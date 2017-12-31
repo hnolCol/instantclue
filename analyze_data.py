@@ -3,7 +3,6 @@ import sys
 import start_page
 
 # tkinter import
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -13,15 +12,10 @@ import tkinter.font as tkFont
 from tkinter.colorchooser import *
 
 
-from funcs import VerticalScrolledFrame
 from funcs import adjust_text_labels
-from funcs import load_and_save_sessions
-from funcs import display_graph_history
 from funcs import fill_axes
-from funcs import tree_for_data_display
 from funcs import resize_window_det
 from funcs import tooltip_information
-from funcs import find_n
 from funcs import get_cmap
 from funcs import choose_subplot
 from funcs import line_and_box_editor
@@ -61,6 +55,7 @@ from modules.dialogs import anova_results
 from modules.dialogs import define_groups_dim_reduction
 from modules.dialogs import pivot_table
 from modules.dialogs import dimRed_transform
+from modules.dialogs import VerticalScrolledFrame
 from modules.dialogs.simple_dialog import simpleUserInputDialog
 from modules.utils import *
 
@@ -68,23 +63,27 @@ from modules.utils import *
 import os
 import time
 import textwrap as tw 
+import string 
+import webcolors as wb
+
 from decimal import Decimal
 
+import pandas as pd
 import numpy as np
 import numpy.polynomial.polynomial as poly
 
-import pandas as pd
+
 
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
 import itertools
-
 from collections import OrderedDict
+
+
 import gc
 
-import string 
-import webcolors as wb
+
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -112,6 +111,8 @@ from multiprocessing import Process
 from threading import Timer,Thread,Event
 import concurrent.futures
 from multiprocessing import Pool 
+
+
 
 from scipy import interpolate
 import scipy.cluster.hierarchy as sch
@@ -1709,17 +1710,7 @@ class analyze_data(tk.Frame):
      													   
         
              
-     def show_graph_history(self):
-         
-         
-         popup = tk.Toplevel()
-         popup.title('Generated Charts and Performed Statistics')
-         popup.attributes('-topmost', True)
-         
-         tree, self.df_history_to_export = display_graph_history.display_graph_history(popup,self.plots_plotted,self.performed_stats)
-         tree.bind(right_click, self.post_menu(self.history_menu))
-         
-         
+
          
      def save_current_session(self):
      	'''
@@ -5614,7 +5605,7 @@ class analyze_data(tk.Frame):
                           if scheme == self.cmap_in_use.get():
                               cb_col.state(['selected'])
                           cb_col.grid(column=row_to_be_placed+1, row = col_to_be_placed, padx=2, pady=2, sticky=tk.NW)
-                          tooltip_information.CreateToolTip(cb_col,platform=platform,title_ = 'Color palette: '+scheme,
+                          CreateToolTip(cb_col,platform=platform,title_ = 'Color palette: '+scheme,
                           								text = 'Information for color palette'
                           								,showcolors = True,cm=scheme)
                           self.cb_list.append(cb_col)
