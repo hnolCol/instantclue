@@ -1,0 +1,465 @@
+import tkinter as tk
+from tkinter import ttk  
+import tkinter.font as tkFont
+           
+
+import numpy as np
+import pandas as pd
+
+import csv
+import re
+
+from modules import images
+from modules.pandastable import core 
+from modules.utils import *
+
+
+
+operationTitle = {'ReplaceColumns': 'Find & Replace column names',
+				  'ReplaceRowEntries': 'Find & Replace values in selected column.'
+				  }
+             
+		 
+infoText = {'object':'You can use "String1","String2" .. to find multiple strings.'+
+		 			'\nThen you have to provide one or exactly the same number of '+
+		 			'value to be used for replacement.',
+		 	'float64':'You can use Value1,Value2, .. to replace multiple values at once.'+
+		 			'\nThen you have to provide one or exactly the same number of '+
+		 			'value to be used for replacement.',
+		 	'int64':'You can use Value1,Value2, .. to replace multiple values at once.'+
+		 			'\nThen you have to provide one or exactly the same number of '+
+		 			'value to be used for replacement.'}		 
+
+class findAndReplaceDialog(object):
+	'''
+	findAndReplaceDialog can be used for several operations. 
+	
+	=================
+	Operations
+		- Find and replace column names
+		- Find and replace data in a selected column
+
+	=================
+	'''
+
+	def __init__(self, mode = 'ReplaceRowEntries', dfClass = None, dataTreeview = None):
+		
+		self.operationType = mode
+		
+		
+		self.searchString = tk.StringVar()
+		self.replaceString = tk.StringVar() 
+		self.exactMatch = tk.BooleanVar() 
+		self.saveLastString  = ''
+		
+		if self.operationType == 'ReplaceRowEntries':
+		
+			self.columnForReplace = self.evaluate_column_selection(dataTreeview)
+			
+			if self.columnForReplace is None:
+				return
+			
+			if isinstance(self.columnForReplace,str):
+				subsetColumns = [self.columnForReplace]
+			else:
+				subsetColumns = self.columnForReplace
+			
+			self.dataType = dataTreeview.dataTypesSelected[0]
+			self.df = dfClass.get_current_data_by_column_list(subsetColumns)						
+			
+			
+		else:
+			self.dataType = 'object'
+			self.dataTreeview = dataTreeview 
+			
+		self.dfClass = dfClass	
+		self.define_commands()
+		self.build_toplevel()
+		self.build_widgets()
+		
+		self.prepare_data()
+		self.display_data()
+		
+	def close(self):
+		'''
+		Close toplevel
+		'''
+		del self.pt
+		self.toplevel.destroy() 	
+		
+
+	def build_toplevel(self):
+	
+		'''
+		Builds the toplevel to put widgets in 
+		'''
+		popup = tk.Toplevel(bg=MAC_GREY) 
+		popup.wm_title('Find & replace - '+self.operationType) 
+		popup.grab_set() 
+        
+		popup.protocol("WM_DELETE_WINDOW", self.close)
+		w=580
+		h=630
+		self.toplevel = popup
+		self.center_popup((w,h))
+		
+			
+	def build_widgets(self):
+ 		'''
+ 		Builds the dialog for interaction with the user.
+ 		'''	 
+ 		self.cont= tk.Frame(self.toplevel, background = MAC_GREY) 
+ 		self.cont.pack(expand =True, fill = tk.BOTH)
+ 		self.cont_widgets = tk.Frame(self.cont,background=MAC_GREY) 
+ 		self.cont_widgets.pack(fill=tk.X, anchor = tk.W) 
+ 		self.cont_widgets.grid_columnconfigure(1,weight=1)
+ 		self.create_preview_container() 
+ 		
+ 		self.doneIcon, self.refreshIcon = images.get_done_refresh_icons()
+ 		
+ 		labelTitle = tk.Label(self.cont_widgets, text= operationTitle[self.operationType], 
+                                     **titleLabelProperties)
+        
+        
+ 		if self.dataType == 'object':
+   
+ 			exactMatchCB = ttk.Checkbutton(self.cont_widgets, variable = self.exactMatch, 
+ 															text = 'Match entire cell content')
+ 			exactMatchCB.grid(row=3,column=0,columnspan=2,padx=3,sticky=tk.W)
+ 			
+ 		labelInfo = tk.Label(self.cont_widgets, text = infoText[self.dataType], 
+ 												bg=MAC_GREY, justify=tk.LEFT) 	
+ 		
+ 		labelSearch = tk.Label(self.cont_widgets, text = 'Replace: ', bg = MAC_GREY)
+ 		labelReplace = tk.Label(self.cont_widgets, text = 'with: ', bg = MAC_GREY)
+ 		 
+ 		entrySearch = ttk.Entry(self.cont_widgets, textvariable = self.searchString)
+ 		entryReplace = ttk.Entry(self.cont_widgets, textvariable = self.replaceString)
+ 		
+ 		self.searchString.trace(mode="w", callback=self.update_data_upon_search) 
+ 		
+ 		applyButton = create_button(self.cont_widgets, image=self.doneIcon, 
+ 										command = self.commandDict[self.operationType])	
+		
+		
+ 		labelTitle.grid(row=0,column=0,padx=4, pady = 15, columnspan = 3, sticky=tk.W)
+ 		labelInfo.grid(row=1,column=0,padx=4, pady = 3, columnspan = 3, sticky=tk.W)
+ 		
+ 		
+ 		labelSearch.grid(row=4,padx = 5, pady = 5, sticky=tk.W)
+ 		labelReplace.grid(row=5,padx = 5, pady = 5, sticky=tk.W)
+ 		entrySearch.grid(column = 1, row = 4, sticky=tk.EW, padx=2)
+ 		entryReplace.grid(column = 1, row = 5, sticky=tk.EW, padx=2)
+ 		applyButton.grid(row=4,column=2,sticky=tk.E,padx=2, rowspan=2) 
+ 
+ 	
+				
+	def create_preview_container(self,sheet = None):
+		'''
+		Creates preview container for pandastable. 
+		'''
+		self.cont_preview  = tk.Frame(self.cont,background='white') 
+		self.cont_preview.pack(expand=True,fill=tk.BOTH,padx=(1,1))		
+
+
+	def center_popup(self,size):
+         	'''
+         	Casts poup and centers in screen mid
+         	'''
+	
+         	w_screen = self.toplevel.winfo_screenwidth()
+         	h_screen = self.toplevel.winfo_screenheight()
+         	x = w_screen/2 - size[0]/2
+         	y = h_screen/2 - size[1]/2
+         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y))) 
+         	
+	def evaluate_column_selection(self, dataTreeview):
+		'''
+		'''
+		columnForReplace = dataTreeview.columnsSelected
+		lenSelectedColumns = len(columnForReplace)
+		if  lenSelectedColumns > 1:
+			uniqueDataType = list(set(dataTreeview.dataTypesSelected))
+			if len(uniqueDataType) > 1:
+					tk.messagebox.showinfo('Error ..','Please select only columns of one data type')
+					return 
+					
+			elif uniqueDataType[0] == 'object' and lenSelectedColumns > 1:
+					tk.messagebox.showinfo('Info ..','For categorical columns, only one column can be selected.'+
+											' Using only first one: {}'.format(dataTreeview.columnsSelected[0]))
+					columnForReplace = dataTreeview.columnsSelected[0]	
+
+		else:
+			columnForReplace = dataTreeview.columnsSelected[0]		
+		
+		
+		return columnForReplace
+			
+			
+		
+	def prepare_data(self):
+		'''
+		'''
+		if self.operationType == 'ReplaceRowEntries':	
+		
+			self.uniqueFlatSplitData = self.df.copy() 
+		else:
+		
+			self.uniqueFlatSplitData = pd.DataFrame(self.dfClass.df_columns , columns = ['Column Names'])
+			self.columnForReplace = 'Column Names'		
+			
+					
+	def display_data(self):
+		'''
+		Displays data in a pandastable. The 
+		'''
+		self.pt = core.Table(self.cont_preview,
+						dataframe = self.uniqueFlatSplitData, 
+						showtoolbar=False, 
+						showstatusbar=False)
+						
+		## unbind some events that are not needed
+		if platform == 'MAC':			
+			self.pt.unbind('<MouseWheel>') # for Mac it looks sometimes buggy 
+
+		self.pt.unbind('<Double-Button-1>')
+		
+		self.pt.show()	
+		
+	def update_data_upon_search(self,varname = None, elementname = None, mode=None):
+		'''
+		Traces user's input an changes the data shown in pandastable.
+		
+		Notes - 
+		=============
+		
+		Data are only updated if entry string is > 2 characters to avoid heavy changes 
+		
+		Dont renew changes when a comma or a " is entered. 
+		
+		For numeric data - the data that are shown when they are close to
+		8 %.
+		'''
+		searchString = self.searchString.get()
+		nonEmptyString = searchString != ''
+		lenSearchString = len(searchString)
+		
+		if self.dataType == 'object':
+			if lenSearchString < 3 and nonEmptyString:
+				## to avoid massive searching when data are big
+				return
+			
+			if lenSearchString > 2:
+				## to start a new String search
+				if searchString[-2:] == ',"':			
+					self.saveLastString = ''		
+			lengthSaved = len(self.saveLastString)
+		
+			if lenSearchString == lengthSaved + 1 and self.saveLastString != '':
+				dataToSearch = self.pt.model.df
+			elif lenSearchString + 1 == lengthSaved and self.saveLastString != '':
+				## avoid research on backspace
+				dataToSearch = self.pt.model.df
+			else:
+				dataToSearch = self.uniqueFlatSplitData
+			if len(dataToSearch.index) == 0:
+				dataToSearch = self.uniqueFlatSplitData
+			
+			splitSearchString = [row for row in csv.reader([searchString], delimiter=',', quotechar='\"')][0]
+			regExp = self.build_regex(splitSearchString)
+		
+			boolIndicator = dataToSearch[self.columnForReplace].str.contains(regExp,case = True)
+			subsetData = dataToSearch[boolIndicator]
+			
+			self.saveLastString = searchString
+
+		else:
+			valueList = self.transform_string_to_float_list(searchString)
+			valuesToReplace = np.asarray(valueList)			
+			#boolIndicator = self.uniqueFlatSplitData.applymap(lambda value: np.in1d(value,valuesToReplace).item(0)).sum(axis=1) > 0
+			## 8 % tolerance to be shown.
+			boolIndicator = self.uniqueFlatSplitData.applymap(lambda value: np.isclose(value,valuesToReplace, rtol = 0.8).item(0)).sum(axis=1) > 0
+			
+			subsetData = self.uniqueFlatSplitData[boolIndicator]
+			
+				
+				 
+		self.pt.model.df = subsetData
+		self.pt.redraw()	
+			         
+	def build_regex(self,stringList, saveInList = False):
+		'''
+		Build regular expression that will search for the selected category. Importantly it will prevent 
+		cross findings with equal substring
+		=====
+		Input:
+			List of strings that were entered by the user
+		====
+		'''
+		regExp = r''
+		if self.exactMatch.get():
+			baseString = r'(^{}$)|'
+		else:
+			baseString = r'({})|'
+		listRegEx = []
+		for category in stringList:
+			category = re.escape(category) #escapes all special characters
+			if saveInList:
+				listRegEx.append(baseString.format(category)[:-1])
+			else:
+				regExp = regExp + baseString.format(category)
+				
+				
+		if saveInList:
+			return listRegEx
+		else:		
+			regExp = regExp[:-1] #strip of last |
+			return regExp
+			
+	def extract_regExList(self,string):
+		'''
+		'''
+		splitString = [row for row in csv.reader([string], delimiter=',', quotechar='\"')][0]
+		regExList = self.build_regex(splitString, saveInList=True) 
+		
+		return regExList
+		
+	def evaluate_input(self,searchList,replaceList):
+		'''
+		'''
+		lenSearchList = len(searchList)
+		lenReplaceList = len(replaceList) 
+		
+		if 	lenSearchList == lenReplaceList:
+			return True, searchList, replaceList
+			
+		elif lenSearchList > lenReplaceList:
+			if lenReplaceList == 1:
+				replaceList = replaceList * lenSearchList
+				return True, searchList, replaceList
+			else:
+				tk.messagebox.showinfo('Error ..','Number strings for replacement does not match'+
+									   ' the number of value to be replaced. Please revisit.'+
+									   ' {} versus {}'.format(lenSearchList,lenReplaceList))
+		elif lenReplaceList > lenSearchList:
+			tk.messagebox.showinfo('Error ..','Number of "To replace" strings is smaller than then number'+
+									' of strings that are should be used to replace them with. Please revisit.'+
+									' {} versus {}'.format(lenSearchList,lenReplaceList))
+			return False, None, None
+				
+	def transform_string_to_float_list(self,string):
+		'''
+		Takes a string and convert it to floats by splitting it at ',' and returns a list 
+		of vlaues
+		'''
+		if string[-1] == ',':
+			string = string[:-1]
+		valueList = [float(x) for x in string.split(',')]
+		return valueList 
+			
+	def perform_replacement_of_rowValues(self):
+		'''
+		'''	
+		searchString = self.searchString.get()
+		replaceString = self.replaceString.get()
+		if searchString == '':
+			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.')
+			return
+			
+		elif replaceString == '':
+			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.')
+			return
+			
+		if self.dataType == 'object':
+			
+			toReplaceList = self.extract_regExList(searchString)
+			valueList = [row for row in csv.reader([replaceString], delimiter=',', quotechar='\"')][0]
+			proceedBool,toReplaceList,valueList = self.evaluate_input(toReplaceList,valueList)
+			if proceedBool == False:
+				return
+			
+			self.dfClass.df[self.columnForReplace].replace(toReplaceList,valueList,
+														   regex=True,inplace=True)
+		else:
+			searchList = self.transform_string_to_float_list(searchString)
+			replaceList = self.transform_string_to_float_list(replaceString)
+			
+			proceedBool,toReplaceList,valueList = self.evaluate_input(searchList,replaceList)
+			if proceedBool == False:
+				return
+			
+			replaceDict = dict(zip(searchList,replaceList))			
+			replacedDf = self.pt.model.df.applymap(lambda value: self.replace_if_match(value, replaceDict))
+			index = replacedDf.index
+			self.dfClass.df.loc[index,self.columnForReplace] = replacedDf
+																	   
+		tk.messagebox.showinfo('Done ..', 'Replacement done.')
+	
+	def replace_if_match(self, value, replaceDict):
+		'''
+		'''
+		if value in replaceDict:
+			return replaceDict[value]
+		else:
+			return value	
+	
+	def get_unique_changes_from_column_dict(self,replaceDict):
+		'''
+		'''
+		keyList = []
+		
+		for key,item in replaceDict.items():
+			if key == item:
+				keyList.append(key)
+		
+		for key in keyList:
+			del replaceDict[key]
+			
+		return replaceDict
+				
+	def rename_column_names(self):
+		'''
+		'''		
+		searchString = self.searchString.get()
+		replaceString = self.replaceString.get()
+		if searchString == '':
+			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.')
+			return
+			
+		elif replaceString == '':
+			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.')
+			return
+		toReplaceList = self.extract_regExList(searchString)
+		valueList = [row for row in csv.reader([replaceString], delimiter=',', quotechar='\"')][0]
+		
+		self.uniqueFlatSplitData['Column Names'].replace(toReplaceList,valueList,
+														   regex=True,inplace=True)
+		
+		replaceDict = dict(zip(self.dfClass.df_columns,self.uniqueFlatSplitData['Column Names']))
+		replaceDictFiltered = self.get_unique_changes_from_column_dict(replaceDict )
+		
+		self.dfClass.rename_columnNames_in_current_data(replaceDictFiltered)	
+		
+		dataFrameID = self.dfClass.currentDataFile 
+		iidList = ['{}_{}'.format(dataFrameID,columnName) for columnName in replaceDictFiltered.keys()]
+		self.dataTreeview.rename_itemText_by_iidList(iidList,list(replaceDictFiltered.values()))
+		
+		tk.messagebox.showinfo('Done ..', 'Replacement done.')
+		
+	def define_commands(self):
+		'''
+		'''
+		self.commandDict = {'ReplaceColumns':self.rename_column_names,
+							'ReplaceRowEntries':self.perform_replacement_of_rowValues}
+		
+
+
+
+
+
+
+
+
+
+
+
