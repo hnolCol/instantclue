@@ -112,7 +112,6 @@ if __name__ == "__main__":
      w = 1620
      h = 1080
      appGeom = evaluate_screen(screen_width,screen_height,w,h)     
-     
      app.geometry(appGeom)
      app.mainloop() 
      sys.exit(1)

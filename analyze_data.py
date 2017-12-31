@@ -145,7 +145,6 @@ cat_error = '''The category has more than 100 levels. This results in a confusin
 
 
 last_called_plot = [] 
-
 t_dict =dict() 
 
 
@@ -3146,7 +3145,7 @@ class analyze_data(tk.Frame):
          cols = list(self.selectedNumericalColumns.keys())
          cats = list(self.selectedCategories.keys())
          self.output_df_hsd = OrderedDict() 
-         used_plot_type = last_called_plot[-1][-2]
+         used_plot_type = self.plt.currentPlotType
          list_for_testing = list() 
          if len(cats) == 0:
              
@@ -3158,23 +3157,20 @@ class analyze_data(tk.Frame):
              else:
                  stat, p = kruskal(*list_for_testing, nan_policy = 'omit')
                  stat_ = 'H'
-             gn=self.a[1].annotate('{}\n{}.stat: {}\np.val: {}\nColumns: {}'.format(self.test,stat_,round(stat,2),round(p,5),len(cols)), xy=(0.025, 0.81), xycoords='axes fraction', bbox = bbox_args,
-                                      fontsize = 8, zorder = 0)    
-             gn.draggable(state = True)     
+             gn=self.plt.add_annotationLabel_to_plot(ax = self.plt.figure.axes[0],text=\
+             '{}\n{}.stat: {}\np.val: {}\nColumns: {}'.format(self.test,stat_,round(stat,2),round(p,5),len(cols)))
+            
+             
              if len(cols) > 2:
                  id_vars = [col for col in self.sourceData.df_columns if col not in cols]
                  long_pd = pd.melt(self.sourceData.df, id_vars = id_vars, value_vars = cols, value_name = 'Value', var_name = 'Variable')
                  long_pd.dropna(inplace=True, subset=['Value'])
                  hsd = pairwise_tukeyhsd(long_pd['Value'],long_pd['Variable'])
                  df = self.generate_pandas_data_frame_from_pariwise(hsd,len(cols))
-                 self.output_df_hsd[str(cols)] = df
-                 
-         
+                          
          else:
              n_levels_0 = self.sourceData.df[cats[0]].unique() 
-         
-         
-         
+                  
          
          if len(cats) == 1:
              anova_group = self.sourceData.df.groupby(cats[0], sort=False)
@@ -3199,12 +3195,9 @@ class analyze_data(tk.Frame):
                      stat_ = 'H'
                  ln_s = np.linspace(0.025,0.74,num=len(cols))
                  x_pos = ln_s[cols.index(col_)]
-                 gn=self.a[1].annotate('{}\n{}.stat: {}\np.val: {}\nLevel: {}\nColumn: {}'.format(self.test,stat_,round(stat,2),round(p,5),cats[0],col_), 
-                          xy=( x_pos, 0.95), xycoords='axes fraction', ha='left', va='top',
-                             bbox = bbox_args,
-                             fontsize = 8, zorder = 0)    
-                 
-                 gn.draggable(state = True)
+                 gn=self.plt.add_annotationLabel_to_plot(ax = self.plt.figure.axes[0],text = \
+             	 '{}\n{}.stat: {}\np.val: {}\nColumns: {}'.format(self.test,stat_,round(stat,2),round(p,5),len(cols)))
+            	 
                  
                  if n_levels_0.size >= 2:
                      source = self.sourceData.df[[col_]+cats].dropna() 
@@ -3213,58 +3206,11 @@ class analyze_data(tk.Frame):
                      self.output_df_hsd[cats[0]+'_'+col_] = df
                
                  list_for_testing = []
-             
-         if len(cats) == 2:
-             n_levels_1 = self.sourceData.df[cats[1]].unique() 
-             anova_group = self.sourceData.df.groupby(cats, sort=False)
-             if anova_group.size().min() < 3:
-                 messagebox.showinfo('Error..','Less than 3 observations in one group.')
-                 return 
-             for col_ in cols:
-                 i = 1
-                 add_to_sub = cols.index(col_)
-                 for lev in n_levels_0:
-                     list_for_testing = list()
-                     
-                     for name,group in anova_group:
-                         if lev in name:
-                             data = anova_group.get_group(name)
-                             test_d = data[col_].dropna()
-                             list_for_testing.append(test_d)
-                     if self.test == '1W-ANOVA':        
-                         stat,p = f_oneway(*list_for_testing)
-                         stat_ = 'F'
-                     else:
-                         stat,p = kruskal(*list_for_testing, nan_policy = 'omit')
-                         stat_ = 'H'
-                     if used_plot_type != 'scatter' and used_plot_type != '' and self.split_in_subplots.get():    
-                         add = 0.025
-                         sub_nr = i
-                         i += 1
-    
-                     else:
-                         sub_nr = 1
-                         ln_s = np.linspace(0,1,num=len(n_levels_0)+1, endpoint = True)
-                         
-                         add =  0.025+ln_s[i-1]
-                         i +=1
-                     gn=self.a[sub_nr+add_to_sub].annotate('{}\n{}.stat: {}\np.val: {}\nLevel: {}'.format(self.test,stat_,round(stat,2),round(p,5),lev), xy=(add, 0.81), xycoords='axes fraction', bbox = bbox_args,
-                                          fontsize = 8, zorder = 0)    
-                     gn.draggable(state = True)
-                     self.add_to_stat_dict(gn)
-                 tukey_data = self.sourceData.df.dropna(subset=[col_])
-                 turkey_group = tukey_data.groupby(cats[0])
-    
-                 for name, group in turkey_group:
-                   
-                    hsd = pairwise_tukeyhsd(group[col_],group[cats[1]])
-                    df = self.generate_pandas_data_frame_from_pariwise(hsd,
-                                                               n_levels_1.size)
                  
-                    self.output_df_hsd[name+'_'+col_] = df
-                         
+         self.plt.redraw()
+         display_data.dataDisplayDialog(df,showOptionsToAddDf = True)
              
-         self.canvas.draw()     
+            
              
                      
                 

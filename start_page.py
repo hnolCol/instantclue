@@ -51,14 +51,9 @@ class StartPage(tk.Frame):
           								command = lambda: webbrowser.open(websiteUrl))
           self.videoTutorialButton = create_button(self,image=self.videoTutorialLogo,
           								command = lambda: webbrowser.open(websiteUrlVideos))
-          if platform == 'MAC':
-          	
-          	self.pdfTutorialButton = create_button(self,image=self.pdfTutorialLogo,
-          								command = lambda: os.system("open {}".format(tutorialPath)))
-          else:
-          	
-          	self.pdfTutorialButton = create_button(self,image=self.pdfTutorialLogo, 
-          								command = lambda: os.system("start {}".format(tutorialPath)))
+          self.pdfTutorialButton = create_button(self,image=self.pdfTutorialLogo,
+          								command = lambda: webbrowser.open(webisteUrlTutorial))
+        
           self.sourceCodeButton = create_button(self,image=self.sourceCodeLogo , 
           								command = lambda: webbrowser.open(gitHubUrl))
           self.analyze_data_but = create_button(self, image= self.data_analysis_icon,
