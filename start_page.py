@@ -13,7 +13,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.3.756' #Date 15.12.2017
+__VERSION__ = '0.4.1' #Date 30.12.2017
 
 
 
@@ -22,7 +22,6 @@ class StartPage(tk.Frame):
           tk.Frame.__init__(self,parent, background="white")
           self.get_images()
           self.build_widgets(controller)
-          
           
           
      def get_images(self):
@@ -42,10 +41,8 @@ class StartPage(tk.Frame):
                               fg ="#4C626F")
           
           self.labelWelcome = tk.Label(self, text="Welcome To Instant Clue \n\nInteractive Scientific Visualization and Analysis\n\n\n",
-                           font=TITLE_FONT,
-                           bg="white",
-                           fg="#4C626F",
-                           justify=tk.LEFT)
+                           font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg="white")
+							
                            
           self.websiteButton = create_button(self,image=self.webisteLogo, 
           								command = lambda: webbrowser.open(websiteUrl))
@@ -60,7 +57,7 @@ class StartPage(tk.Frame):
           								command=lambda: controller.show_frame(analyze_data.analyze_data))
     
           
-          self.label_cite = tk.Label(self, text = "If you found usage of Instant Clue helpful; please cite :\nNolte, H., MacVicar, D. T. and Krüger, M. INSTANt Clue - INteractive ScienTific ANalysis: A Software Suite For Scientific Data Visualization and Analysis by Drag & Drop",
+          self.label_cite = tk.Label(self, text = "If you found usage of Instant Clue helpful; please cite :\nNolte, H., MacVicar, D. T. and Krüger, M. Instant Clue - INteractive ScienTific ANalysis: A Software Suite For Scientific Data Visualization and Analysis by Drag & Drop",
                                 bg="white",
                                 fg="#4C626F",
                                 justify=tk.LEFT,
@@ -71,10 +68,10 @@ class StartPage(tk.Frame):
           self.labelWelcome.grid(row=0, column=0, padx=10, pady=20, columnspan=1, sticky=tk.NW )
           self.analyze_data_but.grid(row = 2,column=0, padx=(50,25),sticky=tk.E+tk.N, pady=(50,11),rowspan=5)#, sticky=tk.E) 
           
-          self.websiteButton.grid(row=2,column=1,sticky=tk.N,pady=(50,11))
-          self.videoTutorialButton.grid(row=3,column=1,sticky=tk.N,pady=11)
-          self.pdfTutorialButton.grid(row=4,column=1,sticky=tk.N,pady=11)
-          self.sourceCodeButton.grid(row=5,column=1,sticky=tk.N,pady=12)
+          self.websiteButton.grid(row=2,column=1,sticky=tk.N,pady=(50,9))
+          self.videoTutorialButton.grid(row=3,column=1,sticky=tk.N,pady=9)
+          self.pdfTutorialButton.grid(row=4,column=1,sticky=tk.N,pady=9)
+          self.sourceCodeButton.grid(row=5,column=1,sticky=tk.N,pady=9)
               
                     
           self.label_LOGO.grid(row=0, column=2, sticky=tk.N + tk.E, padx=0, pady=10, columnspan=2)         

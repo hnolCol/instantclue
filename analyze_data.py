@@ -15,10 +15,7 @@ from tkinter.colorchooser import *
 from funcs import adjust_text_labels
 from funcs import fill_axes
 from funcs import resize_window_det
-from funcs import tooltip_information
 from funcs import get_cmap
-from funcs import choose_subplot
-from funcs import line_and_box_editor
 from funcs import custom_drag_drop_selection
 from funcs import correlations
 
@@ -56,6 +53,7 @@ from modules.dialogs import define_groups_dim_reduction
 from modules.dialogs import pivot_table
 from modules.dialogs import dimRed_transform
 from modules.dialogs import VerticalScrolledFrame
+
 from modules.dialogs.simple_dialog import simpleUserInputDialog
 from modules.utils import *
 
@@ -170,7 +168,7 @@ class analyze_data(tk.Frame):
            ## curveFitCollection saves all curve fittings made by the user
            self.sourceData = data.DataCollection()
            self.plt = plotter._Plotter(self.sourceData,self.f1)
-           
+           self.mainFigureCollection = main_figures.mainFigureCollection(self)
            self.anovaTestCollection = anova_calculations.storeAnovaResultsClass()
            self.dimensionReductionCollection = stats.dimensionReductionCollection()
            self.curveFitCollection = curve_fitting.curveFitCollection()
@@ -189,13 +187,10 @@ class analyze_data(tk.Frame):
                
            self.folder_path = tk.StringVar()
            self.size_selected = tk.StringVar(value = '50')
-           self.search_cat = tk.StringVar()            
-           
            ## stats Test 
            self.twoGroupstatsClass = None
            
            ###
-                      
            self.old_width = None
            self.old_height = None
            
@@ -208,39 +203,28 @@ class analyze_data(tk.Frame):
            self.selectedNumericalColumns  = OrderedDict() 
            self.selectedCategories  = OrderedDict()
            
-           self.plots_plotted = OrderedDict()
            self.count = 0 
            self.save_tree_view_to_dict = OrderedDict()
            self.colormaps = dict()
-           self.performed_AUC_calculations = OrderedDict()
-           self.anotation_for_AUC = OrderedDict() 
-           self.mark_side_labels = OrderedDict()
-           self.global_annotation_dict = OrderedDict()
-           self.save_auc_areas = OrderedDict()
            self.data_set_information = OrderedDict()
            self.tooltip_data = None
            
            ##scatter matrix dicts
            self.data_scata_dict = dict()
            self.axes_scata_dict = dict()
-           self.length_of_data = dict()
            self.performed_stats = OrderedDict() 
            #lists
            self.data_types_selected = [] 
            ##
            self.cmap_in_use = tk.StringVar(value = 'Blues') 
            self.alpha_selected = tk.StringVar(value = '0.75')
-           self.widgets_for_stat = dict()
            
            self.original_vals = []
            self.add_swarm_to_new_plot =False
            self.swarm_but = 0
-           self.add_swarm_collections = list() 
            self.split_on_cats_for_plot = tk.BooleanVar(value = True)
            self.split_in_subplots = tk.BooleanVar(value = False)
            
-           self.idx_and_file_names = OrderedDict()
-           self.split_cat_data_ = OrderedDict()
            self.id_tt = None
                   
            self.selection_press_event = None 
@@ -249,7 +233,6 @@ class analyze_data(tk.Frame):
            self.pick_freehand  = None 
            self._3d_update = None
            self.filt_source_for_update = None
-           self.leg_cat = None 
            self.mot_adjust = None
            self.mot_adjust_ver = None
            self.label_button_droped = None
@@ -257,45 +240,23 @@ class analyze_data(tk.Frame):
            self.size_button_droped = None
            self.color_button_droped = None
            self.stat_button_droped = None
-           
            self.cursor_release_event  = None
            
            self.hclust_dat_ = None
            self.hclust_axes = dict()
            self.calculate_row_dendro = True
            self.calculate_col_dendro = True  
-           self.rows_var_fit = tk.StringVar(value = '3')
-           self.cols_var_fit = tk.StringVar(value = '3') 
-
            
            self.release_event = None
            self.hclust_move_level = None
            self.annotation_main = OrderedDict() 
            self.scat = None
-           self.main_subs = dict() 
-           self.alphabetic_label = list(string.ascii_lowercase)+list(string.ascii_uppercase)
-           self.main_figures_created = OrderedDict()
-           self.canvas_main_created = OrderedDict()
            
-           
-           self.dict_saving_main_figures_axes = dict()
-           self.dict_saving_axes_in_main_figures = dict() 
-           
-           self.menu_items_for_main = dict()
-           self.deleting_axis = None
-           self.artists_in_main_figure = OrderedDict()
-           self.moving_labels = OrderedDict()
-           self.all_adjustable_txts= OrderedDict()
            self.col_map_keys_for_main  = None
            self.col_map_keys_for_main_double  = None
            self.mot_button_dict = dict()
-           self.connect_main_ax_to_heatmap = dict()
-           self.connect_main_ax_heat = dict()
-           self.figure_id_count = 0
-           self.saved_ylims_left = None
            self.color_added = None
-           self.saved_color = None
-           self.saved_size = None
+           
            self.mot_button = None
            self.dimReduction_button_droped = None
            self.color_pca_dict = dict() 
@@ -308,7 +269,6 @@ class analyze_data(tk.Frame):
 
            self.build_main_drop_down_menu_treeview()
            self.def_split_sub_menu()
-           #self.initiate_export_menu()
            self.build_selection_export_menu() 
            self.build_merge_menu()
            self.build_datatype_menu()
@@ -565,7 +525,7 @@ class analyze_data(tk.Frame):
          #self.hclust_menu.add_command(label='Show column dendrogram',  foreground="black", command = self.calculate_dendogram)   
          self.hclust_menu.add_command(label='Add cluster # to source file', command = self.add_cluster_to_source)         
          self.hclust_menu.add_command(label='Find entry in hierarch. cluster', command = lambda: self.categorical_column_handler('Find entry in hierarch. cluster'))
-         self.hclust_menu.add_command(label='Modify hclust settings', command = lambda: self.design_popup(mode = 'Hierarchical Clustering Settings')) 
+         #self.hclust_menu.add_command(label='Modify hclust settings', command = lambda: self.design_popup(mode = 'Hierarchical Clustering Settings')) 
     
      def def_split_sub_menu(self):
          
@@ -671,7 +631,7 @@ class analyze_data(tk.Frame):
      			self.add_new_dataframe(dataDialog.data,nameOfDf)
      	
      	else:
-     		tk.messagebox.showinfo('Error ..','No clustering performed yet.')
+     		tk.messagebox.showinfo('Error ..','No clustering performed yet.',parent=self)
 
 
      def rename_columns(self):
@@ -684,9 +644,9 @@ class analyze_data(tk.Frame):
      		renameDialog = change_columnName.ColumnNameConfigurationPopup(self.DataTreeview.columnsSelected,
      														self.sourceData, self.DataTreeview)
      		if renameDialog.renamed: #indicates if any renaming was done (or closed)
-     			tk.messagebox.showinfo('Done..','Column names were replaced.')
+     			tk.messagebox.showinfo('Done..','Column names were replaced.',parent=self)
      	else:
-     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
      	# reset before selected df
      	self.sourceData.set_current_data_by_id(currentDataFrameId)	
 
@@ -717,7 +677,7 @@ class analyze_data(tk.Frame):
      		dimRedDialog = dimRed_transform.transformDimRedDialog(self.dimensionReductionCollection,
      															self.sourceData, self.DataTreeview)
      	else:
-     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
      															
 
      	#dimRedCollection, dfClass, dataTreeview,
@@ -785,7 +745,7 @@ class analyze_data(tk.Frame):
      			self.add_new_dataframe(dataDialog.data,nameOfDf)
      	else:
      		
-      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
      
      
      def transpose_data(self):
@@ -838,7 +798,7 @@ class analyze_data(tk.Frame):
      			self.add_new_dataframe(data,nameOfDf)
      	else:
      		
-      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')     
+      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)     
      	     	
 	     
      def pivot_data(self):
@@ -859,7 +819,7 @@ class analyze_data(tk.Frame):
      			self.add_new_dataframe(data,nameOfDf)
      	else:
      		
-      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')     
+      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)     
      	
      	
 	
@@ -868,7 +828,7 @@ class analyze_data(tk.Frame):
      	'''
      	corr_ = correlations.correlate_rows_to(data=self.sourceData.df, columns = self.DataTreeview.columnsSelected  , platform=platform)
      	cor_data = corr_.get_correlations() 
-     	tk.messagebox.showinfo('Done..','Calculations were performed and data were added to the source data treeview.') 
+     	tk.messagebox.showinfo('Done..','Calculations were performed and data were added to the source data treeview.',parent=self) 
      	
      	self.sourceData.df = self.sourceData.df.join(cor_data)
      	
@@ -883,53 +843,7 @@ class analyze_data(tk.Frame):
                                               text= column,
                                               image = self.float_icon)
      		except:
-     			
-     			pass 
-     
-     
-     def extract_artists(self,ax,fig_id,anno,key = None):
-         
-         base = dict() 
-
-         base['axis_labels'] = [ax.xaxis.get_label(),ax.yaxis.get_label()]
-         base['x-ticks'] = ax.get_xticklabels()
-         base['y-ticks'] = ax.get_yticklabels()
-         
-         base['subplots'] = [anno]
-         base['annotations'] = [txt for txt in ax.texts if txt != anno]
-         
-         base['titles'] = [ax.title]
-         base['lines'] = ax.lines
-         base['collections'] = ax.collections
-         base['patches'] = ax.patches
-         base['artists'] = ax.artists
-
-
-         leg_ = ax.get_legend()
-             
-         save_ = [] 
-         txts_ = [] 
-         txts_caption = [] 
-         for artist in ax.artists:
-                 if str(artist) == 'Legend':
-                     save_.append(artist)
-                 txts_ = [leg.get_texts() for leg in save_]    
-                 txts_caption = [leg.get_title() for leg in save_]
-                 
-         if leg_ is not None:       
-             tx = leg_.get_texts() 
-             txts_.extend(tx)
-             txts_caption.append(leg_.get_title())
-             
-         base['legend_texts'] = txts_  
-         base['legend_caption'] = txts_caption
-       
-             
-         if anno is None:
-             self.connect_main_ax_heat['Figure__'+str(fig_id)+'_'+str(ax)] = ax   
-             self.artists_in_main_figure['Figure__'+str(fig_id)+'_'+str(ax)] =  base
-         if key is not None:
-             self.artists_in_main_figure[key] =  base
+     			pass
              
              
              
@@ -978,155 +892,40 @@ class analyze_data(tk.Frame):
             
      	if mode is not None:
 
-        	tk.messagebox.showinfo('Done..','Custom filter was applied successfully. Well done.') 
+        	tk.messagebox.showinfo('Done..','Custom filter was applied successfully. Well done.',parent=self) 
           	
 
-     def perform_export(self, ax_export,fig_id,open_session = False, plot_id = None):
-     
-     	
-         ax_export = self.annotation_main['Figure__'+str(fig_id)+'_'+ax_export][0]#
-         ax_export.clear()
-         fig = self.main_figures_created[fig_id]
-       #  import pickle
-         #toPickle = self.plt.plotHistory
-         #too = dict(Hallo=toPickle[1][0])
-         #print(toPickle)
-         #pull = load_and_save_sessions.save_plotter(toPickle)
-        # with open('chart_param','wb') as file:
-         #	pickle.dump(toPickle, file)
-         
-         #with open('chart_param','rb') as file:
-         #	pull = pickle.load(file)
-         #pull[1][0].export_selection(ax_export,self.ax_export)
-         #plotterObjects = self.plt.plotHistory
-         #self.clust.export_selection(ax_export,fig)
-         #self.clust.disconnect_event_bindings()
-         #self.clust.export_cluster_number_to_source()
-         #ax_export.axis('off')
-         #fig.canvas.draw()
-         #return
+     def perform_export(self, axExport,axisId,figureTemplate, exportId = None):
+     		### to do - log transofrm of axes .. 
+     		## 
+     		
+         figureTemplate['template'].clear_axis(axExport)
          plotExporter = self.plt.get_active_helper()
-         #print(plotterObjects)
-         plotExporter.export_selection(ax_export,self.ax_export,fig)
-         self.canvas_main_created[fig_id].draw()
-         return 
+         
+         plotExporter.export_selection(axExport,self.axNum,figureTemplate['figure'])
+         
+         if hasattr(plotExporter,'_hclustPlotter'):
+         	if plotExporter._hclustPlotter is not None:
+         		exportId = plotExporter._hclustPlotter.exportId
+         		axes = plotExporter._hclustPlotter.exportAxes[exportId]
+         		figureTemplate['template'].associate_axes_with_id(axisId,axes)
+         		
+         figureTemplate['template'].add_axis_label(axExport,
+         										   axisId,
+         										   label=figureTemplate['template'].figureProps[axisId]['axisLabel'])
+         figureTemplate['template'].extract_artists(axExport,axisId)
+         figureTemplate['figure'].canvas.draw()
+         
+         self.mainFigureCollection.store_export(axisId,
+         										figureTemplate['template'].figureId,
+         										self.plt.plotCount,
+         										self.axNum,
+         										exportId,
+         										bool(self.plt.showSubplotBox),
+         										bool(self.plt.showGrid))
+         
+         
           
-         #  with open(os.path.join(directory,'performed_stats'),'rb') as file:
-          #   pull1 = pickle.load(file)     
-          
-         for key,items in self.plt.plotHistory.items():
-         	print(key, items)
-         	
-         	if key == 2:
-         		pos = [item for item in items if item is not None]
-         		pos[0].export_selection(ax_export,self.ax_export) 
-         		
-         		self.canvas_main_created[fig_id].draw() 
-         		
-         return
-         
-         if true:
-         	colnames, catnames, plot_type, cm = last_called_plot[-1]
-
-         
-         	ylim, xlim = self.ax_export_ax.get_ylim(), self.ax_export_ax.get_xlim() 
-         
-         
-        
-         	
-         	font_ = lab_artist.get_fontname()
-         	txt_ = lab_artist.get_text() 
-         	col_ = lab_artist.get_color()
-         	size_ = lab_artist.get_size()
-         	rot_ = lab_artist.get_rotation() 
-         	weight_ = lab_artist.get_weight()
-         	ha_align_ = lab_artist.get_ha()
-         	style_ = lab_artist.get_style() 
-         
-         	coll_an = [txt_,font_,col_,size_,rot_,weight_,ha_align_,style_]
-         
-        # key_ = 'Figure__'+str(fig_id)+'_'+str(ax_export)
-         fig = self.main_figures_created[fig_id]
-         lab_artist.remove()
-         ax_export.clear()
-         
-         
-         if key_ in self.connect_main_ax_to_heatmap:
-             axes = self.connect_main_ax_to_heatmap[key_] 
-             for ax_ in axes:
-                 fig.delaxes(ax_)
-             del self.connect_main_ax_to_heatmap[key_]
-             
-         if open_session == False:
-         	if plot_type == 'scatter':
-         		saved_colors = self.scat.get_facecolors()
-         		saved_sizes = self.scat.get_sizes()
-         		#dat_ = self.filt_source_for_update 
-         	else:
-         		saved_colors = None
-         		saved_sizes = None
-         		dat_ = None
-         		
-         	if plot_type == 'PCA':
-         		save_col = self.pca_scat.get_facecolors() 
-         		show_labels_PCA = self.cb_labels.instate(['selected'])
-         		for key,items in self.annotation_dict_pca.items():
-         			#items[-1] = items[-1].xyann
-         			items = self.annotation_dict_pca[key]
-         		print(self.annotation_dict_pca)
-         		pca_labels = self.annotation_dict_pca
-         		
-         	else:
-         		save_col = None
-         		show_labels_PCA  = None
-         		pca_labels  = None
-         	if plot_type in ['hclust','corrmatrix']:
-         		h_clust = self.clust_h
-         		cut_max_d = self.hclust_axes['cluster_line_left'].get_xdata()[0]
-         		ylim_clust = self.hclust_axes['map'].get_ylim()
-         		ylim_clust_left = self.hclust_axes['left'].get_ylim()
-
-         	self.dict_saving_main_figures_axes[key_] = [colnames,catnames,plot_type,
-         												cm,True,self.ax_export,fig_id,coll_an,xlim,ylim,
-         												h_clust,self.color_added,cut_max_d,ylim_clust,
-         												ylim_clust_left,saved_colors,saved_sizes,
-         												dat_,save_col,show_labels_PCA,pca_labels ] ### aaxes is  not saved here
-         
-         
-         anno = ax_export.annotate(txt_,
-                    xy=(0.0, 1), xytext=(-12, 12),
-                    xycoords=('axes fraction'),
-                    textcoords='offset points',
-                    ha= ha_align_, va='bottom',fontname = font_, color = col_, size= size_, rotation = rot_, weight = weight_, style = style_)
-         
-         del self.artists_in_main_figure[key_]
-         
-         ax_export.set_ylim(ylim)
-         ax_export.set_xlim(xlim) 
-         
-         if self.log_y:
-         	ax_export.set_yscale("symlog", subsy = [2,  4,  6,  8,])
-         if self.log_x:
-         	ax_export.set_yscale("symlog", subsy = [2,  4,  6,  8,])
-         	
-         self.unpack_and_plot_sats(plot_in_main = True, ax_export = ax_export, main_index = self.ax_export+1) 
-         
-
-         
-         #self.extract_artists(ax_export,fig_id,anno)
-         if plot_type not in ['hclust','corrmatrix']:
-             
-             self.extract_artists(ax_export,fig_id,anno,key=key_)
-         else:
-
-             axes = self.connect_main_ax_to_heatmap[key_] 
-             for ax_ in axes:
-             	self.extract_artists(ax_,fig_id,anno = None)
-             self.extract_artists(ax_export,fig_id,anno, key=key_)
-         if open_session == False:    	
-         	self.canvas_main_created[fig_id].draw() 
-         self.saved_ylim = None
-         self.saved_ylims_left = None 
          
          
      def display_curve_fits(self):      
@@ -1152,27 +951,24 @@ class analyze_data(tk.Frame):
      	 
          if event.inaxes is None:
              return
-         if self.closest_gn_bool:
-         	return
          if event.button == 1:
              return
+         
          if event.button in [2,3]:
+         	
+             if self.selection_press_event is not None:
+             	return         
              numb = self.plt.get_number_of_axis(event.inaxes)
              if numb is None:
                  return
-             self.ax_export = numb
+                 
+             self.axNum = numb
              self.ax_export_ax = event.inaxes
              
              if self.plt.castMenu == False:
              	return
-             	
-             if self.label_button_droped is not None:
-                 
-                  for key,artist in self.annotations_dict.items():
-                     
-                     if artist is not None:
-                         if artist.contains(event)[0]:
-                             return
+
+             
                              
              self.post_menu(menu = self.main_figure_menu)        
         
@@ -1183,7 +979,7 @@ class analyze_data(tk.Frame):
      	Calculates kernel density estimate and adds new column to the datatreeview
      	'''
      	if self.DataTreeview.onlyNumericColumnsSelected == False:
-     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.')
+     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.',parent=self)
      		return
      	
      	currentDataFrameId = self.sourceData.currentDataFile
@@ -1200,10 +996,11 @@ class analyze_data(tk.Frame):
      											
      		self.sourceData.set_current_data_by_id(currentDataFrameId)
      		
-     		tk.messagebox.showinfo('Done ..','Representation of a kernel-density estimated using Gaussian kernels calculated. Column was added.')
+     		tk.messagebox.showinfo('Done ..','Representation of a kernel-density estimated using '+
+     								'Gaussian kernels calculated. Column was added.', parent = self)
      	else:
      		
-      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
      		     	        
      		     	        
          
@@ -1277,7 +1074,7 @@ class analyze_data(tk.Frame):
      	Triggers data free-hand selection. 
      	'''
      	if self.plt.currentPlotType != 'scatter':
-     		tk.messagebox.showinfo('Error ..','Only useful for scatter plots.')
+     		tk.messagebox.showinfo('Error ..','Only useful for scatter plots.', parent=self)
      		return
      		
      	dataId = self.plt.get_dataID_used_for_last_chart()
@@ -1366,7 +1163,7 @@ class analyze_data(tk.Frame):
      													dataType = 'object',
      													columnList = [columnName])
      		
-     		tk.messagebox.showinfo('Done ..','Cluster numbers were added.')
+     		tk.messagebox.showinfo('Done ..','Cluster numbers were added.', parent=self)
      
              
      def copy_file_to_clipboard(self, data):
@@ -1715,39 +1512,26 @@ class analyze_data(tk.Frame):
      	'''
      	There are x main classes that we need to restart a session.
      	'''
+     	tk.messagebox.showinfo('Note ..','Please not style changes on axis labels/ticks in main'+
+     							' figure templates are currently not saved.', parent=self)
      	## to save the last axis limits change
      	self.plt.save_axis_limits()
      	## create collection to be saved
      	saveCollectionDict = {'plotter':self.plt,
      						  'sourceData':self.sourceData,
+     						  'mainFigureCollection':self.mainFigureCollection,
      						  'curveFitCoellection':self.curveFitCollection,
      						  'clusterAnalysis':self.clusterCollection,
      						  'classificationAnalysis':self.classificationCollection,
      						  'anovaTests':self.anovaTestCollection,
      						  'dimReductionTests':self.dimensionReductionCollection}
      						  
-     						  
-     	save_and_load_sessions.save_session(saveCollectionDict)
-     	tk.messagebox.showinfo('Done..','Session has been saved.')
-     	
-
-     def save_all_figures_no_display(self,event,save_format):
-         
-         if len(self.plots_plotted) == 0:
-             return
-         get_current_cmap =  self.cmap_in_use.get()
-         saved_swarm =  self.add_swarm_to_new_plot
-         
-         for key, plot_info in self.plots_plotted.items() :
-
-            
-             self.add_swarm_to_new_plot = plot_info[-1]
-             self.cmap_in_use.set(plot_info[3])
-             settings = plot_info[0:-1]  + [0,1,key,save_format]             
-             self.prepare_plot(*settings)
-         messagebox.showinfo('Done','All generated charts were saved.')
-         self.cmap_in_use.set(get_current_cmap)                  
-         
+     	try:					  
+     		performed = save_and_load_sessions.save_session(saveCollectionDict)
+     		if performed != False:
+     			tk.messagebox.showinfo('Done..','Session has been saved.')
+     	except Exception as e:
+     		tk.messagebox.showinfo('Error ..','Session not saved.\nError {}'.format(e))               
          
            
      def clean_up_dropped_buttons(self, mode = 'all', replot = True):
@@ -1788,6 +1572,7 @@ class analyze_data(tk.Frame):
          
          self.plt = savedSession['plotter']
          self.sourceData = savedSession['sourceData']
+         self.mainFigureCollection = savedSession['mainFigureCollection']
          self.curveFitcollection = savedSession['curveFitCoellection']
          self.clusterCollection = savedSession['clusterAnalysis']
          self.classificationCollection = savedSession['classificationAnalysis']
@@ -1795,17 +1580,91 @@ class analyze_data(tk.Frame):
          self.dimensionReductionCollection = savedSession['dimReductionTests']
          self.plt.define_new_figure(self.f1)
          self.plt.reinitiate_chart()
-         
-
+         if self.plt.nonCategoricalPlotter is not None:
+         	if self.plt.nonCategoricalPlotter.createIntWidgets:
+         		self.interactiveWidgetHelper.create_widgets(plotter=self.plt)
          
          dataTypeColumCorrelation = self.sourceData.dfsDataTypesAndColumnNames
          file_names = self.sourceData.fileNameByID
          self.DataTreeview.add_all_data_frame_columns_from_dict(dataTypeColumCorrelation,file_names)
+         if self.plt.plotCount in self.plt.plotHistory:
+         	numericColumns, categoricalColumns  = self.plt.get_active_helper().columns
+         	self.place_buttons_in_receiverbox(numericColumns, dtype = 'numeric')
+         	self.place_buttons_in_receiverbox(categoricalColumns, dtype = 'category')
          
-         numericColumns, categoricalColumns  = self.plt.get_active_helper().columns
-         self.place_buttons_in_receiverbox(numericColumns, dtype = 'numeric')
-         self.place_buttons_in_receiverbox(categoricalColumns, dtype = 'category')
- 
+         self.open_main_figures()
+         tk.messagebox.showinfo('Done ..','Session loaded. Happy working.', parent=self)
+     	
+     def open_main_figures(self): 
+     	'''
+     	'''
+     	## reinitiate self.mainFigures dict since we had to delete it before save
+     	self.mainFigureCollection.mainFigures = dict()
+     	self.mainFigureCollection.analyze = self
+     	## 
+     	createdFigs = self.mainFigureCollection.mainFigureTemplates     	
+     	for figureId, axisParameters in createdFigs.items():
+     		
+     		main_figures.mainFigureTemplateDialog(self.mainFigureCollection,figureId)
+     		
+     		self.mainFigureCollection.mainFigures[figureId]['template'].restore_axes(axisParameters)
+     		axisDict = self.mainFigureCollection.exportDetails[figureId]
+     		
+     		figText = self.mainFigureCollection.figText[figureId] 
+     		if len(figText) > 0:
+     			for id , props in figText.items():
+     				text = self.mainFigureCollection.mainFigures[figureId]['figure'].text(**props)
+     				self.mainFigureCollection.mainFigures[figureId]['template'].textsAdded[id] = text
+     				     		
+     		for axisId,exportDetails in axisDict.items():
+     			
+     			if 'path' in exportDetails:
+     				try:
+     					self.mainFigureCollection.mainFigures[figureId]\
+     					['template'].add_image_to_axis(pathToFile = exportDetails['path'], \
+     					axisId =axisId)
+     				except:
+     					tk.messagebox.showinfo('Error..','Could not load image. Moved to another place?')
+     				
+     			else:
+     				plotter = [plotter for plotter in self.plt.plotHistory[exportDetails['plotCount']]\
+     				if plotter is not None]
+     				_,_,plotType,_ = self.plt.plotProperties[exportDetails['plotCount']]
+     				
+     				# check if we had a hclust or corrmatrix 
+     				# special because they have inmutable axes
+     				if plotType in ['hclust','corrmatrix']:
+     						storeId = plotter[0]._hclustPlotter.exportId
+     						plotter[0]._hclustPlotter.fromSavedSession = True 
+     						plotter[0]._hclustPlotter.exportId =  exportDetails['exportId']
+     				
+     				## limits -> axis limits used when exported on main figure template
+     				limits = exportDetails['limits']
+     				ax = self.mainFigureCollection.mainFigures[figureId]['template'].figureProps[axisId]['ax']
+     				
+     				# check how export was done (grids, boxes..)
+     				boxBool, gridBool = exportDetails['boxBool'], exportDetails['gridBool']
+     				## export again with saved settings
+     				plotter[0].export_selection(ax,exportDetails['subplotNum'],
+     					self.mainFigureCollection.mainFigures[figureId]['figure'], 
+     					limits = limits,boxBool = boxBool, gridBool = gridBool)
+     					
+     				self.mainFigureCollection.mainFigures[figureId]['template'].extract_artists(ax,axisId)
+     				
+     				if plotType in ['hclust','corrmatrix']:
+     					plotter[0]._hclustPlotter.exportId  = storeId
+     					axes = plotter[0]._hclustPlotter.exportAxes[exportDetails['exportId']]
+     					self.mainFigureCollection.mainFigures[figureId]['template'].associate_axes_with_id(axisId,axes)
+     		
+     		self.mainFigureCollection.mainFigures[figureId]['figure'].canvas.draw()
+  
+     		
+     def setup_main_figure(self): 
+     	'''
+     	Setup main figure
+     	'''
+     	main_figures.mainFigureTemplateDialog(self.mainFigureCollection)
+   
      def melt_data(self): 
      	'''
      	Melts the data using selected columns. Enters new data columns into the source treeview.
@@ -2580,7 +2439,6 @@ class analyze_data(tk.Frame):
          colnames = list(self.selectedNumericalColumns.keys())
          catnames = list(self.selectedCategories.keys())
          used_plot_style = self.plt.currentPlotType
-         #if used_plot_style is None: used_plot_style = ''
          n_col = len(colnames)
          n_categories = len(catnames)
          if used_plot_style == 'hclust' and n_categories > 0:
@@ -2601,15 +2459,13 @@ class analyze_data(tk.Frame):
          elif n_col == 2 and n_categories == 0 and used_plot_style != 'time_series':    
              plot_type = 'scatter'
          else:
-             if len(last_called_plot) > 0:
-                 
+             if self.plt.plotCount > 0:
                  if used_plot_style not in ['density','countplot','scatter','PCA']:
                      plot_type = used_plot_style
                  else:
                      plot_type = 'boxplot'
              else:
                  plot_type = 'boxplot'
-         
          return plot_type
          
                       
@@ -2624,15 +2480,10 @@ class analyze_data(tk.Frame):
          if self.mot_button is not None:
          	self.mot_button.destroy()
          	self.mot_button = None
-
          
          dataFrames = self.DataTreeview.dataFramesSelected
-                  
          self.sourceData.set_current_data_by_id(dataFrames[0])
-         
-
-         
-         
+                  
          if analysis == '':
              if widget == self.source_treeview:
              	return
@@ -2817,13 +2668,15 @@ class analyze_data(tk.Frame):
              
              
              columnSelected = self.DataTreeview.columnsSelected
-             alreadyUsedColors = self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+             if 'change_color_by_categorical_columns' in self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges:
+             	alreadyUsedColors = self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+             else:
+             	alreadyUsedColors = []
              self.DataTreeview.columnsSelected = alreadyUsedColors + columnSelected
              proceed = self.update_color(add_new_cat = True)
              
              if proceed:
                  self.color_button_droped.configure(text = "Multiple")
-             
             
          elif analysis:
          
@@ -2850,9 +2703,6 @@ class analyze_data(tk.Frame):
                          self.stat_button_droped = create_button(self.interactiveWidgetHelper.frame, text = s, 
                          										image= self.but_stat_icon, compound=tk.CENTER)
                         
-                         if self.test == '1W-ANOVA' or self.test =='Kruskal-Wallis':
-                             self.stat_button_droped.configure(command = lambda: self.design_popup(mode = 'Multiple comparision'))
-                         
                          self.stat_button_droped.grid(columnspan=2, padx=0, pady=1)
                          self.stat_button_droped.bind(right_click, self.remove_stat_)
                                               
@@ -2886,10 +2736,11 @@ class analyze_data(tk.Frame):
                      elif self.test in clustering.availableMethods:
                      
                      	clustering.clusteringDialog(self.sourceData,self.plt, self.DataTreeview, 
-                     								self.clusterCollection , 
+                     								self.clusterCollection , self.interactiveWidgetHelper,
                      								numericColumns = list(self.selectedNumericalColumns.keys()),
                      								initialMethod = self.test,
-                     								cmap = self.cmap_in_use.get())   
+                     								cmap = self.cmap_in_use.get())
+                     	
                      								
                      elif self.test in classification.availableMethods:
                      	tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.')
@@ -2944,8 +2795,6 @@ class analyze_data(tk.Frame):
                          
                      elif self.test in stats.dimensionalReductionMethods:
                      	
-                         if self.dimReduction_button_droped is not None:
-                         	self.dimReduction_button_droped.destroy()
                          
                          self.interactiveWidgetHelper.clean_frame_up()  
                          self.dimReduction_button_droped = create_button(self.interactiveWidgetHelper.frame, text = s, 
@@ -3061,11 +2910,6 @@ class analyze_data(tk.Frame):
          			_,_,scat = subset_and_scatter
          			scat.set_sizes([val])	
            
-         elif plot_type == 'scatter_matrix':
-             for key, scatter in self.axes_scata_dict.items():
-                 length = self.length_of_data.get(key)                
-                 scatter.set_sizes([5]*length)
-                 
          if self.size_leg is not None:        
              self.size_leg.remove()         
          self.canvas.draw()
@@ -3210,28 +3054,6 @@ class analyze_data(tk.Frame):
          self.plt.redraw()
          display_data.dataDisplayDialog(df,showOptionsToAddDf = True)
              
-            
-             
-                     
-                
-         
-     def add_to_stat_dict(self,widget):
-         
-          ##print(widget)
-          if self.count in self.widgets_for_stat:
-                 base = self.widgets_for_stat[self.count]
-                 base.extend(widget)
-                 
-                 ##print("hi - here is erged",base)
-                 self.widgets_for_stat[self.count] = base
-          else:       
-                 if type(widget) is list:
-                     ##print("Hi")
-                     ##print(widget)
-                     self.widgets_for_stat[self.count] = widget
-                 else:                         
-                     self.widgets_for_stat[self.count] = [widget] 
-                 
                  
   
      def return_string_for_buttons(self, items_for_col, lim = 12):
@@ -3245,17 +3067,6 @@ class analyze_data(tk.Frame):
          return s
          
                
-  
-     def copy_stat_results_to_clipboard(self,event, whole=False):
-         if whole == False:
-             sel_rows = self.stats_treeview.selection()   
-             sel_rows_int = [int(idx) for idx in sel_rows]
-             df_to_copy =self.stats_data.iloc[sel_rows_int]
-             
-         else:
-             df_to_copy = self.stats_data
-         self.copy_file_to_clipboard(df_to_copy)   
-             
      			
      def categorical_column_handler(self,mode):
      	'''
@@ -3303,7 +3114,6 @@ class analyze_data(tk.Frame):
          plotHelper = self.plt.get_active_helper()
          plotHelper.add_regression_line(list(self.selectedNumericalColumns.keys())) 
          self.plt.redraw()
-       #  self.canvas_main_created[fig_id].draw()     
 
          
      def add_lowess(self):
@@ -3332,14 +3142,11 @@ class analyze_data(tk.Frame):
      	if data_.equals(self.sourceData.df):
      		pass
      	else:
-     		quest = tk.messagebox.askquestion('Confirm ..','Would you like to update?')
+     		quest = tk.messagebox.askquestion('Confirm ..','Data changed. Would you like to update?')
      		if quest == 'yes':
      			self.sourceData.update_data_frame(id=currentDataSelection[0],
          													dataFrame = data_)
-     			self.update_all_dfs_in_treeview()
-      			
-      			
-     	
+     			self.update_all_dfs_in_treeview()     	
      		else:
      			pass
      	return
@@ -3763,7 +3570,6 @@ class analyze_data(tk.Frame):
              self.center_y = False
              self.log_x = False
              self.log_y = False
-             self.closest_gn_bool = False
              self.col_num_for_stat = None
              self.size_leg = None
              self.label_button_droped = None
@@ -3792,6 +3598,7 @@ class analyze_data(tk.Frame):
              self.colormaps.clear() 
              self.annotations_dict.clear() 
              self.remove_mpl_connection(plot_type = plot_type) 
+             self.selection_press_event = None
              self.subsets_and_scatter_with_cat.clear() 
              self.original_vals = []
              self.define_some_stuff_before_plot()
@@ -4218,26 +4025,7 @@ class analyze_data(tk.Frame):
             
              #self.canvas.widgetlock(self.lasso)   
                          
-     def clean_up_global_anno_dict(self,artist):
-         base = self.global_annotation_dict[self.count]
-         base = [artist_ for artist_ in base if artist_ != artist]
-         self.global_annotation_dict[self.count] = base
-                                    
 
-     def add_annotation_to_global_dict(self,an_,in_dict = False):
-         '''
-         Saves annotations to global dict, that they can be deleted
-         Input: Annotation object
-         Output: Modified Order dict : self.global_annotation_dict
-         '''
-         if in_dict or self.count in self.global_annotation_dict:
-             
-             base = self.global_annotation_dict[self.count]
-             base.append(an_)
-             self.global_annotation_dict[self.count] = base
-         else:
-             self.global_annotation_dict[self.count] = [an_]                               
-             
          
      def callback(self,verts):
 
@@ -4420,21 +4208,6 @@ class analyze_data(tk.Frame):
                                                  side="top",fill='both',expand=True)
              self.canvas._tkcanvas.pack(in_=self.frame,
                                                  side="top",fill='both',expand=True)
-         else:
-             
-             self.canvas_main_created[fig_id] = FigureCanvasTkAgg(f1,self.frame_main)
-             canvas = self.canvas_main_created[fig_id]
-             self.col_num_for_stat = None
-             #self.canvas.mpl_connect('button_press_event', self.onDoubleClick_axes)
-             #f1.canvas.mpl_connect('button_press_event', lambda e: self.is_just_outside(f1, e))
-             canvas.show()
-             self.toolbar_main = NavigationToolbar2TkAgg(canvas, self.cont_)
-             canvas.get_tk_widget().pack(in_=self.frame_main,
-                                                 side="top",fill='both',expand=True)
-             canvas._tkcanvas.pack(in_=self.frame_main,
-                                                 side="top",fill='both',expand=True)
-         
-         
 
      
      def sortby(self,tree, col, descending, data_file):
@@ -4643,9 +4416,7 @@ class analyze_data(tk.Frame):
          	x = w_screen/2 - size[0]/2
          	y = h_screen/2 - size[1]/2
          	toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
-         	
-         self.search_cat = tk.StringVar() 
-         
+         	         
          if mode not in ['Chart configuration','Size setting','Data','Change column name']:
 
          	popup=tk.Toplevel(bg=MAC_GREY)
@@ -4658,7 +4429,7 @@ class analyze_data(tk.Frame):
              _,catnames,plot_type,_ = self.plt.current_plot_settings
              size = self.settings_points['sizes'][0]
              size_handle = size_configuration.SizeConfigurationPopup(platform,self.f1,self.canvas,plot_type,size, catnames,
-             				self.subsets_and_scatter_with_cat, self.axes_scata_dict,self.filt_source_for_update,self.length_of_data)
+             				self.subsets_and_scatter_with_cat, self.axes_scata_dict,self.filt_source_for_update)
 
              self.settings_points['sizes'] = [size_handle.size]
              self.plt.set_scatter_point_properties(size = size_handle.size)
@@ -4720,732 +4491,7 @@ class analyze_data(tk.Frame):
          			else:
          				pass
          		return
-
-
-
-             
-         elif mode == 'Setup main figure ...':
-             def close_(popup,fig_id):
-                 quest = tk.messagebox.askquestion('Closing..','Closing main figure window. Proceed?',parent=popup)
-                 if quest == 'yes':
-                     fig = self.main_figures_created[fig_id]
-                     fig.clf()
-                     plt.close(fig)
-                     del self.canvas_main_created[fig_id]
-                     del self.main_figures_created[figure_id] 
-
-                     l_to_delete = [key for key in self.annotation_main.keys() if 'Figure__'+str(fig_id) in key]
-                     ent_ = self.menu_items_for_main[fig_id]
-                     for i in ent_:
-                        
-                                 self.main_figure_menu.delete(i)
-                   
-                     del self.menu_items_for_main[fig_id]
-                     for dl in l_to_delete:
-                         del self.annotation_main[dl]     
-                     l_to_delete = [key for key in self.artists_in_main_figure.keys() if  'Figure__'+str(fig_id) in key]
-                     for dl in l_to_delete:
-                         del self.artists_in_main_figure[dl]
-                     
-                     l_to_delete = [key for key in self.all_adjustable_txts.keys() if 'Figure__'+str(fig_id) in key]                  
-                     for dl in l_to_delete:
-                         del self.all_adjustable_txts[dl]    
-                     l_to_delete = [key for key in self.dict_saving_main_figures_axes.keys() if 'Figure__'+str(fig_id) in key] 
-                     for dl in l_to_delete:
-                     	del self.dict_saving_main_figures_axes[dl]   
-                 	
-                     popup.destroy()
-                 else:
-                     return
-                     
-                     
-             def on_click(event, fig_id,out, all_txts_):
-#                 fig = self.main_figures_created[fig_id]
             
-                canvas = self.canvas_main_created[fig_id]
-                if all_txts_ is not None:
-                    for txt in all_txts_:
-                        txt.set_bbox(None)
-                        self.moving_labels[figure_id].set_bbox(None)
-    
-                    canvas.draw()
-                canvas.mpl_disconnect(self.position_text)
-                canvas.mpl_disconnect(self.flow_label)
-                #canvas.mpl_disconnect(self.leave_figure)
-                if 'Figure__'+str(fig_id)+'_Text' in self.artists_in_main_figure:
-                    main_texts = self.artists_in_main_figure['Figure__'+str(fig_id)+'_Text']['MainText']
-                    main_texts.append(self.moving_labels[figure_id])
-                else:
-                    main_texts = [self.moving_labels[figure_id]]
-                    
-                self.artists_in_main_figure['Figure__'+str(fig_id)+'_Text']= {'MainText':main_texts}
-                
-                
-                if 'Figure__'+str(fig_id) in self.all_adjustable_txts:
-                    
-                    base = self.all_adjustable_txts['Figure__'+str(fig_id)] 
-                    base = base + main_texts
-                    base = list(OrderedDict((x, True) for x in base).keys())
-                else:
-                    base = [item for item in main_texts]
-                    
-                self.all_adjustable_txts['Figure__'+str(fig_id)]  = base
-                                         
-                self.moving_labels[figure_id] = None 
-                
-             def clear_fig(fig_id,label,row_pos, col_pos):
-                 
-                 label.set('a')
-                 row_pos.set('1')
-                 col_pos.set('1')
-                 fig = self.main_figures_created[fig_id]
-                 fig.clf()
-                 l_to_delete = [key for key in self.annotation_main.keys() if 'Figure__'+str(fig_id) in key]
-                 ent_ = self.menu_items_for_main[fig_id]
-                 for i in ent_:
-                                 self.main_figure_menu.delete(i)
-                 self.menu_items_for_main[fig_id] = []               
-                 for dl in l_to_delete:
-                         del self.annotation_main[dl]    
-                 self.moving_labels[figure_id] = None 
-                                   
-                 l_to_delete = [key for key in self.artists_in_main_figure.keys() if  'Figure__'+str(fig_id) in key]
-                 for dl in l_to_delete:
-                     del self.artists_in_main_figure[dl]
-                 
-                 l_to_delete = [key for key in self.all_adjustable_txts.keys() if 'Figure__'+str(fig_id) in key]                  
-                 for dl in l_to_delete:
-                     del self.all_adjustable_txts[dl]
-                     
-                 l_to_delete = [key for key in self.dict_saving_main_figures_axes.keys() if 'Figure__'+str(fig_id) in key] 
-                 for dl in l_to_delete:
-                 	del self.dict_saving_main_figures_axes[dl] 
-                 	del self.dict_saving_axes_in_main_figures[dl]
-                     
-                 l_to_delete = [key for key in self.connect_main_ax_to_heatmap.keys() if 'Figure__'+str(fig_id) in key]  
-                 for dl in l_to_delete:
-                        del self.connect_main_ax_to_heatmap[dl]                         
-                 self.canvas_main_created[fig_id].draw()
-                 
-             
-                
-                
-                
-             def clean_up_adding_text(event, fig_id):
-                 
-                 canvas.mpl_disconnect(self.position_text)
-                 canvas.mpl_disconnect(self.flow_label)
-                 
-                 self.moving_labels[figure_id] = None
-                 
-             def build_label(event,out,fig_id,pos_all,all_txts_):
-                 
-                 #print(event)
-                 fig = self.main_figures_created[fig_id]
-                 canvas = self.canvas_main_created[fig_id]
-                 fig_coord = fig.transFigure.inverted().transform((event.x,event.y)).tolist()
-                 if self.moving_labels[figure_id]  is None:
-                     
-
-                         if out[4] == 'roman':
-                             out[4] = 'normal'
-                         self.moving_labels[figure_id]  = fig.text(fig_coord[0],fig_coord[1],
-                                 out[0], fontdict = {'weight':out[3], 'size':int(float(out[2])), 'family':out[1],'style':out[4],'color':out[5],'ha':out[7],'rotation':out[6]})
-                         
-                         
-                         canvas.draw()
-
-
-                 else:
-                         if pos_all is not None:
-                             
-                             idx_pos = [pos_all.index(pos) for pos in pos_all if abs(fig_coord[0] - pos[0]) < 0.0009 or abs(fig_coord[1] - pos[1]) < 0.0009] 
-                             
-                             
-                             if len(idx_pos) > 0:
-                                 self.moving_labels[figure_id].set_bbox(dict(facecolor='none', edgecolor="#4C626F", pad=0))  
-                                 for idx in idx_pos:
-                                     all_txts_[idx].set_bbox(dict(facecolor='none', edgecolor="#4C626F", pad=0))
-                             else:
-                                 self.moving_labels[figure_id].set_bbox(None)  
-                                 for txt in all_txts_:
-                                     txt.set_bbox(None)
-                                 
-                        # background = canvas.copy_from_bbox()        
-                                 
-                         self.moving_labels[figure_id].set_position((fig_coord[0],fig_coord[1]))
-                         canvas.draw()
-
-
-
-                 
-             def add_text(fig_id,info_lab,popup):
-                 self.moving_labels[figure_id] = None
-                 fig = self.main_figures_created[fig_id]
-
-                 out = txt_editor.create_txt_widget(platform,fig,fig_left = self.left_align, fig_right = self.right_align  , fig_center =  self.center_align )
-                 popup.focus_force()
-                 
-                 if out[0] == '' or out[0] == 'InstantSaysNone___***444':
-                     return
-                 info_lab.configure(text = 'Place text in main figure')
-                 if 'Figure__'+str(fig_id) in self.all_adjustable_txts:
-                     all_txts_ = self.all_adjustable_txts['Figure__'+str(fig_id)]
-                     
-                     all_txts_pos = [txt.get_position() for txt in all_txts_]
-                 else:
-                     all_txts_pos = None
-                     all_txts_  = None
-
-                 
-                 self.flow_label = self.canvas_main_created[fig_id].mpl_connect('motion_notify_event', lambda event, out = out,all_txts_pos = all_txts_pos, all_txts_ = all_txts_: build_label(event,out,fig_id,all_txts_pos, all_txts_))
-                 
-                 self.position_text = self.canvas_main_created[fig_id].mpl_connect('button_press_event',lambda event, fig_id = fig_id, out= out, all_txts_ = all_txts_ :on_click(event, fig_id, out, all_txts_))
-                 self.canvas_main_created[fig_id].draw()   
-                 
-             def del_clicked_axis(event,fig,canvas,fig_id,but_del,rows,cols,label):
-                 
-                 
-                 if event.inaxes is None:
-                     return
-
-                 ax = event.inaxes                 
-                 
-
-                 ax_key = 'Figure__'+str(fig_id)+'_'+str(ax)
-                 del_ = True
-                 if ax_key in self.connect_main_ax_to_heatmap:
-                 	axes = self.connect_main_ax_to_heatmap[ax_key]
-                 	for ax_ in axes:                 		
-                 		fig.delaxes(ax_)
-                 	del self.connect_main_ax_to_heatmap[ax_key]
-                 	del_ = False
-                 else:
-                 	for key,item in self.connect_main_ax_to_heatmap.items():
-                 		if ax in item:
-                 			for ax_ in item:
-                 				fig.delaxes(ax_)
-                 				#key_ = 'Figure__'+str(fig_id)+'_'+str(ax_)
-                 			ax_key = key 
-                 	if ax_key in self.connect_main_ax_to_heatmap:                 	
-                 		del self.connect_main_ax_to_heatmap[ax_key]
-                 		del_ = False
-                 	
-                 if del_:		
-                 	fig.delaxes(ax)
-                 else:
-                 
-                 	ax = self.annotation_main[ax_key][0]
-                 	fig.delaxes(ax)
-                 			
-                 l_to_delete = [[key,items[-1]] for key,items in self.annotation_main.items() if items[0] == ax]
-                 ents_ = [] 
-
-                 for dl in l_to_delete:
-                         ents_.append('Figure '+str(fig_id)+' - Add to Subplot '+dl[-1])
-                         del self.annotation_main[dl[0]]  
-                         del self.dict_saving_main_figures_axes[dl[0]] 
-                         del self.dict_saving_axes_in_main_figures[dl[0]]  
-                         #print(self.annotation_main)
-                         
-                        
-                 ent_ = self.menu_items_for_main[fig_id]
-                 for i in ent_:
-                     if i in ents_:
-                         self.main_figure_menu.delete(i)
-                         ent_.remove(i)
-                         
-
-                 self.menu_items_for_main[fig_id] = ent_        
-                 if ax_key in self.artists_in_main_figure:
-                 	del self.artists_in_main_figure[ax_key]
-                         
-                 canvas.draw()
-                 
-                 if len(fig.axes) == 0:
-                     canvas.mpl_disconnect(self.deleting_axis)                   
-                     but_del.config(image=self.main_fig_delete)
-                     self.deleting_axis = None
-                     rows.set('1')
-                     cols.set('1')
-                     label.set('a')
-                     #info_lab.configure(text='Cleaned up - Well done.')
-                     return 
-
-                 
-             def delete_axis(event,fig_id,but_del,rows,cols,label):
-                 canvas = self.canvas_main_created[fig_id]
-                 fig = self.main_figures_created[fig_id]
-                 if self.deleting_axis is not None:
-                     canvas.mpl_disconnect(self.deleting_axis)
-                     event.widget.config(image=self.main_fig_delete)
-                     self.deleting_axis = None
-                     info_lab.configure(text='Cleaned up - Well done.')
-                     return 
-
-                 info_lab.configure(text='Click on subplot to delete it')
-                 event.widget.config(image=self.main_fig_delete_active)
-                 self.deleting_axis = canvas.mpl_connect('button_press_event', lambda event, fig = fig, canvas  = canvas,fig_id=fig_id,but_del = event.widget, rows=rows,cols=cols,label =label :del_clicked_axis(event,fig,canvas,fig_id,but_del,rows,cols,label))
-                 
-                 
-                 
-                 
-             def add_image(fig_id,popup,info_label):
-                     check_ = [ent for ent in self.annotation_main.keys() if 'Figure__'+str(fig_id) in ent]
-                     if len(check_) == 0:
-                         tk.messagebox.showinfo('Create axis ..','Please create an axis before adding images.', parent = popup)
-                         return
-                     
-                     path_to_add_file = tf.askopenfilename(initialdir=self.folder_path.get(),
-                                                             title="Choose File",parent = popup)
-                     
-                     if path_to_add_file is None:
-                         return
-                     try:
-                         im = plt.imread(path_to_add_file)      
-                     except ValueError:
-                         tk.messagebox.showinfo('Error','At the moment only .png files can be added to axis.')
-                         return 
-                     info_lab.configure(text='Please note that the original resolution is restored upon export.')
-                     
-                     ax_name = choose_subplot.ask_for_subplot(self.annotation_main,fig_id,platform)
-                     
-                     ax_key = ax_name[-1]
-                        
-                      
-                      
-                     ax_,lab = self.annotation_main[ax_key]
-                     
-                     lab_01 = self.artists_in_main_figure[ax_key] 
-                     del self.annotation_main[ax_key]
-                     
-                    # b_ = self.menu_items_for_main[fig_id]
-                     #idx_ = b_.index('Figure '+str(fig_id)+' - Add to Subplot '+lab)    
-                     
-                     pos1 = ax_.get_position() 
-                     if ax_ is None:
-                         return
-                     ax_.imshow(im)
-                     ax_.axis('off') 
-                     
-                     self.canvas_main_created[fig_id].draw()
-                     pos2 = ax_.get_position() 
-                     if pos2.y1-pos2.y0 < pos1.y1:
-                         pos1_y = pos1.y1 - (pos2.y1-pos2.y0)
-                     else:
-                         pos1_y = pos1.y0                    
-                     new_ = [pos1.x0,pos1_y, (pos2.x1-pos2.x0),(pos2.y1-pos2.y0)]                     
-                     ax_.set_position(new_) 
-                     self.canvas_main_created[fig_id].draw()   
-
-
-                                                      
-                     self.annotation_main['Figure__'+str(fig_id)+'_'+str(ax_)] = [ax_,lab]                  
-                     self.artists_in_main_figure['Figure__'+str(fig_id)+'_'+str(ax_)] = lab_01
-
-                                            # b_[idx_] = 'Figure '+str(fig_id)+' - Add to Subplot '+out[0]
-                                             #self.menu_items_for_main[fig_id] = b_                           
-                                                 
-                    # =  {'subplots':[anno]}   
-                     
-             def add_axis(cols=None,rows=None,rowspan=None,colspan=None,row_pos=None,col_pos=None,label=None,fig_id=None,popup=None,info_lab=None,open_session = False):
-                 fig = self.main_figures_created[fig_id]
-                 r = int(float(rows.get()))
-                 c = int(float(cols.get()))
-                 r_pos = int(float(row_pos.get()))-1
-                 c_pos = int(float(col_pos.get()))-1
-                 r_span = int(float(rowspan.get()))
-                 c_span = int(float(colspan.get()))
-                 
-                 
-                 grid_spec = plt.GridSpec(r,c) 
-                 subplotspec = grid_spec.new_subplotspec(loc=(r_pos,c_pos),rowspan=r_span,colspan=c_span)
-                 
-                 try:
-                     ax_ = fig.add_subplot(subplotspec)
-                 except IndexError:
-                     tk.messagebox.showinfo('Error..','Position out of grid specification.', parent = popup)
-                     return 
-                     
-                 if 'Figure__'+str(fig_id)+'_'+str(ax_) in self.annotation_main:
-                     fig.delaxes(ax_)
-                     
-                     tk.messagebox.showinfo('Error..','Subplot already added at this position', parent = popup)
-                     return
-                 #ax_.tick_params('both', direction = 'in', which = 'both', width=0.5, pad = 2, length=3.5)
-                 #ax_.set_xticklabels([])
-                 #ax_.set_yticklabels([])
-                 
-                 font_ = 'Arial'
-                 col_ = 'black'
-                 size_ = 12
-                 rot_ = 0 
-                 weight_ = 'bold'
-                 ha_align = 'left'
-                 style_ = 'normal'
-                 keys_there =[key for key in  self.artists_in_main_figure.keys() if 'Figure__'+str(fig_id) in key and key != 'Figure__'+str(fig_id)+'_Text']
-                 if len(keys_there) != 0:   
-                                   
-                     for key_ in keys_there:
-                     	 
-                         an_ = self.artists_in_main_figure[key_]['subplots'][0]
-                         if an_ is not None:
-                             font_ = an_.get_fontname()
-                             col_ = an_.get_color()
-                             size_ = an_.get_size()
-                             rot_ = an_.get_rotation() 
-                             weight_ = an_.get_weight()
-                             ha_align = an_.get_ha() 
-                             style_ = an_.get_style() 
-                             break
-                         
-                         
-                 anno = ax_.annotate(label.get(),
-                    xy=(0.0, 1), xytext=(-12, 12),
-                    xycoords=('axes fraction'),
-                    textcoords='offset points',
-                    size=size_, ha=ha_align, va='bottom',fontweight=weight_,
-                    rotation = rot_, fontname = font_, color = col_, style = style_ )
-                 
-                 self.artists_in_main_figure['Figure__'+str(fig_id)+'_'+str(ax_)] =  {'subplots':[anno]}  
-                 if open_session == False: 
-                 	self.canvas_main_created[fig_id].draw()
-                 self.annotation_main['Figure__'+str(fig_id)+'_'+str(ax_)] = [ax_,label.get()]
-
-                 self.main_figure_menu.add_command(label='Figure '+str(fig_id)+' - Add to Subplot '+label.get(),  command = lambda ax_export =str(ax_), fig_id = fig_id  : self.perform_export(ax_export,fig_id), foreground="black") 
-
-                 b_ = self.menu_items_for_main[fig_id]
-                 b_.append('Figure '+str(fig_id)+' - Add to Subplot '+label.get())                 
-                 self.menu_items_for_main[fig_id] = b_
-                 if open_session:
-                 	return
-                 self.dict_saving_axes_in_main_figures['Figure__'+str(fig_id)+'_'+str(ax_)] = [r,c,r_pos,c_pos,r_span,c_span,label.get()]
-
-                 try:
-                     old_idx = self.alphabetic_label.index(label.get())
-                 except:
-                     old_idx = 0
-
-                 label.set(self.alphabetic_label[old_idx+1])  
-                 
-                 c_pos = c_pos + 1 + (c_span)
-                 
-                 if c_pos < c+1:
-                     col_pos.set(str(c_pos))
-                 else:
-                     col_pos.set('1')
-                     row_pos.set(str(r_pos+1+r_span))
-                 info_lab.configure(text='Axis has been added.')  
-
-             def identify_artist(event,fig_id):
-                 fig = self.main_figures_created[fig_id]
-                 
-                 base_keys = [key for key in self.artists_in_main_figure.keys() if 'Figure__'+str(fig_id)+'_' in key]
-
-                 for dicts in base_keys: 
-                     base = self.artists_in_main_figure[dicts]
-                     for keys,artist_list in base.items():
-                         
-                         for artist in artist_list:
-                             if artist is not None:
-                                 check = artist.contains(event)[0]
-                                 if check:
-                                 	if event.button == 3 or (event.button==2 and platform == 'MAC'):
-                                 	
-                                 		pass
-                                 	elif (event.button == 1 and event.dblclick):
-                                 		
-                                     		
-
-                                             
-                                             if keys in ['lines','collections','artists','patches']:
-                                             	#artist.set_fc('red')
-                                             	#print(dicts) 
-                                             	
-                                             	if dicts in self.annotation_main:
-                                                 	 	ax_ = self.annotation_main[dicts][0]
-                                                 	 	control_yticks = True
-                                                          
-                                             	else:
-
-                                                 	 	ax_ = self.connect_main_ax_heat[dicts]
-                                                 	 	control_yticks = True
-                                                       
-                                             	
-                                             	plot_type = last_called_plot[-1][-2]
-                                             	#print(last_called_plot)
-                                             	line_and_box_editor.line_editor(platform=platform, artist_type = keys, artist=artist, artist_list = artist_list, axis = ax_, plot_type = plot_type, cmap = self.cmap_in_use.get() )
-                                             	if control_yticks:
-                                                     for key,item in self.connect_main_ax_to_heatmap.items():
-                                                         self.reduce_tick_to_n(item[-1],'y',3)
-                                             else:	
-                                             	
-                                             	txt_ = artist.get_text()
-                                             	if dicts in self.connect_main_ax_heat:
-                                             		key_ = None ## dont apply to change for all axis
-                                             	
-                                             	else:
-                                             		key_ = keys
-                                             
-                                             
-                                             	out = txt_editor.create_txt_widget(platform,fig, edit_in_figure = True, input_string = txt_,
-                                                                                font = artist.get_fontname(), size = str(artist.get_size()), weight = artist.get_weight(), style = artist.get_style() ,color = artist.get_color(),rotation = str(artist.get_rotation()),
-                                                                                                          ha_align= artist.get_ha(),fig_left = self.left_align,fig_right = self.right_align ,fig_center =  self.center_align, key=key_)
-                                             	if out[0] == 'InstantSaysNone___***444':
-                                                 	return
-                                             	artist.set_text(out[0])
-                                             	artist.set_weight(out[3])
-                                             	artist.set_size(int(float(out[2])))
-                                             	artist.set_family(out[1])
-                                             	artist.set_color(out[5])
-                                             	artist.set_rotation(out[6])
-                                             	artist.set_ha(out[7])
-                                             	if out[4] not in ['normal','italic']:
-                                                 	out[4] = 'normal'
-                                             	artist.set_style(out[4])
-                        
-                                             	if out[8]:
-                                                 	for dic_ in base_keys:
-                                                         base = self.artists_in_main_figure[dic_]
-                                                 		#base = self.artists_in_main_figure[dic_]
-                                                         if keys in base:
-                                                 		#if keys in base:
-                                                             artist_list = base[keys]
-                                                             for art in artist_list:
-                                                                 if art is not None:
-                                            
-                                                                         art.set_weight(out[3])
-                                                                         art.set_size(int(float(out[2])))
-                                                                         art.set_family(out[1])
-                                                                         art.set_color(out[5])
-                                                                         art.set_rotation(out[6])
-                                                                         art.set_ha(out[7])
-                                                                         art.set_style(out[4])
-                                                                     
-                                                            
-                
-                                                 				
-                                             	elif out[9]:
-                                                     for art_ in artist_list:
-                                                         if  art_ is not None:   
-                                                             art_.set_weight(out[3])
-                                                             art_.set_size(int(float(out[2])))
-                                                             art_.set_family(out[1])
-                                                             art_.set_color(out[5])
-                                                             art_.set_rotation(out[6])
-                                                             art_.set_ha(out[7])
-                                                             art_.set_style(out[4])
-                                          
-                                                		 
-											 
-                                             if 'ticks' in keys and txt_ != out[0]:
-                                             	if dicts in self.annotation_main:
-                                                 	 	ax_ = self.annotation_main[dicts][0]
-                                             	else:
-
-                                                 	 	ax_ = self.connect_main_ax_heat[dicts]
-                                                 	 	
-                                             	if 'x' in keys:
-                                             		
-                                             		ax_.set_xticklabels(artist_list)
-                                             	else:
-                                             		ax_.set_yticklabels(artist_list)
-                                             
-                                                     
-                                             if 'subplots' in keys:
-                                                 self.annotation_main[dicts][1] = out[0]
-                                                 #print(self.annotation_main)
-                                                 self.main_figure_menu.entryconfigure('Figure '+str(fig_id)+' - Add to Subplot '+txt_, label ='Figure '+str(fig_id)+' - Add to Subplot '+out[0])
-                                                # print(fig_id)
-                                                 b_ = self.menu_items_for_main[fig_id]
-                                                 idx_ = b_.index('Figure '+str(fig_id)+' - Add to Subplot '+txt_)
-                                                 b_[idx_] = 'Figure '+str(fig_id)+' - Add to Subplot '+out[0]
-                                                 self.menu_items_for_main[fig_id] = b_
-                                          	#if (event.button == 1 and event.dblclick):
-                                            
-                                     		
-                                              
-                                         
-                 self.canvas_main_created[fig_id].draw()   
-        
-      
-             #main_figures.mainFigureCollection()
-             #return    
-             w = 845
-             h = 840
-             
-             self.figure_id_count += 1
-             
-             figure_id = self.figure_id_count# = self.figure_id_count + 1 
-             #figure_id = len(self.main_figures_created) +1      
-             cont = self.create_frame(popup)  
-             
-             self.moving_labels[figure_id] = None
-             
-             cont.pack(fill='both', expand=True)
-             cont.grid_columnconfigure(9, weight = 1)
-             #cont.grid_columnconfigure(0, weight = 1)
-             cont.grid_rowconfigure(10, weight=1)
-             popup.protocol("WM_DELETE_WINDOW", lambda: close_(popup,fig_id = figure_id))
-             var_rows = tk.StringVar()
-             var_rowspan = tk.StringVar()
-             var_cols = tk.StringVar() 
-             var_colspan = tk.StringVar() 
-             var_rowpos = tk.StringVar() 
-             var_colpos = tk.StringVar()
-            
-             var_subplot_label = tk.StringVar() 
-             var_subplot_label.set('a')
-             grid_setup = tk.Label(cont, text='Define grid layout for main figure',font = LARGE_FONT, 
-                                     fg="#4C626F", 
-                                     justify=tk.LEFT, bg = MAC_GREY)
-             
-             axis_setup = tk.Label(cont, text='Add axis to figure',font = LARGE_FONT, 
-                                     fg="#4C626F", 
-                                     justify=tk.LEFT, bg = MAC_GREY)
-             
-             position_setup = tk.Label(cont, text='Position (row,column): ', bg = MAC_GREY)
-             lab_row = tk.Label(cont, text = 'Rows: ', bg = MAC_GREY)
-             lab_cols = tk.Label(cont, text = 'Columns: ', bg = MAC_GREY)
-             info_lab = tk.Label(cont, text = 'Add subplots to build main figure', font = LARGE_FONT, 
-                                     fg="#4C626F", 
-                                     justify=tk.LEFT, bg = MAC_GREY)
-             fig_id_label = tk.Label(cont, text = 'Figure '+str(figure_id), font = LARGE_FONT, 
-                                     fg="#4C626F", 
-                                     justify=tk.LEFT, bg = MAC_GREY)
-
-             lab_rowspan = tk.Label(cont, text = 'Rowspan: ', bg = MAC_GREY)
-             lab_colspan = tk.Label(cont, text = 'Columnspan: ', bg = MAC_GREY)
-             lab_subplot = tk.Label(cont, text = 'Subplot Label: ', bg = MAC_GREY)
-             
-             combo_row = ttk.Combobox(cont, textvariable = var_rows, values = list(range(1,20)), width=5)
-             combo_col = ttk.Combobox(cont, textvariable = var_cols, values = list(range(1,20)), width=5)
-             
-             combo_rowspan = ttk.Combobox(cont, textvariable = var_rowspan, values = list(range(1,20)), width=5)
-             combo_colspan = ttk.Combobox(cont, textvariable = var_colspan, values = list(range(1,20)), width=5)
-             
-             
-             combo_rowspostion = ttk.Combobox(cont, textvariable =  var_rowpos, values = list(range(1,20)), width=5)
-             combo_colposition = ttk.Combobox(cont, textvariable = var_colpos, values = list(range(1,20)), width=5)
-             
-             
-             
-             combo_label = ttk.Combobox(cont, textvariable =  var_subplot_label, values = self.alphabetic_label, width=5)
-             
-             for var in [var_rows,var_rowspan,var_cols,var_colspan,var_rowpos,var_colpos]:
-                 if var in [var_rows,var_cols]:
-                     var.set('3')
-                 else:    
-                     var.set('1')
-
-  
-             grid_setup.grid(row=1, column = 0, sticky=tk.W, columnspan=6, padx=3,pady=5)              
-             lab_row.grid(row=2, column = 0,columnspan=2, sticky =tk.E,pady=3)
-             lab_cols.grid(row=2, column =4, sticky=tk.W,pady=3) 
-             combo_row.grid(row=2, column = 2, sticky=tk.W,pady=3)
-             combo_col.grid(row=2, column = 5, sticky=tk.W,pady=3)
-             
-             
-             fig_id_label.grid(row=2,column = 7, sticky = tk.E, columnspan=14, padx=30)
-             
-             ttk.Separator(cont, orient = tk.HORIZONTAL).grid(sticky=tk.EW, columnspan=15,pady=4)             
-             axis_setup.grid(row=4, column = 0, sticky=tk.W, columnspan=15,padx=3,pady=5)
-             position_setup.grid(row=5,column=0, sticky=tk.E, columnspan=2,pady=3) 
-             combo_rowspostion.grid(row=5, column = 2, sticky=tk.W,pady=3,padx=1)
-             combo_colposition.grid(row=5, column = 3, sticky=tk.W,pady=3,padx=1)                         
-             lab_rowspan.grid(row=5,column = 4, sticky=tk.E,pady=2)
-             lab_colspan.grid(row=5,column = 6, sticky=tk.W,pady=3)
-             combo_rowspan.grid(row=5,column = 5, sticky=tk.W,pady=3)
-             combo_colspan.grid(row=5,column = 7, sticky=tk.W,pady=3) 
-             lab_subplot.grid(row=5,column =8, sticky=tk.W,pady=3) 
-             combo_label.grid(row=5,column =9, sticky=tk.W,pady=3) 
-             ttk.Separator(cont, orient = tk.HORIZONTAL).grid(sticky=tk.EW, columnspan=15,pady=4)
-
-             self.menu_items_for_main[figure_id] =[]
-             self.main_figures_created[figure_id] = plt.figure(figsize=(8.27,11.7))
-             
-             self.main_figures_created[figure_id].subplots_adjust(top=0.94, bottom=0.05,left=0.1,right=0.95)
-
-             self.cont_ = tk.Frame(cont, background = MAC_GREY) 
-             
-             vert_ = VerticalScrolledFrame.VerticalScrolledFrame(cont)
-             vert_.grid(row=10,columnspan=16, sticky=tk.NSEW)
-             self.frame_main = tk.Frame(vert_.interior)
-
-             
-             if platform == 'WINDOWS':
-                 but_add_text = ttk.Button(cont, image = self.main_fig_add_text, command = lambda fig_id = figure_id,info_lab = info_lab: add_text(fig_id,info_lab,popup))  #fig_id = figure_id :  add_text(fig_id))
-                 but_clear = ttk.Button(cont, image = self.main_fig_clear , command = lambda fig_id = figure_id, label=var_subplot_label, row_pos = var_rowpos, col_pos = var_colpos :  clear_fig(fig_id,label,row_pos,col_pos))
-                 but_add_image = ttk.Button(cont, image =  self.main_fig_image, command = lambda: add_image(figure_id,popup,info_lab))  
-                 but_delete_ax = ttk.Button(cont, image = self.main_fig_delete)
-                 but_delete_ax.bind('<Button-1>', lambda event, figure_id = figure_id, info_lab = info_lab,rows = var_rowpos,cols= var_colpos,label=var_subplot_label: delete_axis(event,figure_id,info_lab,rows,cols,label))
-                 but_add_axis = ttk.Button(cont, image = self.main_add_axis, command = lambda cols = var_cols, rows = var_rows, rowspan =var_rowspan,
-                                                                               colspan = var_colspan, 
-                                                                               row_pos = var_rowpos,
-                                                                               col_pos = var_colpos, 
-                                                                               label = var_subplot_label,
-                                                                               fig_id = figure_id,
-                                                                               popup = popup,
-                                                                               info_lab = info_lab:add_axis(cols,rows,rowspan,colspan,row_pos,col_pos,label,fig_id,popup,info_lab))
-             
-             elif platform == 'MAC':
-                  but_add_text = tk.Button(cont, image = self.main_fig_add_text, command = lambda fig_id = figure_id,info_lab = info_lab: add_text(fig_id,info_lab,popup))
-                  but_clear = tk.Button(cont, image = self.main_fig_clear , command = lambda fig_id = figure_id,  label=var_subplot_label,row_pos = var_rowpos, col_pos = var_colpos  :  clear_fig(fig_id,label,row_pos,col_pos))
-                  but_add_image = tk.Button(cont, image =  self.main_fig_image, command = lambda: add_image(figure_id,popup,info_lab)) 
-                  but_delete_ax = tk.Button(cont, image = self.main_fig_delete)
-                  but_delete_ax.bind('<Button-1>', lambda event, figure_id = figure_id, info_lab = info_lab,rows = var_rowpos,cols= var_colpos,label=var_subplot_label: delete_axis(event,figure_id,info_lab,rows,cols,label))
-                  but_add_axis = tk.Button(cont, image = self.main_add_axis, command = lambda cols = var_cols, rows = var_rows, rowspan =var_rowspan,
-                                                                               colspan = var_colspan, 
-                                                                               row_pos = var_rowpos,
-                                                                               col_pos = var_colpos, 
-                                                                               label = var_subplot_label,
-                                                                               fig_id = figure_id,
-                                                                               popup = popup,
-                                                                               info_lab = info_lab:add_axis(cols,rows,rowspan,colspan,row_pos,col_pos,label,fig_id,popup,info_lab))
-             
-             but_add_axis.grid(row=7,column=0,padx=(4,2),pady=2) 
-             but_add_text.grid(row=7,column = 1,padx=2,pady=2)
-             but_delete_ax.grid(row=7,column=3,padx=2,pady=2) 
-             but_clear.grid(row=7,column = 4,padx=2,pady=2) 
-             #self.main_subs = dict() 
-             but_add_image.grid(row=7,column=2, padx=2,pady=2)
-             info_lab.grid(row=7,column=5, sticky=tk.W, padx=2,pady=2,columnspan=9)
-             self.frame_main.grid(columnspan=10)
-             self.cont_.grid(columnspan=16, sticky=tk.W)#+tk.EW)
-             self.display_graph(self.main_figures_created[figure_id], main_figure = True, fig_id = figure_id)
-             
-             
-             
-             self.canvas_main_created[figure_id].mpl_connect('button_press_event', lambda event: identify_artist(event,figure_id))
-
-             keys_= [key for key in self.dict_saving_axes_in_main_figures.keys() if 'Figure__{}_Axes'.format(self.figure_id_count) in key]
-             if len(keys_) != 0:
-             #if 'Figure__{}_Axes'.format(self.figure_id_count) in self.dict_saving_axes_in_main_figures:
-             	
-             	
-             	for key in keys_:
-             	
-             		setting = self.dict_saving_axes_in_main_figures[key]
-             		#print(setting) 
-             		var_rows.set(str(setting[0]))
-             		var_cols.set(str(setting[1]))
-             		
-             		var_rowpos.set(str(setting[2]+1))
-             		var_colpos.set(str(setting[3]+1))
-             		var_rowspan.set(str(setting[4]))
-             		var_colspan.set(str(setting[5]))
-             		var_subplot_label.set(str(setting[6]))
-             		add_axis(cols = var_cols,rows = var_rows,rowspan= var_rowspan,colspan=var_colspan,row_pos=var_rowpos,col_pos=var_colpos,
-             				label = var_subplot_label,fig_id = self.figure_id_count,popup = popup,info_lab = info_lab, open_session = True)
-             				
-             		if key in self.dict_saving_main_figures_axes:
-             			props = self.dict_saving_main_figures_axes[key]
-             			ax_export = self.annotation_main[key][0]
-             			self.perform_export(ax_export = str(ax_export),fig_id = self.figure_id_count, open_session = True)
-
-             
-             #cols,rows,rowspan,colspan,row_pos,col_pos,label,fig_id,popup,info_lab,open_session = False):             
-
              
              
 
@@ -5551,7 +4597,7 @@ class analyze_data(tk.Frame):
                           if scheme == self.cmap_in_use.get():
                               cb_col.state(['selected'])
                           cb_col.grid(column=row_to_be_placed+1, row = col_to_be_placed, padx=2, pady=2, sticky=tk.NW)
-                          CreateToolTip(cb_col,platform=platform,title_ = 'Color palette: '+scheme,
+                          CreateToolTip(cb_col,title_ = 'Color palette: '+scheme,
                           								text = 'Information for color palette'
                           								,showcolors = True,cm=scheme)
                           self.cb_list.append(cb_col)
@@ -5560,7 +4606,11 @@ class analyze_data(tk.Frame):
               self.slider_col.grid(row=10,columnspan=15, rowspan=5, sticky=tk.W, padx=5)   
               lab_alpha.grid(row=10,column=5, sticky=tk.E, rowspan=5, padx=25,pady=5, columnspan=4)  
               
+         
+         
+         
          elif mode == 'Hierarchical Clustering Settings':
+         
              def close_and_save(popup,vars_,cbs):
                  for i,met in enumerate(self.hclust_metrices):
                      self.hclust_metrices[i] = vars_[i].get() 
@@ -5911,31 +4961,13 @@ class analyze_data(tk.Frame):
               self.swarm_but = 0
               self.add_swarm_to_new_plot = False
               self.remove_mpl_connection()
-              self.plots_plotted.clear()
               self.performed_stats.clear() 
               self.count = 0 
-              self.idx_and_file_names.clear()
-              self.performed_AUC_calculations.clear()
-              self.anotation_for_AUC.clear() 
-              self.global_annotation_dict.clear()
-              self.save_auc_areas.clear()
               self.data_set_information.clear()
-              self.dict_saving_axes_in_main_figures.clear()
-              self.dict_saving_main_figures_axes.clear()
+
               self.f1.clf() 
-              self.canvas.draw() 
+              self.canvas.draw()               
               
-              
-              
-              
-         
-
-          if self.mark_side_labels is not None and len(self.mark_side_labels.keys()) > 0:
-              for keys,values in self.mark_side_labels.items():
-                  for widget in values:
-                      w = widget
-
-         
           
      def source_file_upload(self, pathUpload = None, resetTreeEntries = True):
           """Upload file, extract data types and insert columns names into the source data tree"""
@@ -5974,6 +5006,7 @@ class analyze_data(tk.Frame):
           else:
           	tk.messagebox.showinfo('Error..','File format not supported yet.')
           	return
+          
           if resetTreeEntries:
           	del self.sourceData
           	self.sourceData = data.DataCollection()
@@ -5987,22 +5020,26 @@ class analyze_data(tk.Frame):
           		id = self.sourceData.get_next_available_id()
           		fileName = '{}_{}'.format(sheetName,fileName)
           		self.sourceData.add_data_frame(dataFrame, id = id, fileName = fileName)
+          		self.sourceData.set_current_data_by_id(id)
+          		self.update_all_dfs_in_treeview()
+          		objectColumnList = self.sourceData.get_columns_data_type_relationship()['object']
+          		self.sourceData.fill_na_in_columnList(objectColumnList,naString)
+          
           else:
           		## add data frame to the sourceData class 
           	
           	id = self.sourceData.get_next_available_id()
-          	
           	self.sourceData.add_data_frame(uploadedDataFrame, id=id, fileName=fileName)
           	self.sourceData.set_current_data_by_id(id)
 		  
 		  ### extracts data type columns relationship and fills the source data
-          	
           	self.update_all_dfs_in_treeview()
-
-          ## avoid nan in data categorical columns
-          objectColumnList = self.sourceData.get_columns_data_type_relationship()['object']
-          self.sourceData.fill_na_in_columnList(objectColumnList,naString)
+          	## avoid nan in data categorical columns
+          	objectColumnList = self.sourceData.get_columns_data_type_relationship()['object']
+          	self.sourceData.fill_na_in_columnList(objectColumnList,naString)
+         
           self.sourceData.replaceObjectNan = naString
+          
           if resetTreeEntries:
 
           	self.plt = plotter._Plotter(self.sourceData,self.f1)
@@ -6014,6 +5051,7 @@ class analyze_data(tk.Frame):
      
      def update_all_dfs_in_treeview(self):
      	'''
+     	Updates the data frames added in the treeview
      	'''
      	dict_ = self.sourceData.dfsDataTypesAndColumnNames
      	file_names = self.sourceData.fileNameByID
@@ -6029,9 +5067,7 @@ class analyze_data(tk.Frame):
      	mergeDialog = mergeDataFrames.mergeDataFrames(self.sourceData, 
      												  self.DataTreeview,method)   
      	del mergeDialog
- 	
- 	
- 	
+ 	 	
  	         
      def add_new_dataframe(self,newDataFrame,fileName):
      	'''
@@ -6229,7 +5265,10 @@ class analyze_data(tk.Frame):
             
      def get_images(self):
             
-            
+           '''
+           Images are stored in base64 code in the module 'images'
+           '''
+          
            
            self.size_icon, self.color_icon, self.label_icon, \
            				self.filter_icon, self.selection_icon, self.tooltip_icon  = images.get_slice_and_mark_images()
@@ -6271,37 +5310,6 @@ class analyze_data(tk.Frame):
            self.add_swarm_icon = self.add_swarm_icon_
            self.remove_swarm_icon = self.remove_swarm_icon_
 			
-           if platform == 'WINDOWS':
-                   
-          #     self.figure_history_icon                       =        tk.PhotoImage(file=os.path.join(path_file,'icons','figure_history_icon.png'))
-           #    self.figure_history_icon_norm                       =        tk.PhotoImage(file=os.path.join(path_file,'icons','figure_history_icon_norm.png'))
-               
-              
-               
-                              
-               self.main_fig_add_text = tk.PhotoImage(file=os.path.join(path_file,'icons','main_figure_add_text.png'))
-               self.main_fig_clear = tk.PhotoImage(file=os.path.join(path_file,'icons','main_figure_clean.png')) 
-               self.main_fig_image = tk.PhotoImage(file=os.path.join(path_file,'icons','main_figure_image.png')) 
-               self.main_fig_delete = tk.PhotoImage(file=os.path.join(path_file,'icons','main_figure_delete_axis.png')) 
-               self.main_fig_delete_active = tk.PhotoImage(file=os.path.join(path_file,'icons','main_figure_delete_axis_active.png')) 
-               self.main_add_axis = tk.PhotoImage(file=os.path.join(path_file,'icons','main_add_axis.png')) 
-               
-               
-           else:
-               from PIL import Image, ImageTk
-               
-
- #              self.figure_history_icon                       =        ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','figure_history_icon.png')))
-#               self.figure_history_icon_norm                       =        ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','figure_history_icon_norm.png')))
-               
-               
-               
-               self.main_fig_add_text = ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_figure_add_text.png')))
-               self.main_fig_clear =  ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_figure_clean.png')))
-               self.main_fig_image = ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_figure_image.png')))
-               self.main_fig_delete = ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_figure_delete_axis.png')) )
-               self.main_fig_delete_active = ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_figure_delete_axis_active.png')) )
-               self.main_add_axis = ImageTk.PhotoImage(Image.open(os.path.join(path_file,'icons','main_add_axis.png')) )
            
      def grid_widgets(self,controller):
            '''
@@ -6395,7 +5403,7 @@ class analyze_data(tk.Frame):
            	#										command = self.show_graph_history)
            	
            
-           self.main_fig = create_button(self, image = self.main_figure_icon, command = lambda: self.design_popup(mode='Setup main figure ...')) 
+           self.main_fig = create_button(self, image = self.main_figure_icon, command = self.setup_main_figure) 
            sep_nav_ = ttk.Separator(self.plotoptions_sideframe, orient = tk.HORIZONTAL)
            self.label_nav = tk.Label(self.plotoptions_sideframe, text = "Navigation", bg=MAC_GREY)
            
