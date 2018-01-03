@@ -24,6 +24,12 @@ class hierarchichalClustermapPlotter(object):
 
 	def __init__(self,progressClass, dfClass, Plotter,figure,numericColumns = [], plotCorrMatrix = True):
 		
+		self.exportId = 0
+		self.exportAxes = {}
+		self.exportYLim = {}
+		self.savedLabels = {}
+		self.fromSavedSession = False
+		
 		self.progressClass = progressClass
 		self.colorData = pd.DataFrame() 
 		self.labelColumn = None
@@ -35,9 +41,10 @@ class hierarchichalClustermapPlotter(object):
 		self.plotCorrMatrix = plotCorrMatrix
 		
 		##retrieve hclust cmap and dendrogram settings from the Plotter helper.
-		
+		## updaten
+		self.plotter = Plotter
 		cmapClusterMap, self.cmapRowDendrogram, \
-		self.cmapColorColumn, self.metric, self.method = Plotter.get_hClust_settings()
+		self.cmapColorColumn, self.metric, self.method = self.plotter.get_hClust_settings()
 		
 		self.cmapClusterMap = get_max_colors_from_pallete(cmapClusterMap) ## to avoid same color over and over again
 
@@ -52,7 +59,7 @@ class hierarchichalClustermapPlotter(object):
 		self.df = data.dropna(subset=numericColumns)
 			
 		if self.plotCorrMatrix:
-			self.corrMethod = Plotter.corrMatrixCoeff
+			self.corrMethod = self.plotter.corrMatrixCoeff
 			self.df = self.df.corr(method = self.corrMethod).dropna()
 			
 		if self.df.empty:
@@ -163,6 +170,12 @@ class hierarchichalClustermapPlotter(object):
 		return state
 		
 	
+	def replot(self):
+		'''
+		'''
+		self.progressClass = Progressbar('Hierarchical Clustering ..')
+		self.create_cluster_map()
+		
 	def create_cluster_map(self,specificAxis=None,figure=None):
 		'''
 		'''
@@ -226,8 +239,6 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		'''
 		return sch.fcluster(linkage,maxD,'distance')		
-		
- 
 		
 	
 		
@@ -614,9 +625,12 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		Changes colormap of the pcolormesh
 		'''
+		self.plotter.cmapClusterMap = newCmap
 		newCmap = get_max_colors_from_pallete(newCmap)  
 		self.colorMesh.set_cmap(newCmap)
-		self.axColormap.yaxis.set_major_locator(mtick.MaxNLocator(3))		
+		self.axColormap.yaxis.set_major_locator(mtick.MaxNLocator(3))	
+		self.cmapClusterMap = newCmap	
+		
 		
 	def export_cluster_number_to_source(self):
 		'''
@@ -653,7 +667,7 @@ class hierarchichalClustermapPlotter(object):
 		
 	def export_selection(self, specificAxis = None,figure=None):
 		'''
-		We repeat here a lot of the function (create_cluster_map) but we beliebe that 
+		We repeat here a lot of the function (create_cluster_map) but we believe that 
 		it is cleaner like this. 
 		
 		Function to export the created Clustermap onto another axis (in the given range) 
@@ -669,24 +683,56 @@ class hierarchichalClustermapPlotter(object):
 		axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
 		self.adjust_axis_limits_and_labels(axClusterMap,axLabelColor,axRowDendro,axColumnDendro,axColormap,export=True)
 		
-		currentYLim = self.axClusterMap.get_ylim()
+		if self.fromSavedSession:
+			currentYLim = self.exportYLim[self.exportId]
+			yticks, ylabels = self.savedLabels[self.exportId]
+		else:
+			currentYLim = self.axClusterMap.get_ylim()
+			if self.colorData.empty == False:
+				yticks = self.axLabelColor.get_yticks()
+				ylabels = self.axLabelColor.get_yticklabels()
+			else:
+				yticks = self.axClusterMap.get_yticks()
+				ylabels = self.axClusterMap.get_yticklabels()			
 		
 		if self.colorData.empty == False:
 			axLabelColor.axis('on')
 			# +0.5 to get enough space for labels! 
 			self.adjust_colorLabel_axis(len(self.colorData.columns)+0.5, ax = axLabelColor) 
 			self.draw_color_data(axLabelColor,len(self.colorData.columns))
-			axLabelColor.set_yticks(self.axLabelColor.get_yticks())
-			axLabelColor.set_yticklabels(self.axLabelColor.get_yticklabels())
+			axLabelColor.set_yticks(yticks)
+			axLabelColor.set_yticklabels(ylabels)
 		else:
-			axClusterMap.set_yticks(self.axClusterMap.get_yticks())
-			axClusterMap.set_yticklabels(self.axClusterMap.get_yticklabels())
+			axClusterMap.set_yticks(yticks)
+			axClusterMap.set_yticklabels(ylabels)
 			
 		## Needed to not get a white box on top of the hclust
 			
 		for ax in [axClusterMap,axLabelColor]:
 			ax.set_ylim(currentYLim)				
 		axRowDendro.set_ylim([currentYLim[0]*10,currentYLim[1]*10])
+		axesColl = [axRowDendro,axColumnDendro,axClusterMap,axLabelColor,axColormap]
+		if self.fromSavedSession == False:
+			self.save_export_details(axesColl,
+				currentYLim,yticks,ylabels)
+		else:
+			self.exportAxes[self.exportId] = axesColl
+					
+	def save_export_details(self,axes,currentYLim,yticks,ylabels):	
+		'''
+		'''
+		self.exportId += 1
+		self.exportAxes[self.exportId] = axes
+		self.exportYLim[self.exportId] = currentYLim
+		if yticks[-1]-yticks[0] < 60:
+			self.savedLabels[self.exportId] = [yticks,ylabels]
+		else:
+			self.savedLabels[self.exportId] = [[],'']
+		self.fromSavedSession = False
+		
+		
+		
+		
 		
 	def disconnect_event_bindings(self):
 		'''
