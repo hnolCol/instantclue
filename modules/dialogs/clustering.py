@@ -100,7 +100,8 @@ class clusterAnalysisCollection(object):
 class clusteringDialog(object):
 	
 	
-	def __init__(self, dfClass, plotter, dataTreeview, clusterCollection, numericColumns = [], initialMethod = 'k-means', cmap = 'Blues'):
+	def __init__(self, dfClass, plotter, dataTreeview, clusterCollection, widgetHandler,
+						numericColumns = [], initialMethod = 'k-means', cmap = 'Blues'):
 		'''
 		'''
 		self.connectCenter = tk.BooleanVar(value=True)
@@ -116,7 +117,8 @@ class clusteringDialog(object):
 		self.data = dfClass.get_current_data_by_column_list(numericColumns)
 		self.data.dropna(inplace=True)
 		
-		self.Plotter = plotter
+		self.plotter = plotter
+		self.widgetHandler = widgetHandler
 		
 		self.dataTreeview = dataTreeview
 		self.clusterCollection = clusterCollection
@@ -262,7 +264,7 @@ class clusteringDialog(object):
 		silhouetteScore = silhouette_score(self.data[self.numericColumns], clusterClass.labels_, metric = 'euclidean')
 		calinskiScore = calinski_harabaz_score(self.data[self.numericColumns], clusterClass.labels_)
 		scoreDict = {'Silhouette':silhouetteScore, 'Calinski': calinskiScore}
-		self.Plotter.update_cluster_anaylsis_evalScores(scoreDict, classLabels)
+		self.plotter.update_cluster_anaylsis_evalScores(scoreDict, classLabels)
 		
 				
 		self.data = self.data.join(classLabels)
@@ -273,11 +275,11 @@ class clusteringDialog(object):
 		
 		
 		## plot the cluster result
-		self.Plotter.initiate_chart(numericColumns = self.numericColumns,
+		self.plotter.initiate_chart(numericColumns = self.numericColumns,
 									categoricalColumns = [], selectedPlotType = 'cluster_analysis',
 									colorMap=self.cmap, redraw = False)	
 		## give clusters color
-		self.Plotter.nonCategoricalPlotter.change_color_by_categorical_columns(columnName, adjustLayer = False)
+		self.plotter.nonCategoricalPlotter.change_color_by_categorical_columns(columnName, adjustLayer = False)
 
 
 		## connect cluster if desired for some methods
@@ -285,7 +287,7 @@ class clusteringDialog(object):
 			self.plot_cluster_centers(clusterClass, columnName)
 
 				
-		self.Plotter.redraw()
+		self.plotter.redraw()
 	
 		## 
 		self.clusterCollection.add_new_cluster_analysis(columnName.split(' :')[-1], # this looks overly complicated but it ensures that a name cannot be present twice.
@@ -297,6 +299,8 @@ class clusteringDialog(object):
 		self.dataTreeview.add_list_of_columns_to_treeview(id = self.dfClass.currentDataFile,
 															dataType = 'object',
 															columnList = [columnName])
+		self.widgetHandler.clean_frame_up()
+		self.widgetHandler.create_widgets(plotter = self.plotter)
 		del clusterClass
 		
 		
@@ -324,10 +328,10 @@ class clusteringDialog(object):
 		clustCenters = clusterClass.cluster_centers_[:,:len(self.numericColumns)]
 		clusterSeq = pd.DataFrame(clustCenters, columns = self.numericColumns)
 		lineSegments = self.extract_line_segments(clusterSeq, self.numericColumns[:2], columnName)
-		colors = self.Plotter.nonCategoricalPlotter.get_current_colorMapDict()
+		colors = self.plotter.nonCategoricalPlotter.get_current_colorMapDict()
 		for n,segment in enumerate(lineSegments):
 			color = colors[str(n)]
-			self.Plotter.nonCategoricalPlotter.add_line_collection(segment, colors=color, zorder = 1)
+			self.plotter.nonCategoricalPlotter.add_line_collection(segment, colors=color, zorder = 1)
 						
 	def extract_current_settings(self):
 		'''
@@ -408,7 +412,7 @@ class predictCluster(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Predict clusters') 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w = 525
+		w = 530
 		h= 420
 		self.toplevel = popup
 		self.center_popup((w,h))			

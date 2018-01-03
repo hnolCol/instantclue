@@ -3,16 +3,14 @@ from tkinter import ttk
 import tkinter.simpledialog as ts
 import matplotlib.pyplot as plt
 
-
-MAC_GREY = '#ededed'
-LARGE_FONT = ("Verdana", 13, "bold") 
+from modules.utils import *
 
 class SizeConfigurationPopup(object):
 	
 	
 	def __init__(self,platform,figure,canvas,plot_type,size,catnames,
 						subsets_and_scatter_with_cat,
-						axes_scata_dict,filt_source_for_update, length_of_data):
+						axes_scata_dict,filt_source_for_update):
 						
 		self.plot_type= plot_type
 		self.platform = platform
@@ -25,7 +23,6 @@ class SizeConfigurationPopup(object):
 		self.subsets_and_scatter_with_cat = subsets_and_scatter_with_cat
 		self.axes_scata_dict = axes_scata_dict
 		self.filt_source_for_update = filt_source_for_update
-		self.length_of_data = length_of_data
 		self.size_selected = tk.StringVar() 
 		
 		self.build_toplevel() 
@@ -129,9 +126,18 @@ class SizeConfigurationPopup(object):
              		ax_coll = ax.collections
              		for coll in ax_coll:
              			coll.set_sizes([val])
-             	
-             
+             			
+         elif plot_type == 'cluster_analysis':
+         
+         	ax = self.figure.axes[0]
+         	ax_coll = ax.collections
+         	for coll in ax_coll:
+         		if hasattr(coll,'set_sizes'): #otherwise it is a line collection
+         			coll.set_sizes([val])
+           	
+		             
          elif plot_type == 'scatter_matrix':
+         
              axes = self.figure.axes
              for ax in axes:           
              		ax_coll = ax.collections
@@ -144,11 +150,8 @@ class SizeConfigurationPopup(object):
          	for ax in axes:
          		ax_coll = ax.collections
          		for coll in ax_coll:
-         			coll.set_sizes([val]) 
-            
-        
+         			coll.set_sizes([val])         
 
-         #self.settings_points['sizes'] = [val]
          self.size = val
         
          self.size_selected.set(val)

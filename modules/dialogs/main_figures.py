@@ -1,24 +1,20 @@
 import string 
 import os
 import sys
-try:
-	from PIL import Image, ImageTk
-except:
-	pass
-	
-	
 	
 import tkinter as tk
 from tkinter import ttk             
 import tkinter.simpledialog as ts
 import matplotlib.pyplot as plt
+import tkinter.filedialog as tf
 from modules import images
 from modules.utils import * 
 from modules.dialogs import VerticalScrolledFrame
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 
-
-
+from modules.dialogs import text_editor
+from modules.dialogs import artist_editor
+from modules.dialogs import simple_dialog
 
 alphabeticLabel  = list(string.ascii_lowercase)+list(string.ascii_uppercase)
 rangePositioning = list(range(1,20))
@@ -39,51 +35,197 @@ labelsAndGridInfo = 		dict(
 												dict(row=5,column =9, sticky=tk.W,pady=3) ])
 
 
-MAC_GREY = '#ededed'
-LARGE_FONT = ("Verdace", 13, "bold") 
-titleFont = dict(font = LARGE_FONT, fg="#4C626F",  justify=tk.LEFT, bg = MAC_GREY)
+
+class mainFigureCollection(object):	
+	
+	def __init__(self,analyzeClass =None):
+		self.mainFigureId = 0
+		
+		self.mainFigureTemplates = OrderedDict()
+		self.mainFigures = {}
+		self.exportDetails = {}
+		self.figText = {}
+				
+		self.analyze = analyzeClass
+		self.default_label_settings()
+
+	
+	def initiate(self, figureId = None):
+		'''
+		'''
+		if figureId is None:
+			self.mainFigureId += 1
+			self.exportDetails[self.mainFigureId] = {}
+			self.figText[self.mainFigureId] = {}
+		else:
+			## this happens when 
+			self.mainFigureId = figureId
+			
+			
+		self.mainFigureTemplates[self.mainFigureId] = {}
+		self.mainFigures[self.mainFigureId] = {}
+		
+		
+		return self.mainFigureId
+
+	def store_export(self,axisId,figureId,plotCount,subplotNum,exportId,boxBool,gridBool):
+		'''
+		'''
+		limits = self.get_limits(axisId,figureId)
+		
+		self.exportDetails[figureId][axisId] = {'plotCount':plotCount,
+												'subplotNum':subplotNum,
+												'limits':limits,
+												'exportId':exportId,
+												'boxBool':boxBool,
+												'gridBool':gridBool}
+												
+	def store_image_export(self,axisId,figureId,imagePath):
+		'''
+		'''
+		self.exportDetails[figureId][axisId] = {'path':imagePath}	
+						
+	def store_figure(self,figure,templateClass):
+		'''
+		Store in different dict, since we cannot pickle the 
+		figure in a tk canvas.
+		'''
+		self.mainFigures[self.mainFigureId]['figure'] = figure
+		self.mainFigures[self.mainFigureId]['template'] = templateClass
+	
+	
+	def store_figure_text(self,figureId,id,props):
+		'''
+		Stores figure text added by the user. To enable session upload.
+		'''
+		self.figText[figureId][id] = props
+		
+	
+	def get_limits(self,axisId,figureId):
+		'''
+		'''
+		ax = self.mainFigureTemplates[figureId][axisId]['ax']
+		xLim = ax.get_xlim()
+		yLim = ax.get_ylim()
+		return [xLim,yLim]
+			
+	def update_params(self, figureId, axisId = None, params = None, how = 'add'):
+		'''
+		'''
+		if how == 'add':
+			self.mainFigureTemplates[figureId][axisId] = params
+			self.update_menu(params['ax'],axisId,figureId,params['axisLabel'])
+			
+		elif how == 'delete':
+			params =  self.mainFigureTemplates[figureId][axisId]
+			self.analyze.main_figure_menu.delete('Figure {} - Subplot {}'.format(figureId,params['axisLabel']))
+			del self.mainFigureTemplates[figureId][axisId]
+			del self.exportDetails[figureId][axisId]
+		
+		elif how == 'clean_up':			
+			for axisId,params in self.mainFigureTemplates[figureId].items():
+				self.analyze.main_figure_menu.delete('Figure {} - Subplot {}'.format(figureId,params['axisLabel']))
+			self.mainFigureTemplates[figureId] = {}
+			self.exportDetails[figureId] = {}
+		
+		elif how == 'destroy':			
+			for axisId,params in self.mainFigureTemplates[figureId].items():
+				self.analyze.main_figure_menu.delete('Figure {} - Subplot {}'.format(figureId,params['axisLabel']))
+			del self.mainFigureTemplates[figureId]
+			del self.exportDetails[figureId]
+
+	def update_menu_label(self,old,new):
+		'''
+		Updates the menu if user re-labels.
+		'''
+		self.analyze.main_figure_menu.entryconfigure(old,label=new)						
+								
+	def update_menu(self,ax,axisId,figureId,label):
+		'''
+		'''
+		self.analyze.main_figure_menu.add_command(label='Figure {} - Subplot {}'.format(figureId,label), 
+			command = lambda ax = ax:self.analyze.perform_export(ax,axisId,self.mainFigures[figureId]))
+	
+	def default_label_settings(self):
+		'''
+		'''
+		self.subplotLabelStyle = {'xy':(0.0,1),'xytext':(-12,12),
+						'xycoords':('axes fraction'),'textcoords':'offset points',
+						'size':12, 'family':'Verdana','ha':'left',
+						'weight':'bold','color':'black','va':'bottom',
+						'rotation':'0'}
+		
+	def __getstate__(self):
+		'''
+		Cant pickle menu since it is a tkinter menu object.
+		We need to remove it before pickle
+		'''
+		for figureId, axisDict in self.mainFigureTemplates.items():
+			for axisId, params in axisDict.items():
+				if 'ax' in params: # if user saves session twice this will be gone already
+					del params['ax']
+		state = self.__dict__.copy()
+		for attr in ['analyze','mainFigures']:
+			if attr in state: 
+				del state[attr]
+		return state	
 
 
-class mainFigureCollection(object):
+class mainFigureTemplateDialog(object):
 	'''
 	Class that manages main figures.
 	We have decided to split this from the actual creation to achieve easier opening from saved session. 
 	'''
-	def __init__(self):
-		## defining StringVars for grid layout and positioning of axis 
+	def __init__(self, mainFigureCollection, figureId = None):
+		## defining StringVars for grid layout and positioning of axis
+
+		self.define_variables()
+		
+		self.mainFigureCollection = mainFigureCollection
+		self.figureId = self.mainFigureCollection.initiate(figureId)
+		
+		self.axisId = 0
+		self.figureProps = OrderedDict()
+								
+		self.load_images()	
+		self.build_toplevel()
+		self.create_frame()
+		self.create_widgets()
+		self.mainFigureCollection.store_figure(self.figure,self)
+		
+	def define_variables(self):
+				 
 		self.main_fig_add_text = None
+		self.delete_axis_event = None
+		self.motionLabel = None
+		self.textsAdded = {}
+		self.axisLabels = {}
+		self.axisItems = {}
+		self.associatedAxes = {}
+				
 		self.positionColumn = tk.StringVar(value='1') 
 		self.positionRow = tk.StringVar(value='1') 
 		self.columnSpan = tk.StringVar(value='1') 
 		self.rowSpan = tk.StringVar(value='1') 	
 		self.gridColumn = tk.StringVar(value='3') 
 		self.gridRow = tk.StringVar(value='4') 
-		
 		self.subplotLabel = tk.StringVar(value='a')	
 		self.infolabel = tk.StringVar(value = 'Add subplots to build main figure') 
-		
 				
 		self.positionGridDict = OrderedDict(positionColumn = self.positionColumn,positionRow = self.positionRow,
 								columnSpan = self.columnSpan, rowSpan = self.rowSpan, gridRow = self.gridRow,
-								gridColumn = self.gridColumn, subplotLabel = self.subplotLabel)
-								
-		
-		
-		
-		self.load_images()	
-		self.build_toplevel()
-		self.create_frame()
-		self.create_widgets()
-		
-		
-	
-		
+								gridColumn = self.gridColumn, subplotLabel = self.subplotLabel)			
 	def close(self):
 		'''
 		closing the toplevel
 		'''
-		self.toplevel.destroy() 
-		
+		quest = tk.messagebox.askquestion('Confirm ..',
+			'Closing main figure template window. Proceed?',
+			parent = self.toplevel)
+			
+		if quest == 'yes':	
+			self.mainFigureCollection.update_params(self.figureId,how='destroy')	
+			self.toplevel.destroy() 
 		
 		
 	def build_toplevel(self):
@@ -117,10 +259,10 @@ class mainFigureCollection(object):
 		'''
 		Creates all widgets
 		'''
-		labelGridSetup = tk.Label(self.cont, text='Define grid layout for main figure',**titleFont)
-		labelAxisSetup = tk.Label(self.cont, text='Add subplot to figure',**titleFont)
-		labelInfoLab = tk.Label(self.cont, textvariable = self.infolabel,**titleFont)
-		labelFigIdLabel = tk.Label(self.cont, text = 'Figure ID ENTER HERE',**titleFont)
+		labelGridSetup = tk.Label(self.cont, text='Define grid layout for main figure',**titleLabelProperties)
+		labelAxisSetup = tk.Label(self.cont, text='Add subplot to figure',**titleLabelProperties)
+		labelInfoLab = tk.Label(self.cont, textvariable = self.infolabel,**titleLabelProperties)
+		labelFigIdLabel = tk.Label(self.cont, text = 'Figure {}'.format(self.figureId),**titleLabelProperties)
 		
 		
 		labelGridSetup.grid(row=1, column = 0, sticky=tk.W, columnspan=6, padx=3,pady=5)       
@@ -147,20 +289,14 @@ class mainFigureCollection(object):
 		ttk.Separator(self.cont, orient = tk.HORIZONTAL).grid(sticky=tk.EW, columnspan=15,pady=4)
 		
 		## crate and grid main buttons  on MAC ttk Buttons with images are buggy in width
-		if platform == 'WINDOWS':
-			but_add_axis = ttk.Button(self.cont, image = self.add_axis_img, command = self.add_axis_to_figure)	
-			but_add_text = ttk.Button(self.cont, image = self.add_text_img)
-			but_add_image = ttk.Button(self.cont, image =  self.add_image)
-			but_delete_ax = ttk.Button(self.cont, image = self.delete_axis_img)
-			but_clear = ttk.Button(self.cont, image = self.clean_up_img, command = self.clean_up_figure)
-		elif platform == 'MAC':				
-			but_add_axis = tk.Button(self.cont, image = self.add_axis_img, command = self.add_axis_to_figure)	
-			but_add_text = tk.Button(self.cont, image = self.add_text_img)
-			but_add_image = tk.Button(self.cont, image =  self.add_image)
-			but_delete_ax = tk.Button(self.cont, image = self.delete_axis_img)
-			but_clear = tk.Button(self.cont, image = self.clean_up_img, command = self.clean_up_figure)
+		but_add_axis  = create_button(self.cont, image = self.add_axis_img, command = self.add_axis_to_figure)
+		but_add_text = create_button(self.cont, image = self.add_text_img, command = self.add_text)	
+		but_add_image = create_button(self.cont, image =  self.add_image, command = self.add_image_to_axis)
+		self.but_delete_ax = create_button(self.cont, image = self.delete_axis_img, command = self.delete_axis)
+		but_clear = create_button(self.cont, image = self.clean_up_img, command = self.clean_up_figure)
+		
 			
-		btns= [but_add_axis,but_add_text,but_add_image,but_delete_ax,but_clear]
+		btns= [but_add_axis,but_add_text,but_add_image,self.but_delete_ax,but_clear]
 		
 		for n,btn in enumerate(btns):
 			btn.grid(row=7,column=n, padx=2,pady=2)
@@ -174,71 +310,187 @@ class mainFigureCollection(object):
 		figureFrame.grid(columnspan=20) 
 		toolbarFrame.grid(columnspan=16, sticky=tk.W)#+tk.EW)
 		self.display_figure(figureFrame,toolbarFrame)
+		self.figure.canvas.mpl_connect('button_press_event', self.edit_items_in_figure)
 		
-             
-        
-			
-		
-		
-		
-		#, command = lambda fig_id = figure_id,info_lab = info_lab: add_text(fig_id,info_lab,popup))  #fig_id = figure_id :  add_text(fig_id))
-         #, command = lambda fig_id = figure_id, label=var_subplot_label, row_pos = var_rowpos, col_pos = var_colpos :  clear_fig(fig_id,label,row_pos,col_pos))
-        #, command = lambda: add_image(figure_id,popup,info_lab))  
-        
-        #but_delete_ax.bind('<Button-1>', lambda event, figure_id = figure_id, info_lab = info_lab,rows = var_rowpos,cols= var_colpos,label=var_subplot_label: delete_axis(event,figure_id,info_lab,rows,cols,label))
-        
-        
-        
-        
-       
-       # but_add_axis.grid(row=7,column=0,padx=(4,2),pady=2) 
-       # but_add_image.grid(row=7,column=2, padx=2,pady=2)
-       # but_add_text.grid(row=7,column = 1,padx=2,pady=2)
-       # but_delete_ax.grid(row=7,column=3,padx=2,pady=2) 
-       # but_clear.grid(row=7,column = 4,padx=2,pady=2) 
-       # 
-             
-             
-             
-             #self.main_subs = dict() 
-             
-        
-        
-    
-		
-		 
-
-
-
-	
-    	
+            	
 	def load_images(self):
 		self.add_axis_img, self.add_text_img,self.add_image,\
 		self.delete_axis_img,self.clean_up_img,self.delete_axis_active_img  = images.get_main_figure_images()      
         
         
-        
-
-
 	def display_figure(self, frameFigure,toolbarFrame):
 	
 		self.figure = plt.figure(figsize=(8.27,11.7))      
-		self.figure.subplots_adjust(top=0.94, bottom=0.05,left=0.1,right=0.95)
-		
+		self.figure.subplots_adjust(top=0.94, bottom=0.05,left=0.1,
+									right=0.95, wspace = 0.3, hspace=0.3)
 		canvas  = FigureCanvasTkAgg(self.figure,frameFigure)
 		canvas.show() 
 		self.toolbar_main = NavigationToolbar2TkAgg(canvas, toolbarFrame)
 		canvas._tkcanvas.pack(in_=frameFigure,side="top",fill='both',expand=True)
-                                                 
 		canvas.get_tk_widget().pack(in_=frameFigure,side="top",fill='both',expand=True)
+		
+
 	
-         #
+	def add_axis_label(self,ax, axisId, label = None):
+		'''
+		Adds a subplot label to the created/updated subplot
+		'''
+		if label is None:
+			text = self.subplotLabel.get()
+		else:
+			text = label
+			
+		axesLabel = ax.annotate(text,**self.mainFigureCollection.subplotLabelStyle)
+		self.axisLabels[axisId] = axesLabel
+		
 	
-	def add_axis_to_figure(self):
+	def edit_items_in_figure(self,event):
+		'''
+		'''
+		if event.dblclick:
+					
+			for id,label in self.textsAdded.items():
+				if label.contains(event)[0]:
+					editedStyle = self.modify_text_items(label)
+					editedStyle['x'], editedStyle['y'] = label.get_position()
+					if editedStyle is not None:				
+							self.mainFigureCollection.store_figure_text(self.figureId,id,editedStyle)
+					
+			if event.inaxes is None:
+				for id, subplotLabel in self.axisLabels.items():
+					if subplotLabel.contains(event)[0]:
+						editedStyle = self.modify_text_items(subplotLabel,
+										type = 'subplot labels', axisId =id,
+										extraCb = {'global':['Modify all subplots labels',True]})
+									
+			if event.inaxes:
+				typesToCheck = ['collections','patches','annotations',
+								'lines','artists']
+				mustBeText = False
+			elif event.inaxes is None:
+				typesToCheck = ['x-ticks','y-ticks','axis labels','titles',
+								'legend texts','legend caption']
+				mustBeText = True
+			for axisId, artists in self.axisItems.items():
+				for type, items in artists.items():
+					if type in typesToCheck:
+						for item in items:
+							if hasattr(item,'contains'):
+								if item.contains(event)[0]:
+									if mustBeText or type == 'annotations':
+										self.modify_text_items(item,type,axisId)
+									else:
+										self.handle_artist_modification(axisId,type,item,items)	
+		else:
+			return
+		self.redraw()	
+	
+	def modify_text_items(self, item, type = None, axisId = None, extraCb = None):
+		'''
+		Modify text item(s). The text editor can be used to apply the 
+		properties to global and to axis items of the same type.
+		'''
+		textProps = self.extract_text_props(item)
+		
+		if type is not None and extraCb is None:
+			extraCb = OrderedDict([('global',['Modify all {}'.format(type),False]),
+				   ('axis',['Modify {} in subplot'.format(type),True])])
+		if extraCb is not None:
+			textProps['extraCB'] = extraCb
+				
+		edit = text_editor.textEditorDialog(**textProps)
+		editedStyle,extraCbState = edit.get_results()
+		
+		if editedStyle is not None:
+			
+			if  type == 'subplot labels' and \
+			self.figureProps[axisId]['axisLabel'] != editedStyle['s']:
+			
+				old = 'Figure {} - Subplot {}'.format(self.figureId,
+								self.figureProps[axisId]['axisLabel'])
+								
+				new = 'Figure {} - Subplot {}'.format(self.figureId,
+										editedStyle['s'])
+				self.mainFigureCollection.update_menu_label(old,new)
+			
+			item.set(**editedStyle['fontdict'])
+			item.set_text(editedStyle['s'])
+			
+			if type == 'subplot labels':
+				self.figureProps[axisId]['axisLabel'] = editedStyle['s']
+			
+			how = 'single'
+			if 'global' in extraCbState:
+				if extraCbState['global']:
+					how = 'global'
+			if 'axis' in extraCbState and how != 'global':
+				if extraCbState['axis']:
+					how = 'axis'
+			if how != 'single':
+				self.modify_multiple_items(how,editedStyle,axisId = axisId,type=type)
+			
+			return editedStyle
+
+	def modify_multiple_items(self,how,editedStyle,axisId = None,type = 'subplot labels'):
+		'''
+		how - can be - 'global' or 'axis'
+		'''
+		if type == 'subplot labels':
+			toModify = self.axisLabels
+			for prop,value in editedStyle['fontdict'].items():
+				self.mainFigureCollection.subplotLabelStyle[prop] = value
+		
+		else:
+			if how == 'axis':
+				toModify = self.axisItems[axisId][type]
+			elif how == 'global':
+				toModify = []
+				for axisId,artists in self.axisItems.items():
+					for textType,texts in artists.items():
+						if textType == type:
+							toModify.extend(texts)
+							
+		if isinstance(toModify,dict):
+			for id,item in toModify.items():
+				item.set(**editedStyle['fontdict'])
+				
+		elif isinstance(toModify,list):
+			for item in toModify:
+				item.set(**editedStyle['fontdict'])
+		
+	def extract_text_props(self, text):
+		'''
+		'''
+		props = {'size':text.get_size(),
+				 'font':text.get_fontname(),
+				 'weight':text.get_weight(),
+				 'style':text.get_style(),
+				 'ha':text.get_ha(),
+				 'color':col_c(text.get_color()),
+				 'rotation':str(text.get_rotation())}
+		
+		style = {'inputText':text.get_text(),
+				'props':props}
+				
+		return style  	
+
+	
+	def handle_artist_modification(self,axisId,type,item,itemList):
+		'''
+		Opens dialog to alter some settings of artists.
+		'''
+		artist_editor.artistEditorDialog(type,item,
+			itemList,axis=self.figureProps[axisId]['ax'])
+		
+	
+		
+	def add_axis_to_figure(self, axisParams = None, axisId = None,
+										redraw = True, addToId = True):
 		'''
 		Adss an axis to the figure . Gets the settings from the dictionary that stores self.positionGridDict
 		'''
-		axisParams =  self.get_axis_parameters()
+		if axisParams is None:
+			axisParams =  self.get_axis_parameters()
 		gridRow, gridCol,posRow, posCol,rowSpan, colSpan, subplotLabel = axisParams
 		
 		if posRow-1 + rowSpan > gridRow or posCol -1 + colSpan > gridCol:
@@ -249,12 +501,20 @@ class mainFigureCollection(object):
 		subplotspec = grid_spec.new_subplotspec(loc=(posRow-1,posCol-1),
 												rowspan=rowSpan,colspan=colSpan)
 										
-		ax_ = self.figure.add_subplot(subplotspec)
-									
-		self.figure.canvas.draw()
+		ax = self.figure.add_subplot(subplotspec)
+		self.save_axis_props(ax,axisParams,addToId = addToId)
 		
-		self.update_axis_parameters(axisParams)	
-		self.infolabel.set('Axis added!')									
+		if addToId:
+			axisId = self.axisId
+			self.add_axis_label(ax, axisId)
+		else:
+			self.add_axis_label(ax, axisId, 
+								label = self.figureProps[axisId]['axisLabel'])
+		
+		if redraw:							
+			self.redraw()
+			self.update_axis_parameters(axisParams)	
+			self.infolabel.set('Axis added!')									
 												
         
 	
@@ -301,20 +561,304 @@ class mainFigureCollection(object):
 		
 		self.positionGridDict['positionRow'].set(str(posRow))
 		self.positionGridDict['positionColumn'].set(str(posCol))
+
+	def check_if_axes_created(self):
+		'''
+		'''
+		if len(self.figure.axes) == 0:
+			tk.messagebox.showinfo('Create axis ..','Please create an axis.', 
+													parent = self.toplevel)
+			return False
+		else:
+			return True
+
+	def align_image_in_axis(self,ax, axOriginalPos):
+		'''
+		'''
+		
+		axCurrentPos = ax.get_position()
+		
+		if axCurrentPos.y1-axCurrentPos.y0 < axOriginalPos.y0:
+			newYPos = axOriginalPos.y1-(axCurrentPos.y1-axCurrentPos.y0)
+		else:	
+			newYpos = axOriginalPos.y0
+		#x,y,width,height
+		newAxPosition = [axOriginalPos.x0,newYPos,
+						(axCurrentPos.x1-axCurrentPos.x0),
+						(axCurrentPos.y1-axCurrentPos.y0)]
+		ax.set_position(newAxPosition)
+
+	
+	def add_text(self):
+		'''
+		Adds user defined text
+		'''
+		txtEditor = text_editor.textEditorDialog()
+		self.textDict, _  = txtEditor.get_results()
+		del txtEditor
+		# reset focus to figure toplevel 
+		self.toplevel.focus_force()
+		self.infolabel.set('Click to place text in figure.')
+		if self.textDict is not None:
+			self.on_motion_event = self.figure.canvas.mpl_connect('motion_notify_event', self.on_motion_with_label)
+			self.on_click_event = self.figure.canvas.mpl_connect('button_press_event', self.on_click)
+
+	def on_motion_with_label(self,event):
+		'''
+		motion_notify_event handler. Moves text item on figure (maybe 
+		a trick to use blit would be better?
+		'''
+		x,y = self.figure.transFigure.inverted().transform((event.x,event.y)).tolist()
+		if self.motionLabel is None:
+			self.motionLabel = self.figure.text(x,y,**self.textDict)
+		else:
+			self.motionLabel.set_position((x,y))
+		self.redraw()
+	
+	def on_click(self,event):
+		'''
+		Handles on click events when motion is enabled 
+		Either 
+			button-1 places item in figure
+		Or
+			button-2/3 remove items
+		'''
+		textItem = self.motionLabel
+		if event.button > 1:
+			textItem.remove()
+			self.disconnect_events()
+			self.redraw()
+			
+		elif event.button == 1:
+			self.disconnect_events()	
+			self.save_added_text(textItem)
+					
+		self.motionLabel = None
+		self.infolabel.set('Done. Double click on text opens the editor again.')
+		
+	def save_added_text(self,text):
+		'''
+		'''
+		id = len(self.textsAdded)
+		self.textsAdded[id] = text
+		self.textDict['x'], self.textDict['y'] = text.get_position()
+		self.mainFigureCollection.store_figure_text(self.figureId,id,self.textDict)
+		
+		
+	def disconnect_events(self):
+		'''
+		'''
+		self.figure.canvas.mpl_disconnect(self.on_motion_event)	
+		self.figure.canvas.mpl_disconnect(self.on_click_event)		
+		
+		
+	def add_image_to_axis(self, pathToFile = None, axisId = None):
+		'''
+		'''
+		if self.check_if_axes_created() == False:
+			return
+		if pathToFile is None:
+			pathToFile = tf.askopenfilename(initialdir=path_file,
+                                        title="Choose File",parent = self.toplevel)
+		
+		if pathToFile == '':
+			return
+		
+		fileEnd = pathToFile.split('.')[-1]	
+		if fileEnd != 'png':
+			tk.messagebox.showinfo('File error ..','At the moment only png files are supported.'+
+									' Your file path ends with: {}'.format(fileEnd))
+			return
+
+		im = plt.imread(pathToFile)
+		if axisId is None:
+			axesInFigure = []
+			for id, props in self.figureProps.items():
+				axesInFigure.append('Subplot Id: {} - Label: {}'.format(id,props['axisLabel']))
+			
+		## select axis
+			dialog = simple_dialog.simpleUserInputDialog(['Subplot: '],
+				[axesInFigure[0]],[axesInFigure],
+				title='Select subplot',infoText='Select subplot.')
+		
+			axisId = int(float(dialog.selectionOutput['Subplot: '].split(' ')[2]))	
+		ax = self.figureProps[axisId]['ax']
+		
+		axOrigPosition = ax.get_position()
+		## show image 
+		ax.imshow(im)
+		ax.axis('off')
+		self.infolabel.set('The original resolution is restored upon export.')	
+		self.redraw()
+		self.align_image_in_axis(ax,axOrigPosition)
+		self.redraw()
+		self.mainFigureCollection.store_image_export(axisId,self.figureId,pathToFile)
+
+	def restore_axes(self,figureProps):
+		'''
+		Restores axis by a dict. Used when restored from saved session
+		'''
+		axisParams = None
+		for id,props in figureProps.items():
+		
+			self.axisId = id
+			
+			axisParams = props['axisParams']
+			axisParams[-1] = props['axisLabel']
+			self.add_axis_to_figure(axisParams,axisId = id,
+									redraw=False,addToId=False)
+		if axisParams is not None:
+			self.update_axis_parameters(axisParams)
+				
+	def identify_id_of_axis(self,ax):	
+		'''
+		'''
+		axClicked = ax
+		for id,props in self.figureProps.items():
+			if props['ax'] == axClicked:
+				return id
+				
+		for id, axes in self.associatedAxes.items():
+			if axClicked in axes:
+				return id
 		
 
+	def save_axis_props(self,ax,axisParams,addToId = True):
+		'''
+		Need to save:
+			- axis with id
+			- label 
+			- subplot specs 
+			- associated axis (for example hclust)
+		'''
+		# we dont want to add 1 if we restore figures
+		if addToId:
+			self.axisId += 1
+		id = self.axisId
+		self.figureProps[id] = {}
+		self.figureProps[id]['ax'] = ax
+		self.figureProps[id]['axisParams'] = axisParams
+		# save label for quick change
+		self.figureProps[id]['axisLabel'] = axisParams[-1]
+		self.figureProps[id]['addAxis'] = []
+		self.mainFigureCollection.update_params(self.figureId,id,self.figureProps[id])
+		
+		self.axisItems[id] = {}
+		
 
+	def delete_axis(self):
+		'''
+		'''
+		if self.delete_axis_event is not None:
+			self.disconnect_and_reset_deleting()
+			return
+			
+		if self.check_if_axes_created():
+			self.but_delete_ax.configure(image=self.delete_axis_active_img)
+			self.infolabel.set('Deleting active. Click on subplot to delete.')
+			self.delete_axis_event = self.figure.canvas.mpl_connect('button_press_event', 
+															   self.identify_and_remove_axis)
+			
+		
+	def identify_and_remove_axis(self,event):
+		'''
+		'''
+		if len(self.figure.axes) == 0:
+			return
 
+		id = self.identify_id_of_axis(event.inaxes)
+		self.check_for_associations_and_remove(id)
+		self.mainFigureCollection.update_params(self.figureId,axisId = id,how='delete')
+		self.figure.delaxes(self.figureProps[id]['ax'])
+		del self.figureProps[id]
+		del self.axisItems[id]
+		
+		self.redraw()
+		
+		if len(self.figure.axes) == 0:
+			self.disconnect_and_reset_deleting()	
+			self.update_axis_parameters([float(self.gridRow.get()),
+										 float(self.gridColumn.get()),
+										 1,0,1,1,'Z'])
+			
+	def check_for_associations_and_remove(self,axisId):
+		'''
+		'''
+		if axisId in self.associatedAxes:
+			axes = self.associatedAxes[axisId]
+		
+			for ax in axes:
+				self.figure.delaxes(ax)
+			del self.associatedAxes[axisId] 
+			
+		
 
+	def clear_axis(self, axis):
+		'''
+		'''
+		id = self.identify_id_of_axis(axis)
+		self.check_for_associations_and_remove(id)
+			
+	def disconnect_and_reset_deleting(self):
+		'''
+		'''
+		self.but_delete_ax.configure(image=self.delete_axis_img)
+		self.figure.canvas.mpl_disconnect(self.delete_axis_event)
+		self.delete_axis_event = None
+		
+				
 	def clean_up_figure(self):
+		'''
+		Clean up figure
+		'''
+		quest = tk.messagebox.askquestion('Confirm ..','Clean up main figure template?',
+										parent = self.toplevel)
+		if quest == 'yes':
+			self.figure.clf()
+			self.redraw()
+			self.update_axis_parameters([float(self.gridRow.get()),
+									 float(self.gridColumn.get()),
+									 1,0,1,1,'Z'])
+			self.infolabel.set('Cleaned up.')
+			self.mainFigureCollection.update_params(self.figureId,how='clean_up')	
+	
+	
+	def associate_axes_with_id(self,axisId,axes):
+		'''
+		Function if additional axes were added.  Like in hierarchical clustering
+		'''
+		self.associatedAxes[axisId] = axes
 		
-		self.figure.clf()
-		self.figure.canvas.draw()
+
+
+	def extract_artists(self,ax,id):
+		'''
+		'''
+		self.axisItems[id]['axis labels']= [ax.xaxis.get_label(),ax.yaxis.get_label()]
+		self.axisItems[id]['x-ticks'] = ax.get_xticklabels()
+		self.axisItems[id]['y-ticks'] = ax.get_yticklabels()
 		
-		self.update_axis_parameters([4,3,1,0,1,1,'Z'])
-		self.infolabel.set('Cleaned up.')	
+		self.axisItems[id]['annotations'] = [txt for txt in ax.texts]
+		
+		self.axisItems[id]['titles'] = [ax.title]
+		self.axisItems[id]['lines'] = ax.lines
+		self.axisItems[id]['collections'] = ax.collections
+		self.axisItems[id]['patches'] = ax.patches
+		self.axisItems[id]['artists'] = ax.artists
+		
+		leg =  ax.get_legend()
+		
+		legendTexts = []
+		if leg is not None:
+			self.axisItems[id]['legend texts'] = [leg.get_texts()]
+			self.axisItems[id]['legend caption'] = [leg.get_title()]
 		
 		
+	def redraw(self):
+		'''
+		Redraws figure canvas
+		'''
+		self.figure.canvas.draw()	
 		
 	def center_popup(self,size):
          	'''

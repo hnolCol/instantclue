@@ -153,6 +153,7 @@ class ExcelImporter(object):
 						showstatusbar=False)
 		self.current_sheet = sheet				
 		self.pt.show()
+		self.pt.parentframe.master.unbind_all('<Return>')
 		
 	def refresh_preview(self, new_excel_sheet):
 		'''
