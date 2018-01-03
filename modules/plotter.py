@@ -136,6 +136,8 @@ class _Plotter(object):
 		Reinitiate chart replots the last displayed chart when a saved session
 		is opened-
 		'''
+		if self.plotCount not in self.plotHistory:
+			return 
 		plotterHelper = self.plotHistory[self.plotCount] 
 		for helper in plotterHelper:
 			if helper is not None:
@@ -267,6 +269,16 @@ class _Plotter(object):
 					for handle in leg.legendHandles:
 						handle.set(**self.settings_points)
 		
+	def set_limits_by_plotCount(self,plotCount,subplotNum,axis):
+		'''
+		Define axis limits
+		'''
+		if plotCount not in self.axesLimits:
+			self.save_axis_limits()
+		axesLimits = self.axesLimits[plotCount]
+		self.set_limits_in_replot(ax,axesLimits[subplotNum])
+	
+	
 	def reset_limits(self,subplotIdNumber,axisExport):
 		'''
 		'''
@@ -419,9 +431,10 @@ class _Plotter(object):
 		
 			self.nonCategoricalPlotter.reset_color_and_size_level(resetSize=True)
 
-	def adjust_grid_and_box_around_subplot(self, axes = None):
+	def adjust_grid_and_box_around_subplot(self, axes = None, 
+											boxBool = None, gridBool = None ):
 		'''
-		Two helper functions to help readability of code
+		Two helper functions to adjust bbox and grids
 		'''
 		def change_box_setting(boolBox,axes):
 			for ax in axes:
@@ -440,21 +453,24 @@ class _Plotter(object):
 		if self.currentPlotType in ['hclust','corrmatrix']:
 			return
 		if axes is None:
-			axes = self.axes	
-		change_box_setting(self.showSubplotBox,axes)	
-		change_grid_setting(self.showGrid,axes)
+			axes = self.axes
+			
+		if boxBool is None: 
+			boxBool = self.showSubplotBox
+		if gridBool is None:
+			gridBool = self.showGrid
+			
+		change_box_setting(boxBool,axes)	
+		change_grid_setting(gridBool,axes)
 	
 	def __getstate__(self):
 	
 		state = self.__dict__.copy()
 		for list in [ 'axes', 'figure']:#, 'nonCategoricalPlotter', 'plotHistory']:
-			del state[list]#print(state.keys())
-			
+			if list in state:
+				del state[list]
 		return state			
-			
-     							
-	
-	
+				
 	
 	def add_annotationLabel_to_plot(self,ax,text,xy = None, xytext = None,position='topleft', xycoords = 'axes fraction', arrowprops = None):
 		'''
@@ -1072,7 +1088,8 @@ class categoricalPlotter(object):
 			
 		return x,y
 
-	def export_selection(self,axisExport, subplotIdNumber, fig):
+	def export_selection(self,axisExport, subplotIdNumber, 
+			fig,limits = None, boxBool = None, gridBool = None):
 		'''
 		Uses a specific axis to export this plot. Main purpose to use this in a main figure.
 		'''
@@ -1081,9 +1098,15 @@ class categoricalPlotter(object):
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
 		self.plotter.display_statistics(axisExport,subplotIdNumber)
-		self.plotter.adjust_grid_and_box_around_subplot(axes = [axisExport])
+		
+		self.plotter.adjust_grid_and_box_around_subplot(boxBool = boxBool,
+														gridBool = gridBool,
+														axes = [axisExport])
 		self.plotter.style_collection([axisExport])
-		self.plotter.reset_limits(subplotIdNumber,axisExport)
+		if limits is None:
+			self.plotter.reset_limits(subplotIdNumber,axisExport)
+		else:
+			self.plotter.set_limits_in_replot(axisExport,limits)
 		
 		
 	def get_grid_layout_for_plotting(self,n,cols=3):
@@ -1104,7 +1127,17 @@ class categoricalPlotter(object):
 		if adjustRight > 1.8:
 			adjustRight = 1.75
 		self.figure.subplots_adjust(right = adjustRight)  
+	
+	
+	def __getstate__(self):
 		
+		state = self.__dict__.copy()
+		for attr in ['figure','axisDict']:
+			if attr in state: 
+				del state[attr]
+		return state
+			#'_Plotter',
+					
 
 		
 class nonCategoricalPlotter(object):
@@ -1172,7 +1205,7 @@ class nonCategoricalPlotter(object):
 			elif self.currentPlotType == 'density':
 			
 				row,column = self.get_grid_layout_for_plotting()
-				self.figure.subplots_adjust(wspace=0.25)
+				self.figure.subplots_adjust(wspace=0.25, hspace = 0.25)
 				for n,numericColumn in enumerate(self.numericColumns):
 					self.axisDict[n] = self.figure.add_subplot(row,column,n+1) 
 					
@@ -1205,7 +1238,7 @@ class nonCategoricalPlotter(object):
 		This handles a replot of the initilized plot.
 		It is used when a stored session is re-stored.
 		'''
-		
+		self.createIntWidgets = False
 		if self.currentPlotType in ['hclust','corrmatrix']:
 			self._hclustPlotter.replot() 
 
@@ -1231,9 +1264,11 @@ class nonCategoricalPlotter(object):
 			for functionName,column in self.sizeStatsAndColorChanges.items():
 				if functionName == 'change_color_by_categorical_columns':
 					kws = {'updateColor' : False}
+					self.createIntWidgets = True
 				else:
 					kws = {}
 				getattr(self,functionName)(column,**kws)
+				
 			## add label changes	
 			if self.annotationClass is not None:
 				self.annotationClass.replotAllAnnotations(self.axisDict[0])
@@ -1670,7 +1705,8 @@ class nonCategoricalPlotter(object):
 			getattr(self,functionName)(column)  
 			
 	
-	def export_selection(self,axisExport, subplotIdNumber, exportFigure = None):
+	def export_selection(self,axisExport, subplotIdNumber, exportFigure = None,
+			limits=None, boxBool = None, gridBool = None):
 		'''
 		Exports a specific axis onto the axisExport axis (in a main figure). The integer id is used to
 		identify the plot.
@@ -1684,7 +1720,10 @@ class nonCategoricalPlotter(object):
 			if self.plotter.addSwarm:
 				self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
 			
-			self.plotter.adjust_grid_and_box_around_subplot(axes = [axisExport])
+			self.plotter.adjust_grid_and_box_around_subplot(axes = [axisExport], 
+															boxBool = boxBool, 
+															gridBool = gridBool)
+															
 			if (self.currentPlotType == 'PCA' and subplotIdNumber == 0) or self.currentPlotType != 'PCA' :
 
 				for functionName,column in self.sizeStatsAndColorChanges.items():
@@ -1697,7 +1736,10 @@ class nonCategoricalPlotter(object):
 			
 			self.plotter.display_statistics(axisExport,subplotIdNumber)
 			self.plotter.style_collection([axisExport])
-			self.plotter.reset_limits(subplotIdNumber,axisExport)
+			if limits is None:
+				self.plotter.reset_limits(subplotIdNumber,axisExport)
+			else:
+				self.plotter.set_limits_in_replot(axisExport,limits)
 			self.style_axis(axisExport,subplotIdNumber)
 			
 			
@@ -1744,7 +1786,8 @@ class nonCategoricalPlotter(object):
 			
 		
 		elif plotType == 'density':
-			cdf = self.plotter.get_dist_settings()
+			if hasattr(self,'cdf') == False:
+				self.cdf = self.plotter.get_dist_settings()
 			for n,numericColumn in enumerate(self.numericColumns):
 					if onlySelectedAxis is None:
 					
@@ -1755,8 +1798,8 @@ class nonCategoricalPlotter(object):
 						else:
 							ax = axisExport
 					
-					sns.distplot(dataInput[numericColumn].dropna().values, ax=ax, hist_kws={'cumulative':cdf},
-															kde_kws={'cumulative':cdf})
+					sns.distplot(dataInput[numericColumn].dropna().values, ax=ax, hist_kws={'cumulative':self.cdf},
+															kde_kws={'cumulative':self.cdf})
 					self.plotter.add_annotationLabel_to_plot(ax = ax, text = numericColumn)
 
 		elif plotType == 'time_series':
@@ -2084,11 +2127,20 @@ class nonCategoricalPlotter(object):
 		elif plotType == 'density':
 		
 			for n,numericColumn in enumerate(self.numericColumns):
+				
+				
+				if onlySelectedAxis is not None:
+					if n != onlySelectedAxis:
+						continue
+						
+				else:
+					ax = self.axisDict[n]
+				
 			
-				if self.axisDict[n].is_first_col():
-					axisStyler(self.axisDict[n], ylabel='Density', nTicksOnYAxis = 4, nTicksOnXAxis=4)
+				if ax.is_first_col():
+					axisStyler(ax, ylabel='Density', nTicksOnYAxis = 4, nTicksOnXAxis=4)
 				else:	
-					axisStyler(self.axisDict[n], nTicksOnYAxis = 4, nTicksOnXAxis=4)
+					axisStyler(ax, nTicksOnYAxis = 4, nTicksOnXAxis=4)
 		else:
 			if self.numbNumericColumns == 2:
 				xlabel, ylabel = self.numericColumns[:2] # precaution
@@ -2605,8 +2657,15 @@ class _annotateScatterPoints(object):
 		## allowing several subplots to have an annotation (PCA)
 		if event.mouseevent.inaxes != self.ax:
 			return
-			
+		
+		if event.mouseevent.button != 1:
+			self.plotter.castMenu = False
+			return
+					
 		ind = event.ind
+		## inelegant way to check if we should label
+		xyEvent =  (event.mouseevent.xdata,event.mouseevent.ydata)
+		self.find_closest_and_check_event(xyEvent,event.mouseevent)
 		if self.eventOverAnnotation:
 			return
 			
@@ -2674,7 +2733,6 @@ class _annotateScatterPoints(object):
 		'''
 		if event.inaxes is None:
 			return 
-			
 		if event.button in [2,3]: ## mac is 2 and windows 3..
 			self.remove_clicked_annotation(event)
 		elif event.button == 1:
@@ -2684,7 +2742,7 @@ class _annotateScatterPoints(object):
 		'''
 		'''
 		self.addAnnotationFromDf(self.data)
-		
+	
 			
 	def remove_clicked_annotation(self,event):
 		'''
@@ -2702,6 +2760,7 @@ class _annotateScatterPoints(object):
 		if toDelete is not None:
 			del self.selectionLabels[toDelete] 
 			del self.madeAnnotations[toDelete] 
+			self.eventOverAnnotation = False
 			self.plotter.redraw()		
 	
 	def remove_all_annotations(self):
@@ -2714,6 +2773,23 @@ class _annotateScatterPoints(object):
 				madeAnnotation.remove()
 		self.madeAnnotations.clear()
 		self.selectionLabels.clear()
+
+	def find_closest_and_check_event(self,xyEvent,event):
+		'''
+		'''
+		if len(self.selectionLabels) == 0:
+			return
+		annotationsKeysAndPositions = [(key,annotationDict['xytext']) for key,annotationDict \
+		in self.selectionLabels.items()][::-1]
+		
+		keys, xyPositions = zip(*annotationsKeysAndPositions)
+		idxClosest = closest_coord_idx(xyPositions,xyEvent)[0]
+		keyClosest = keys[idxClosest]
+		annotationClostest = self.madeAnnotations[keyClosest]
+		self.eventOverAnnotation = annotationClostest.contains(event)[0]
+		
+		return annotationClostest,xyPositions,idxClosest,keyClosest
+
 			
 	def move_annotations_around(self,event):
 		'''
@@ -2725,16 +2801,10 @@ class _annotateScatterPoints(object):
 		self.eventOverAnnotation = False	
 		
 		xyEvent =  (event.xdata,event.ydata)
-
-		annotationsKeysAndPositions = [(key,annotationDict['xytext']) for key,annotationDict in self.selectionLabels.items()][::-1]
 		
-		keys, xyPositions = zip(*annotationsKeysAndPositions)
-		
-		idxClosest = closest_coord_idx(xyPositions,xyEvent)[0]
-		keyClosest = keys[idxClosest]
-		annotationClostest = self.madeAnnotations[keyClosest]
-		
-		self.eventOverAnnotation = annotationClostest.contains(event)[0]
+		annotationClostest,xyPositions,idxClosest,keyClosest = \
+		self.find_closest_and_check_event(xyEvent,event)	
+					
 		
 		if self.eventOverAnnotation:
 			ax = self.ax

@@ -14,7 +14,8 @@ def save_session(classDict):
 	sessionName = ts.askstring('Provide session name',
 								prompt = 'Session name: ',
 								initialvalue= time.strftime("%d_%m_%Y"))
-							
+	if sessionName is None:
+		return False						
 	sessionPath = os.path.join(path_file,'Data','stored_sessions',sessionName)
 	
 	while os.path.exists(sessionPath):
@@ -42,8 +43,6 @@ def save_session(classDict):
 	
 	with open(os.path.join(sessionPath,'{}.pkl'.format(sessionName)),'wb') as file:
 		pickle.dump(classDict, file)
-			
-
 	
 	
 def open_session():

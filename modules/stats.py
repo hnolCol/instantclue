@@ -348,13 +348,15 @@ class interactiveStatistics(object):
 	def identify_test_groups_and_perform_test(self,event):
 		'''
 		'''
-		
+		self.plotter.castMenu = True
 		for id,param in self.saveStatsPerformed.items():
 			if param['text'].contains(event)[0]:
+				self.plotter.castMenu = False
 				if event.button == 1:
 					self.make_text_movable(id,param)
 				elif event.button in [2,3]:
 					self.delete_text_and_line(id,param)
+					
 				return
 				
 		if event.button != 1:
