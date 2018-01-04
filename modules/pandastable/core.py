@@ -148,7 +148,7 @@ class Table(Canvas):
         if platform == 'MAC':
         	self.thefont = ('Arial',12)
         else:
-        	self.thefont = ('Arial',9)
+        	self.thefont = ('Arial',8)
         self.cellbackgr = '#F4F4F3'
         self.entrybackgr = 'white'
         self.grid_color = '#ABB1AD'
