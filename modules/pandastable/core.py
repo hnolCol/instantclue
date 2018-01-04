@@ -144,7 +144,11 @@ class Table(Canvas):
         self.linewidth=1.0
         self.rowheaderwidth=50
         self.showkeynamesinheader=False
-        self.thefont = ('Arial',12)
+        ##changed 
+        if platform == 'MAC':
+        	self.thefont = ('Arial',12)
+        else:
+        	self.thefont = ('Arial',9)
         self.cellbackgr = '#F4F4F3'
         self.entrybackgr = 'white'
         self.grid_color = '#ABB1AD'
@@ -221,13 +225,14 @@ class Table(Canvas):
         self.focus_set()
         return
 
-    def show(self, callback=None):
+    def show(self, callback=None,noRowIndex = True):
         """Adds column header and scrollbars and combines them with
            the current table adding all to the master frame provided in constructor.
            Table is then redrawn."""
 
         #Add the table and header to the frame
-        self.rowheader = RowHeader(self.parentframe, self, width=self.rowheaderwidth)
+        if noRowIndex:
+        	self.rowheader = RowHeader(self.parentframe, self, width=self.rowheaderwidth)
         self.tablecolheader = ColumnHeader(self.parentframe, self)
         self.rowindexheader = IndexHeader(self.parentframe, self)
         self.Yscrollbar = AutoScrollbar(self.parentframe,orient=VERTICAL,command=self.set_yviews)
@@ -237,13 +242,15 @@ class Table(Canvas):
         self['xscrollcommand'] = self.Xscrollbar.set
         self['yscrollcommand'] = self.Yscrollbar.set
         self.tablecolheader['xscrollcommand'] = self.Xscrollbar.set
-        self.rowheader['yscrollcommand'] = self.Yscrollbar.set
+        if noRowIndex:
+        	self.rowheader['yscrollcommand'] = self.Yscrollbar.set
         self.parentframe.rowconfigure(1,weight=1)
         self.parentframe.columnconfigure(1,weight=1)
 
         self.rowindexheader.grid(row=0,column=0,rowspan=1,sticky='news')
         self.tablecolheader.grid(row=0,column=1,rowspan=1,sticky='news')
-        self.rowheader.grid(row=1,column=0,rowspan=1,sticky='news')
+        if noRowIndex:
+        	self.rowheader.grid(row=1,column=0,rowspan=1,sticky='news')
         self.grid(row=1,column=1,rowspan=1,sticky='news',pady=0,ipady=0)
 
         self.adjustColumnWidths()
