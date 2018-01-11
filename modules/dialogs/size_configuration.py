@@ -25,9 +25,13 @@ class SizeConfigurationPopup(object):
 		self.filt_source_for_update = filt_source_for_update
 		self.size_selected = tk.StringVar() 
 		
+		self.background = self.figure.canvas.copy_from_bbox(self.figure.bbox)
+		
 		self.build_toplevel() 
 		self.build_widgets() 
 		
+		self.collections = self.get_collections()
+		self.r = self.figure.canvas.get_renderer()
 		
 		self.toplevel.wait_window() 
 		
@@ -89,29 +93,17 @@ class SizeConfigurationPopup(object):
          	x = w_screen/2 - size[0]/2
          	y = h_screen/2 - size[1]/2
          	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))  	
+
 	
 	
-	def change_size(self,val,event=None):
-         
-         '''
-         Main execution function of this popup. Changes dynamically the size of collections.
-         It will get the scatter items from 
-         '''
+	def get_collections(self):
 		
-         if event is not None:
-         	val = self.size_selected.get() 
-         	val = round(float(val),0)
-         	self.slider_size.set(val)
-         else:	
-         	
-         	val = round(float(val),0)
-         if val == self.size:
-         	return	
+		
          plot_type = self.plot_type
          catnames = self.catnames
          n_categories = len(catnames)
-        
-         
+         axColl = []
+		
          if plot_type == 'scatter':
          	
              if n_categories > 0:
@@ -123,9 +115,8 @@ class SizeConfigurationPopup(object):
              else:
              	axes = self.figure.axes
              	for ax in axes:
-             		ax_coll = ax.collections
-             		for coll in ax_coll:
-             			coll.set_sizes([val])
+             		axColl.extend(ax.collections)
+             		
              			
          elif plot_type == 'cluster_analysis':
          
@@ -133,26 +124,47 @@ class SizeConfigurationPopup(object):
          	ax_coll = ax.collections
          	for coll in ax_coll:
          		if hasattr(coll,'set_sizes'): #otherwise it is a line collection
-         			coll.set_sizes([val])
+         			axColl.append(ax.collections)
            	
 		             
          elif plot_type == 'scatter_matrix':
          
              axes = self.figure.axes
              for ax in axes:           
-             		ax_coll = ax.collections
-             		for coll in ax_coll:
-             			coll.set_sizes([val])
+             		axColl.extend(ax.collections)
+             		
              			
          elif plot_type == 'pointplot' or plot_type == 'swarm':
          
          	axes = self.figure.axes
          	for ax in axes:
-         		ax_coll = ax.collections
-         		for coll in ax_coll:
-         			coll.set_sizes([val])         
-
+         		axColl.extend(ax.collections)
+         		
+         return axColl
+		
+	
+	def change_size(self,val,event=None):
+         
+         '''
+         Main execution function of this popup. Changes dynamically the size of collections.
+         Collections were extracted before and are stored in self.collections
+         '''
+		
+         if event is not None:
+         	val = self.size_selected.get() 
+         	val = round(float(val),0)
+         	self.slider_size.set(val)
+         else:	
+         	val = round(float(val),0)
+         if val == self.size:
+         	return	
+         
+         self.figure.canvas.restore_region(self.background)
+         for coll in self.collections:
+             			coll.set_sizes([val])
+             			coll.draw(self.r)
+             			#ax.draw_artist(coll)
+         
          self.size = val
-        
          self.size_selected.set(val)
-         self.canvas.draw()		
+         self.canvas.blit(self.figure.bbox)		

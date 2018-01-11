@@ -59,7 +59,7 @@ class numericalFilterDialog(object):
  		'''	 
  		self.cont= tk.Frame(self.toplevel, background =MAC_GREY) 
  		self.cont.pack(expand =True, fill = tk.BOTH)
- 		self.cont.grid_columnconfigure(4, weight = 1)
+ 		self.cont.grid_columnconfigure(2,weight=1)
  		
  		labTitle = tk.Label(self.cont, text = 'Add a categorical column with "+" matching the given criteria.', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
  		labMainOperator = tk.Label(self.cont, text = 'Operator used for all given conditions: ', bg = MAC_GREY)
@@ -72,8 +72,10 @@ class numericalFilterDialog(object):
  		
  		self.add_filter_widgets_for_columns()
  		
- 		addButton = ttk.Button(self.cont, text='Apply', command = self.apply_numeric_filter)
- 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
+ 		addButton = ttk.Button(self.cont, text='Apply', 
+ 			command = self.apply_numeric_filter, width = 6)
+ 		closeButton = ttk.Button(self.cont, text = 'Close', 
+ 			command = self.close, width = 6)
  		
  		buttonRow = self.numbNumericalColumns + 5
  		addButton.grid(row=buttonRow, column=4,padx=3,pady=8,sticky=tk.E)
@@ -105,13 +107,13 @@ class numericalFilterDialog(object):
 			opCombo.insert('end','> greater than')
 			
 			## entry for user to provide criteria 
-			filterEntry = ttk.Entry(self.cont, width=300)
+			filterEntry = ttk.Entry(self.cont)
 			
 			## grid widgets
 			absoluteValuesCB.grid(row=row, column = 1, sticky=tk.W, pady=8, padx=3)
-			columnLabel.grid(row=row,column = 2, sticky=tk.W, pady=8, padx=3)
+			columnLabel.grid(row=row,column = 2, sticky=tk.EW, pady=8, padx=3)
 			opCombo.grid(row=row,column =3 , sticky=tk.W,pady=8, padx=3)
-			filterEntry.grid(row=row,column=4, sticky=tk.W,pady=8, padx=8,columnspan=2)
+			filterEntry.grid(row=row,column=4, sticky=tk.EW,pady=8, padx=8,columnspan=2)
 			##  Lets save everything in a dict to be used later in applying filter
 			self.filterSettings[numColumn] = [absoluteValuesCB, variableOperator, filterEntry]
 		
@@ -142,7 +144,11 @@ class numericalFilterDialog(object):
  			absoluteValues = absValuesCB.instate(['selected'])
  			operator = variableOperator.get() 
  			if 'within' not in operator:
- 				filterValue = float(filterEntry.get())
+ 				try:
+ 					filterValue = float(filterEntry.get())
+ 				except:
+ 					tk.messagebox.showinfo('Error ..','Could not convert input to float. Empty?',parent=self)
+ 					return
  			else:
  				filterValue = filterEntry.get()
  			
@@ -153,10 +159,11 @@ class numericalFilterDialog(object):
  		
  		else:
  			selectionColumn = self.collectDataFrame.sum(axis=1) > 0
+ 		
  		outputColumn = selectionColumn.map(self.replaceDict)
  		
  		self.columnName = self.build_columnName()
- 		
+ 		self.columnName = self.dfClass.evaluate_column_name(self.columnName)
  		self.dfClass.add_column_to_current_data(self.columnName,outputColumn)
  		self.close()
  			 
@@ -183,8 +190,8 @@ class numericalFilterDialog(object):
 		
 		if 'greater than' in operator:
 			boolIndicator = data > filterValue
-		elif 'greater than equal' in operator:
-			boolIndicator = data >= filterValue
+		elif 'greater equal than' in operator:
+			boolIndicator = data >= filterValue			
 		elif 'unequal' in operator:
 			boolIndicator = data != filterValue
 		elif 'smaller equal than' in operator:

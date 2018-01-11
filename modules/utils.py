@@ -32,7 +32,6 @@ def return_platform():
     
 platform = return_platform() 
 
-
 defaultFont = 'Verdana'
 if platform == 'WINDOWS':
 	corrFontSize = -1
@@ -59,6 +58,7 @@ titleLabelProperties = dict(font = LARGE_FONT, fg="#4C626F",
 							bg = MAC_GREY, justify=tk.LEFT)
 
 
+savedMaxColors = dict()
 
 if platform == "WINDOWS":                             
     right_click = "<Button-3>"
@@ -70,12 +70,14 @@ elif platform == "MAC":
     col_menu = MAC_GREY
     defaultFontSize = 12
      
+     
+     
     
+
+
 
 styleDict = {'tearoff':0,'background' : col_menu,'foreground':"black"}
 
-color_schemes = ["Greys","Blues","Greens","Purples",'Reds',"BuGn","PuBu","PuBuGn","BuPu","OrRd","BrBG","PuOr","Spectral","RdBu","RdYlBu","RdYlGn",
-                                    'Accent','Dark2','Paired','Pastel1','Pastel2','Set1','Set2','Set3','Set4','Set5']
 linkage_methods = ['single','complete','average','weighted','centroid','median','ward']
              
 pdist_metric = ['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation', 'cosine', 'dice', 'euclidean', 'hamming', 'jaccard', 'kulsinski', 'matching', 'minkowski',
@@ -146,8 +148,26 @@ def evaluate_screen(screen_width,screen_height,w,h):
      return geom_
 		
 
-
-
+def validate_float(self, action, index, value_if_allowed,
+    prior_value, text, validation_type, trigger_type, widget_name):
+    # action=1 -> insert
+    '''
+    Validate float in entry input
+    '''
+    if(action=='1'):
+        if text in '0123456789.-+':
+            try:
+                value = float(value_if_allowed)
+                if value < 100 and value >= 0:
+                	return True
+                else:
+                	return False
+            except ValueError:
+                return False
+        else:
+            return False
+    else:
+        return True
 
 
 
@@ -173,15 +193,32 @@ def fill_listbox(listbox,entryList):
 	listbox.delete(0,tk.END)
 	for entry in entryList:
 		listbox.insert(tk.END, entry)
+
+def return_unique_list(seq): 
+    return list(_f11(seq))
+
+def _f11(seq):
+    seen = set()
+    for x in seq:
+        if x in seen:
+            continue
+        seen.add(x)
+        yield x
 	
       
 def col_c(color):
 	'''
 	from rgb to hex
 	'''
+	if color is None:
+		#ugly - think better
+		return '#000000'
 	if '#' in color:
 		return color
 	if isinstance(color,tuple):
+		y = tuple([int(float(z) * 255) for z in color])
+		hexCol = "#{:02x}{:02x}{:02x}".format(y[0],y[1],y[2])
+	elif isinstance(color,list):
 		y = tuple([int(float(z) * 255) for z in color])
 		hexCol = "#{:02x}{:02x}{:02x}".format(y[0],y[1],y[2])
 	elif 'xkcd:'+str(color) in XKCD_COLORS:
@@ -295,11 +332,11 @@ def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot',
          elif plot_type == 'barplot':
                          sns.barplot(x= x, y=y, hue = hue, data=data, order = order, 
                          palette = cmap,errwidth=0.5, capsize=0.09, edgecolor=".25", ax = ax,
-                         hue_order = hue_order)
+                         hue_order = hue_order,n_boot = 500)
          elif plot_type == 'pointplot':
                          sns.pointplot(x= x, y=y, hue = hue, data=data, order = order, capsize=0.05, 
                                      	errwidth=0.4, scale=0.55,palette=cmap,dodge=dodge,ax=ax,
-                                     	hue_order = hue_order)
+                                     	hue_order = hue_order,n_boot = 500)
          elif plot_type == 'violinplot':
                          sns.violinplot(x= x, y=y, hue = hue, data=data, palette = cmap ,order=order, 
                          linewidth=0.65, ax = ax, hue_order = hue_order)
@@ -455,8 +492,6 @@ def return_readable_numbers(number):
      return new_number              
             
 
-
-
 def get_max_colors_from_pallete(cmap):
     '''
     '''
@@ -471,6 +506,19 @@ def get_max_colors_from_pallete(cmap):
         n = 9
     elif cmap == 'Set5':
         n = 13
+    elif cmap in savedMaxColors:
+    	n = savedMaxColors[cmap]
+    else:
+    	n = 0
+    	col = []
+    	for color in sns.color_palette(cmap,n_colors=60):
+    		if color not in col:
+    			col.append(color)
+    			n += 1
+    		else:
+    			break
+    	savedMaxColors[cmap] = n
+    		
     
     cmap = ListedColormap(sns.color_palette(cmap, n_colors = n ,desat = 0.85))  
     
@@ -485,15 +533,6 @@ def create_button(container, image = None, command = None , text = None, compoun
 		button = tk.Button(container,text = text,image = image, command = command, compound = compound)
 		
 	return button
-	
-
-
-	
-	
-	
-	
-	
-	
 		
 		
 class Progressbar(object):
@@ -597,13 +636,18 @@ class CreateToolTip(object):
                  bg='white',
                  pad=(5, 3, 5, 3),
                  text= None,
-                 waittime=300,
+                 waittime=800,
                  wraplength=250,
-                 showcolors = False,cm = None):
+                 showcolors = False,cm = None, 
+                 display_widget = False,
+                 widgetProps = None,
+                 master = None):
 
         self.waittime = waittime  # in miliseconds, originally 500
         self.wraplength = wraplength  # in pixels, originally 180
         self.widget = widget
+        self.display_widget = display_widget
+        self.widgetProps = widgetProps 
         self.text = text
         self.title = title_
         self.widget.bind("<Enter>", self.onEnter)
@@ -616,24 +660,15 @@ class CreateToolTip(object):
         self.plat = platform
         self.showcolors = showcolors
         self.cm = cm
-        self.f_tw  = None
-        self.canvas = None
+        self.master = master
+        
 
     def onEnter(self, event=None):
     	self.schedule()
         
 
     def onLeave(self, event=None):
-    	if self.showcolors == True:
-    		if self.f_tw  is not None and self.canvas is not None:
-    			self.f_tw.clear()
-    			plt.close(self.f_tw)
-    			try:
-    				self.canvas.get_tk_widget().delete("all")
-    				self.canvas.get_tk_widget().destroy()
-    			except:
-    				pass 	
-    			
+    		
     	self.unschedule()
     	self.hide()
     		
@@ -652,16 +687,11 @@ class CreateToolTip(object):
         def tip_pos_calculator(widget, label,
                                *,
                                tip_delta=(10, 5), pad=(5, 3, 5, 3)):
-
             w = widget
-
             s_width, s_height = w.winfo_screenwidth(), w.winfo_screenheight()
-
             width, height = (pad[0] + label.winfo_reqwidth() + pad[2],
                              pad[1] + label.winfo_reqheight() + pad[3])
-
             mouse_x, mouse_y = w.winfo_pointerxy()
-
             x1, y1 = mouse_x + tip_delta[0], mouse_y + tip_delta[1]
             x2, y2 = x1 + width, y1 + height
 
@@ -671,9 +701,7 @@ class CreateToolTip(object):
             y_delta = y2 - s_height
             if y_delta < 0:
                 y_delta = 0
-
             offscreen = (x_delta, y_delta) != (0, 0)
-
             if offscreen:
 
                 if x_delta:
@@ -686,30 +714,53 @@ class CreateToolTip(object):
 
             if offscreen_again:
                 y1 = 0
-
             return x1, y1
 
         bg = self.bg
         pad = self.pad
         widget = self.widget
+        n = 6
         self.tw = tk.Toplevel(widget)
         
-
-        if self.plat == 'WINDOWS':
+        if self.display_widget == False:
+		
+        	if self.plat == 'WINDOWS':
+        		self.tw.wm_overrideredirect(True)
+        		font_size = 9
         # Leaves only the label and removes the app window
-            self.tw.wm_overrideredirect(True)
-            font_size = 9
+            	
+        	else:
+        		self.tw.tk.call("::tk::unsupported::MacWindowStyle","style",self.tw._w, "plain", "none")
+        		font_size = 11
+            	
         else:
-            self.tw.tk.call("::tk::unsupported::MacWindowStyle","style",self.tw._w, "plain", "none")
-            font_size = 11
+        	self.tw.grab_set() 
+        	self.tw.wm_title('')  
+		            	
         win = tk.Frame(self.tw,
                        background=bg,
                        relief=tk.GROOVE,
                        )
+        
+        if self.display_widget:
+
+        	for key, props in self.widgetProps.items():
+        		if key == 'Label':
+        			label = tk.Label(win,text = props['text'],bg=MAC_GREY)
+        			label.grid()
+        			        	
+        		if key == 'Slider':
+        			widget = ttk.Scale(win,orient=tk.HORIZONTAL,**props)
+        			widget.grid()        
+        
+        
         if self.text is not None:
-        	title_label = tk.Label(win, text = self.title,background=bg,
+        	if self.title is not None:
+        		title_label = tk.Label(win, text = self.title,background=bg,
                                justify =tk.LEFT,wraplength=self.wraplength,
                                font = (defaultFont, font_size,'bold'))
+        		title_label.grid(sticky = tk.W,columnspan=2) 
+                               
         	label = tk.Label(win,
                           text=self.text,
                           justify=tk.LEFT,
@@ -718,33 +769,13 @@ class CreateToolTip(object):
                           borderwidth=0.0,
                           wraplength=self.wraplength,
                           font = (defaultFont, font_size))
-        	title_label.grid(sticky = tk.W) 
-        	label.grid(padx=(pad[0], pad[2]),
-                   pady=(pad[1], pad[3]),
-                   sticky=tk.W)
+
+        
         if self.showcolors == True:
                 
-        	self.f_tw = plt.figure(figsize = (4.0,1.2), facecolor='white')
-        	self.f_tw.subplots_adjust(wspace=0.0, hspace=0.0,
-        							 right = 1, top = 1, left = 0.0, bottom = 0.0)
-        	ax = self.f_tw.add_subplot(111)
-        	cm_ = sns.color_palette(self.cm,15)
-        	cm = []
-        	for color in cm_:
-        		if color not in cm:
-        			cm.append(color)
-        	y_bar = min_x_square(len(cm)) 
-
-        	ax.bar(range(len(cm)),y_bar, color= cm, edgecolor="darkgrey",linewidth=0.72)
-        	ax.set_ylim(-0.1,max(y_bar)+0.5)
-        	ax.set_xlim(-0.7,len(cm))
-        	ax.axhline(0, color = "darkgrey", linewidth=0.72)
-        	ax.axvline(-0.6,color="darkgrey",linewidth=0.72)
-        	self.canvas = FigureCanvasTkAgg(self.f_tw,win)
-        	plt.axis('off')
-        	self.canvas._tkcanvas.grid(in_=win, sticky = tk.W,padx=10,pady=10)
-        	self.canvas.get_tk_widget().grid(in_=win, sticky = tk.W,padx=10,pady=10)
-        	if self.cm not in ['Accent','Pastel1','Pastel2','Set1','Set3','Spectra','RdYlGn']:
+        	if 'Custom' in self.cm:
+        		col_blind = 'Not defined'
+        	elif self.cm not in ['Accent','Pastel1','Pastel2','Set1','Set3','Spectra','RdYlGn']:
         		col_blind = 'True'
         	else:
         		col_blind = 'False'
@@ -754,20 +785,39 @@ class CreateToolTip(object):
         	elif self.cm in ["BrBG","PuOr","Spectral","RdBu","RdYlBu","RdYlGn"]:
         		type = 'diverging'
         		n = np.inf
+        	elif self.cm in savedMaxColors:
+        		type = 'qualitative'
+        		n = savedMaxColors[self.cm]
         	else:
         		type = 'qualitative'
+        		cm_ = sns.color_palette(self.cm,15)
+        		cm = [] 
+        		for color in cm_:
+        			if color not in cm:
+        				cm.append(color)
         		n = len(cm)
-        	text = self.text + '\nMaximum number of colors: {}\nColorblind safe: {}\nType: {}'.format(n,col_blind,type)
+        		savedMaxColors[self.cm] = n
+        	text = self.text + '\nMax. number of colors: {}\nColorblind safe: {}\nType: {}'.format(n,col_blind,type)
         	label.configure(text=text)
+        	
+        	if n == np.inf:
+        		n = 20
+        		
+        	for n,color in enumerate(sns.color_palette(self.cm,n,desat=0.8)):
+        		labCol = tk.Label(win,bg=col_c(color),text=' ')
+        		labCol.grid(row=2,column=n,pady=4,sticky=tk.EW)
+        		        	
         	if self.plat == 'WINDOWS':
                         self.tw.attributes('-topmost',True)
-            
-        win.grid()
         
-		
+        if self.text is not None:
+        	
+        	label.grid(padx=(pad[0], pad[2]),
+                   pady=(pad[1], pad[3]),
+                   sticky=tk.W,
+                   columnspan=n+1)            
+        win.grid()		
         x, y = tip_pos_calculator(widget, label)
-        
-
         self.tw.wm_geometry("+%d+%d" % (x, y))
 
     def hide(self):
@@ -861,6 +911,41 @@ tooltip_information_plotoptions = [
         ]
 
 
+LIMIT_WIDTH_SMALL = 920
+LIMIT_HEIGHT_SMALL = 700
+
+LIMIT_WIDTH_NORMAL = 1150
+LIMIT_HEIGHT_NORMAL = 930
+
+LIMIT_WIDTH_LARGE = 1360
+LIMIT_HEIGHT_LARGE = 1010
+
+
+def check_resolution_for_icons(new_width,new_height,old_width= None,old_height = None, init_window = False):
+    '''
+    Checks for the resized resolution and returns:
+        SMALL
+        MEDIUM
+        LARGE
+    that can be used to reconfigure buttons with new ICONS...    
+    '''
+    if init_window:
+        if new_width < LIMIT_WIDTH_SMALL:
+            return 'NORM'
+        elif new_width < LIMIT_WIDTH_NORMAL:
+            return 'NORM'
+        else:
+            return 'LARGE'
+    else:   
+        if (new_width < LIMIT_WIDTH_SMALL and old_width > LIMIT_WIDTH_SMALL) or (new_height < LIMIT_HEIGHT_SMALL and old_height > LIMIT_HEIGHT_SMALL):
+            return 'NORM'
+        elif (new_width < LIMIT_WIDTH_NORMAL and old_width > LIMIT_WIDTH_NORMAL) or (new_width > LIMIT_WIDTH_SMALL and old_width < LIMIT_WIDTH_SMALL and new_width < LIMIT_WIDTH_LARGE) or (new_height < LIMIT_HEIGHT_NORMAL and old_height > LIMIT_HEIGHT_NORMAL) or  (new_height > LIMIT_HEIGHT_SMALL and old_height < LIMIT_HEIGHT_SMALL and new_height < LIMIT_HEIGHT_LARGE):
+            
+            return 'NORM'
+        elif (new_width > LIMIT_WIDTH_NORMAL and old_width < LIMIT_WIDTH_NORMAL) or (new_height > LIMIT_HEIGHT_NORMAL and old_height < LIMIT_HEIGHT_NORMAL):
+            return 'LARGE'
+        else:
+            return None 
 
 
 

@@ -73,6 +73,7 @@ class categoricalFilter(object):
 		self.annotationColumn = tk.StringVar()
 		
 		self.operationType = operationType
+		self.closed = False
 		
 		self.dfClass = dfClass
 		## make sure data of plot is selected
@@ -106,6 +107,7 @@ class categoricalFilter(object):
 		'''
 		Close toplevel
 		'''
+		self.closed = True
 		del self.pt
 		self.toplevel.destroy() 	
 		
@@ -367,7 +369,9 @@ class categoricalFilter(object):
 
 		textSelected = self.get_selected_category()
 		if len(textSelected) == 0:
-			tk.messagebox.showinfo('Select category ..','Please select a category for annotation.')
+			tk.messagebox.showinfo('Select category ..',
+				'Please select a category for annotation.',
+				parent=self.toplevel)
 			return
 		
 		regExp = self.build_regex(textSelected)
@@ -395,7 +399,9 @@ class categoricalFilter(object):
 		self.dataTreeview.add_list_of_columns_to_treeview(self.dfClass.currentDataFile, 
 														'object', [columnName])
 														 
-		tk.messagebox.showinfo('Done ..',operationMessage[self.operationType]) 
+		tk.messagebox.showinfo('Done ..',
+			operationMessage[self.operationType],
+			parent=self.toplevel) 
 		
 	         
 	def build_regex(self,categoriesList,withSeparator = True):
@@ -514,7 +520,9 @@ class categoricalFilter(object):
 		textSelected = self.get_selected_category()
 		
 		if len(textSelected) == 0:
-			tk.messagebox.showinfo('Select category ..','Please select a category for annotation.')
+			tk.messagebox.showinfo('Select category ..',
+				'Please select a category for annotation.',
+				parent=self.toplevel)
 			return
 		regExp = self.build_regex(textSelected)	
 		
@@ -534,7 +542,9 @@ class categoricalFilter(object):
 		
 		self.dataTreeview.add_new_data_frame(subsetId,nameOfNewSubset,columnDataTypeRelation)
 		
-		tk.messagebox.showinfo('Done ..',operationMessage[self.operationType]) 
+		tk.messagebox.showinfo('Done ..',
+			operationMessage[self.operationType],
+			parent=self.toplevel) 
 	
 	def annotate_scatter_points(self):
 		'''
@@ -560,7 +570,7 @@ class categoricalFilter(object):
 	
 	def search_for_entry_in_hclust(self):
 		'''
-		
+		Find entry in hierarcichal clustering and center.
 		'''
 		rowsSelected = self.get_selected_row()
 		selection = self.pt.model.df.iloc[rowsSelected[:1]]
@@ -572,11 +582,6 @@ class categoricalFilter(object):
 		self.plt.nonCategoricalPlotter._hclustPlotter.add_label_column(labelColumn)
 		self.plt.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)
 		self.plt.redraw()
-		
-
-		
-		
-		
 		
 					
 	def define_annotation_command_relation(self):

@@ -33,7 +33,11 @@ class colorChanger(object):
 		self.change_color()
 		
 		self.plotter.redraw()
-		
+		## update cmap in helper - > to get the right color for export and session import
+		helper = self.plotter.get_active_helper()
+		if helper is not None:
+			helper.colorMap = newColorMap
+			
 	def make_sure_correct_df_is_selected(self):
 		'''
 		'''
@@ -98,7 +102,7 @@ class colorChanger(object):
 			return
 			
 		elif self.selectedPlotType in ['scatter','cluster_analysis','PCA'] and self.numbCategoricalColumns == 0:
-		
+			
 			self.plotter.nonCategoricalPlotter.update_colorMap(self.newColorMap)
 			self.interactiveWidgetHelper.update_new_colorMap()
 			return

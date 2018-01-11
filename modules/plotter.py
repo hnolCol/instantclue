@@ -26,6 +26,8 @@ from modules.dialogs import curve_fitting
 
 from .utils import *
 
+if platform == 'WINDOWS':
+	sys.__stdout__ = sys.stdout	
 fittingFuncs = curve_fitting._HelperCurveFitter()
 fitFuncsDict = fittingFuncs.get_fit_functions
 nonScatterPlotTypes = ['boxplot','barplot','violinplot','pointplot','swarm']
@@ -219,12 +221,18 @@ class _Plotter(object):
 	def set_scatter_point_properties(self,color = None,alpha = None,size = None):
 		'''
 		'''
+		
 		if size is not None:
 			self.sizeScatterPoints = size
+			self.settings_points['sizes'] = [size]
 		if alpha is not None:
 			self.alphaScatterPoints = alpha
+			self.settings_points['alpha'] = alpha
 		if color is not None:
 			self.colorScatterPoints = color
+		helper = self.get_active_helper()
+		if hasattr(helper, 'get_scatter_props'):
+			helper.get_scatter_props()
 			
 	def get_scatter_point_properties(self):
 		'''
@@ -250,6 +258,7 @@ class _Plotter(object):
 		'''
 		self.settings_points = dict(edgecolor=edgecolor,linewidth=linewidth,
 									zorder=zorder,alpha=alpha,sizes = sizes)
+									
 	def style_collection(self,ax = None):
 		'''
 		Actually modifies the style of the collection
@@ -373,7 +382,7 @@ class _Plotter(object):
 		outside this class and will be used every time we plot a new hierarch cluster.
 		'''
 		self.cmapClusterMap = 'RdYlBu'
-		self.cmapRowDendrogram = 'Set3'
+		self.cmapRowDendrogram = 'Paired'
 		self.cmapColorColumn = 'Blues'
 		
 		self.metric = 'euclidean'
@@ -936,7 +945,6 @@ class categoricalPlotter(object):
 						yValues = subsetData.values
 						xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
 						
-						#print(subsetData.name)
 						coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],subsetData.name,self.fitFuncForFit[fitId])
 						xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
 						
@@ -1188,10 +1196,14 @@ class nonCategoricalPlotter(object):
 		self.sizeStatsAndColorChanges = OrderedDict()
 		self.axisDict = dict()  
 		self.categoricalColorDefinedByUser = dict()		
-		self.sizeScatterPoints, self.alphaScatterPoints,\
-		self.colorScatterPoints = self.plotter.get_scatter_point_properties()   
+		self.get_scatter_props()
 		
-		 	
+	def get_scatter_props(self):
+		'''
+		'''
+		self.sizeScatterPoints, self.alphaScatterPoints,\
+		self.colorScatterPoints = self.plotter.get_scatter_point_properties()
+			 	
 	def add_axis_to_figure(self):
 			
 			self.figure.subplots_adjust(wspace=0.05, hspace = 0.05)  
@@ -1356,11 +1368,15 @@ class nonCategoricalPlotter(object):
 		if self.annotationClass is not None: ## useful to keep already added annotations by another column selectable
 			madeAnnotations = self.annotationClass.madeAnnotations
 			selectionLabels = self.annotationClass.selectionLabels
+			## avoid wrong labeling
+			try:
+				self.annotationClass.disconnect_event_bindings()
+			except:
+				pass
 		else:
 			madeAnnotations = OrderedDict()
 			selectionLabels = OrderedDict()
 			
-		
 		self.annotationClass = _annotateScatterPoints(self.plotter,self.figure,self.axisDict[0],
 													  self.data,labelColumnList,self.numericColumns[:2],
 													  madeAnnotations,selectionLabels) 
@@ -1498,6 +1514,7 @@ class nonCategoricalPlotter(object):
 			self.plotter.add_scatter_collection(ax,x=self.data[self.numericColumns[0]],
 											y = self.data[self.numericColumns[1]], size=self.data['size'],
 											color = self.data['color'].values, picker = True)
+			## index changed .. update data in annotation class
 			if self.annotationClass is not None:
 				self.annotationClass.update_data(self.data)								
 		
@@ -1540,7 +1557,10 @@ class nonCategoricalPlotter(object):
 		Categorical columns can be used to display categorical levels within that column.
 		The color is determined by the colorMapDict which can be accessed and used. 
 		'''
-		return self.colorMapDict	
+		if hasattr(self,'colorMapDict'):
+			return self.colorMapDict	
+		else:
+			return None
 	
 	def clean_up_saved_size_and_color_changes(self,which = 'color'):
 		'''
@@ -1600,6 +1620,8 @@ class nonCategoricalPlotter(object):
 			self._scatterMatrix.set_default_color()	
 			return
 		
+		self.colorScatterPoints = newColor
+		
 		ax = self.axisDict[0]
 		
 		## check if changes have been made on color and disable any further modification.
@@ -1653,14 +1675,16 @@ class nonCategoricalPlotter(object):
 		if leg is not None:
 			leg.remove()
 		for level,color in colorMapDict.items():
-		 	if level  not in ['nan',' ']:
+		 	if str(level)  not in ['nan',' ']:
 		 		# generate and save collection that is used for legend
-		 		collectionLegend = self.plotter.add_scatter_collection(ax = ax,x=[],y=[],label=level,color=color, returnColl=True)
+		 		collectionLegend = self.plotter.add_scatter_collection(ax = ax,x=[],y=[],
+		 										label = level,color = color, returnColl=True)
 		 		if export == False:
 		 			self.savedLegendCollections.append(collectionLegend)
 		 		 
-		legendTitle = get_elements_from_list_as_string(categoricalColumn, addString = 'Categorical Levels: ', newLine=True)		
-		axisStyler(ax,addLegendToFirstCol=True,kwsLegend={'leg_title':legendTitle})
+		legendTitle = get_elements_from_list_as_string(categoricalColumn, addString = 'Categorical Levels: ', newLine=True)	
+
+		axisStyler(ax,forceLegend=True,kwsLegend={'leg_title':legendTitle})
 			
 	def update_legend(self,ax,colorMapDict):
 		'''
@@ -1670,7 +1694,7 @@ class nonCategoricalPlotter(object):
 		if leg is not None:
 			n = 0
 			for level,color in colorMapDict.items():
-		 		if level  not in ['nan',' ']:
+		 		if str(level)  not in ['nan',' ']:
 		 			leg.legendHandles[n].set_facecolor(color)
 		 			n += 1
 					
@@ -1711,6 +1735,7 @@ class nonCategoricalPlotter(object):
 		Exports a specific axis onto the axisExport axis (in a main figure). The integer id is used to
 		identify the plot.
 		'''
+		plotTypesRestricted = ['PCA','cluster_analysis']
 		if self.currentPlotType in ['hclust','corrmatrix']:
 			axisExport.axis('off')
 			self._hclustPlotter.export_selection(axisExport,exportFigure)
@@ -1723,8 +1748,10 @@ class nonCategoricalPlotter(object):
 			self.plotter.adjust_grid_and_box_around_subplot(axes = [axisExport], 
 															boxBool = boxBool, 
 															gridBool = gridBool)
-															
-			if (self.currentPlotType == 'PCA' and subplotIdNumber == 0) or self.currentPlotType != 'PCA' :
+			## this needs to be checked other we cannot export other subplots 
+			## from a PCA or cluster anaylsis 												
+			if (self.currentPlotType in plotTypesRestricted and subplotIdNumber == 0) \
+			or self.currentPlotType not in plotTypesRestricted:
 
 				for functionName,column in self.sizeStatsAndColorChanges.items():
 					getattr(self,functionName)(column,axisExport)
@@ -1935,7 +1962,6 @@ class nonCategoricalPlotter(object):
 					data = self.plotter.dimRedResults['data']['ExplainedVariance'].loc[:,0]
 					xTicks = [x+1 for x in data.index.tolist()]
 				else:
-					#print(self.plotter.dimRedResults)'ReconstructionError'
 					data = self.plotter.dimRedResults['data']['ReconstructionError']
 					xTicks = 1 
 				if onlySelectedAxis is None:
@@ -2612,7 +2638,7 @@ class axisStyler(object):
 		elif rotationXTicks is not None:
 			self.rotate_axis_tick_labels(rotationXTicks)
 			
-			
+		
 class _annotateScatterPoints(object):
 	'''
 	Adds an annotation triggered by a pick event. Deletes annotations by right-mouse click
@@ -2628,11 +2654,11 @@ class _annotateScatterPoints(object):
 		self.data = data
 		self.numericColumns = numericColumns
 		self.textAnnotationColumns = labelColumns
-		
 		self.eventOverAnnotation = False
 		
 		self.selectionLabels = selectionLabels
 		self.madeAnnotations = madeAnnotations
+		
 		
 		self.on_press =  self.plotter.figure.canvas.mpl_connect('button_press_event', lambda event:  self.onPressMoveAndRemoveAnnotions(event))
 		self.on_pick_point =  self.plotter.figure.canvas.mpl_connect('pick_event', lambda event:  self.onClickLabelSelection(event))
@@ -2663,21 +2689,21 @@ class _annotateScatterPoints(object):
 			return
 					
 		ind = event.ind
-		## inelegant way to check if we should label
+		## check if we should label
 		xyEvent =  (event.mouseevent.xdata,event.mouseevent.ydata)
 		self.find_closest_and_check_event(xyEvent,event.mouseevent)
 		if self.eventOverAnnotation:
 			return
-			
-		seletedData = self.data.iloc[ind]
-		key = seletedData.index.values.item(0)
-		clickedData = seletedData.iloc[0]
+		
+		selectedData = self.data.iloc[ind]
+		key = selectedData.index.values.item(0)
+		clickedData = selectedData.iloc[0]
+		
 		
 		if key in self.selectionLabels: ## easy way to check if that row is already annotated
 			return
 		
 		xyDataLabel = tuple(clickedData[self.numericColumns])
-		
 		if len(self.textAnnotationColumns) != 1:
 			textLabel = str(clickedData[self.textAnnotationColumns]).split('Name: ')[0] ## dangerous if 'Name: ' is in column name
 		else:
@@ -2872,6 +2898,8 @@ class _annotateScatterPoints(object):
                              
 	def update_data(self,data):
 		'''
+		Updates data to be used. This is needed if the order of the data 
+		changed.
 		'''
 		self.data = data		
 			

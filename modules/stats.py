@@ -9,7 +9,6 @@ from scipy.stats import ranksums
 from scipy.stats import ttest_ind
 from scipy.stats import ttest_rel
 
-
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD
 
@@ -611,7 +610,7 @@ def compare_two_groups(testSettings,groupList):
 		paired = testSettings['paired']#self.selectedTest['paired']
 		test = testSettings['test']#self.selectedTest['test']
 		mode = testSettings['mode']# self.selectedTest['mode']	
-		
+		print(paired,test,mode)
 		if test in ['t-test','Welch-test']:
 			if test == 'Welch-test':
 				equalVariance = False
@@ -619,15 +618,44 @@ def compare_two_groups(testSettings,groupList):
 				equalVariance = True
 			if paired:
 				try:
-					testResult = ttest_rel(groupList[0],groupList[1], nan_policy='omit')
+					if mode == 'two-sided [default]' or mode == 'greater':
+						group1, group2 = groupList
+					elif mode == 'less':
+						group1, group2 = groupList[1], groupList[0]
+					testResult = ttest_rel(group1,group2,nan_policy='omit')
 					if mode != 'two-sided [default]':
-						testResult = (testResult[0], testResult[1]/2)
-				except:
+						if mode == 'greater':
+							mult = 1 
+						else: 
+							mult = -1
+						if testResult[0] < 0:
+							testResult = (mult*testResult[0], 1-testResult[1]/2)
+						else:	
+							testResult = (mult*testResult[0], testResult[1]/2)
+							
+				except ValueError:
+					tk.messagebox.showinfo('Error ..','Can not handle unequal data size.')
 					testResult = (np.nan, np.nan)
+					
 			else:
 				try:
-					testResult = ttest_ind(groupList[0],groupList[1], nan_policy='omit', 
+					if mode == 'two-sided [default]' or mode == 'greater':
+						group1, group2 = groupList
+					elif mode == 'less':
+						group1, group2 = groupList[1], groupList[0]
+					testResult = ttest_ind(group1,group2, nan_policy='omit', 
 																equal_var = equalVariance)
+					if mode != 'two-sided [default]':
+						
+						if mode == 'greater':
+							mult = 1 
+						else: 
+							mult = -1
+							
+						if testResult[0] < 0:
+							testResult = (mult*testResult[0], 1-testResult[1]/2)
+						else:	
+							testResult = (mult*testResult[0], testResult[1]/2)
 				except:
 					testResult = (np.nan,np.nan)
 					
@@ -636,13 +664,19 @@ def compare_two_groups(testSettings,groupList):
 				alt_test = 'two-sided'
 			else:
 				alt_test = mode
-			testResult = mannwhitneyu(groupList[0],groupList[1],alternative=alt_test)
+			try:
+				testResult = mannwhitneyu(groupList[0],groupList[1],alternative=alt_test)
+			except:
+				testResult = (np.nan,np.nan)
 				
 		elif test == 'Wilcoxon [paired non-para]': 
-			groupList = [group[~pd.isnan(group)] for group in groupList]
+		
+			groupList = [group[~np.isnan(group)] for group in groupList]
 			try:
-				testResult = wilcoxon(groupList[0],groupList[1])		
+				testResult = wilcoxon(groupList[0],groupList[1],correction=True)		
+			
 			except ValueError:
+				
 				quest = tk.messagebox.askquestion('Unequal N',
 						'Wilcoxon cannot handle unequal N. Would you like to get an equal subset of the two groups?')			
 				if quest == 'yes':
@@ -650,9 +684,19 @@ def compare_two_groups(testSettings,groupList):
 					groupList = [np.random.choice(group,min,replace=False) for group in groupList]
 					testResult = wilcoxon(groupList[0],groupList[1])		
 				else:
-					pass
+					testResult = (np.nan,np.nan)
+					
 			if mode != 'two-sided [default]':
-				testResult = (testResult[0], testResult[1]/2)
+			
+						if mode == 'greater':
+							mult = 1 
+						else: 
+							mult = -1
+							
+						if testResult[0] < 0:
+							testResult = (mult*testResult[0], 1-testResult[1]/2)
+						else:	
+							testResult = (mult*testResult[0], testResult[1]/2)
 				
 		return testResult
 

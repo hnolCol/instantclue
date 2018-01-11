@@ -11,21 +11,20 @@ from modules.utils import *
 
 class importDataFromDf(object):
 
-	def __init__(self,dfClass,title,requiredDataPoints = None,dataFrame = None):
+	def __init__(self,dfClass,title,requiredDataPoints = None, allowMultSelection = False,dataFrame = None):
 		
 		self.data_to_export = pd.DataFrame()
 		
-		self.fileNames = list(dfClass.fileNameByID.values())
-		self.currFileName = dfClass.get_file_name_of_current_data()
 		
 		self.dfClass = dfClass
 		self.title = title
 		
+		self.get_file_names()
 		self.dfSelection = tk.StringVar()
 		self.selectionIndicator = tk.StringVar()
 		
 		self.requiredDataPoints = requiredDataPoints 
-		
+		self.allowMultSelection = allowMultSelection
 		self.build_toplevel() 
 		self.build_widgets()
 		
@@ -38,6 +37,7 @@ class importDataFromDf(object):
 		if reset or self.selectionMatches == False:
 			self.currentRows = []
 			self.currentColumns = [] 
+		self.toplevel.after_cancel(self.dataSelection)
 		self.toplevel.destroy() 	
 		
 	
@@ -114,10 +114,9 @@ class importDataFromDf(object):
 		'''
 		Actually displaying the data.
 		'''
-		dataFrameID = [id for id,fileName in self.dfClass.fileNameByID.items() if fileName == self.dfSelection.get()]
+		dataFrameID = self.getIdFromName[self.currFileName]
 	 	
-	 	
-		df = self.dfClass.get_data_by_id(dataFrameID[0])
+		df = self.dfClass.get_data_by_id(dataFrameID)
 		self.pt = core.Table(self.cont_preview,
 						dataframe = df, 
 						showtoolbar=False, 
@@ -137,11 +136,13 @@ class importDataFromDf(object):
 		shapeString = 'Rows: {} x Columns: {}'.format(nRows,
 														   nCols)
 		
-		if nRows == self.requiredDataPoints and nCols == 1:
+		
+		
+		if nRows == self.requiredDataPoints and (nCols == 1 or self.allowMultSelection):
 			selectionString = 'Row selection matches - '+shapeString
 			self.labelSelection.configure(**titleLabelProperties)
 			
-		elif nCols == self.requiredDataPoints  and nRows == 1:
+		elif nCols == self.requiredDataPoints  and (nRows == 1 or self.allowMultSelection):
 			selectionString =  'Column selection matches - '+shapeString
 			self.labelSelection.configure(**titleLabelProperties)
 		else:
@@ -152,19 +153,33 @@ class importDataFromDf(object):
 		self.selectionIndicator.set(selectionString)
 			 
 	
-		self.toplevel.after(200, self.identify_selected_data)
+		self.dataSelection = self.toplevel.after(200, self.identify_selected_data)
 		
 		
 		
-	def refresh_preview(self, dataFrameID):
+	def refresh_preview(self, idAndName):
 		'''
 		Refreshing the preview of a file. 
 		'''
-		data = self.dfClass.get_data_by_id(dataFrameID)
-		self.pt.model.df = data
-		self.pt.redraw()
+		if idAndName in self.getIdFromName:
+			dataFrameID = self.getIdFromName[idAndName]
+			data = self.dfClass.get_data_by_id(dataFrameID)
+			self.pt.model.df = data
+			self.pt.redraw()
+	
+	def get_file_names(self):
+		'''
+		'''
+		self.getIdFromName = {}
+		fileNameSelected = self.dfClass.get_file_name_of_current_data()
+		for id, fileName in self.dfClass.fileNameByID.items():
+			self.getIdFromName['{} {}'.format(id,fileName)] = id
+			if fileNameSelected == fileName:
+				self.currFileName = '{} {}'.format(id,fileName)
 		
-
+		self.fileNames = list(self.getIdFromName.keys())
+		
+		
 	def get_data_selection(self):
 		if len(self.currentRows) > 0 and len(self.currentColumns) > 0:
 			return self.pt.model.df.iloc[self.currentRows,self.currentColumns]

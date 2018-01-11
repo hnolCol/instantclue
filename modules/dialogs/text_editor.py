@@ -24,7 +24,6 @@ class textEditorDialog(object):
 		'''
 		extraCB - dict. Can handle addition checkbox widgets creation. key = key, 
 					items = text,initial Value (example extraCB = {ticks:['Apply to all x-ticks',True]}
-		
 		'''
 		self.styleDict	= None
 		self.extraCbs = extraCB
@@ -65,7 +64,7 @@ class textEditorDialog(object):
          
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		
-		w = 612
+		w = 620
 		h = 380
              
 		self.toplevel = popup
@@ -76,7 +75,7 @@ class textEditorDialog(object):
 		'''
 		self.cont= tk.Frame(self.toplevel, background = MAC_GREY) 
 		self.cont.pack(expand =True, fill = tk.BOTH)
-		self.cont.grid_columnconfigure(9,weight=1)
+		self.cont.grid_columnconfigure(0,weight=1)
 		
 		labelTitle = tk.Label(self.cont, text= 'Text Editor', 
  		
@@ -97,7 +96,7 @@ class textEditorDialog(object):
 		for key, settings in self.comboSettings.items():
 
 			combo = ttk.Combobox(self.cont,**settings)
-			combo.grid(row=m+1,column=n,sticky=tk.W,pady=3,padx=1)
+			combo.grid(row=m+1,column=n,sticky=tk.EW,pady=3,padx=1)
 			combo.bind('<<ComboboxSelected>>',self.update_text_window)
 			n+=1
 		
@@ -138,10 +137,34 @@ class textEditorDialog(object):
 		'''
 		w = event.widget
 		color = askcolor(color=w.cget('bg'),parent=self.toplevel)
-		if color is not None:
+		if color[1] is not None:
 			w.configure(bg=color[1])
 			self.txtWindow.configure(fg=color[1])
 			self.itemProps['color'] = color[1]
+	
+	def check_variant(self,input=None):
+		'''
+		'''
+		variant = self.comboSettings['variant']['textvariable'].get()
+		if  variant != 'None':
+			if input is None:
+				inputText = self.txtWindow.get('1.0',tk.END)
+			else:
+				inputText = input
+			if variant == 'Title':
+				textOut = inputText.title()
+			elif variant == 'UPPER':
+				textOut = inputText.upper()
+			elif variant == 'lower case':
+				textOut = inputText.lower()
+			if input is None:
+				self.txtWindow.delete('1.0',tk.END)
+				self.txtWindow.insert(tk.END,textOut)
+			else:
+				return textOut
+		else:
+			return
+		
 			
 	def update_text_window(self,event=None):
 		'''
@@ -150,7 +173,8 @@ class textEditorDialog(object):
 		if style not in ['roman','italic']:
 			style = 'roman'
 			
-		## matplotlib has much more setting than the text widget from tkinter - careful!
+		self.check_variant()
+		## matplotlib has much more setting for this option than the text widget from tkinter - careful!
 		weight = self.comboSettings['weight']['textvariable'].get()
 		if weight not in ['normal','bold']:
 			if weight in self.comboSettings['weight']['values']:
@@ -192,6 +216,9 @@ class textEditorDialog(object):
 		'''
 		self.styleDict = self.define_style_dict()
 		self.close()
+	
+	
+	
 					
 	def define_style_dict(self):
 		'''
@@ -215,7 +242,6 @@ class textEditorDialog(object):
 				return
 		
 		style = {'s':self.txtWindow.get('1.0',tk.END).strip(),
-				
 				'fontdict' : {'weight':weightFont,
 							 'size':sizeFont,
 							 'style':self.comboSettings['style']['textvariable'].get(),
@@ -224,6 +250,12 @@ class textEditorDialog(object):
 							 'ha':self.itemProps['ha'],
 							 'rotation':self.comboSettings['rotation']['textvariable'].get().split(' ')[0]}}
 		return style 
+
+
+	def get_variant(self):
+		'''
+		'''
+		return self.comboSettings['variant']['textvariable'].get()
 	
 	def get_results(self):
 		'''
@@ -252,8 +284,11 @@ class textEditorDialog(object):
 		rotation = {'textvariable':tk.StringVar(value=self.itemProps['rotation']),
 				'values':[str(x)+' °' for x in range(0,360,15)],
 				'width':5}	
+		variant = {'textvariable':tk.StringVar(value='None'),
+				'values':['None','Title','UPPER','lower case'],
+				'width':6}
 		comboSettings = OrderedDict([('font',font),('size',size),('weight',weight),
-							('style',style),('rotation',rotation)])
+							('style',style),('rotation',rotation),('variant',variant)])
 	
 		return comboSettings
 

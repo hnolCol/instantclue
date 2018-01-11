@@ -4,8 +4,6 @@ import tkinter as tk
 import webbrowser 
 
 import analyze_data
-from funcs import resize_window_det
-from funcs import determine_platform
 
 
 from tkinter import ttk
@@ -13,7 +11,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.4.1' #Date 30.12.2017
+__VERSION__ = '0.4.2' #Date 11.01.2018
 
 
 

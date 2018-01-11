@@ -90,8 +90,10 @@ class artistEditorDialog(object):
 				lab.grid(row=i+2, column =1,pady=2,padx=2,sticky=tk.W)
 				self.collect_coll_labels.append(lab_)
 
-		applyButton =  ttk.Button(self.cont, text='Apply', command = self.apply_changes)
-		discardButton =  ttk.Button(self.cont, text= 'Discard', command = self.close_toplevel)
+		applyButton =  ttk.Button(self.cont, text='Apply', 
+			command = self.apply_changes, width = 6)
+		discardButton =  ttk.Button(self.cont, text= 'Discard', 
+			command = self.close_toplevel,width = 6)
 
 		if (self.looks_like_clust == False  and self.collection_list_colors is None) and self.QuadMesh == False:  
 			color_text.grid(row=3, column =0,pady=2,padx=2, sticky=tk.E)

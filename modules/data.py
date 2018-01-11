@@ -292,7 +292,7 @@ class DataCollection(object):
 		return df
 		
 			
-	def evaluate_column_name(self,columnName,columnList = None, useExact = False):
+	def evaluate_column_name(self,columnName,columnList = None, useExact = False, maxLength = 80):
 		'''
 		Check if the column name already exists and how often. Adds a suffix.
 		'''
@@ -308,7 +308,8 @@ class DataCollection(object):
 			newColumnName = columnName+'_'+str(numberColumnNameExists)
 		else:
 			newColumnName = columnName
-		
+		if len(newColumnName) > maxLength-10:
+			newColumnName = newColumnName[:maxLength-30]+'___'+newColumnName[-30:]
 		return newColumnName
 	
 	def extract_data_type_of_columns(self,dataFrame,id):
@@ -806,7 +807,7 @@ class DataCollection(object):
 			indexInTreeview = self.dfsDataTypesAndColumnNames[self.currentDataFile]['object'].index(columnName)
 			
 			newColumnNames = df_split.columns = ["{}_[by_{}]_{}".format(columnName,splitString,colIndex) for colIndex in expandedSplitOnDataColumns]
-			
+			df_split.fillna(self.replaceObjectNan,inplace=True)
 			self.insert_data_frame_at_index(df_split,newColumnNames,indexColumnInData)
 			
 		self.update_columns_of_current_data()

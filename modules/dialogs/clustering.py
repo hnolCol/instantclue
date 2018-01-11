@@ -259,7 +259,7 @@ class clusteringDialog(object):
 		columnName = self.dfClass.evaluate_column_name('Clust-Labels: {}'.format(self.initialMethod))
 		classLabels = pd.DataFrame(clusterClass.labels_, 
 								   index=self.data.index, columns = [columnName], dtype = 'object')
-		classLabels[columnName] = classLabels[columnName].astype(str).fillna(self.dfClass.replaceObjectNan)
+		classLabels[columnName] = classLabels[columnName].fillna(self.dfClass.replaceObjectNan).astype(str)
 		## calculate silhouette and calinksi score	   
 		silhouetteScore = silhouette_score(self.data[self.numericColumns], clusterClass.labels_, metric = 'euclidean')
 		calinskiScore = calinski_harabaz_score(self.data[self.numericColumns], clusterClass.labels_)
@@ -498,6 +498,7 @@ class predictCluster(object):
 				columnName = 'Predict {}'.format(key)
 				columnName = self.dfClass.evaluate_column_name(columnName)
 				dataToPredict.loc[:,columnName] = clustLabels
+				dataToPredict[columnName] = dataToPredict[columnName].fillna(self.dfClass.replaceObjectNan).astype(str)
 				predictLabelsColumns.append(columnName)
 		
 		

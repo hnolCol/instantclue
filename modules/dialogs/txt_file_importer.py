@@ -65,7 +65,7 @@ class fileImporter(object):
 		'''
 		Close toplevel
 		'''
-		self.pt.parentframe.destroy()	
+		self.pt.remove()	
 		self.toplevel.destroy() 
 
 	def build_toplevel(self):

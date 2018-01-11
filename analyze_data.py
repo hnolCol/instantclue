@@ -12,12 +12,6 @@ import tkinter.font as tkFont
 from tkinter.colorchooser import *
 
 
-from funcs import adjust_text_labels
-from funcs import fill_axes
-from funcs import resize_window_det
-from funcs import get_cmap
-from funcs import custom_drag_drop_selection
-from funcs import correlations
 
 # internal imports
 
@@ -31,7 +25,7 @@ from modules import save_and_load_sessions
 from modules import interactive_widget_helper
 
 from modules.plots import scatter_with_categories
-from modules.plots import hierarchical_clustering
+
 from modules.dialogs import chart_configuration
 from modules.dialogs import size_configuration
 from modules.dialogs import display_data
@@ -45,7 +39,7 @@ from modules.dialogs import curve_fitting
 from modules.dialogs import clustering
 from modules.dialogs import findAndReplace
 from modules.dialogs import classification
-from modules.dialogs import txt_editor
+from modules.dialogs import custom_sort
 from modules.dialogs import mergeDataFrames
 from modules.dialogs import anova_calculations
 from modules.dialogs import anova_results
@@ -53,6 +47,9 @@ from modules.dialogs import define_groups_dim_reduction
 from modules.dialogs import pivot_table
 from modules.dialogs import dimRed_transform
 from modules.dialogs import VerticalScrolledFrame
+from modules.dialogs import custom_filter
+from modules.dialogs import color_configuration
+from modules.dialogs import correlations
 
 from modules.dialogs.simple_dialog import simpleUserInputDialog
 from modules.utils import *
@@ -174,6 +171,7 @@ class analyze_data(tk.Frame):
            self.curveFitCollection = curve_fitting.curveFitCollection()
            self.clusterCollection = clustering.clusterAnalysisCollection()
            self.classificationCollection =classification.classifierAnalysisCollection()
+           self.colorHelper = color_configuration.colorMapHelper()
            
            
            self.interactiveWidgetHelper = interactive_widget_helper.interactiveWidgetsHelper(self.mark_sideframe)
@@ -406,7 +404,7 @@ class analyze_data(tk.Frame):
            
            menuDict['sort'].add_command(label="Value", command = lambda s = "Value":  self.sort_source_data(s))
            menuDict['sort'].add_command(label="String length", command = lambda s = "String length":  self.sort_source_data(s)) 
-           menuDict['sort'].add_command(label="Custom order", command = lambda : tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.'))#)self.design_popup(mode='Custom sorting'))
+           menuDict['sort'].add_command(label="Custom order", command = self.custom_sort_values)#lambda : tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.'))#)self.design_popup(mode='Custom sorting'))
 
            for splitString in splitOptions:
                menuDict['split'].add_command(label=splitString, 
@@ -557,7 +555,7 @@ class analyze_data(tk.Frame):
          
          self.data_type_menu.add_command(label='Sort and rename columns', state = tk.DISABLED)
          self.data_type_menu.add_separator()
-         self.data_type_menu.add_command(label = 'Custom column order', command  =  lambda: tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.'))#self.design_popup(mode='Re-Sort'))
+         self.data_type_menu.add_command(label = 'Custom column order', command  =  self.custom_column_order)#lambda: tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.'))#self.design_popup(mode='Re-Sort'))
          self.data_type_menu.add_command(label='Sort columns alphabetically', command = self.re_sort_source_data_columns)
          self.data_type_menu.add_command(label='Colum names - Find and replace', command = lambda : findAndReplace.findAndReplaceDialog('ReplaceColumns',
          																				self.sourceData,self.DataTreeview))
@@ -581,12 +579,10 @@ class analyze_data(tk.Frame):
      def build_main_figure_menu(self):
          
          self.main_figure_menu = tk.Menu(self, **styleDict)         
-         self.main_figure_menu.add_command(label='Add to main figure',foreground='darkgrey')  
+         self.main_figure_menu.add_command(label='Add in main figure to ..',foreground='darkgrey')  
          self.main_figure_menu.add_separator()
 
          
-    
-
      def build_corrMatrix_menu(self):
      	'''
      	'''
@@ -720,17 +716,87 @@ class analyze_data(tk.Frame):
      	Dialog to define grouping in dimensional reduction procedure
      	'''
      	define_groups_dim_reduction.defineGroupsDialog(self.dimensionReductionCollection,
-     												   self.plt)
+     												   self.plt,
+     												   self.colorHelper)
+     def custom_sort_values(self):
+     	'''
+     	'''
+     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData:
+     	
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		selectedColumns = self.DataTreeview.columnsSelected
+     		inputValues = OrderedDict()
+     		
+     		uniqueValueList = self.sourceData.get_unique_values(selectedColumns,forceListOutput=True) 
+     		
+     		for n,column in enumerate(selectedColumns):
+     			inputValues[column] = uniqueValueList[n]
+     		dialog = custom_sort.customSortDialog(inputValues) 
+     		
+     		if dialog.resortedValues is not None:
+     			idxColNames = []
+     			for key,values in dialog.resortedValues.items():
+     				factors = range(len(values))
+     				#kind of factorize for sorting
+     				orderMapDict = dict(zip(values,factors))
+     				idxColName = self.sourceData.evaluate_column_name('instantClueSort{}'.format(key))
+     				idxColNames.append(idxColName)
+     				self.sourceData.df[idxColName] = self.sourceData.df[key].astype(str).map(orderMapDict)     				
+     				del orderMapDict
+     			
+     			self.sourceData.df.sort_values(idxColNames,kind='mergesort',inplace=True) 
+     			self.sourceData.delete_columns_by_label_list(idxColNames)
+     			tk.messagebox.showinfo('Done ..','Customary sorting done.',parent=self)
+     
+     		else:
+     			pass
+     			
+     		del dialog
+     	else:
+     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
+
+
+     def custom_column_order(self):
+     	'''
+     	'''
+     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData:
+     	
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		
+     		selectedDataTypes = self.DataTreeview.allItemsSelected
+     		inputValues = OrderedDict()     		
+     		for item in selectedDataTypes:
+     			dataType = item.split('{}_'.format(selectionDataFrameId))[-1]
+     			inputValues[dataType] = self.sourceData.get_columns_data_type_relationship()[dataType]
+     			
+     		dialog = custom_sort.customSortDialog(inputValues) 
+     		
+     		if dialog.resortedValues is not None:
+     			columnOrder = []
+     			for key,values in dialog.resortedValues.items():
+     				columnOrder.extend(values)
+     			df1 = self.sourceData.df[columnOrder]	
+     			dfOut = self.sourceData.join_missing_columns_to_other_df(df1,id=selectionDataFrameId)     			
+     			self.sourceData.update_data_frame(selectionDataFrameId,dfOut)
+     			self.update_all_dfs_in_treeview()
+     			tk.messagebox.showinfo('Done ..','Customary sorting done.',parent=self)
+     		else:
+     			pass
+     	else:
+     		tk.messagebox.showinfo('Error ..','Please select only data types from one file.',parent=self)
+
+
+
      	
      def summarize(self):
      	'''
      	Summarize Table 
      	'''
-     	currentDataFrameId = self.sourceData.currentDataFile
      	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
      	if selectionIsFromSameData:
      		self.sourceData.set_current_data_by_id(selectionDataFrameId) 
-     		
      		selectedColumns = self.DataTreeview.columnsSelected  
      		summarizedData = self.sourceData.df[selectedColumns].describe(
      													percentiles = [.25, .5, .75],
@@ -825,31 +891,46 @@ class analyze_data(tk.Frame):
 	
      def calculate_correlations(self):
      	'''
+     	Calculates correlation of rows against given values 
      	'''
-     	corr_ = correlations.correlate_rows_to(data=self.sourceData.df, columns = self.DataTreeview.columnsSelected  , platform=platform)
-     	cor_data = corr_.get_correlations() 
+     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData: 
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     	else:
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only columns from one data frame',parent=self)
+     		return
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error ..','Please select only numeric data.',parent=self) 
+     		return
+     		   	
+     	corrDialog = correlations.correlationDialog(dfClass=self.sourceData, 
+     										selectedColumns = self.DataTreeview.columnsSelected)
+     	
+     	cor_data = corrDialog.get_correlations() 
+     	if cor_data.empty:
+     		return
+     	
+     	columnsAddedToDf = self.sourceData.join_df_to_currently_selected_df(cor_data, exportColumns = True)
+     	self.DataTreeview.add_list_of_columns_to_treeview(selectionDataFrameId,'float64',columnsAddedToDf)
+     	     	
      	tk.messagebox.showinfo('Done..','Calculations were performed and data were added to the source data treeview.',parent=self) 
-     	
-     	self.sourceData.df = self.sourceData.df.join(cor_data)
-     	
-     	self.sourceData.df_columns = self.sourceData.df.columns.values.tolist()
-     	 
-     	
-     	for column in cor_data.columns:
-     		try:
-     			self.source_treeview.insert(self.current_data+str(self.sourceData.df[column].dtype), 
-                                              'end',
-                                              self.current_data+column,
-                                              text= column,
-                                              image = self.float_icon)
-     		except:
-     			pass
-             
-             
+     	             
              
      def custom_filter(self):
+     ## seleceted data ?
      
-     	customFilter = custom_drag_drop_selection.custom_category_handle(platform,self.sourceData.df, self.DataTreeview.columnsSelected  , os.path.join(path_file,'icons'))
+     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData: 
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     	else:
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only columns from one data frame',parent=self)
+     		return
+     	
+     	customFilter = custom_filter.customFilterDialog(self.sourceData, self.DataTreeview.columnsSelected)
+     	
+     	
      	data,mode, match_annotation = customFilter.get_data() 
      	del customFilter
      	currentFileName = self.sourceData.get_file_name_of_current_data()
@@ -898,8 +979,21 @@ class analyze_data(tk.Frame):
      def perform_export(self, axExport,axisId,figureTemplate, exportId = None):
      		### to do - log transofrm of axes .. 
      		## 
+         '''
+         Performs the export.
+         Parameter
+         ==========
+         axExport - matplotlib axis. The axis that should be used for export
+         axisId   - id for given axExport in the main figure template collection
+         figureTemplete  - dict that contains the figure (key = 'figure') on which the
+         				   axis axExport is on and the template (key = 'template') which
+         				   is the class that stores all axes and texts etc in a main
+         				   figure template
+         				   
+         '''
      		
          figureTemplate['template'].clear_axis(axExport)
+		
          plotExporter = self.plt.get_active_helper()
          
          plotExporter.export_selection(axExport,self.axNum,figureTemplate['figure'])
@@ -909,11 +1003,10 @@ class analyze_data(tk.Frame):
          		exportId = plotExporter._hclustPlotter.exportId
          		axes = plotExporter._hclustPlotter.exportAxes[exportId]
          		figureTemplate['template'].associate_axes_with_id(axisId,axes)
-         		
+         figureTemplate['template'].extract_artists(axExport,axisId)
          figureTemplate['template'].add_axis_label(axExport,
          										   axisId,
          										   label=figureTemplate['template'].figureProps[axisId]['axisLabel'])
-         figureTemplate['template'].extract_artists(axExport,axisId)
          figureTemplate['figure'].canvas.draw()
          
          self.mainFigureCollection.store_export(axisId,
@@ -923,10 +1016,7 @@ class analyze_data(tk.Frame):
          										exportId,
          										bool(self.plt.showSubplotBox),
          										bool(self.plt.showGrid))
-         
-         
-          
-         
+                   
          
      def display_curve_fits(self):      
       	'''
@@ -944,10 +1034,12 @@ class analyze_data(tk.Frame):
       	else:
       		pass	
       	
-
-
       
      def export_selected_figure(self,event):
+         '''
+         Cast a menu to export subplots from the main window into a 
+         main figure template.
+         '''
      	 
          if event.inaxes is None:
              return
@@ -966,10 +1058,7 @@ class analyze_data(tk.Frame):
              self.ax_export_ax = event.inaxes
              
              if self.plt.castMenu == False:
-             	return
-
-             
-                             
+             	return                             
              self.post_menu(menu = self.main_figure_menu)        
         
         
@@ -1076,7 +1165,6 @@ class analyze_data(tk.Frame):
      	if self.plt.currentPlotType != 'scatter':
      		tk.messagebox.showinfo('Error ..','Only useful for scatter plots.', parent=self)
      		return
-     		
      	dataId = self.plt.get_dataID_used_for_last_chart()
      	self.sourceData.set_current_data_by_id(dataId)
      	
@@ -1541,6 +1629,7 @@ class analyze_data(tk.Frame):
              for button in self.selectedCategories.values():
                       button.destroy()    
              self.plt.clean_up_figure()
+             self.interactiveWidgetHelper.clean_frame_up()
              self.selectedNumericalColumns.clear()
              self.selectedCategories.clear()
 
@@ -1569,7 +1658,11 @@ class analyze_data(tk.Frame):
      	
 
          savedSession = save_and_load_sessions.open_session()
-         
+         if savedSession is None:
+         	return
+         elif savedSession == 'Not pckl found':
+         	tk.messagebox.showinfo('Not found ..','Could not find a saved session file in selected directory..')
+         	return
          self.plt = savedSession['plotter']
          self.sourceData = savedSession['sourceData']
          self.mainFigureCollection = savedSession['mainFigureCollection']
@@ -1615,16 +1708,32 @@ class analyze_data(tk.Frame):
      			for id , props in figText.items():
      				text = self.mainFigureCollection.mainFigures[figureId]['figure'].text(**props)
      				self.mainFigureCollection.mainFigures[figureId]['template'].textsAdded[id] = text
-     				     		
+     		
+     		self.unpack_exports(axisDict,figureId)
+     		self.mainFigureCollection.mainFigures[figureId]['figure'].canvas.draw()		     		
+     		
+     		     		
+     def unpack_exports(self,axisDict,figureId,specAxisId=None,specificAxis = None,transferAxisId = None): 
      		for axisId,exportDetails in axisDict.items():
-     			
+     			if specAxisId is not None:
+     				if axisId != specAxisId:
+     					continue
+     				else:
+     					axisId = transferAxisId
      			if 'path' in exportDetails:
      				try:
      					self.mainFigureCollection.mainFigures[figureId]\
      					['template'].add_image_to_axis(pathToFile = exportDetails['path'], \
      					axisId =axisId)
      				except:
-     					tk.messagebox.showinfo('Error..','Could not load image. Moved to another place?')
+     					tk.messagebox.showinfo('Error..',
+     						'Could not load image. Moved to another place?',
+     						parent = self)
+     				
+     				if transferAxisId  is not None:
+     					break
+     					
+     					
      				
      			else:
      				plotter = [plotter for plotter in self.plt.plotHistory[exportDetails['plotCount']]\
@@ -1637,26 +1746,40 @@ class analyze_data(tk.Frame):
      						storeId = plotter[0]._hclustPlotter.exportId
      						plotter[0]._hclustPlotter.fromSavedSession = True 
      						plotter[0]._hclustPlotter.exportId =  exportDetails['exportId']
-     				
+     				else:
+     					storeId = None
      				## limits -> axis limits used when exported on main figure template
      				limits = exportDetails['limits']
-     				ax = self.mainFigureCollection.mainFigures[figureId]['template'].figureProps[axisId]['ax']
-     				
+     				if specificAxis is None:
+     					ax = self.mainFigureCollection.mainFigures[figureId]['template'].figureProps[axisId]['ax']
+     				else:
+     					ax = specificAxis
      				# check how export was done (grids, boxes..)
      				boxBool, gridBool = exportDetails['boxBool'], exportDetails['gridBool']
      				## export again with saved settings
      				plotter[0].export_selection(ax,exportDetails['subplotNum'],
      					self.mainFigureCollection.mainFigures[figureId]['figure'], 
      					limits = limits,boxBool = boxBool, gridBool = gridBool)
-     					
      				self.mainFigureCollection.mainFigures[figureId]['template'].extract_artists(ax,axisId)
      				
      				if plotType in ['hclust','corrmatrix']:
      					plotter[0]._hclustPlotter.exportId  = storeId
      					axes = plotter[0]._hclustPlotter.exportAxes[exportDetails['exportId']]
      					self.mainFigureCollection.mainFigures[figureId]['template'].associate_axes_with_id(axisId,axes)
-     		
-     		self.mainFigureCollection.mainFigures[figureId]['figure'].canvas.draw()
+     				
+     				# indicates transfer
+     				if transferAxisId is not None:
+     					self.mainFigureCollection.store_export(transferAxisId,
+         										figureId,
+         										exportDetails['plotCount'],
+         										exportDetails['subplotNum'],
+         										storeId,
+         										exportDetails['boxBool'],
+         										exportDetails['gridBool'])
+     					break
+ 	
+ 		
+ 
   
      		
      def setup_main_figure(self): 
@@ -1747,7 +1870,7 @@ class analyze_data(tk.Frame):
      		testSettings = {'paired':self.paired,
      						'test':self.test,
      						'mode':self.mode}
-     			
+     		print(testSettings)	
      		for n,combination in enumerate(itertools.combinations(self.groupedStatsKeys,2)):
      			valuesGroup1 = self.groupedStatsData.get_group(combination[0])
      			valuesGroup2 = self.groupedStatsData.get_group(combination[1])
@@ -1760,9 +1883,13 @@ class analyze_data(tk.Frame):
      			for column in columnsForTest:
      				data1 = valuesGroup1[column].dropna().values
      				data2 = valuesGroup2[column].dropna().values
-     				testResult = stats.compare_two_groups(testSettings,[data1,
+     				try:
+     					testResult = stats.compare_two_groups(testSettings,[data1,
      											data2])
-     				t , p = round(testResult[0],4), testResult[1]
+     					t , p = round(testResult[0],4), testResult[1]
+     				except:
+     					t, p = np.nan, 1
+     				
      				dataDict['{} p-value'.format(column)].append(p)
      				dataDict['{} test statistic'.format(column)].append(t)
      		
@@ -1874,9 +2001,12 @@ class analyze_data(tk.Frame):
                     if heads == 'Compare-two-groups':
                         if opt_test in  ['t-test','Welch-test']:
                             for sub_opt in opt_two_groups:
-                                 sub2 = self.stats_tree.insert(sub1, 'end','%s_%s' % (str(opt_test),str(sub_opt)), text=sub_opt)
+                                 sub2 = self.stats_tree.insert(sub1, 'end','%s_%s' % (opt_test,sub_opt), text=sub_opt)
                                  for direction in direct_test:
-                                    self.stats_tree.insert(sub2, 'end', '%s_%s_%s' %  (str(opt_test),str(sub_opt),str(direction)), text=direction) 
+                                    self.stats_tree.insert(sub2, 'end', '%s_%s_%s' %  (opt_test,sub_opt,direction), text=direction) 
+                                 if opt_test == 'Welch-test':
+                                 	break
+                                
                         else:
                                 for direction in direct_test:
                                     self.stats_tree.insert(sub1, 'end', '%s_%s' % (str(opt_test),str(direction)), text=direction)
@@ -1891,6 +2021,9 @@ class analyze_data(tk.Frame):
          
          
      def  retrieve_test_from_tree(self,event,tree):
+         '''
+         Get the test properties from the selection.
+         '''
          self._drag_and_drop = True
          self.mot_button = None
          curItem = tree.focus()
@@ -1907,10 +2040,7 @@ class analyze_data(tk.Frame):
          elif len(itx) == 2:
             self.mode = itx[-1]
          else:
-            pass
-
-             	
-   
+            pass   
    
      		
      def combine_selected_columns(self):
@@ -2104,7 +2234,7 @@ class analyze_data(tk.Frame):
      		
      		self.sourceData.set_current_data_by_id(currentDataFrameId)
 
-     		tk.messagebox.showinfo('Done ..','Selected column(s) were splitted and added to the source data treeview.')
+     		tk.messagebox.showinfo('Done ..','Selected column(s) were split and added to the source data treeview.')
      		
      	else:
      		
@@ -2548,10 +2678,13 @@ class analyze_data(tk.Frame):
                                  if quest:
                                      dataSubset = self.sourceData.df[self.sourceData.df[self.DataTreeview.columnsSelected[0]].str.contains(r'^\+$')]
                                  	
-                                     categorical_filter.categoricalFilter(self.sourceData,self.DataTreeview,self.plt,
+                                     dialog = categorical_filter.categoricalFilter(self.sourceData,self.DataTreeview,self.plt,
                                      									  operationType = 'Annotate scatter points',
                                      									  columnForFilter = self.DataTreeview.columnsSelected[0], 
                                      									  dataSubset = dataSubset)
+                                     if dialog.closed:
+                                     	return
+                          
                                  else:
                                     self.make_labels_selectable() 
                          else:
@@ -2668,8 +2801,9 @@ class analyze_data(tk.Frame):
              
              
              columnSelected = self.DataTreeview.columnsSelected
-             if 'change_color_by_categorical_columns' in self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges:
-             	alreadyUsedColors = self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+             if self.plt.nonCategoricalPlotter is not None:
+             	if 'change_color_by_categorical_columns' in self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges:
+             		alreadyUsedColors = self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
              else:
              	alreadyUsedColors = []
              self.DataTreeview.columnsSelected = alreadyUsedColors + columnSelected
@@ -2808,11 +2942,22 @@ class analyze_data(tk.Frame):
      	Dialogue window to calculate curve fit. 
      	'''
      	if  from_drop_down:
+     		selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     		if selectionIsFromSameData: 
+     			self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		else:
+     			tk.messagebox.showinfo('Error ..','Please select only columns from one data frame',parent=self)
+     			return
      		columns = self.DataTreeview.columnsSelected  
      	else:
-     		columns = list(self.selectedNumericalColumns.keys())  
+     		id = self.plt.get_dataID_used_for_last_chart()
+     		self.sourceData.set_current_data_by_id(id)
+     		columns = list(self.selectedNumericalColumns.keys())
+     	  
      	curve_fitting.curveFitter(columns,self.sourceData,self.DataTreeview,self.curveFitCollection)
-                 
+        
+        
+      
      
      def show_anova_results(self, id):
      	'''
@@ -3133,6 +3278,9 @@ class analyze_data(tk.Frame):
      	currentDataSelection = self.DataTreeview.get_data_frames_from_selection()
      	if len(currentDataSelection) == 0:
      		currentDataSelection = [self.sourceData.currentDataFile]
+     		if currentDataSelection is None:
+     			tk.messagebox.showinfo('No data ..','No data loaded.',parent=self)
+     			return
      	else:
      		pass
      	datToInspect = self.sourceData.get_data_by_id(currentDataSelection[0]).copy() ## this is needed otherwise the self.df will be updated instantly
@@ -3266,46 +3414,6 @@ class analyze_data(tk.Frame):
                      size_data = data[col_]
                      sizes = size_data.apply(lambda x: size_map_update[x])
                      
-
-     
-         
-     def change_transp(self, val):
-         
-         val = round(float(val),2)
-         self.alpha_selected.set(val) 
-         try:
-             plot_type = last_called_plot[-1][-2]
-             categories = last_called_plot[-1][1]
-             n_categories = len(categories)
-         except:
-            
-             return
-         if plot_type == 'scatter': 
-                
-                 if n_categories  == 0:    
-                     self.scat.set_alpha(val)
-                 else:
-                 	for key, subset_and_scatter in self.subsets_and_scatter_with_cat.items():
-                 		_,_, scat = subset_and_scatter
-                 		scat.set_alpha(val)
-             	
-             		
-            
-         elif plot_type == 'pointplot' or plot_type == 'swarm': 
-         	axes = self.f1.axes
-         	for ax in axes:
-         		ax_coll = ax.collections
-         		for coll in ax_coll:
-         			coll.set_alpha(val) 
-         			
-    
-         elif plot_type == 'scatter_matrix': 
-             for scatter in self.axes_scata_dict.values():
-                 scatter.set_alpha(val)
-         
-         self.canvas.draw()
-         self.settings_points['alpha'] = val
-         
                                                 
 
                         
@@ -4088,39 +4196,6 @@ class analyze_data(tk.Frame):
                              an_gn = self.a[1].text(xy[0],xy[1], s= text_annot)   
                              collect_texts.append(an_gn)
                              collect_names.append(text_annot+str(xy))
-                             
-                 if len(data_to_annotate.index) >= 2000:        
-                     x_data = self.sourceData.df[colnames[0]] 
-                     y_data = self.sourceData.df[colnames[0]] 
-                     texts, orig_xy = adjust_text_labels.adjust_text(collect_texts,x_data = x_data, y_data = y_data, renderer = r, ax = self.a[1], add_objects = self.artist_list)      
-                     
-                     for j, text in enumerate(texts):
-                         xy_text = text.get_position()
-                         xy = orig_xy[j]
-                         
-                         if xy_text[0] < xy[0]:
-                             add_x = - (xy[0]*0.015)
-                         else:
-                             add_x = (xy[0]*0.015)
-                         if xy_text[1] < xy[1]:
-                             add_y = - (xy[1]*0.015)
-                         else:
-                             add_y = + (xy[1]*0.015)
-                         xy_text = (xy_text[0]+add_x,xy_text[1]+add_y)    
-                         
-                         
-                         
-                         
-                         an_gn = self.a[1].annotate(text.get_text(),xy=orig_xy[j],xytext = xy_text ,
-                                          bbox=bbox_args,
-                                          arrowprops=arrow_args,
-                                           ha='left')#, zorder=0)
-                         self.add_annotation_to_global_dict(an_gn)              
-                         if len(data_to_annotate.index) <= 5 and len(self.annotations_dict) < 20:     
-                             label = collect_names[j]     
-                             self.artist_list.append(an_gn)
-                             self.annotations_dict[label] = an_gn
-                         texts[j].remove()
                          
                             
                          
@@ -4262,6 +4337,7 @@ class analyze_data(tk.Frame):
          	return
          plotHelper = self.plt.get_active_helper()
          plotHelper.change_nan_color(col_get)
+         self.plt.set_scatter_point_properties(color=col_get)
          self.plt.redraw()
          
          
@@ -4281,17 +4357,13 @@ class analyze_data(tk.Frame):
    
              
              
-     def check_button_handling(self, cb):
+     def check_button_handling(self, colormap):
+
          
-         for cbs in self.cb_list:
-             if cbs != cb:
-                 cbs.state(['!selected'])
-         idx_cb = self.cb_list.index(cb)
-         updated_palette = color_schemes[idx_cb]
+         self.cmap_in_use.set(colormap)
          
-         self.cmap_in_use.set(updated_palette)
-         
-         color_changer.colorChanger(self.plt,self.sourceData,updated_palette, self.interactiveWidgetHelper)
+         if self.plt.plotCount != 0:
+         	color_changer.colorChanger(self.plt,self.sourceData,colormap, self.interactiveWidgetHelper)
          
         
      def numeric_filter_dialog(self):
@@ -4329,63 +4401,13 @@ class analyze_data(tk.Frame):
          		return         
          
 	         
-     
-            
-     def _fill_trees(self, data, col_sel = [], tree_from_dict = False, dict_key = 0, sort_active = True):
-                    if len(col_sel) == 0:
-                        col_sel = self.sourceData.df_columns
-                        
-                    if   tree_from_dict:
-                        tree = self.save_tree_view_to_dict[dict_key]
-                    else:
-                        tree = self.data_tree
+     def open_color_configuration(self):
+     	'''
+     	Opens a dialog window to change color/alpha settings.
+     	'''
+     	color_configuration.colorChooseDialog(self.colorHelper,self, 
+     			self.cmap_in_use.get(),float(self.alpha_selected.get()))     
 
-                    for col in col_sel:
-                        idx_ = col_sel.index(col)
-                       # #print(col)
-                        try:
-                            if sort_active:
-                                tree.heading(col, text=col,
-                                                   command = lambda c=col: self.sortby(tree,
-                                                                                  c,
-                                                                                  0, 
-                                                                                  data_file = data))
-                            else:
-                                tree.heading(col, text=col)
-                                                   
-                            dtyp_col = data[col].dtype
-                            col_w = tkFont.Font().measure(col) + 20
-                            if  dtyp_col == np.float64 or dtyp_col == np.int64:
-                                tree.column(col, anchor=tk.CENTER, width=col_w)
-                                
-                            else:
-                                 tree.column(col, anchor=tk.W, width=col_w)
-                        except:
-                            pass 
-                        
-                    for col_num in range(len(data.index)):
-                        data_fill = tuple(data.iloc[col_num])
-                        if tree_from_dict == True and 'subject' not in dict_key:
-                            if data_fill[-2] == True:
-                                tag = 'green'
-                            else:
-                                tag = ''      
-                        else:
-                            tag = '' 
-                        tree.insert('', 'end',str(col_num), values = data_fill, tag=tag)
-                    if tree_from_dict == True and 'subject' not in dict_key:
-                        tree.tag_configure('green', background = "lightgreen")
-         
-         
-             
-     def define_error_for_ts(self, var_list, colnames,popup):
-         
-         self.error_col_dic = OrderedDict() 
-         
-         for i,col_ in enumerate(colnames[1:]):
-             
-             self.error_col_dic[col_] = var_list[i].get() 
-         popup.destroy() 
          
      def create_frame(self,popup):
 
@@ -4430,9 +4452,10 @@ class analyze_data(tk.Frame):
              size = self.settings_points['sizes'][0]
              size_handle = size_configuration.SizeConfigurationPopup(platform,self.f1,self.canvas,plot_type,size, catnames,
              				self.subsets_and_scatter_with_cat, self.axes_scata_dict,self.filt_source_for_update)
-
+			
              self.settings_points['sizes'] = [size_handle.size]
              self.plt.set_scatter_point_properties(size = size_handle.size)
+             self.plt.redraw()
              return 
          
                   
@@ -4514,100 +4537,6 @@ class analyze_data(tk.Frame):
              self.plt.showGrid = chart_configurator.show_grid
 
 
-                
-                 
-         elif 'Color' in mode:
-              #popup.attributes('-topmost', True)
-            
-              h = 430
-              w = 690
-              try:
-                  used_alpha = float(self.alpha_selected.get())
-                  
-              except:
-                  used_alpha = 0.4
-                  
-              self.cb_list = list()
-              self.var =tk.IntVar()
-              self.var.set(0)
-              
-              
-              
- 
-              label_main = tk.Label(popup, text = "Choose color palette.", bg = MAC_GREY)#\nYou can simply click on the colors [scatter plots only] or select a new color palette [ColorBrewer]")
-              label_des = tk.Label(popup, text = 'Change transparancy of marker: ', bg = MAC_GREY)
-              lab_alpha = tk.Label(popup, textvariable = self.alpha_selected, bg = MAC_GREY)
-                  
-                  
-              self.slider_col = ttk.Scale(popup, from_=0, to=1, value = used_alpha, command = lambda val: self.change_transp(val)) 
-              
-              
-              
-               
-              label_main.grid(padx=5,row=0, column=0, columnspan=35,sticky=tk.W, pady=15)  
-              
-              for scheme in color_schemes:
-                  list_of_colors = sns.color_palette(scheme,5,desat=0.85)
-                  
-                  col_to_be_placed = color_schemes.index(scheme)+4
-                                                             
-                  if color_schemes.index(scheme) >= color_schemes.index('Accent'):
-                          add = 19
-                          
-                          col_to_be_placed = col_to_be_placed- 16
-                  elif color_schemes.index(scheme) >= color_schemes.index("BrBG"):
-                          add = 13
-                          
-                          col_to_be_placed = col_to_be_placed- 10
-                  elif color_schemes.index(scheme) >= color_schemes.index('BuGn'):
-                          add = 7
-                          col_to_be_placed = col_to_be_placed- 5
-                                          
-                  else:
-                      add = 0
-                          
-                  for n,color in enumerate(list_of_colors):
-                      color_255max = tuple([int(255*x) for x in color])
-                      hex_color = wb.rgb_to_hex(color_255max)
-                      row_to_be_placed = list_of_colors.index(color)+add
-                      if platform == "WINDOWS":
-                          but_col = tk.Button(popup, text="  " ,background =hex_color)
-                          but_col.configure(height=1,command =  lambda button = but_col: self.change_default_color(button))
-                      elif platform == "MAC":
-                           but_col = tk.Label(popup, text="  " ,background =hex_color)
-                           but_col.bind('<Button-1>', lambda event, button = but_col: self.change_default_color(button = button, event=event))
-                      if n == 0:
-                          add_padx = 5
-                      else:
-                          add_padx = 0
-                      but_col.grid(column= row_to_be_placed, row = col_to_be_placed, padx=(add_padx,0), sticky=tk.W) 
-                      
-                      
-                      
-                      if list_of_colors.index(color) == len(list_of_colors)-1:
-                          if platform == "WINDOWS":
-                              cb_col = ttk.Checkbutton(popup, text = scheme ,variable=self.var, onvalue=1, offvalue=0)
-                              cb_col.configure(command = lambda cb_col = cb_col: self.check_button_handling(cb_col))
-                          elif platform == "MAC":
-                              cb_col = ttk.Checkbutton(popup, variable=self.var, onvalue=1, offvalue=0)
-                              cb_col.configure(command = lambda cb_col = cb_col: self.check_button_handling(cb_col))
-                              lab_scheme = tk.Label(popup, text = scheme, bg = MAC_GREY)
-                              lab_scheme.grid(column = row_to_be_placed+1,row = col_to_be_placed,padx=22,pady=2,sticky=tk.NW)
-                              
-                          if scheme == self.cmap_in_use.get():
-                              cb_col.state(['selected'])
-                          cb_col.grid(column=row_to_be_placed+1, row = col_to_be_placed, padx=2, pady=2, sticky=tk.NW)
-                          CreateToolTip(cb_col,title_ = 'Color palette: '+scheme,
-                          								text = 'Information for color palette'
-                          								,showcolors = True,cm=scheme)
-                          self.cb_list.append(cb_col)
-                
-              label_des.grid(row=8,pady=5,columnspan=15,rowspan=5, sticky=tk.W, padx=8) 
-              self.slider_col.grid(row=10,columnspan=15, rowspan=5, sticky=tk.W, padx=5)   
-              lab_alpha.grid(row=10,column=5, sticky=tk.E, rowspan=5, padx=25,pady=5, columnspan=4)  
-              
-         
-         
          
          elif mode == 'Hierarchical Clustering Settings':
          
@@ -5065,7 +4994,8 @@ class analyze_data(tk.Frame):
      	Open Dialog to merge two or more dataframes.
      	'''
      	mergeDialog = mergeDataFrames.mergeDataFrames(self.sourceData, 
-     												  self.DataTreeview,method)   
+     												  self.DataTreeview,method,
+     												  images = self.mergeImages)   
      	del mergeDialog
  	 	
  	         
@@ -5096,7 +5026,7 @@ class analyze_data(tk.Frame):
                 self.old_height = event.height 
                 n = 1 ## to trigger rescaling if screen resolution is very small from beginning (e.g. laptop)
             
-            icon_ = resize_window_det.check_resolution_for_icons(new_width,
+            icon_ =  check_resolution_for_icons(new_width,
                                                          new_height,
                                                          self.old_width,
                                                          self.old_height,
@@ -5295,11 +5225,15 @@ class analyze_data(tk.Frame):
            
            self.delete_all_cols, self.delete_all_cols_norm = images.get_delete_cols_images()
            
+           self.right, self.outer, self.left, self.inner = images.get_merge_images()
+           self.mergeImages = {'right':self.right,'left':self.left,
+						'outer':self.outer,'inner':self.inner}
+           
            self.but_col_icon_, self.but_col_icon_norm, self.but_label_icon_, \
         					self.but_label_icon_norm,  self.but_size_icon_,self.but_size_icon_norm, \
            					self.but_stat_icon_, self.but_stat_icon_norm, self.but_tooltip_icon_, self.but_tooltip_icon_norm  =  images.get_drop_button_images()
            
-           
+		
            self.main_figure_icon, self.main_figure_icon_norm = images.get_main_figure_button_images()
            
            self.but_col_icon = self.but_col_icon_
@@ -5367,7 +5301,7 @@ class analyze_data(tk.Frame):
            ## mark/slice frame buttons
            self.sliceMarkFrameButtons = OrderedDict() 	
            imageAndFunctionsSliceMark = OrderedDict([('size',[self.size_icon,lambda: self.design_popup(mode = 'Size setting')]),
-           											 ('color',[self.color_icon,lambda: self.design_popup(mode = 'Color setting')]),
+           											 ('color',[self.color_icon,self.open_color_configuration]),
            											 ('label',[self.label_icon,self.open_label_window]),
            											 ('tooltip',[self.tooltip_icon,'']),
            											 ('selection',[self.selection_icon,self.select_data]),
@@ -5519,7 +5453,7 @@ class analyze_data(tk.Frame):
            self.build_analysis_tree()
            
            
-           self.data_button = create_button(self.source_sideframe, text = 'Open Raw Data' , 
+           self.data_button = create_button(self.source_sideframe, 
            						image = self.streteched_data, 
            						command = self.show_data)#
            
@@ -5542,11 +5476,17 @@ class analyze_data(tk.Frame):
            self.tx_space.pack(in_=self.column_sideframe,  fill = tk.BOTH,expand=True )#f,
            self.cat_space.pack(in_=self.category_sideframe, fill = tk.BOTH,expand=True)
            recBox = ['numeric','category']
+           if platform == 'MAC':
+           	pady_ = 1
+           else:
+           	pady_ = 4
+           
+            
         
            for dtype in recBox:
            		placeHolder = tk.Label(self.receiverFrame[dtype], text='',
            			bg = MAC_GREY)
-           		placeHolder.pack(side=tk.LEFT,padx=2)
+           		placeHolder.pack(side=tk.LEFT,padx=2,pady=pady_)
            
            for column,button in enumerate(self.uploadFrameButtons.values()):
            		button.grid(in_=self.sideframe_upload, row=1, column=column, padx=4)              

@@ -58,9 +58,13 @@ class dataDisplayDialog(object):
 		'''
 		Close toplevel
 		'''
-		
-		self.data = self.pt.model.df
-		self.pt.remove()
+		if hasattr(self,'identifyAfter'):
+			self.toplevel.after_cancel(self.identifyAfter)
+		try: ## if error with data selection this will prevent closing..
+			self.data = self.pt.model.df
+			self.pt.remove()
+		except:
+			pass 
 		if hasattr(self.analyzeClass,'groupedStatsData') and \
 		hasattr(self, 'dragDropLabel'):
 			## then we are using this to show all Pairwise Comparisons
@@ -155,7 +159,7 @@ class dataDisplayDialog(object):
 		
 		currentRows = self.pt.multiplerowlist
 		self.trigger_plotting(currentRows)
-		self.toplevel.after(100, self.identify_data)
+		self.identifyAfter = self.toplevel.after(100, self.identify_data)
 	
 	
 			

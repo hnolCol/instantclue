@@ -162,6 +162,8 @@ class interactiveWidgetsHelper(object):
 			return
 			
 		self.colorMapDict = self.plotter.nonCategoricalPlotter.get_current_colorMapDict()
+		if self.colorMapDict is None:
+			return
 		rawColorMapDict = self.plotter.nonCategoricalPlotter.rawColorMapDict 
 		# we need the raw colorMap with user's changed to get the correct color
 		

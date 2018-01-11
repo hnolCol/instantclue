@@ -21,14 +21,16 @@ from modules.pandastable import core
 class defineGroupsDialog(object):
 	'''	
 	'''
-	def __init__(self,dimRedCollection,plotter):
+	def __init__(self,dimRedCollection,plotter,colorHelper):
 		'''
 		=====
 
 		=====
 		'''
+		
 		self.dimRedCollection = dimRedCollection
 		self.plotter = plotter
+		self.colorSchmes = colorHelper.get_all_color_palettes()
 		
 		result = dimRedCollection.get_last_calculation()
 		
@@ -36,9 +38,7 @@ class defineGroupsDialog(object):
 		
 		self.data = result['data']['Components'].T
 		self.method = result['method']
-		self.prepare_data(result)
-		
-		
+		self.prepare_data(result)		
 		self.build_toplevel()
 		self.build_widgets()
 		self.display_data(self.data)
@@ -90,7 +90,7 @@ class defineGroupsDialog(object):
                                      **titleLabelProperties)
  		labelColorMap = tk.Label(self.cont_widgets,text = 'Color Map:', bg = MAC_GREY)
  		comboboxColorMap = ttk.Combobox(self.cont_widgets, textvariable =self.colorMap,
- 											values = color_schemes, width = 10)
+ 											values = self.colorSchmes, width = 10)
  		comboboxColorMap.bind('<<ComboboxSelected>>', self.refresh)
  		## creating buttons for applying 
  		inferButton = ttk.Button(self.cont_widgets, text = 'Infer groups', 
@@ -131,10 +131,23 @@ class defineGroupsDialog(object):
 		## unbind some events that are not needed
 		if platform == 'MAC':			
 			self.pt.unbind('<MouseWheel>') # for Mac it looks sometimes buggy
-		
+		self.pt.bind('<Control-v>',self.check_clipboard)
 		self.pt.show()		
 				 		
-
+	def check_clipboard(self,event):
+		'''
+		'''
+		print('buum')
+		cb = self.toplevel.clipboard_get()
+		df = pd.read_clipboard(header=None)
+		rows = self.pt.multiplerowlist
+		cols = self.pt.multiplecollist
+		
+		
+		
+		print(rows,cols)
+		
+		
 	def create_preview_container(self,sheet = None):
 		'''
 		Creates preview container for pandastable. 
@@ -179,7 +192,6 @@ class defineGroupsDialog(object):
 		levSimilarity = -1*np.array([[minimumEditDistance(w1,w2) for w1 in inputData] for w2 in inputData])
 		affProp = sklearn.cluster.AffinityPropagation(affinity="precomputed", damping=0.5)
 		affProp.fit(levSimilarity.astype('float'))
-		print(affProp.labels_)
 		self.data.loc[:,'Group'] = affProp.labels_
 		self.refresh()
 		
@@ -216,7 +228,8 @@ class defineGroupsDialog(object):
 					return False, color, None
 				else:
 					colorDict[key] = colHex
-		return True, None, colorDict   
+		return True, None, colorDict 
+		  
 	def center_popup(self,size):
          	'''
          	Casts poup and centers in screen mid

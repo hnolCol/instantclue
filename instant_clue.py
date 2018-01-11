@@ -1,9 +1,6 @@
 import sys
 import os
 
-sys.path.append('.../funcs/')
-from funcs import resize_window_det
-
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
@@ -109,7 +106,7 @@ if __name__ == "__main__":
      multiprocessing.freeze_support()
      app = instantClueApp()
      screen_width, screen_height = app.winfo_screenwidth(), app.winfo_screenheight()
-     w = 1620
+     w = 1690
      h = 1080
      appGeom = evaluate_screen(screen_width,screen_height,w,h)     
      app.geometry(appGeom)

@@ -379,6 +379,9 @@ class hierarchichalClustermapPlotter(object):
 		if event.dblclick:
 		
 			self.reset_ylimits()
+		
+		elif event.button != 1:
+			return
 			
 		elif self.rowMaxDLine.contains(event)[0]:
 			
@@ -405,9 +408,10 @@ class hierarchichalClustermapPlotter(object):
 	def moveRowMaxDLine(self,event):
 		'''
 		'''
-		if event.inaxes != self.axRowDendro:
+		if event.inaxes != self.axRowDendro or event.button != 1:
 			self.figure.canvas.mpl_disconnect(self.motion_dendrogram)
 			return
+			
 		self.figure.canvas.restore_region(self.backgroundRow)
 		x = event.xdata
 		self.rowMaxDLine.set_xdata(x)

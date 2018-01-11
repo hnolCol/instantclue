@@ -53,7 +53,7 @@ class simpleUserInputDialog(object):
         
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=390
-		h=130 + 45*len(self.descriptionValues)
+		h=60 + 55*len(self.descriptionValues)
 		# this could be done better in a scollable frame 
 		# but usually not so many values are being asked from the user
 		self.toplevel = popup
@@ -83,13 +83,15 @@ class simpleUserInputDialog(object):
  			self.output[label] = var
  												
  			
- 		applyButton = ttk.Button(self.cont, text = 'Done', command = self.save_selection)
+ 		applyButton = ttk.Button(self.cont, text = 'Done', 
+ 			command = self.save_selection,width=6)
  		
- 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
+ 		closeButton = ttk.Button(self.cont, text = 'Close', 
+ 			command = self.close, width=6)
  		
- 		applyButton.grid(column = 0, sticky=tk.W)
+ 		applyButton.grid(column = 0, sticky=tk.W,padx=4)
  		row = int(float(applyButton.grid_info()['row']))
- 		closeButton.grid(row=row, column = 1, sticky=tk.E)
+ 		closeButton.grid(row=row, column = 1, sticky=tk.E,padx=4)
  		
 	def save_selection(self):
 		'''
@@ -108,7 +110,7 @@ class simpleUserInputDialog(object):
          	h_screen = self.toplevel.winfo_screenheight()
          	x = w_screen/2 - size[0]/2
          	y = h_screen/2 - size[1]/2
-         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))                                      
+         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))                               
                                      
                                      
                                      

@@ -42,7 +42,7 @@ class ColumnNameConfigurationPopup(object):
 		popup.wm_title('Change column name') 
          
 		popup.protocol("WM_DELETE_WINDOW", self.discard_changes)
-		w=600
+		w=450
 		h=100+int(len(self.columns))*33 ##emperically
 		self.toplevel = popup
 		self.center_popup((w,h))
@@ -56,33 +56,34 @@ class ColumnNameConfigurationPopup(object):
              
              cont = tk.Frame(self.toplevel,background = MAC_GREY)
              cont.pack(fill='both', expand=True)
-             cont.grid_columnconfigure(1,weight=1,minsize=130)
-             cont.grid_columnconfigure(0,weight=1,minsize=230)
+             cont.grid_columnconfigure(1,weight=1,minsize=200)
+             cont.grid_columnconfigure(0,weight=1,minsize=200)
 			
              labelTitle = tk.Label(cont, text = 'Change column name', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
              labelTitle.grid(pady=5,padx=5,sticky=tk.W,columnspan=2)
              
              entryDict = OrderedDict()
-             
              for n,columnName in enumerate(self.columns): 
-             	columnLabel = tk.Label(cont, text = columnName, bg=MAC_GREY)
-             	newColumnEntry = ttk.Entry(cont,width=400)
+             	columnLabel = tk.Label(cont, text = columnName+': ', bg=MAC_GREY)
+             	newColumnEntry = ttk.Entry(cont)
              	
              	newColumnEntry.insert('end',columnName)
              	
              	entryDict[columnName] = newColumnEntry
-             	
              	columnLabel.grid(row=n+2,column=0,sticky=tk.E,padx=5, pady=3)
+             	CreateToolTip(columnLabel,text=columnName,waittime=800)
              	newColumnEntry.grid(row=n+2, column=1, padx=5, pady=3, columnspan=5, sticky=tk.EW)
              
-             
              renameButton = ttk.Button(cont, text = 'Rename',
-             						   command = lambda: self.rename_columns_in_df(entryDict))  
-             closeButton = ttk.Button(cont, text = 'Close', command = self.discard_changes)
+             						   command = lambda: self.rename_columns_in_df(entryDict),
+             						   width = 7)  
+             closeButton = ttk.Button(cont, text = 'Close', 
+             						   command = self.discard_changes, 
+             						   width = 7)
+             							
              
              closeButton.grid(row=n+3, column = 1, padx=5, pady=3, sticky=tk.E) 
              renameButton.grid(row = n+3, column = 0, padx=5, pady=3, sticky=tk.W, columnspan=2)
-	
 	
 	def discard_changes(self):
 		'''
@@ -104,6 +105,9 @@ class ColumnNameConfigurationPopup(object):
 				renameDict[oldName] = entryText
 				iidList.append(self.iidList[n])
 				n+=1
+		if len(renameDict) == 0:
+			self.discard_changes()
+			return
 		columnNotToChange = [col for col in self.dfClass.df_columns if col not in columnNamesToChange]
 		for oldName,newName in renameDict.items():
 			newNameEval = self.dfClass.evaluate_column_name(newName,columnNotToChange,useExact=True)

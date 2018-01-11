@@ -281,10 +281,10 @@ class sourceDataTreeview(object):
 			
 		
 		self.onlyDataFramesSelected = all([self.sourceDataTree.parent(itemIID) == '' for itemIID in self.allItemsSelected])
-		
 		self.dataFramesSelected = self.get_data_frames_from_selection(self.allItemsSelected)	
 		self.columnsIidSelected = self.get_column_selections(self.allItemsSelected)
 		self.columnsSelected = [self.sourceDataTree.item(iid)['text'] for iid in self.columnsIidSelected]
+		#data types of the selected columns, will be empty if data type separators are selected
 		self.dataTypesSelected = self.get_data_types_from_selection(self.columnsIidSelected )
 		
 		self.onlyDataTypeSeparator =  all(items in list(columnTypeNaming.values()) \
@@ -327,21 +327,26 @@ class sourceDataTreeview(object):
 		
 		
 		
-		#print(self.dataFramesSelected) 
-		#print(self.columnsSelected)
-		#print(self.dataTypesSelected)
-		
-		
 	def rename_itemText_by_iidList(self,iidList,newNameList):
 		'''
 		'''
-		for n,iid in enumerate(iidList):
-			self.sourceDataTree.item(iid,text=newNameList[n])
+		for n,iid in enumerate(iidList):	
 			
+			newIID = '{}_{}'.format(iid.split('_')[0],newNameList[n])
+			idx = self.sourceDataTree.index(iid)
+			parent = self.sourceDataTree.parent(iid)
+			self.sourceDataTree.delete(iid)
+			#self.sourceDataTree.item(iid,iid=newIID,text=newNameList[n])
+			self.insert_entry_to_treeview(parent=parent,index=idx,iid=newIID,text=newNameList[n])
 					
 			
 			
-		
+	#	def insert_entry_to_treeview(self, parent='',index='end',iid = None, text = '', tag  = '',open=False):
+	
+	#	'''
+	#	Inserts entries to tkinter treeview.
+	#	'''
+	#	self.sourceDataTree.insert(parent,index,iid,text=text,tag=tag,open=open)
 		
 		
 		

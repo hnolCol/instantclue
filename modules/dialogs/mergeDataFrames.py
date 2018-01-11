@@ -38,10 +38,17 @@ toolTipText = {'how':descriptionMerge,'join':descriptionMerge,'indicator':indica
 
 class mergeDataFrames(object):
 	'''
+	Window Dialog to facilitate merging and concatenation using the 
+	pandas package. User has to select two data frames for merging.
+	
+	Output
+	========
+	Merged data frame which is added to the source data treeview in Instant Clue
 	'''
 	
-	def __init__(self,dfClass,dataTreeView, method = 'Merge'):
+	def __init__(self,dfClass,dataTreeView, method = 'Merge', images = None):
 		'''
+		Define variables, build toplevel and grid widgets. 
 		'''
 		self.treeviews = OrderedDict()
 		self.dfColumns = dict()
@@ -49,14 +56,16 @@ class mergeDataFrames(object):
 		self.dataTreeView = dataTreeView 
 		self.dataFrameList = dataTreeView .dataFramesSelected
 		self.dfClass = dfClass
-		self.fileNames = dfClass.fileNameByID		
-		
+		self.fileNames = dfClass.fileNameByID	
+		self.tw = None	
+		self.images = images
 		if method == 'Merge':
 			## update the dfColumns dict
 			self.extract_df_information()
 					
 		
 		self.method = method
+		
 		self.build_toplevel()
 		self.build_widgets()
 		
@@ -64,11 +73,15 @@ class mergeDataFrames(object):
 	
 	def close(self):
 		'''
+		Closes the dialog window.
 		'''
+		if self.tw is not None:
+			self.tw.destroy()
 		self.toplevel.destroy()
 			
 	def build_toplevel(self):
 		'''
+		Builds toplevel of specific size and title.
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Combine data frames') 
@@ -82,6 +95,7 @@ class mergeDataFrames(object):
 	
 	def build_widgets(self):
 		'''
+		Defines widgets and grids them. 
 		'''
 		self.cont = tk.Frame(self.toplevel, bg = MAC_GREY)
 		self.cont.pack(expand=True, fill=tk.BOTH)
@@ -90,6 +104,10 @@ class mergeDataFrames(object):
 							**titleLabelProperties)
 							
 		labTitle.grid(columnspan=2, sticky=tk.W, padx=10,pady=3)
+		
+		infoButton = ttk.Button(self.cont,text='Help',command=self.open_help)
+		infoButton.grid(row = 0, column=3,padx=5,pady=3)
+		
 		
 		n = 2
 		for label, options_ in parameters[self.method].items():
@@ -148,6 +166,7 @@ class mergeDataFrames(object):
 	
 	def extract_df_information(self):
 		'''
+		Get information from df and store them in a dict (dfColumns) 
 		'''					
 		for n,dfID in enumerate(self.dataFrameList):
 			dfColumnDict = OrderedDict()
@@ -199,12 +218,51 @@ class mergeDataFrames(object):
 			# get the column names for merge
 			props['left_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['left data frame']] #cutoff the data frame id from the iid = columnName
 			props['right_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['right data frame']]
-			
+			self.evaluate_input(props)	
 		return props	
-				
+	
+	def evaluate_input(self,props):
+		'''
+		Evaluates input of columns to be used for merging. We take this extra computing
+		time to warn the user if a column was selected that contains less unique values
+		than rows (e.g. the merging could result in unexpected results since the merging
+		occurs at the first matching item)
+		'''
+		leftId = self.dataFrameList[0]
+		rightId = self.dataFrameList[1]
+		nonSuitableColumn = []
+		
+		self.dfClass.set_current_data_by_id(leftId)
+		uniqueValues = self.dfClass.get_unique_values(props['left_on'],forceListOutput=True)
+		rows = self.dfClass.get_row_number()
+		for n,column in enumerate(props['left_on']):
+			if uniqueValues[n].size != rows:
+				nonSuitableColumn.append(column)
+
+			
+			
+		
+		# now check right df
+		self.dfClass.set_current_data_by_id(rightId)
+		uniqueValues = self.dfClass.get_unique_values(props['right_on'],forceListOutput=True)
+		rows = self.dfClass.get_row_number()
+		for n,column in enumerate(props['right_on']):
+			if uniqueValues[n].size != rows:
+				nonSuitableColumn.append(column)
+		
+		if len(nonSuitableColumn) != 0:
+			tk.messagebox.showinfo('Warning ..','Warning - Column(s) used for merging contain(s)'+
+					' less unique values than rows. Unexpected results are possible.\n'+
+					' Columns: {}'.format(get_elements_from_list_as_string(nonSuitableColumn)),
+					parent= self.toplevel)
+	
+		
+					
 			
 	def create_treeview_frame(self, row):
 		'''
+		Create tkinter Treeview to display colum headers or dataframes.
+		User must select from all present tree views.
 		'''
 		if hasattr(self, 'treeviewFrame') == False:
 			self.treeviewFrame = tk.Frame(self.cont, bg=MAC_GREY)
@@ -260,10 +318,14 @@ class mergeDataFrames(object):
 			selectedItems =  list(treeview.selection())
 			numItemsSelected = len(selectedItems)
 			if self.method == 'Merge' and numItemsSelected == 0:
-				tk.messagebox.showinfo('Please select ..','Please select columns to be used for merging.')
+				tk.messagebox.showinfo('Please select ..',
+					'Please select columns to be used for merging.',
+					parent = self.toplevel)
 				return
 			elif self.method == 'Concatenate' and numItemsSelected == 0:
-				tk.essagebox.showinfo('Please select ..','Please select dataframes to be used for concatenation.')
+				tk.essagebox.showinfo('Please select ..',
+					'Please select dataframes to be used for concatenation.',
+					parent = self.toplevel)
 				return
 			if self.method == 'Merge':
 				columnsForMerge[label] = selectedItems
@@ -277,7 +339,9 @@ class mergeDataFrames(object):
 			try:
 				newDf = pd.concat(dfsToConat, **propsConcat)
 			except Exception as e:
-				tk.messagebox.showinfo('Error ..','An error occured during merge:\n'+str(e))
+				tk.messagebox.showinfo('Error ..',
+					'An error occured during merge:\n'+str(e),
+					parent=self.toplevel)
 				return
 			nameOfNewDf = '{}: {}'.format(self.method,
 										get_elements_from_list_as_string(dfsFileNames,maxStringLength=10))
@@ -289,7 +353,9 @@ class mergeDataFrames(object):
 			try:
 				newDf = pd.merge(leftDf, rightDf, sort = False, **propsMerge)
 			except Exception as e:
-				tk.messagebox.showinfo('Error ..','An error occured during merge:\n'+str(e))
+				tk.messagebox.showinfo('Error ..',
+					'An error occured during merge:\n'+str(e),
+					parent=self.toplevel)
 				return
 			nameOfNewDf = '{}: {} {}'.format(self.method,self.dataFrameList[0],self.dataFrameList[1])
 		id = self.dfClass.get_next_available_id()
@@ -300,15 +366,36 @@ class mergeDataFrames(object):
 		self.dataTreeView.add_new_data_frame(id,dfName,columnDataTypeRel)
 		tk.messagebox.showinfo('Done ..','Done. Merged/Concatenated data frame was added.'+
 										  'The shape of the new data is {}. \n\n Please note'.format(newDf.shape)+
-										  ' that due to insertion of NaN for non matching row, '+
+										  ' that due to insertion of NaN for non matching rows, '+
 										  'integers are cosnidered as floats.'+
 										  'This does not happen using "inner" join.', parent = self.toplevel)
 		self.close()
 
-		
-	
+	def open_help(self):
+		'''
+		Opens a tkinter toplevel and display a help picture.
+		'''
+		if self.tw is None:
+			self.tw = tk.Toplevel()
+			if 'how' in self.joinOptions:
+				key = 'how'
+			else:
+				key = 'join'
+			value = self.joinOptions[key].get()
+			if platform == 'WINDOWS':
+				self.tw.wm_overrideredirect(True)
+			else:
+				self.tw.tk.call("::tk::unsupported::MacWindowStyle","style",self.tw._w, "plain", "none")
+			self.lab = tk.Label(self.tw , image = self.images[value])
+			self.lab.grid()
+			x, y = self.tw.winfo_pointerxy()
+			self.tw.wm_geometry("+%d+%d" % (x, y))
+		else:
+			self.tw.destroy()
+			self.tw = None
+        	
 
-				
+					
 	def center_popup(self,size):
          	'''
          	Casts poup and centers in screen mid

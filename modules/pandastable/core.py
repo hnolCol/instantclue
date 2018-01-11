@@ -145,10 +145,7 @@ class Table(Canvas):
         self.rowheaderwidth=50
         self.showkeynamesinheader=False
         ##changed 
-        if platform == 'MAC':
-        	self.thefont = ('Arial',12)
-        else:
-        	self.thefont = ('Arial',8)
+        self.thefont = ('Arial',11)
         self.cellbackgr = '#F4F4F3'
         self.entrybackgr = 'white'
         self.grid_color = '#ABB1AD'
@@ -215,9 +212,10 @@ class Table(Canvas):
         self.bind("<Left>", self.handle_arrow_keys)
         self.bind("<Up>", self.handle_arrow_keys)
         self.bind("<Down>", self.handle_arrow_keys)
-        self.parentframe.master.bind_all("<KP_8>", self.handle_arrow_keys)
-        self.parentframe.master.bind_all("<Return>", self.handle_arrow_keys)
-        self.parentframe.master.bind_all("<Tab>", self.handle_arrow_keys)
+        #changed
+        #self.parentframe.master.bind_all("<KP_8>", self.handle_arrow_keys)
+        #self.parentframe.master.bind_all("<Return>", self.handle_arrow_keys)
+        #self.parentframe.master.bind_all("<Tab>", self.handle_arrow_keys)
         #if 'windows' in self.platform:
         self.bind("<MouseWheel>", self.mouse_wheel)
         self.bind('<Button-4>', self.mouse_wheel)
@@ -3111,8 +3109,12 @@ class Table(Canvas):
         self.cellbackgr = self.prefs.get('cellbackgr')
         self.grid_color = self.prefs.get('grid_color')
         self.rowselectedcolor = self.prefs.get('rowselectedcolor')
-        self.fontsize = self.celltextsizevar.get()
-        self.thefont = (self.prefs.get('celltextfont'), self.prefs.get('celltextsize'))
+        #if platform == 'MAC':
+        #	self.fontsize = 9
+        #else:
+        ##change
+        self.fontsize = 9
+        self.thefont = (self.prefs.get('celltextfont'), 9)
         self.rowheaderwidthvar = IntVar()
         self.rowheaderwidthvar.set(self.prefs.get('rowheaderwidth'))
         self.rowheaderwidth = self.rowheaderwidthvar.get()

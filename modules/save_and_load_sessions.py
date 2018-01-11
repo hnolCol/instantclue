@@ -49,15 +49,17 @@ def open_session():
 	'''
 	'''
 	directorySession = tf.askdirectory(initialdir = os.path.join(path_file,'Data','stored_sessions'), title ="Choose saved session")	
-	if directorySession is None:
+	if directorySession is None or directorySession == '':
 		return
-	
+		
+	dictPath = None
 	for root, dirs, files in os.walk(directorySession):
 		for file in files:
 			if file.endswith(".pkl"):
 				dictPath = os.path.join(root, file)
 				break	
-	
+	if dictPath is None:
+		return 'Not pckl found'
 	with open(dictPath,'rb') as file:
 		classDict = pickle.load(file)
 		

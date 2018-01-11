@@ -19,16 +19,15 @@ operationTitle = {'ReplaceColumns': 'Find & Replace column names',
 				  'ReplaceRowEntries': 'Find & Replace values in selected column.'
 				  }
              
-		 
 infoText = {'object':'You can use "String1","String2" .. to find multiple strings.'+
 		 			'\nThen you have to provide one or exactly the same number of '+
-		 			'value to be used for replacement.',
+		 			'values to be used for replacement.',
 		 	'float64':'You can use Value1,Value2, .. to replace multiple values at once.'+
 		 			'\nThen you have to provide one or exactly the same number of '+
-		 			'value to be used for replacement.',
+		 			'values to be used for replacement.',
 		 	'int64':'You can use Value1,Value2, .. to replace multiple values at once.'+
 		 			'\nThen you have to provide one or exactly the same number of '+
-		 			'value to be used for replacement.'}		 
+		 			'values to be used for replacement.'}		 
 
 class findAndReplaceDialog(object):
 	'''
@@ -181,12 +180,15 @@ class findAndReplaceDialog(object):
 		if  lenSelectedColumns > 1:
 			uniqueDataType = list(set(dataTreeview.dataTypesSelected))
 			if len(uniqueDataType) > 1:
-					tk.messagebox.showinfo('Error ..','Please select only columns of one data type')
+					tk.messagebox.showinfo('Error ..',
+						'Please select only columns of one data type',
+						parent=self.toplevel)
 					return 
 					
 			elif uniqueDataType[0] == 'object' and lenSelectedColumns > 1:
 					tk.messagebox.showinfo('Info ..','For categorical columns, only one column can be selected.'+
-											' Using only first one: {}'.format(dataTreeview.columnsSelected[0]))
+											' Using only first one: {}'.format(dataTreeview.columnsSelected[0]),
+											parent=self.toplevel)
 					columnForReplace = dataTreeview.columnsSelected[0]	
 
 		else:
@@ -339,12 +341,14 @@ class findAndReplaceDialog(object):
 				return True, searchList, replaceList
 			else:
 				tk.messagebox.showinfo('Error ..','Number strings for replacement does not match'+
-									   ' the number of value to be replaced. Please revisit.'+
-									   ' {} versus {}'.format(lenSearchList,lenReplaceList))
+									   ' the number of values to be replaced. Please revisit.'+
+									   ' {} versus {}'.format(lenSearchList,lenReplaceList),
+									   parent=self.toplevel)
 		elif lenReplaceList > lenSearchList:
 			tk.messagebox.showinfo('Error ..','Number of "To replace" strings is smaller than then number'+
-									' of strings that are should be used to replace them with. Please revisit.'+
-									' {} versus {}'.format(lenSearchList,lenReplaceList))
+									' of strings that should be used to replace them with. Please revisit.'+
+									' {} versus {}'.format(lenSearchList,lenReplaceList),
+									parent=self.toplevel)
 			return False, None, None
 				
 	def transform_string_to_float_list(self,string):
@@ -363,11 +367,11 @@ class findAndReplaceDialog(object):
 		searchString = self.searchString.get()
 		replaceString = self.replaceString.get()
 		if searchString == '':
-			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.')
+			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.',parent=self.toplevel)
 			return
 			
 		elif replaceString == '':
-			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.')
+			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.',parent=self.toplevel)
 			return
 			
 		if self.dataType == 'object':
@@ -393,7 +397,7 @@ class findAndReplaceDialog(object):
 			index = replacedDf.index
 			self.dfClass.df.loc[index,self.columnForReplace] = replacedDf
 																	   
-		tk.messagebox.showinfo('Done ..', 'Replacement done.')
+		tk.messagebox.showinfo('Done ..', 'Replacement done.',parent=self.toplevel)
 	
 	def replace_if_match(self, value, replaceDict):
 		'''
@@ -423,11 +427,11 @@ class findAndReplaceDialog(object):
 		searchString = self.searchString.get()
 		replaceString = self.replaceString.get()
 		if searchString == '':
-			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.')
+			tk.messagebox.showinfo('Error ..','Please insert string to be replaced.',parent=self.toplevel)
 			return
 			
 		elif replaceString == '':
-			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.')
+			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.',parent=self.toplevel)
 			return
 		toReplaceList = self.extract_regExList(searchString)
 		valueList = [row for row in csv.reader([replaceString], delimiter=',', quotechar='\"')][0]
@@ -444,7 +448,7 @@ class findAndReplaceDialog(object):
 		iidList = ['{}_{}'.format(dataFrameID,columnName) for columnName in replaceDictFiltered.keys()]
 		self.dataTreeview.rename_itemText_by_iidList(iidList,list(replaceDictFiltered.values()))
 		
-		tk.messagebox.showinfo('Done ..', 'Replacement done.')
+		tk.messagebox.showinfo('Done ..', 'Replacement done.',parent=self.toplevel)
 		
 	def define_commands(self):
 		'''
