@@ -210,11 +210,12 @@ def col_c(color):
 	'''
 	from rgb to hex
 	'''
-	if color is None:
+	if color is None or color == 'k':
 		#ugly - think better
 		return '#000000'
 	if '#' in color:
 		return color
+	
 	if isinstance(color,tuple):
 		y = tuple([int(float(z) * 255) for z in color])
 		hexCol = "#{:02x}{:02x}{:02x}".format(y[0],y[1],y[2])
@@ -227,7 +228,6 @@ def col_c(color):
 		hexCol = TABLEAU_COLORS['tab:'+str(color)]
 	elif color in namedColors:
 		hexCol = namedColors[color]
-
 	else:
 		try:
 			hexCol = matplotlib.colors.to_hex(color)

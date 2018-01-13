@@ -15,7 +15,7 @@ from scipy import interpolate
 
 from modules.utils import *
 from modules.dialogs.import_subset_of_data import importDataFromDf
-
+from modules.dialogs.VerticalScrolledFrame import VerticalScrolledFrame
 from pandastable import Table, TableModel
 
 import time
@@ -183,8 +183,8 @@ class curveFitter(object):
 		popup.wm_title('Curve fitting') 
          
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=352
-		h=280 + 33 * self.numbNumericColumns
+		w=370
+		h=530
 		self.toplevel = popup
 		self.center_popup((w,h))
 		
@@ -197,6 +197,8 @@ class curveFitter(object):
  		self.cont= tk.Frame(self.toplevel, background =MAC_GREY) 
  		self.cont.pack(expand =True, fill = tk.BOTH)
  		self.cont.grid_columnconfigure(1,weight=1)
+ 		self.cont.grid_columnconfigure(0,weight=1,minsize=110)
+ 		self.cont.grid_rowconfigure(5,weight=1)
  		labelTile = tk.Label(self.cont, text = 'Fit each row to x-values by given model.',
  												**titleLabelProperties)
                             
@@ -210,29 +212,36 @@ class curveFitter(object):
  		comboboxDegree.insert(0,2)
  		
  		entryNameOfFit = tk.Entry(self.cont, textvariable = self.nameOfFit)
- 		entryNameOfFit.configure(highlightbackground="#4C626F", highlightcolor="#4C626F")
+ 		entryNameOfFit.configure(highlightbackground="#4C626F", 
+ 			highlightcolor="#4C626F",highlightthickness=2)
  		
  		self.nameOfFit.set('Curve fit {}'.format(len(self.curveFitCollection.fitCollection)))
  		
  		optionmenuFit =  ttk.OptionMenu(self.cont, self.fittingFunction,'polynomial fit',*self.fittingFunctions)
  		
- 		optionmenuFit.grid(row = 1, column = 1, pady = 3, padx = 3,sticky = tk.EW, columnspan = 2) 
- 		comboboxDegree.grid(row = 2, column = 1, pady = 3, padx = 3,sticky = tk.EW, columnspan = 2)
- 		entryNameOfFit.grid(row = 3, column = 1, pady = 3, padx = 3,sticky = tk.EW, columnspan = 2)
+ 		optionmenuFit.grid(row = 1, column = 1, pady = 3, padx = 5,sticky = tk.EW, columnspan = 2) 
+ 		comboboxDegree.grid(row = 2, column = 1, pady = 3, padx = 5,sticky = tk.EW, columnspan = 2)
+ 		entryNameOfFit.grid(row = 3, column = 1, pady = 3, padx = 5,sticky = tk.EW, columnspan = 2)
  		
  		ttk.Separator(self.cont,orient=tk.HORIZONTAL).grid(row=5,sticky=tk.EW,pady=(2,8), columnspan=5,padx=3)
  		
- 		
+ 		columnFrame = tk.Frame(self.cont,bg=MAC_GREY,relief=tk.GROOVE,bd=2)
+ 		columnFrame.grid(row=5,column=0,sticky=tk.NSEW,columnspan=3,pady=5,padx=2)
+ 		vertFrame = VerticalScrolledFrame(columnFrame)
+ 		vertFrame.pack(expand=True,fill=tk.BOTH)
+ 		vertFrame.interior.grid_columnconfigure(0,weight=1,minsize=130)
+ 		vertFrame.interior.grid_columnconfigure(1,minsize=40)
+		
  		for n,column in enumerate(self.numericColumns):
  		
- 			labelColumn = tk.Label(self.cont, text = '{} :'.format(column), bg=MAC_GREY) 
- 			labelColumn.grid(row = n+6,column = 0,padx = 4,pady = 3,sticky = tk.E,columnspan = 2)
- 			
- 			entryXValue = ttk.Entry(self.cont, width=15) 
- 			entryXValue.grid(row = n+6,column = 2,padx = 4, pady = 3, sticky = tk.EW)
+ 			labelColumn = tk.Label(vertFrame.interior, text = '{} :'.format(column), bg=MAC_GREY) 
+ 			labelColumn.grid(row = n,column = 0,padx = 4,pady = 2, sticky = tk.E)
+ 			entryXValue = ttk.Entry(vertFrame.interior) 
+ 			entryXValue.grid(row = n,column = 1,padx = 4, pady = 2, sticky = tk.W)
  			entryXValue.insert(tk.END,n)
  			self.columnEntryDict[column] = entryXValue
  		## import label	
+ 		#vertFrame.grid(row=6,column=0,columnspan=2,sticky=tk.E,padx=2,pady=5)
  		importLabel = tk.Label(self.cont, text = 'Import values from: ', bg = MAC_GREY)	
  		
  		## checkbutton if AUC should be calculated
@@ -240,25 +249,23 @@ class curveFitter(object):
  		checkbuttonAUC  = ttk.Checkbutton(self.cont, variable = self.calculateAUC, text = 'Calculate Area under Curve')
  		
  		## define buttons
- 		applyButton = ttk.Button(self.cont, text = 'Fit', command = self.fit_data)
- 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
- 		importFileButton = ttk.Button(self.cont, text = 'File')
- 		importFromDataButton = ttk.Button(self.cont, text = 'Data', command = self.import_data)
+ 		applyButton = ttk.Button(self.cont, text = 'Fit', command = self.fit_data,width=5)
+ 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close,width=6)
+ 		#importFileButton = ttk.Button(self.cont, text = 'File')
+ 		importFromDataButton = ttk.Button(self.cont, text = 'Data', command = self.import_data,width=6)
  		
  		## taking n from above + 5 -> below entries ..
  		rowButtons = n+7
  		
- 		importLabel.grid(row = rowButtons, column = 0, columnspan = 2, sticky = tk.W)
- 		importFileButton.grid(row = rowButtons, column = 1, sticky = tk.E, columnspan=2)
- 		importFromDataButton.grid(row= rowButtons, column = 1, sticky = tk.E, columnspan=2, padx = (0,110))
+ 		importLabel.grid(row = rowButtons, column = 0, columnspan = 2, sticky = tk.W, padx = 5)
+ 		#importFileButton.grid(row = rowButtons, column = 1, sticky = tk.E, columnspan=2)
+ 		importFromDataButton.grid(row= rowButtons, column = 1, sticky = tk.E, columnspan=2,padx=5)
  		
  		checkbuttonAUC.grid(row = rowButtons+1, column = 0, sticky = tk.W,padx = 3,
  							pady = (10,2), columnspan = 2)
- 		
- 		applyButton.grid(row = rowButtons+2, column = 0, sticky = tk.W+tk.S,pady = 10)
- 		closeButton.grid(row = rowButtons+2, column = 2,sticky = tk.E+tk.S,pady = 10)
- 		
- 		self.cont.grid_rowconfigure(rowButtons+2,weight=1)
+ 		applyButton.grid(row = rowButtons+2, column = 0, sticky = tk.W+tk.S,pady = 10,padx=5)
+ 		closeButton.grid(row = rowButtons+2, column = 2,sticky = tk.E+tk.S,pady = 10,padx=5)
+ 		#self.cont.grid_rowconfigure(rowButtons+2,weight=1)
  	 		
 	
 	def import_data(self):
@@ -504,7 +511,7 @@ class curveFitter(object):
 			if updatePB and rowIntIdx % self.reportProgress == 0: 
 				self.progressbar.update_progressbar_and_label(rowIntIdx/self.dfLength*100,
 											'Calculating ..', 
-											updateText = False)
+											updateText = True)
 			if calcAUC:
 			
 				
@@ -517,7 +524,6 @@ class curveFitter(object):
 				return poptString,pErrorString,rSquared
 		
 		except (RuntimeError):
-		
 			if calcAUC:
 			
 				return self.nanString,self.nanString,np.nan, np.nan
@@ -967,8 +973,8 @@ class displayCurveFitting(object):
 		self.tightLayout = tk.BooleanVar(value=True)
 		self.equalYLims = tk.BooleanVar(value=True)
 		self.dfClass = dfClass
-		self.columns = dfClass.get_columns_of_current_data()
-		self.data = dfClass.get_current_data()
+		#self.columns = dfClass.get_columns_of_current_data()
+		#self.data = dfClass.get_current_data()
 		
 		self.plotter = Plotter
 		
@@ -979,6 +985,7 @@ class displayCurveFitting(object):
 		
 		self.customGridLayout = OrderedDict()
 		self.subplotDataIdxDict = OrderedDict()
+		
 		self.curveFitsSelected = []
 		self.find_curve_fittings()
 		
@@ -1007,7 +1014,7 @@ class displayCurveFitting(object):
 		popup.wm_title('Display curve fits') 
          
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=520
+		w=570
 		h=565
 		self.toplevel = popup
 		self.center_popup((w,h))
@@ -1047,9 +1054,9 @@ class displayCurveFitting(object):
 		scrollListBoxVer.config(command=self.listboxCurveFits.yview)
 		scrollListBoxHor.config(command=self.listboxCurveFits.xview) 	
 							
-		checkbuttonColumnShow = ttk.Checkbutton(self.cont, text = 'Show curve fit(s) only',
-												variable = self.filterColumnsForFits,
-												command = lambda listbox = self.listboxCurveFits: self.fill_listbox(listbox=listbox))	
+		#checkbuttonColumnShow = ttk.Checkbutton(self.cont, text = 'Show curve fit(s) only',
+		#										variable = self.filterColumnsForFits,
+		#										command = lambda listbox = self.listboxCurveFits: self.fill_listbox(listbox=listbox))	
 												
 		checkbuttonSameYLimit = ttk.Checkbutton(self.cont, text = 'Adjust y-limits', variable = self.equalYLims)
 		
@@ -1063,8 +1070,8 @@ class displayCurveFitting(object):
 					  pad = (1,1,1,1))
 					  
 					  														
-		plotButton = ttk.Button(self.cont, text = 'Plot', command =  self.set_chart_settings)                            
-		closeButton = ttk.Button(self.cont, text = 'Close', command = lambda: self.close(reset=True))
+		plotButton = ttk.Button(self.cont, text = 'Plot', command =  self.set_chart_settings,width=6)                            
+		closeButton = ttk.Button(self.cont, text = 'Close', command = lambda: self.close(reset=True),width=6)
 		customLayoutButton = ttk.Button(self.cont, text = 'Customize Plot Order', command =  self.get_custom_grid_layout)  
 		
 
@@ -1074,15 +1081,14 @@ class displayCurveFitting(object):
 		comboboxRow.grid(row=1,column=1)
 		comboboxColumn.grid(row=1,column=2)
 		labelChooseFit.grid(row=2,column=0, padx=3,pady=2)
-		checkbuttonColumnShow.grid(row=2,column=2,columnspan=2,sticky=tk.E, padx=3,pady=2)
-		self.listboxCurveFits.grid(row=5, columnspan = 4,sticky=tk.NSEW,padx=3,pady=(3,0))
+		self.listboxCurveFits.grid(row=5, columnspan = 5,sticky=tk.NSEW,padx=3,pady=(3,0))
 		scrollListBoxHor.grid(sticky=tk.EW,columnspan=4)
 		scrollListBoxVer.grid(sticky=tk.NS+tk.W, row=5,column = 5)
 		
 		checkbuttonSameYLimit.grid(row=7,column = 0,columnspan=3,padx=3,pady=2,sticky=tk.W)
 		checkbuttonTightLayout.grid(row=7,column = 2,columnspan=3,padx=(3,10),pady=2,sticky=tk.E)
-		plotButton.grid(row = 8, column = 0, pady=4, padx=3)
-		closeButton.grid(row = 8, column = 3,pady=4, padx=3)
+		plotButton.grid(row = 8, column = 0, pady=4, padx=3, sticky=tk.W)
+		closeButton.grid(row = 8, column = 3,pady=4, padx=10,sticky=tk.E)
 		customLayoutButton.grid(row = 8, column = 1,pady=4, padx=5)
 		self.fill_listbox(listbox = self.listboxCurveFits)
 		
@@ -1096,6 +1102,7 @@ class displayCurveFitting(object):
 	def find_curve_fittings(self):
 		'''
 		'''
+		
 		self.curveFits = list(self.courveFitCollection.fitCollection.keys())
  		
  		
@@ -1105,10 +1112,10 @@ class displayCurveFitting(object):
 		listbox.delete(0,tk.END)
 		
 		if itemsToAdd is None:
-			if len(self.curveFits) != 0 and self.filterColumnsForFits.get():
+			if len(self.curveFits) != 0:
 				itemsToAdd = self.curveFits
 			else:
-				itemsToAdd = self.columns
+				return
 		
 		for item in itemsToAdd:
 		

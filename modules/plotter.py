@@ -341,14 +341,16 @@ class _Plotter(object):
 		self.statistics['{}_{}'.format(type,self.plotCount)] = params
 		self.statistics['dfResults_{}_{}'.format(type,self.plotCount)] = resultDf
 	
-	def display_statistics(self,ax, axNumber = None): ###IMPORTANT WITH ID OF AXIS!!
+	def display_statistics(self,ax, axNumber = None, plotCount = None): ###IMPORTANT WITH ID OF AXIS!!
 		''' 
 		Shows the statistic - e.g. singifiance lines and p value
 		'''
 		if len(self.statistics) == 0:
 			return 
 		else:
-			plotCount = self.plotCount
+			if plotCount is None:
+				plotCount = self.plotCount
+				
 			for key, params in self.statistics.items():
 				count = key.split('_')[-1]
 				if 'dfResults' not in key and float(count) == float(plotCount):
@@ -565,6 +567,9 @@ class categoricalPlotter(object):
 		self.data = sourceDataClass.get_current_data_by_column_list(columnList = self.numericColumns+self.categoricalColumns)
 		self.axisDict = dict() 
 		self.selectedPlotType = selectedPlotType
+		self.adjustYLims = bool(self.plotter.equalYLimits)
+		self.tightLayout = bool(self.plotter.tightLayout)
+		
 		self.add_axis_to_figure() 
 		self.filling_axis(selectedPlotType) 
 		if self.plotter.addSwarm:
@@ -630,7 +635,7 @@ class categoricalPlotter(object):
 				for n in range(sumAxis):
 					self.axisDict[n] = self.figure.add_subplot(row,columns,n+1)
 				
-				if self.plotter.tightLayout:
+				if self.tightLayout:
 					self.figure.subplots_adjust(right=0.88 ,wspace=0, hspace=0)  
 				else:
 					self.figure.subplots_adjust(right=0.88, wspace=0.22, hspace=0.22)  
@@ -939,45 +944,56 @@ class categoricalPlotter(object):
 				numFit = 0
 				for fitId, columnNames in self.columnsForFit.items():
 					
-					xValues = self.xValuesForFit[fitId]
 					
+					
+					xValues = self.xValuesForFit[fitId]
 					if mulitpleCurvefits:
 						yValues = subsetData.values
-						xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
-						
-						coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],subsetData.name,self.fitFuncForFit[fitId])
-						xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
-						
-						ax.plot(xValues,yValues, marker='o',ls=' ', markerfacecolor='white', 
-								markersize=7, markeredgewidth = 0.4 , markeredgecolor='black')	
-						if numFit == 0:					
-							self.plotter.add_annotationLabel_to_plot(ax,'ID: {}'.format(subsetData.name),
+						try:
+							xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
+						except:
+							pass
+						try:
+							coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],
+									subsetData.name,self.fitFuncForFit[fitId])
+							xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
+							if numFit == 0:					
+								self.plotter.add_annotationLabel_to_plot(ax,'ID: {}'.format(subsetData.name),
 																	  xy = (xLine.item(argMaxY),yLine.item(argMaxY))) 
-						ax.plot(xLine,yLine, label = fitId)	
+							ax.plot(xLine,yLine, label = fitId)	
+						except:
+							pass
+						
+						if xValues.size > 0 and yValues.size > 0 :
+							ax.plot(xValues,yValues, marker='o',ls=' ', markerfacecolor='white', 
+								markersize=7, markeredgewidth = 0.4 , markeredgecolor='black')	
 						numFit += 1
 					else:
 						
 						colors = sns.color_palette(self.colorMap,len(subsetData.index))
 						for n,rowIdx in enumerate(subsetData.index):
-							
 							yValues = subsetData[columnNames].loc[rowIdx,:]
-							xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
-							
-							coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],rowIdx,self.fitFuncForFit[fitId])
-							xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
-							
-							ax.plot(xValues,yValues, marker='o',ls=' ', markerfacecolor=colors[n], 
-									markersize=7, markeredgewidth = 0.4,markeredgecolor="black")	
-							if len(subsetData.index) > 1:
-								self.plotter.add_annotationLabel_to_plot(ax,'ID: {}'.format(rowIdx),
+							try:
+								xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
+							except:
+								continue
+							try:
+								coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],rowIdx,self.fitFuncForFit[fitId])
+								xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
+								if len(subsetData.index) > 1:
+									self.plotter.add_annotationLabel_to_plot(ax,'ID: {}'.format(rowIdx),
 																	  xy = (xLine.item(argMaxY),yLine.item(argMaxY)), 
 																	  position='defined', 
 																	  xycoords = 'data', 
 																	  arrowprops=arrow_args)
-																	  
-							ax.plot(xLine,yLine, label = fitId, c = colors[n])		
+									ax.plot(xLine,yLine, label = fitId, c = colors[n])		
+							except:
+								pass
+							if xValues.size > 0 and yValues.size > 0:
+								ax.plot(xValues,yValues, marker='o',ls=' ', markerfacecolor=colors[n], 
+									markersize=7, markeredgewidth = 0.4,markeredgecolor="black")								
 								
-					if self.plotter.tightLayout:
+					if self.tightLayout:
 					
 						axisStyler(ax,nTicksOnYAxis =  4, ylabel = 'Value',yLabelFirstCol = True, 
     					   showYTicksOnlyFirst = True, addLegendToFirstSubplot = True)	
@@ -985,13 +1001,14 @@ class categoricalPlotter(object):
 						axisStyler(ax,nTicksOnYAxis =  4, ylabel = 'Value',yLabelFirstCol = True, 
     					   showYTicksOnlyFirst = False, addLegendToFirstSubplot = True)	    
 				
-			if self.plotter.equalYLimits:
+			if self.adjustYLims: 
 					axes = self.figure.axes 
 					yMin, yMax = zip(*self.collectMinAndMax)
 					yMinOfAll, yMaxOfAll = min(yMin), max(yMax)
-					newYLim = (yMinOfAll-0.01*yMinOfAll, yMaxOfAll+0.01*yMaxOfAll)
+					newYLim = (yMinOfAll-0.05*yMinOfAll, yMaxOfAll+0.05*yMaxOfAll)
 					for ax in axes:
 						ax.set_ylim(newYLim)
+					
 			
 
 	def define_new_figure(self,figure):
@@ -1090,14 +1107,13 @@ class categoricalPlotter(object):
 		y = y[~np.isnan(y)]
 		
 		## caluclate min and max to adjust y Limits if desired by user
-		
-		if self.plotter.equalYLimits:
-			self.collectMinAndMax .append((y.min(),y.max()))
+		if self.adjustYLims and y.size > 0 and x.size > 0:
+			self.collectMinAndMax.append((y.min(),y.max()))
 			
 		return x,y
 
 	def export_selection(self,axisExport, subplotIdNumber, 
-			fig,limits = None, boxBool = None, gridBool = None):
+			fig,limits = None, boxBool = None, gridBool = None, plotCount = None):
 		'''
 		Uses a specific axis to export this plot. Main purpose to use this in a main figure.
 		'''
@@ -1105,7 +1121,7 @@ class categoricalPlotter(object):
 		#print(self.plotter.statistics)
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
-		self.plotter.display_statistics(axisExport,subplotIdNumber)
+		self.plotter.display_statistics(axisExport,subplotIdNumber,plotCount)
 		
 		self.plotter.adjust_grid_and_box_around_subplot(boxBool = boxBool,
 														gridBool = gridBool,
@@ -1730,7 +1746,7 @@ class nonCategoricalPlotter(object):
 			
 	
 	def export_selection(self,axisExport, subplotIdNumber, exportFigure = None,
-			limits=None, boxBool = None, gridBool = None):
+			limits=None, boxBool = None, gridBool = None, plotCount = None):
 		'''
 		Exports a specific axis onto the axisExport axis (in a main figure). The integer id is used to
 		identify the plot.
@@ -1761,12 +1777,13 @@ class nonCategoricalPlotter(object):
 				for key,props in self.annotationClass.selectionLabels.items():
 					axisExport.annotate(ha='left', arrowprops=arrow_args,**props)
 			
-			self.plotter.display_statistics(axisExport,subplotIdNumber)
+			self.plotter.display_statistics(axisExport,subplotIdNumber,plotCount)
 			self.plotter.style_collection([axisExport])
 			if limits is None:
 				self.plotter.reset_limits(subplotIdNumber,axisExport)
 			else:
 				self.plotter.set_limits_in_replot(axisExport,limits)
+				
 			self.style_axis(axisExport,subplotIdNumber)
 			
 			

@@ -1,3 +1,41 @@
+'''
+File - main_figures.py
+Part of Instant Clue http://www.instantclue.uni-koeln.de 
+License: GNU GPL v3
+Classes:
+	a) mainFigureCollection - stores all main figures created. (e.g position of subplot
+	label of subplot, internal ids). It also stores all details about exports that were
+	done. An Exports means in this context: A chart from the main figure was transported
+	onto the main figure. This information is used when a chart is either transfered with
+	in a main figure (using drag & drop or right-click drop-down menu) or if a session is
+	loaded. 
+	The class functions also take care that the menus are updated accordingly if a subplot
+	was delete or a main figure was close (function: update_params). 
+	A class instance is created upon start and will be passed every time to the mainFigure
+	TemplateDialog class.
+	
+	b) mainFigureTemplateDialog - opens a dialog window of a main figure template.
+	The user can:
+		- add a subplot - needed to export charts from the main window(!) to the main fig-
+		ure. The creation of an axis is needed because it determines the size of the expor
+		ted chart. 
+		- add text - add figure text using a text editor that can be moved around. For ex-
+		ample to label your figure: Author et al. Figure 1.
+		- add image - upload a png file to be display in a main figure subplot. Currently
+		only png files are suppoted. 
+		- delete axis - once clicked the icon changes and allows users to click on a speci
+		fic axis to delete it. All entries within the mainFigureCollection class are going
+		to be deleted.
+		- erase complete canvas (brush) - Remove everything from the figure. Deletes all
+		entries made for this figureId in mainFigureCollection.
+		
+	If an export of a chart from the main window(!) or a chart transfer within main figures
+	the artists in that figure will be extracted that might be used to alter it's 
+	appearance. But this is not yet very neat to work with. 
+
+'''
+
+
 import string 
 import os
 import sys
@@ -72,13 +110,13 @@ class mainFigureCollection(object):
 		'''
 		'''
 		limits = self.get_limits(axisId,figureId)
-		
 		self.exportDetails[figureId][axisId] = {'plotCount':plotCount,
 												'subplotNum':subplotNum,
 												'limits':limits,
 												'exportId':exportId,
 												'boxBool':boxBool,
 												'gridBool':gridBool}
+	
 	def store_image_export(self,axisId,figureId,imagePath):
 		'''
 		'''
@@ -107,6 +145,14 @@ class mainFigureCollection(object):
 		xLim = ax.get_xlim()
 		yLim = ax.get_ylim()
 		return [xLim,yLim]
+
+	def update_menus(self):
+		'''
+		'''		
+		for figureId,props in self.mainFigures.items():
+					props['template'].define_menu()
+
+
 			
 	def update_params(self, figureId, axisId = None, params = None, how = 'add'):
 		'''
@@ -114,6 +160,7 @@ class mainFigureCollection(object):
 		if how == 'add':
 			self.mainFigureTemplates[figureId][axisId] = params
 			self.update_menu(params['ax'],axisId,figureId,params['axisLabel'])
+
 			
 		elif how == 'delete':
 			params =  self.mainFigureTemplates[figureId][axisId]
@@ -138,7 +185,10 @@ class mainFigureCollection(object):
 				self.analyze.main_figure_menu.delete('Figure {} - Subplot {}'.format(figureId,params['axisLabel']))
 			del self.mainFigureTemplates[figureId]
 			del self.exportDetails[figureId]
-
+			del self.mainFigures[figureId]
+		
+		self.update_menus()
+		
 	def update_menu_label(self,old,new):
 		'''
 		Updates the menu if user re-labels.
@@ -203,13 +253,13 @@ class mainFigureTemplateDialog(object):
 				 
 		self.main_fig_add_text = None
 		self.delete_axis_event = None
+		self.event = None
 		self.motionLabel = None
+		self.motionAxis = None
 		self.textsAdded = {}
 		self.axisLabels = {}
 		self.axisItems = {}
-		self.associatedAxes = {}
-		
-		
+		self.associatedAxes = {}		
 				
 		self.positionColumn = tk.StringVar(value='1') 
 		self.positionRow = tk.StringVar(value='1') 
@@ -241,7 +291,6 @@ class mainFigureTemplateDialog(object):
 		'''
 		Builds the toplevel to put widgets in 
 		'''
-        
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Setup main figure ...') 
          
@@ -342,6 +391,7 @@ class mainFigureTemplateDialog(object):
 		self.toolbar_main = NavigationToolbar2TkAgg(canvas, toolbarFrame)
 		canvas._tkcanvas.pack(in_=frameFigure,side="top",fill='both',expand=True)
 		canvas.get_tk_widget().pack(in_=frameFigure,side="top",fill='both',expand=True)
+		#print(self.toolbar_main.__dict__)
 		
 
 	
@@ -361,7 +411,6 @@ class mainFigureTemplateDialog(object):
 	def edit_items_in_figure(self,event):
 		'''
 		'''
-
 		if event.dblclick:
 					
 			for id,label in self.textsAdded.items():
@@ -376,8 +425,9 @@ class mainFigureTemplateDialog(object):
 					if subplotLabel.contains(event)[0]:
 						editedStyle = self.modify_text_items(subplotLabel,
 										type = 'subplot labels', axisId =id,
-										extraCb = {'global':['Modify all subplots labels',True],
-												   'variant':['Transfer variant changes (upper ..)',True]})
+										extraCb = OrderedDict([('global',['Modify all subplots labels',True]),
+												   ('globalChange',['Apply changes to all figures.',False]),
+												   ('variant',['Apply variant changes (upper ..) in figure',True])]))
 						
 									
 			if event.inaxes:
@@ -415,17 +465,118 @@ class mainFigureTemplateDialog(object):
 			if toDelete is not None:
 				del self.textsAdded[toDelete]
 			
+			elif event.button == 1 and event.inaxes and self.delete_axis_event is None:
+				if self.check_if_event_is_over_artist(event):
+					return
+				if self.motionAxis is not None:
+					self.disconnect_on_axis_move_events()
+				try:
+					self.disconnect_on_axis_move_events()
+				except:
+					pass
+					
+				self.onRealeaseWithAxis = self.figure.canvas.mpl_connect('button_release_event',\
+				self.on_release_with_axis)
+				self.onMotionWithAxis = self.figure.canvas.mpl_connect('motion_notify_event',\
+				self.on_motion_with_axis)
+			
 			elif event.button == 3 and event.inaxes:	
 				self.event = event				
 				idClicked = self.identify_id_of_axis(self.event.inaxes)
-				self.menu.entryconfigure(2, 
-					label = 'Selected : {}'.format(self.figureProps[idClicked]['axisLabel']))
+				#self.menu.entryconfigure(2, 
+				#	label = 'Selected : {}'.format(self.figureProps[idClicked]['axisLabel']))
 				self.cast_menu()
 				
 						
 		self.redraw()	
 	
-	
+	def check_if_event_is_over_artist(self,event):
+		'''
+		Checks if event is over a draggable item
+		'''
+		over = False
+		for id,label in self.textsAdded.items():
+			if label.contains(event)[0]:
+				over = True
+				break
+		if over == False:
+			typesToCheck = ['titles','legend texts','legend caption','annotations']
+			for axisId, artists in self.axisItems.items():
+				for type, items in artists.items():
+						if type in typesToCheck:
+							for item in items:
+								if hasattr(item,'contains'):
+									if item.contains(event)[0]:
+										over = True
+										break
+		return over
+		
+			
+	def on_release_with_axis(self,event = None):
+		'''
+		'''
+		
+		if self.motionAxis is None:
+			try:
+				self.disconnect_on_axis_move_events()
+			except:
+				pass
+			return
+		try:
+			self.motionAxis.remove()
+		except:
+			pass
+		self.disconnect_on_axis_move_events()
+		
+		# check if event is in axis
+		if event.inaxes is None or hasattr(self,'idStart') == False:	
+			#redraw to remove label
+			self.redraw()
+			return
+		if event.dblclick:
+			self.redraw()
+			return
+		idHover = self.identify_id_of_axis(event.inaxes)
+		
+		self.initiate_transfer(axisId = idHover,figureId=self.figureId,
+								idClicked = self.idStart)
+		self.motionAxis = None
+	def disconnect_on_axis_move_events(self):
+		'''
+		'''
+		self.figure.canvas.mpl_disconnect(self.onMotionWithAxis)
+		self.figure.canvas.mpl_disconnect(self.onRealeaseWithAxis)	
+		
+	def on_motion_with_axis(self,event):
+		'''
+		'''
+		if self.toolbar_main._active is not None:
+			self.infolabel.set('Zoom/Pan active. Disable to move label')
+			self.disconnect_on_axis_move_events()
+			return
+		if event.dblclick:
+			self.disconnect_on_axis_move_events()
+			return
+		x,y = self.figure.transFigure.inverted().transform((event.x,event.y)).tolist()
+		if self.motionAxis is None:
+			
+			self.background = self.figure.canvas.copy_from_bbox(self.figure.bbox)
+			self.idStart = self.identify_id_of_axis(event.inaxes)
+			self.motionAxis = self.figure.text(x,y,s="Drag & drop on\ndestination subplot",
+				size=9,ha='left', fontname = 'Verdana',color="white",
+				va='bottom',bbox = dict(facecolor="#6C8A78",pad=4))
+				
+		else:
+			self.figure.canvas.restore_region(self.background)
+			self.motionAxis.set_position((x,y))
+			if event.inaxes is None:
+				self.motionAxis.set_bbox(dict(facecolor='#A95C4C'))
+			else:
+				self.motionAxis.set_bbox(dict(facecolor='#6C8A78'))
+			self.motionAxis.draw(self.figure.canvas.get_renderer())
+			self.figure.canvas.blit(self.figure.bbox)
+			
+
 	def cast_menu(self):
 		'''
 		'''
@@ -442,12 +593,54 @@ class mainFigureTemplateDialog(object):
 		self.menu.add_command(label='Transfer to ..', 
 			state=tk.DISABLED, foreground='darkgrey')
 		self.menu.add_separator()	
-		self.menu.add_command(label='Selected: ',state=tk.DISABLED,foreground = 'darkgrey')
+		for figureId,axes in self.mainFigureCollection.mainFigureTemplates.items():
+			figureMenu = tk.Menu(self.toplevel, **styleDict)
+			self.menu.add_cascade(label='Figure {}'.format(figureId), menu = figureMenu)
+			for axisId in axes.keys():
+					axisLabel = self.mainFigureCollection.mainFigureTemplates[figureId][axisId]['axisLabel']
+					figureMenu.add_command(label='Subplot {}'.format(axisLabel),
+						command = lambda axisId = axisId,figureId = figureId: 
+						self.initiate_transfer(axisId,figureId))
+			
+		
 		self.menu.add_separator()	
-		self.menu.insert_command(index=30,label = 'Clear subplot', 
-			command = self.clear_axis_from_menu,foreground="red")
+		self.menu.add_command(label = 'Clear', 
+			command = self.clear_axis_from_menu,foreground='#A95C4C')
+		self.menu.add_command(label = 'Delete', 
+			command = self.delete_axis_by_event,
+			foreground='#A95C4C')
 	
-	
+	def modify_variant(self,edit,axisId):
+		'''
+		'''
+		n = 0
+		for axisIdSub,axisProps in self.figureProps.items():
+			for key,label in axisProps.items():
+				if key == 'axisLabel' and axisIdSub != axisId:
+						newLabel = edit.check_variant(label)
+						old = 'Figure {} - Subplot {}'.format(self.figureId,
+						self.figureProps[axisIdSub]['axisLabel'])
+						new = 'Figure {} - Subplot {}'.format(self.figureId,
+										newLabel)
+			
+						self.mainFigureCollection.update_menu_label(old,new)
+						self.axisLabels[axisIdSub].set_text(newLabel)
+						self.figureProps[axisIdSub]['axisLabel'] = newLabel	
+						n += 1
+		
+		if n != 0:
+			self.get_next_subplot_label(newLabel)
+
+
+	def apply_style_to_all_figures(self,styleDict,edit,type):
+		'''
+		'''
+		for figureId,props in self.mainFigureCollection.mainFigures.items():
+			props['template'].modify_multiple_items('global',styleDict,type=type)
+			props['template'].modify_variant(edit,axisId = -1)
+			props['template'].redraw()
+			
+		
 		
 	def modify_text_items(self, item, type = None, axisId = None, extraCb = None):
 		'''
@@ -478,8 +671,7 @@ class mainFigureTemplateDialog(object):
 								
 				new = 'Figure {} - Subplot {}'.format(self.figureId,
 										editedStyle['s'])
-				self.menu.entryconfigure('Subplot - %s' % self.figureProps[axisId]['axisLabel'],
-					label = 'Subplot - %s' % editedStyle['s'])
+		
 				self.mainFigureCollection.update_menu_label(old,new)
 				
 			item.set(**editedStyle['fontdict'])
@@ -488,24 +680,15 @@ class mainFigureTemplateDialog(object):
 			if type == 'subplot labels':
 				self.figureProps[axisId]['axisLabel'] = editedStyle['s']
 				variant = edit.get_variant()
-				if variant != 'None' and extraCbState['variant']:
-					for axisIdSub,axisProps in self.figureProps.items():
-						for key,label in axisProps.items():
-							if key == 'axisLabel' and axisIdSub != axisId:
-								newLabel = edit.check_variant(label)
-								old = 'Figure {} - Subplot {}'.format(self.figureId,
-								self.figureProps[axisIdSub]['axisLabel'])
-								new = 'Figure {} - Subplot {}'.format(self.figureId,
-										newLabel)
-								self.menu.entryconfigure('Subplot - %s' % self.figureProps[axisIdSub]['axisLabel'],
-										label = 'Subplot - %s' % newLabel)
+				
+				if variant != 'None' and (extraCbState['variant'] \
+				or extraCbState['globalChange']):
+				
+					self.modify_variant(edit,axisId)
+				
+				if extraCbState['globalChange']:
+					self.apply_style_to_all_figures(editedStyle,edit,type)
 								
-								self.mainFigureCollection.update_menu_label(old,new)
-								self.axisLabels[axisIdSub].set_text(newLabel)
-								self.figureProps[axisIdSub]['axisLabel'] = newLabel
-					self.get_next_subplot_label(newLabel)
-								
-			
 			how = 'single'
 			if 'global' in extraCbState:
 				if extraCbState['global']:
@@ -604,15 +787,12 @@ class mainFigureTemplateDialog(object):
 			self.add_axis_label(ax, axisId)
 		else:
 			self.add_axis_label(ax, axisId, 
-								label = self.figureProps[axisId]['axisLabel'])
-		
-		
+								label = self.figureProps[axisId]['axisLabel'])		
 		if redraw:							
 			self.redraw()
 			self.update_axis_parameters(axisParams)	
 			self.infolabel.set('Axis added!')									
 												
-        
 	
 	def get_axis_parameters(self):
 		'''
@@ -714,6 +894,11 @@ class mainFigureTemplateDialog(object):
 		motion_notify_event handler. Moves text item on figure (maybe 
 		a trick to use blit would be better? - Done
 		'''
+		if self.toolbar_main._active is not None:
+			self.infolabel.set('Zoom/Pan active. Disable to move label')
+			self.disconnect_on_label_move_events()
+			return
+			
 		x,y = self.figure.transFigure.inverted().transform((event.x,event.y)).tolist()
 		if self.motionLabel is None:
 			# trick to hide label when using blit
@@ -734,7 +919,12 @@ class mainFigureTemplateDialog(object):
 			self.motionLabel.set_position((x,y))
 			self.motionLabel.draw(self.figure.canvas.get_renderer())
 			self.figure.canvas.blit(self.figure.bbox)
-						
+	
+	def disconnect_on_label_move_events(self):
+		'''
+		'''			
+		self.figure.canvas.mpl_disconnect(self.onMotionEvent)
+		self.figure.canvas.mpl_disconnect(self.onReleaseEvent)
 				
 	def on_release(self,event,id):
 		'''
@@ -745,8 +935,7 @@ class mainFigureTemplateDialog(object):
 		event - matplotlib button_release_event
 		id	  - id that was given to the text when created
 		'''
-		self.figure.canvas.mpl_disconnect(self.onMotionEvent)
-		self.figure.canvas.mpl_disconnect(self.onReleaseEvent)
+		self.disconnect_on_label_move_events()
 		if self.motionLabel is not None:
 			self.textDict = self.mainFigureCollection.figText[self.figureId][id]		
 			self.textDict['x'], self.textDict['y'] = self.motionLabel.get_position()
@@ -884,29 +1073,40 @@ class mainFigureTemplateDialog(object):
 		# save label for quick change
 		self.figureProps[id]['axisLabel'] = axisParams[-1]
 		self.figureProps[id]['addAxis'] = []
-		self.mainFigureCollection.update_params(self.figureId,id,self.figureProps[id])
-		self.menu.insert_command(index = len(self.figureProps)+2,label='Subplot - %s' % axisParams[-1],
-			command = lambda: self.initiate_transfer(id,self.figureId)) 
+		self.mainFigureCollection.update_params(self.figureId,id,self.figureProps[id])		
 		self.axisItems[id] = {}
 		
-	def initiate_transfer(self,axisId,figureId):
+	def initiate_transfer(self,axisId,figureId,idClicked = None):
 		'''
 		'''
-		idClicked = self.identify_id_of_axis(self.event.inaxes)
-		if axisId == idClicked:
-			tk.messagebox.showinfo('Error..','Already in position.',parent=self.toplevel)
+
+		if idClicked is None:
+			idClicked = self.identify_id_of_axis(self.event.inaxes)
+		if axisId == idClicked and figureId == self.figureId:
+		
+			tk.messagebox.showinfo('Error..',
+				'Already in position.',
+				parent=self.toplevel)
+			self.redraw()
 			return
 		else:
-			self.clear_axis(self.figureProps[axisId]['ax'])
-			axisDict = self.mainFigureCollection.exportDetails[figureId]
+			mainFigureTemplate = self.mainFigureCollection.mainFigures[figureId]['template']
+			ax = mainFigureTemplate.figureProps[axisId]['ax']
+			mainFigureTemplate.clear_axis(ax)
+			axisDict = self.mainFigureCollection.exportDetails[self.figureId]
 			self.mainFigureCollection.analyze.unpack_exports(axisDict,figureId,
 															 specAxisId = idClicked,
-															 specificAxis = self.figureProps[axisId]['ax'],
+															 specificAxis = ax,
 															 transferAxisId = axisId)
-			self.add_axis_label(ax = self.figureProps[axisId]['ax'],
+			mainFigureTemplate.add_axis_label(ax = mainFigureTemplate.figureProps[axisId]['ax'],
 								axisId = axisId,
-								label = self.figureProps[axisId]['axisLabel'])
-			self.redraw()
+								label = mainFigureTemplate.figureProps[axisId]['axisLabel'])
+			mainFigureTemplate.redraw()
+			#show message only if different main figures
+			self.infolabel.set('Transfer done.')
+			if figureId != self.figureId:
+				tk.messagebox.showinfo('Done ..','Transfer done ..',parent=self.toplevel)
+	
 	def clear_axis_from_menu(self):
 		'''
 		'''
@@ -946,25 +1146,34 @@ class mainFigureTemplateDialog(object):
 			return
 		if event.button != 1:
 			return
-		id = self.identify_id_of_axis(event.inaxes)
-		self.check_for_associations_and_remove(id)
-		self.mainFigureCollection.update_params(self.figureId,axisId = id,how='delete')
-		self.menu.delete('Subplot - %s' % self.figureProps[id]['axisLabel']) 
-		self.figure.delaxes(self.figureProps[id]['ax'])
+		self.delete_axis_by_event(event)
 		
-		del self.figureProps[id]
-		del self.axisItems[id]
-		del self.axisLabels[id]
-		
-		self.redraw()
-		
+
 		if len(self.figure.axes) == 0:
 			self.disconnect_and_reset_deleting()
 			self.infolabel.set('Deleting done. No subplots left.')	
 			self.update_axis_parameters([float(self.gridRow.get()),
 										 float(self.gridColumn.get()),
 										 1,0,1,1,'Z'])
-			
+		
+	def delete_axis_by_event(self,event = None):
+		'''
+		Deletes axis by an event that has the attributes inaxes. This
+		will be used to find the given ID (enumerated) and it will then
+		delete all entries that were done in the main Figure Collection. 
+		'''
+		if event is None:
+			event = self.event
+		id = self.identify_id_of_axis(event.inaxes)
+		self.check_for_associations_and_remove(id)
+		self.figure.delaxes(self.figureProps[id]['ax'])
+		del self.figureProps[id]
+		del self.axisItems[id]
+		del self.axisLabels[id]
+		self.mainFigureCollection.update_params(self.figureId,axisId = id,how='delete')	
+		self.redraw()
+		
+				
 	def check_for_associations_and_remove(self,axisId):
 		'''
 		'''
@@ -1008,7 +1217,16 @@ class mainFigureTemplateDialog(object):
 			self.clear_dicts()
 			self.define_menu()
 
-			self.mainFigureCollection.update_params(self.figureId,how='clean_up')	
+			self.mainFigureCollection.update_params(self.figureId,how='clean_up')
+			self.motionAxis = None	
+			try:
+				self.disconnect_on_label_move_events()
+			except:
+				pass
+			try:
+				self.disconnect_on_axis_move_events()
+			except:
+				pass
 	
 	def clear_dicts(self):
 		'''

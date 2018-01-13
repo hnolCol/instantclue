@@ -258,15 +258,17 @@ class DataCollection(object):
 		'''
 		Drops rows with NaN
 		'''
-		self.df.dropna(subset=[columnLabelList],inplace=True, thresh=thresh)
-		
+		if isinstance(columnLabelList,list):
+			pass
+		elif isinstance(columnLabelList,str):
+			columnLabelList = [columnLabelList]
+		self.df.dropna(subset=columnLabelList,inplace=True, thresh=thresh)
 			
 	def duplicate_columns(self,columnLabelList):
 		'''
 		Duplicates a list of columns and inserts the column at the position + 1
 		of the original column. 
 		'''
-		
 		columnLabelListDuplicate = ['Dupl_'+col for col in columnLabelList]
 		columnIndexRaw = [self.df_columns.index(col)  for col in self.df_columns if col in columnLabelList]
 		
@@ -275,7 +277,6 @@ class DataCollection(object):
 			columnColumn = columnLabelListDuplicate[i]
 			columnLabel = columnLabelList[i]
 			newColumnData = self.df[columnLabel]
-			
 			self.insert_column_at_index(columnIndex, columnColumn, newColumnData)
 			
 		self.update_columns_of_current_data()
@@ -283,12 +284,11 @@ class DataCollection(object):
 		
 	def evaluate_columnNames_of_df(self, df):
 		'''
-		Checks each column name individually to avoid same naming and overriding
+		Checks each column name individually to avoid same naming and overriding.
 		'''
 		columns = df.columns.values.tolist() 
 		evalColumns = [self.evaluate_column_name(column) for column in columns]
 		df.columns = evalColumns
-		
 		return df
 		
 			
@@ -317,9 +317,7 @@ class DataCollection(object):
 		Saves the columns name per data type. In InstantClue there is no difference between
 		objects and others non float, int, bool like columns.
 		'''
-		
 		dataTypeColumnRelationship = dict() 
-		
 		for dataType in ['float64','int64','object','bool']:
 			try:
 				if dataType != 'object':
@@ -330,7 +328,6 @@ class DataCollection(object):
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
 			dataTypeColumnRelationship[dataType] = columnHeaders
-
 		self.dfsDataTypesAndColumnNames[id] = dataTypeColumnRelationship
 	
 		
@@ -569,7 +566,6 @@ class DataCollection(object):
 		Joins another dataframe onto the currently selected one
 		'''
 		dfToAdd = self.evaluate_columnNames_of_df(dfToAdd)
-		
 		self.df = self.df.join(dfToAdd, rsuffix='_', lsuffix = '' ) 
 		self.update_columns_of_current_data()
 		
@@ -683,6 +679,19 @@ class DataCollection(object):
 		self.df_columns = self.df.columns.values.tolist() 
 		self.extract_data_type_of_columns(self.df,self.currentDataFile)	
 		self.save_current_data()
+
+	def replace_values_by_dict(self,replaceDict,id=None):
+		'''
+		Replaces values by dict. Dict must be nested in the form:
+		{ColumnName:{Value:NewValue}}
+		'''
+		if id is None:
+			pass
+		else:
+			self.set_current_data_by_id(id)
+		self.df.replace(replaceDict,inplace=True)
+		self.save_current_data()
+		
 
 	def resort_columns_in_current_data(self):
 		'''
