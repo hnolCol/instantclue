@@ -58,6 +58,9 @@ class _Plotter(object):
 		
 		self.splitCategories = True
 		self.plotCumulativeDist = False
+		## define cluster defaults
+		self.equalYLimits = True
+		self.tightLayout = True
 		
 		self.setup_basic_design()
 		self.set_hClust_settings()
