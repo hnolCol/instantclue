@@ -221,6 +221,7 @@ class colorChooseDialog(object):
  		alphaFrame.grid(columnspan=2,pady=10,padx=3,sticky=tk.W)
  		labAlpha = tk.Label(alphaFrame, text = 'Transparency: ', bg = MAC_GREY)
  		entryAlpha = ttk.Entry(alphaFrame,width=5,textvariable=self.alpha)
+ 		entryAlpha.bind('<Return>',lambda event: self.change_transparency(self.alpha.get()))
  		slider = ttk.Scale(alphaFrame,from_ = 0.0, to = 1.0,
  			value=float(self.alpha.get()), command = self.change_transparency)
  		

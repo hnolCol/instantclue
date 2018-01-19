@@ -240,6 +240,10 @@ class DataCollection(object):
 		del self.dfs[id]
 		del self.fileNameByID[id]
 		del self.dfsDataTypesAndColumnNames[id]
+		
+		if id == self.currentDataFile:
+			self.df = pd.DataFrame()
+			self.df_columns = []
 
 	def divide_columns_by_value(self,columnAndValues,baseString):
 		'''
@@ -349,10 +353,12 @@ class DataCollection(object):
 		self.set_current_data_by_id(id=id)
 		self.export_current_data(format=format) 		
 	
-	def fill_na_in_columnList(self,columnLabelList,naFill):
+	def fill_na_in_columnList(self,columnLabelList,naFill = None):
 		'''
 		Replaces nan in certain columns by value
 		'''
+		if naFill is None:
+			naFill = self.replaceObjectNan
 		self.df[columnLabelList] = self.df[columnLabelList].fillna(naFill)
 	
 	def get_numeric_columns(self):

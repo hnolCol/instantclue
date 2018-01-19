@@ -114,7 +114,7 @@ class textEditorDialog(object):
 			n+=1
 		self.adjust_ha_setting()
 		
-		self.txtWindow = tk.Text(self.cont, undo=True)
+		self.txtWindow = tk.Text(self.cont, undo=True, background='white')
 		self.txtWindow.insert(1.0,self.inputText)
 		self.update_text_window()
 		self.txtWindow.grid(row=m+3,column=0,columnspan=10,pady=(2,2),padx=1,sticky=tk.NSEW)

@@ -9,11 +9,11 @@ from modules.utils import *
 
 class simpleUserInputDialog(object):
 
-	def __init__(self, descriptionValues,initialValueList, optionList, title, infoText):
+	def __init__(self, descriptionValues,initialValueList, optionList, title, infoText, h = None):
 		
 		self.initialValueList = initialValueList
 		self.descriptionValues = descriptionValues
-		
+		self.h = h
 		if isinstance(optionList[0],list):
 			self.optionList = optionList
 		else:
@@ -53,7 +53,9 @@ class simpleUserInputDialog(object):
         
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=390
-		h=60 + 55*len(self.descriptionValues)
+		if self.h is None:
+			self.h = 60
+		h=self.h + 55*len(self.descriptionValues)
 		# this could be done better in a scollable frame 
 		# but usually not so many values are being asked from the user
 		self.toplevel = popup

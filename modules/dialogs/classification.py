@@ -46,7 +46,8 @@ availableMethods = list(classDict.keys())
 preProcessDict = {'MinMaxScaler':skPreProc.MinMaxScaler,
 				'RobustScaler':skPreProc.RobustScaler,
 				'UniformScaler':skPreProc.QuantileTransformer,
-				'GaussianScaler':skPreProc.QuantileTransformer}
+				'GaussianScaler':skPreProc.QuantileTransformer,
+				'IdentityScaler':skPreProc.FunctionTransformer}
 
 abbrevDict = {'Random forest classifier':'RFC',
 			'Extra Trees Classifier':'ETC',
@@ -118,7 +119,7 @@ sgdWidgets = OrderedDict([('loss',['hinge',sgdLossFuncs,'The loss function to be
 					 ('penalty',['l2',['none', 'l2', 'l1', 'elasticnet'],'Degree of the polynomial kernel function (‘poly’). Ignored by all other kernels.']),
 					 ('learning_rate',['optimal',['optimal','constant','invscaling'],'The learning rate schedule:\n‘constant’: eta = eta0\n‘optimal’: eta = 1.0 / (alpha * (t + t0)) [default]\n‘invscaling’: eta = eta0 / pow(t, power_t)\nwhere t0 is chosen by a heuristic proposed by Leon Bottou']),
 					 ('tol',['1e-3','Tolerance for stopping criterion.']),
-					 
+					 ('alpha',['0.0001','Constant that multiplies the regularization term. Defaults to 0.0001 Also used to compute learning_rate when set to ‘optimal’.']),
 					 ('class_weight',['balanced',['balanced','None'],'Preset for the class_weight fit parameter.']),
 					 ('n_jobs',['-2','The number of CPUs to use to do the OVA (One Versus All, for multi-class problems) computation. -1 means ‘all CPUs’. Defaults to 1.']),
 					 #('class_weight',['balanced',['balanced','None'],'The “balanced” mode uses the values of y to automatically adjust weights inversely proportional to class frequencies in the input data as n_samples / (n_classes * np.bincount(y))\nThe “balanced_subsample” mode is the same as “balanced” except that weights are computed based on the bootstrap sample for every tree grown.']),
@@ -512,12 +513,6 @@ class classifyingDialog(object):
 		'''
 		'''
 		webbrowser.open_new(r"http://scikit-learn.org/stable/supervised_learning.html#supervised-learning")	
-	
-	
-	
-
-#function == casts the option/setting/range 
-
 
 				
 
@@ -525,29 +520,35 @@ class classifyingDialog(object):
 class gridSearchClassifierOptimization(object):
 	
 	
-	def __init__(self, data, features, targetColumn):
+	def __init__(self, classificationCollection, dfClass, features, targetColumn = None,
+					Treeview = None, plotter = None):
+		
+		
+		self.classificationCollection = classificationCollection
 		
 		self.get_items_associations()
+		
 		self.optimizeGrid = dict()
 		self.functionSettings = dict()
+		
 		self._dragProps = {'x':0,'y':0,'item':None,'receiverBox':None}
 		self.gridSearchCV = {'n_splits':3, 'KFold Procedure':'Stratified k-fold'}
 		self.nestedCV = {'n_splits':5, 'KFold Procedure':'StratifiedShuffleSplit'}
-		self.data = data
+		self.data = dfClass.get_current_data_by_column_list(features+targetColumn)
 		self.targetColumn = targetColumn
 		self.features = features
 		
+		self.plotter = plotter
+		
+		
 		self.build_popup()
 		self.add_widgets_to_toplevel()
-		
-		
 	
 		
 	def close(self):
 		'''
 		Closes the toplevel.
 		'''
-		
 		self.toplevel.destroy()
          
          			
@@ -579,10 +580,10 @@ class gridSearchClassifierOptimization(object):
 		
 		labelTitle = tk.Label(self.cont, text = 'Classifier Parameter Optimization', 
                                      **titleLabelProperties)
-		labelHelp = tk.Label(self.cont, text ='An optimization procedure includes several steps:\n1) Define a pipeline of steps like: feature/dimensionality reduction (PCA) - classifier'+
-												'\n2) Define specified parameters values for the steps in the pipeline like: number of features/components - min_sample_split(RFC)'+
-												'\n3) Set the number of cross evaluations and a score that should be used to evaluate parameters. You can choose also multiple scores for visualization but only the one to be used to find the best methods needs to be specified.',
-												justify=tk.LEFT, bg=MAC_GREY, wraplength=650)		
+		#labelHelp = tk.Label(self.cont, text ='An optimization procedure includes several steps:\n1) Define a pipeline of steps like: feature/dimensionality reduction (PCA) - classifier'+
+		#										'\n2) Define specified parameters values for the steps in the pipeline like: number of features/components - min_sample_split(RFC)'+
+		#										'\n3) Set the number of cross evaluations and a score that should be used to evaluate parameters. You can choose also multiple scores for visualization but only the one to be used to find the best methods needs to be specified.',
+		#										justify=tk.LEFT, bg=MAC_GREY, wraplength=650)		
 		
 		
 		self.canvas = tk.Canvas(self.contCanvas)#, width=200, height=100)
@@ -599,8 +600,8 @@ class gridSearchClassifierOptimization(object):
 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
 		
 		
-		labelTitle.grid(row=0, columnspan=3)
-		labelHelp.grid(row=1, columnspan=3, sticky=tk.W, padx=3,pady=4)
+		labelTitle.grid(row=0, columnspan=3, sticky=tk.W)
+		#labelHelp.grid(row=1, columnspan=3, sticky=tk.W, padx=3,pady=4)
 		runGridButton.grid(row=3,column= 0, sticky=tk.W, pady = 4, padx = 3)
 		closeButton.grid(row=3, column = 2, sticky = tk.E, pady = 4, padx = 3)
 		
@@ -620,6 +621,7 @@ class gridSearchClassifierOptimization(object):
 			elif firstTag == 'nestedCV':
 				boom = defineGridSearchDialog('nestedCV', self.features)
 				self.nestedCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
+				print(self.nestedCV)
 			else:
 				boom = defineGridSearchDialog(tagsOfSelection[1].split('_')[1], self.features)
 				self.optimizeGrid[tagsOfSelection[1]] = boom.collectParamGrid
@@ -961,6 +963,8 @@ class gridSearchClassifierOptimization(object):
 		elif 'Pre-Processing' in tag:
 			if funcName == 'GaussianScaler':
 				settingDict['output_distribution'] = 'normal'
+			elif funcName == 'IdentityScaler':
+				settingDict['func'] = None
 			func = preProcessDict[funcName](**settingDict)
 		return func
 			
@@ -1059,18 +1063,19 @@ class gridSearchClassifierOptimization(object):
 		paramGrid = []
 		pipelineSteps = []
 		resultDF = pd.DataFrame() 
-		predictionByBestEstimator = []
+		predictionByBestEstimator = OrderedDict()
 		
 		# get data
 		
 		X,Y = self.data[self.features].values, self.data[self.targetColumn].values
 			
-		## define k fold validation for gridsearch
-		
+		## define k fold validation for nested cv
 		n_split_nested  = self.nestedCV['n_splits']
 		cvName = self.gridSearchCV['KFold Procedure']
+		print(cvName)
 		if cvName not in crossValidation:
 			cvName = 'StratifiedShuffleSplit'
+			
 		if cvName in ['StratifiedShuffleSplit','ShuffleSplit']:
 			testDataFraction = ts.askfloat(title = 'Define test size ..',
 										   prompt = 'Please provide the fraction of data to use for testing [0,0.95]',
@@ -1111,10 +1116,10 @@ class gridSearchClassifierOptimization(object):
 		pipe = Pipeline(pipeLine)
 		progressBar.update_progressbar_and_label(10,'Pipeline extracted ..')
 
-		n = 1
+		nSplit = 1
 		for train_index, test_index in cvNestedIndices:
 		
-			progressBar.update_progressbar_and_label(10+80/n_split_nested*n,'Nested cross validation {}/{}..'.format(n,n_split_nested))
+			progressBar.update_progressbar_and_label(10+80/n_split_nested*nSplit,'Nested cross validation {}/{}..'.format(nSplit,n_split_nested))
 			grid = skModel.GridSearchCV(pipe, cv=cvInner , n_jobs=1, param_grid=paramGrid, return_train_score=True)
 			try:
 				grid.fit(X[train_index], Y[train_index])
@@ -1125,7 +1130,8 @@ class gridSearchClassifierOptimization(object):
 			## save results for inspection
 			resultGrid = self.shorten_params(grid.cv_results_)
 			cvResults = pd.DataFrame(resultGrid)
-			cvResults.loc[:,'#CV'] = [n] * len(cvResults.index)
+			cvNestedIndex = [nSplit] * len(cvResults.index)
+			cvResults.loc[:,'#CV'] = cvNestedIndex
 			cvResults = self.clean_up_results(cvResults)
 			
 			resultDF = resultDF.append(cvResults, ignore_index = True)	
@@ -1141,19 +1147,28 @@ class gridSearchClassifierOptimization(object):
 			collectRocCurveParam = dict() 
 			for n,class_ in enumerate(grid.classes_):
 				fpr, tpr, _ = roc_curve(Y[test_index],probsTest[:,n], pos_label=class_)
-				collectRocCurveParam['fpr'] = fpr 
-				collectRocCurveParam['tpr'] = tpr 
-				collectRocCurveParam['AUC'] = auc(fpr,tpr)
+				collectRocCurveParam['fpr_'+class_] = fpr 
+				collectRocCurveParam['tpr_'+class_] = tpr 
+				collectRocCurveParam['AUC_'+class_] = auc(fpr,tpr)
 			
-			predictionByBestEstimator.append({'Y_test_pred':Y_test_pred,
+			predictionByBestEstimator[nSplit] = {'Y_test_pred':Y_test_pred,
 											  'best_params':grid.best_params_,
 											  'ClassificationReport':classReport,
-											  'roc_curve':collectRocCurveParam})
-			n += 1
+											  'roc_curve':collectRocCurveParam,
+											  'classes':grid.classes_}
+			
+			nSplit += 1
 			
 			
 		progressBar.update_progressbar_and_label(100,'Done. Initiate visualization ..')
-		display_data.dataDisplayDialog(resultDF)
+		display_data.dataDisplayDialog(resultDF, waitWindow = False)
+		results = dict() 
+		results['nestedCVResults'] = resultDF
+		results['rocCurveParams'] = predictionByBestEstimator
+		self.plotter.set_current_grid_search_results(results)
+		self.plotter.initiate_chart(self.features,self.targetColumn,'grid_search_results',
+			self.plotter.get_active_helper().colorMap)
+		self.plotter.redraw()
 		return
 		
 		
@@ -1225,14 +1240,16 @@ class gridSearchClassifierOptimization(object):
 							self.bestKFeatureIcon , self.uniformScalerIcon, self.gaussianScalerIcon,self.robustScalerIcon, \
 							self.minMaxScalerIcon, self.sgdIcon, \
 							self.gridSearchIcon, self.finalEstimatorIcon,\
-							self.nmfIcon, self.evaluationIcon = images.get_workflow_builder_images()
+							self.nmfIcon, self.evaluationIcon, \
+							self.identityFunctionIcon = images.get_workflow_builder_images()
 		
 		self.itemsToDrag = OrderedDict([
 				('Pre-Processing',
 				{'UniformScaler':self.uniformScalerIcon,
 				'GaussianScaler': self.gaussianScalerIcon,
 				'RobustScaler':self.robustScalerIcon,
-				'MinMaxScaler':self.minMaxScalerIcon}),
+				'MinMaxScaler':self.minMaxScalerIcon,
+				'IdentityScaler':self.identityFunctionIcon}),
 				('FeatureSelection',
 				{'PCA':self.pcaIcon,
 				'NMF':self.nmfIcon,
@@ -1354,6 +1371,9 @@ class defineGridSearchDialog(object):
 		for n,param in enumerate(parameters):
 			varCb = tk.BooleanVar()
 			cb = ttk.Checkbutton(self.cont, text = param[0], variable = varCb)
+			if self.procedure in abbrevDictRev:
+				description = widgetCollection[abbrevDictRev[self.procedure]][param[0]][-1]
+				CreateToolTip(cb,title_=param[0],text= description)
 			combo = ttk.Combobox(self.cont, values = param[1])
 			
 			self.paramWidgets[param[0]] = {'CbVar':varCb,'Entry':combo} 
@@ -1406,6 +1426,7 @@ class defineGridSearchDialog(object):
 		if self.procedure == 'GNB':
 		
 			return True
+			
 		elif self.procedure in ['nestedCV','gridSearchCV']:
 			
 			for oldDict, updateDict in zip(oldDictList,newDictList):
@@ -1534,8 +1555,18 @@ class defineGridSearchDialog(object):
          	y = h_screen/2 - size[1]/2
          	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))    
          	
-   
-   
+ 
+ 
+
+ 		
+  		
+  		
+  		
+  		
+  		
+  		
+  		
+  		 
 #parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
 #								('kernel',['rbf','linear','poly','rbf,linear,poly']),('gamma',['auto']),('coef0',['0'])],
 #					  'RFC':['n_estimators','max_features','max_depth',

@@ -246,7 +246,7 @@ class clusteringDialog(object):
 		clusterClass = classDict[self.initialMethod](**self.settingDict)
 		
 		try:
-			clusterLabes = clusterClass.fit_predict(self.data)
+			clusterLabels = clusterClass.fit_predict(self.data[self.numericColumns])
 		except ValueError as e:
 			tk.messagebox.showinfo('Error..','Initializing the clustering an error occured:\n\n' + str(e))
 			return
@@ -259,19 +259,22 @@ class clusteringDialog(object):
 		columnName = self.dfClass.evaluate_column_name('Clust-Labels: {}'.format(self.initialMethod))
 		classLabels = pd.DataFrame(clusterClass.labels_, 
 								   index=self.data.index, columns = [columnName], dtype = 'object')
-		classLabels[columnName] = classLabels[columnName].fillna(self.dfClass.replaceObjectNan).astype(str)
+		classLabels[columnName] = classLabels[columnName].astype(str)
+		
 		## calculate silhouette and calinksi score	   
 		silhouetteScore = silhouette_score(self.data[self.numericColumns], clusterClass.labels_, metric = 'euclidean')
 		calinskiScore = calinski_harabaz_score(self.data[self.numericColumns], clusterClass.labels_)
 		scoreDict = {'Silhouette':silhouetteScore, 'Calinski': calinskiScore}
 		self.plotter.update_cluster_anaylsis_evalScores(scoreDict, classLabels)
 		
-				
 		self.data = self.data.join(classLabels)
-		
+		self.data[columnName].fillna(self.dfClass.replaceObjectNan)
 		## add data to dfClass
 		self.dfClass.join_df_to_currently_selected_df(classLabels)	
+		# sort values
 		self.dfClass.sort_columns_by_value(columnName)
+		# replace nan in data (happens if missing values are present in source data)
+		self.dfClass.fill_na_in_columnList(columnName)
 		
 		
 		## plot the cluster result
@@ -281,14 +284,11 @@ class clusteringDialog(object):
 		## give clusters color
 		self.plotter.nonCategoricalPlotter.change_color_by_categorical_columns(columnName, adjustLayer = False)
 
-
 		## connect cluster if desired for some methods
 		if self.initialMethod in ['k-means','Affinity Propagation','MiniBatch-Kmeans'] and self.connectCenter.get():
 			self.plot_cluster_centers(clusterClass, columnName)
-
 				
 		self.plotter.redraw()
-	
 		## 
 		self.clusterCollection.add_new_cluster_analysis(columnName.split(' :')[-1], # this looks overly complicated but it ensures that a name cannot be present twice.
 													    clusterClass,clusterClass.labels_,
@@ -302,7 +302,6 @@ class clusteringDialog(object):
 		self.widgetHandler.clean_frame_up()
 		self.widgetHandler.create_widgets(plotter = self.plotter)
 		del clusterClass
-		
 		
 	def extract_line_segments(self, clusterCentersDf, numericColumns, clusterColumn):
 		'''
@@ -324,6 +323,7 @@ class clusteringDialog(object):
 	
 	def plot_cluster_centers(self,clusterClass, columnName):
 		'''
+		Calculate line collection to connect cluster center with data/scatter points
 		'''
 		clustCenters = clusterClass.cluster_centers_[:,:len(self.numericColumns)]
 		clusterSeq = pd.DataFrame(clustCenters, columns = self.numericColumns)
@@ -335,6 +335,7 @@ class clusteringDialog(object):
 						
 	def extract_current_settings(self):
 		'''
+		Extract current settings.
 		'''
 		if len(self.settingDict) > 0:
 			self.settingDict.clear() 
@@ -436,7 +437,7 @@ class predictCluster(object):
 											   '\nThe result will be an additional column in the \ndata treeview per selected predictor indicating class labels.',
 											   justify=tk.LEFT, bg=MAC_GREY)
 											   
-		labelWarning = tk.Label(self.cont, text = 'Warning: Only the column order not the name is considered.\nThe columns need to be in the same order as they were at construction.',**titleLabelProperties)
+		labelWarning = tk.Label(self.cont, text = 'Warning: If column names do not match exactly only the order of input matters..',**titleLabelProperties)
                                      
                                      
 		self.create_widgets_for_clustClasses() 
@@ -469,7 +470,13 @@ class predictCluster(object):
 			cb = ttk.Checkbutton(vertFrame.interior, text = clustClass, variable = varCb) 
 			self.clust_cbs_var[clustClass] = varCb			
 			
-			if len(columnsInClustClass) != len(self.numericColumns):
+			if 'Spectral Clustering' in clustClass:
+				cb.configure(state = tk.DISABLED)
+				title_ = '== Spectral Clustering does not support predictions. =='
+			elif 'Agglomerative' in clustClass:
+				cb.configure(state = tk.DISABLED)
+				title_ = '== Agglomerative Clustering does not support predictions. =='
+			elif len(columnsInClustClass) != len(self.numericColumns):
 				cb.configure(state=tk.DISABLED) 
 				title_ = ' == Number of selected columns/features does NOT match the\nnumber of columns/features used in cluster class creation! == '
 			else:		
@@ -501,7 +508,7 @@ class predictCluster(object):
 				dataToPredict[columnName] = dataToPredict[columnName].fillna(self.dfClass.replaceObjectNan).astype(str)
 				predictLabelsColumns.append(columnName)
 		
-		
+		dataToPredict[predictLabelsColumns].fillna(self.dfClass.replaceObjectNan)
 		self.dfClass.join_df_to_currently_selected_df(dataToPredict[predictLabelsColumns])
 		self.dataTreeview.add_list_of_columns_to_treeview(self.dfClass.currentDataFile, 
 														 'object', predictLabelsColumns)		

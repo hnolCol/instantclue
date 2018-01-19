@@ -8,23 +8,18 @@ from modules.utils import *
 class SizeConfigurationPopup(object):
 	
 	
-	def __init__(self,platform,figure,canvas,plot_type,size,catnames,
-						subsets_and_scatter_with_cat,
-						axes_scata_dict,filt_source_for_update):
+	def __init__(self,plotter):
+			
 						
-		self.plot_type= plot_type
-		self.platform = platform
-		self.catnames = catnames
-		self.figure = figure
-		self.canvas = canvas 
-		self.size = size
+		self.plot_type = plotter.currentPlotType 
+				
+		self.catergoricalColumns = plotter.get_active_helper().categoricalColumns
+		self.figure = plotter.figure
+		self.canvas = self.figure.canvas
+		self.size = plotter.sizeScatterPoints		
 		
-		
-		self.subsets_and_scatter_with_cat = subsets_and_scatter_with_cat
-		self.axes_scata_dict = axes_scata_dict
-		self.filt_source_for_update = filt_source_for_update
+		self.plotter = plotter
 		self.size_selected = tk.StringVar() 
-		
 		self.background = self.figure.canvas.copy_from_bbox(self.figure.bbox)
 		
 		self.build_toplevel() 
@@ -100,17 +95,18 @@ class SizeConfigurationPopup(object):
 		
 		
          plot_type = self.plot_type
-         catnames = self.catnames
+         catnames = self.catergoricalColumns
          n_categories = len(catnames)
          axColl = []
 		
          if plot_type == 'scatter':
          	
              if n_categories > 0:
-             	for key, subset_and_scatter in self.subsets_and_scatter_with_cat.items():
-             	
-             		subset, ax_, scat = subset_and_scatter
-             		scat.set_sizes([val])
+             	immAxes = self.plotter.categoricalPlotter.scatterWithCategories.inmutableAxes
+             	axes = self.figure.axes
+             	for ax in axes:
+             		if ax not in immAxes:
+             			axColl.extend(ax.collections)
              		
              else:
              	axes = self.figure.axes

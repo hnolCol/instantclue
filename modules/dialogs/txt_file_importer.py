@@ -65,7 +65,9 @@ class fileImporter(object):
 		'''
 		Close toplevel
 		'''
-		self.pt.remove()	
+		if hasattr(self,'pt'):
+			self.pt.remove()
+			del self.pt	
 		self.toplevel.destroy() 
 
 	def build_toplevel(self):

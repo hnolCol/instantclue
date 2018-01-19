@@ -61,21 +61,19 @@ class instantClueApp(tk.Tk):
 
                     
         self.show_frame(start_page.StartPage)
+       
+       
         
     def create_menu(self, container):
 		
         
         menubar = tk.Menu(container)
         filemenu = tk.Menu(menubar, tearoff=0)
-        
         menubar.add_cascade(label="File", menu=filemenu)
-        
-
         filemenu.add_command(label="Exit", command=self.close_up)
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Tutorial", command=lambda:webbrowser.open(webisteUrlTutorial))
         menubar.add_cascade(label="Help", menu=helpmenu)
-          
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Orig. Publication", command = lambda: webbrowser.open('http://google.de'))
         menubar.add_cascade(label="Read more", menu=helpmenu)
@@ -85,6 +83,7 @@ class instantClueApp(tk.Tk):
         
 	
     def show_frame(self, cont):
+    	
 
         frame = self.frames[cont]
         frame.tkraise()

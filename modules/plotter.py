@@ -22,6 +22,8 @@ from collections import OrderedDict
 from modules import stats
 from modules.plots.hierarchical_clustering import hierarchichalClustermapPlotter
 from modules.plots.time_series_helper import _timeSeriesHelper
+from modules.plots.scatter_with_categories import scatterWithCategories
+from modules.plots.grid_search_results import gridSearchVisualization 
 from modules.dialogs import curve_fitting
 
 from .utils import *
@@ -344,6 +346,20 @@ class _Plotter(object):
 		self.statistics['{}_{}'.format(type,self.plotCount)] = params
 		self.statistics['dfResults_{}_{}'.format(type,self.plotCount)] = resultDf
 	
+	def set_current_grid_search_results(self,data):
+		'''
+		Define result data by a grid search
+		data - dict like
+		'''
+		
+		self.gridSearchData = data
+	
+	def get_grid_search_results(self):
+		'''
+		'''
+		
+		return self.gridSearchData 
+	
 	def display_statistics(self,ax, axNumber = None, plotCount = None): ###IMPORTANT WITH ID OF AXIS!!
 		''' 
 		Shows the statistic - e.g. singifiance lines and p value
@@ -434,17 +450,21 @@ class _Plotter(object):
 	def remove_color_level(self):
 		
 		if self.currentPlotType in ['scatter','PCA']:
-		
-			self.nonCategoricalPlotter.reset_color_and_size_level(resetColor=True)
-
+			if self.nonCategoricalPlotter is not None:
+				self.nonCategoricalPlotter.reset_color_and_size_level(resetColor=True)
+			else:
+				self.categoricalPlotter.scatterWithCategories.remove_color_and_size_changes(which='color')
+				
 	def remove_size_level(self):
 		'''
 		Removes any changes in size of scatter points
 		'''
 		if self.currentPlotType in ['scatter','PCA']:
-		
-			self.nonCategoricalPlotter.reset_color_and_size_level(resetSize=True)
-
+			if self.nonCategoricalPlotter is not None:
+				self.nonCategoricalPlotter.reset_color_and_size_level(resetSize=True)
+			else:
+				self.categoricalPlotter.scatterWithCategories.remove_color_and_size_changes(which='size')
+				
 	def adjust_grid_and_box_around_subplot(self, axes = None, 
 											boxBool = None, gridBool = None ):
 		'''
@@ -475,15 +495,7 @@ class _Plotter(object):
 			gridBool = self.showGrid
 			
 		change_box_setting(boxBool,axes)	
-		change_grid_setting(gridBool,axes)
-	
-	def __getstate__(self):
-	
-		state = self.__dict__.copy()
-		for list in [ 'axes', 'figure']:#, 'nonCategoricalPlotter', 'plotHistory']:
-			if list in state:
-				del state[list]
-		return state			
+		change_grid_setting(gridBool,axes)		
 				
 	
 	def add_annotationLabel_to_plot(self,ax,text,xy = None, xytext = None,position='topleft', xycoords = 'axes fraction', arrowprops = None):
@@ -504,18 +516,20 @@ class _Plotter(object):
 		annLabel.draggable(state=True, use_blit =True)
 	
 
-	def add_scatter_collection(self,ax,x,y, color = None, size=None,label=None,returnColl = False, picker=False):
+	def add_scatter_collection(self,ax,x,y, color = None, size=None,alpha = None,label=None,
+									returnColl = False, picker=False):
 		'''
 		'''
 		if color is None:
 			color = self.colorScatterPoints
 		if size is None:
 			size = self.sizeScatterPoints
-		
+		if alpha is None:
+			alpha = self.alphaScatterPoints
 		
 		collection = ax.scatter(x,y, edgecolor = 'black',
 					linewidth = 0.3, s = size,
-					alpha =  self.alphaScatterPoints, 
+					alpha =  alpha, 
 					color = color,
 					label = label,
 					picker = picker)	
@@ -547,7 +561,13 @@ class _Plotter(object):
 		matplotlib.rcParams['savefig.directory'] = os.path.dirname(sys.argv[0])
 		matplotlib.rcParams['savefig.dpi'] = 600      
 		
-		
+	def __getstate__(self):
+	
+		state = self.__dict__.copy()
+		for list in [ 'axes', 'figure']:#, 'nonCategoricalPlotter', 'plotHistory']:
+			if list in state:
+				del state[list]
+		return state			
 	
 	
 class categoricalPlotter(object):
@@ -564,10 +584,17 @@ class categoricalPlotter(object):
 		self.categoricalColumns = categoricalColumns
 		self.numbCategoricalColumns = numbCategoricalColumns
 		self.currentPlotType = selectedPlotType
+		
 		self.colorMap = colorMap
 		self.dfClass = sourceDataClass
 		self.dataID = sourceDataClass.currentDataFile
-		self.data = sourceDataClass.get_current_data_by_column_list(columnList = self.numericColumns+self.categoricalColumns)
+		
+		if selectedPlotType != 'grid_search_results':
+			self.data = sourceDataClass.get_current_data_by_column_list(columnList = self.numericColumns+self.categoricalColumns)
+		
+		else:
+			self.data = self.plotter.get_grid_search_results() 
+			
 		self.axisDict = dict() 
 		self.selectedPlotType = selectedPlotType
 		self.adjustYLims = bool(self.plotter.equalYLimits)
@@ -577,13 +604,21 @@ class categoricalPlotter(object):
 		self.filling_axis(selectedPlotType) 
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot()
+			self.addSwarm = True
+		else:
+			self.addSwarm = False
+		
 		
 		
 	def add_axis_to_figure(self):
 		'''
 		Adds the needed axis for plotting. The arangement depends on the number of categories
 		'''
-	
+		self.figure.subplots_adjust(bottom=.15,top=.88,left=.15)
+		if self.currentPlotType == 'scatter':
+			return
+		elif self.currentPlotType == 'grid_search_results':
+			return
 		if self.currentPlotType == 'countplot':
 		
 			rows,cols = self.get_grid_layout_for_plotting(n=self.numbCategoricalColumns)
@@ -658,12 +693,15 @@ class categoricalPlotter(object):
 	def replot(self):
 		'''
 		'''
+		if self.currentPlotType == 'scatter':
+			self.scatterWithCategories.figure = self.figure
+			self.scatterWithCategories.replot()
+		else:
+			self.axisDict = dict() 
+			self.add_axis_to_figure() 
+			self.filling_axis(self.selectedPlotType) 
 		
-		self.axisDict = dict() 
-		self.add_axis_to_figure() 
-		self.filling_axis(self.selectedPlotType) 
-		
-		if len(self.inmutableCollections):
+		if len(self.inmutableCollections) != 0:
 			self.add_swarm_to_plot()
 			
 		axesLimits = self.plotter.axesLimits[self.plotter.plotCount]
@@ -896,8 +934,15 @@ class categoricalPlotter(object):
 						subId += 1
 				
 				
+		elif plotType == 'scatter':
+			self.scatterWithCategories = scatterWithCategories(self.plotter,self.dfClass,
+								self.figure, self.categoricalColumns,self.numericColumns,
+								self.colorMap)
 	
-	
+		elif plotType == 'grid_search_results':
+		
+			self.gridSearchPlotter = gridSearchVisualization(self.plotter,self.data)
+			
 		elif plotType == 'curve_fit':
 			
 			
@@ -917,6 +962,7 @@ class categoricalPlotter(object):
 				self.columnsForFit[fitId] = self.plotter.curveFitCollectionDict[fitId]['columnNames']
 				self.xValuesForFit[fitId] = self.plotter.curveFitCollectionDict[fitId]['xValues']
 				self.fitFuncForFit[fitId] = self.plotter.curveFitCollectionDict[fitId]['fittingFunc']
+				
 				
 			for n, ax in self.axisDict.items():
 			 
@@ -946,9 +992,7 @@ class categoricalPlotter(object):
 					subsetData = self.data.loc[idxList,:]
 				numFit = 0
 				for fitId, columnNames in self.columnsForFit.items():
-					
-					
-					
+										
 					xValues = self.xValuesForFit[fitId]
 					if mulitpleCurvefits:
 						yValues = subsetData.values
@@ -1012,7 +1056,11 @@ class categoricalPlotter(object):
 					for ax in axes:
 						ax.set_ylim(newYLim)
 					
-			
+	def change_nan_color(self,newColor):
+		'''
+		'''
+		if hasattr(self,'scatterWithCategories'):
+			self.scatterWithCategories.change_nan_color(newColor)
 
 	def define_new_figure(self,figure):
  		'''
@@ -1037,6 +1085,7 @@ class categoricalPlotter(object):
 		
 		self.inmutableCollections = []	
 		self.plotter.addSwarm = False		
+		self.addSwarm = False
 
 			
 	
@@ -1055,6 +1104,7 @@ class categoricalPlotter(object):
 
 		self.filling_axis('add_swarm',subplotIdNumber,axisExport)
 		self.plotter.addSwarm = True
+		self.addSwarm = True
 		
 	def get_fit_properties(self,data, idx, func = 'non cubic fit'):
 		'''
@@ -1121,8 +1171,8 @@ class categoricalPlotter(object):
 		Uses a specific axis to export this plot. Main purpose to use this in a main figure.
 		'''
 		self.filling_axis(self.currentPlotType,subplotIdNumber,axisExport)
-		#print(self.plotter.statistics)
-		if self.plotter.addSwarm:
+		
+		if self.addSwarm:
 			self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
 		self.plotter.display_statistics(axisExport,subplotIdNumber,plotCount)
 		
@@ -1157,13 +1207,15 @@ class categoricalPlotter(object):
 	
 	
 	def __getstate__(self):
-		
+		'''
+		Remove objects that cannot be sterilized. 
+		'''
 		state = self.__dict__.copy()
 		for attr in ['figure','axisDict']:
 			if attr in state: 
 				del state[attr]
 		return state
-			#'_Plotter',
+			
 					
 
 		
@@ -1196,6 +1248,9 @@ class nonCategoricalPlotter(object):
 		self.filling_axis()
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot()
+			self.addSwarm = True
+		else:
+			self.addSwarm = False
 		self.style_axis()
 	
 	@property
@@ -1219,13 +1274,14 @@ class nonCategoricalPlotter(object):
 		
 	def get_scatter_props(self):
 		'''
+		Get the current scatter properties from the "main" plotter class.
 		'''
 		self.sizeScatterPoints, self.alphaScatterPoints,\
 		self.colorScatterPoints = self.plotter.get_scatter_point_properties()
 			 	
 	def add_axis_to_figure(self):
 			
-			self.figure.subplots_adjust(wspace=0.05, hspace = 0.05)  
+			self.figure.subplots_adjust(wspace=0.05, hspace = 0.05,bottom=0.15)  
 			if self.currentPlotType in nonScatterPlotTypes:
 				self.axisDict[0] = self.figure.add_subplot(221) 
 				self.adjust_margin_of_figure_for_non_scatter()
@@ -1267,7 +1323,7 @@ class nonCategoricalPlotter(object):
 	def replot(self):
 		'''
 		This handles a replot of the initilized plot.
-		It is used when a stored session is re-stored.
+		It is used when a stored session is opened.
 		'''
 		self.createIntWidgets = False
 		if self.currentPlotType in ['hclust','corrmatrix']:
@@ -1305,7 +1361,6 @@ class nonCategoricalPlotter(object):
 				self.annotationClass.replotAllAnnotations(self.axisDict[0])
 				textColumn = self.annotationClass.textAnnotationColumns
 				self.bind_label_event(textColumn)
-			
 			
 			
 
@@ -1395,23 +1450,16 @@ class nonCategoricalPlotter(object):
 		else:
 			madeAnnotations = OrderedDict()
 			selectionLabels = OrderedDict()
-			
 		self.annotationClass = _annotateScatterPoints(self.plotter,self.figure,self.axisDict[0],
 													  self.data,labelColumnList,self.numericColumns[:2],
 													  madeAnnotations,selectionLabels) 
 		
-
-		
-		
 	def change_color_by_numerical_column(self, numericColumn, specificAxis = None):
 		'''
-		ceepts a numeric column from the dataCollection class. numeric is added using 
+		Accepts a numeric column from the dataCollection class. This column is added using 
 		the index ensuring that correct dots get the right color. 
 		'''
-		if self.colorMap not in ['Set4','Set5']:  
-			cmap = cm.get_cmap(self.colorMap) 
-		else:
-			cmap = ListedColormap(sns.color_palette(self.colorMap))
+		cmap = get_max_colors_from_pallete(self.colorMap)
 			
 		## update data if missing columns 
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
@@ -1458,7 +1506,6 @@ class nonCategoricalPlotter(object):
 		'''
 		changes sizes of collection by a cateogrical column
 		'''
-	
 		## update data if missing columns 
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
 																  definedColumnsList=[categoricalColumn])	
@@ -1493,6 +1540,8 @@ class nonCategoricalPlotter(object):
 												updateColor = True, adjustLayer = True):
 		'''
 		Takes a categorical column and plots the levels present in different colors.
+		Reorders the categories in a way that ensures that the NanReplaceString is 
+		last in the list and also has the lowest zorder.
 		'''
 		if isinstance(categoricalColumn,str):
 			categoricalColumn = [categoricalColumn]
@@ -1538,13 +1587,16 @@ class nonCategoricalPlotter(object):
 				self.annotationClass.update_data(self.data)								
 		
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
+			if len(self.colorMapDict) < 20:
+			
+				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
 			
 		elif adjustLayer == False:
 		
 			axCollection[0].set_facecolor(self.data['color'].values)
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
+			if len(self.colorMapDict) < 20:
+				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
 
 		else:
 		
@@ -1761,13 +1813,13 @@ class nonCategoricalPlotter(object):
 			
 		else:	
 			self.filling_axis(subplotIdNumber,axisExport) 
-			if self.plotter.addSwarm:
+			if self.addSwarm:
 				self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
 			
 			self.plotter.adjust_grid_and_box_around_subplot(axes = [axisExport], 
 															boxBool = boxBool, 
 															gridBool = gridBool)
-			## this needs to be checked other we cannot export other subplots 
+			## this needs to be checked otherwise we cannot export other subplots 
 			## from a PCA or cluster anaylsis 												
 			if (self.currentPlotType in plotTypesRestricted and subplotIdNumber == 0) \
 			or self.currentPlotType not in plotTypesRestricted:
@@ -1989,17 +2041,6 @@ class nonCategoricalPlotter(object):
 				else:
 					ax = axisExport
 				ax.bar(xTicks, data)
-								
-	
-	def __getstate__(self):
-	
-		state = self.__dict__.copy()
-		for attr in ['figure','colorMapDict', 'savedLegendCollections',
-					'pcaProjectionAnnotations','axisDict', 'LineSegments']:
-			if attr in state: 
-				del state[attr]
-		return state
-			#'_Plotter',
 			
 	def update_color_in_projection(self,resultDict = None, ax = None):
 		'''
@@ -2028,9 +2069,6 @@ class nonCategoricalPlotter(object):
  									   		 'patchKws':{'alpha':self.alphaScatterPoints,
  									   		 'lw':0.5}}) 
  									   
-		
-		
-		
 											
 	def hide_show_feature_names(self):
 	
@@ -2045,10 +2083,7 @@ class nonCategoricalPlotter(object):
 				self.pcaProjectionAnnotations.annotate_all_row_in_data()
 			
 			self.plotter.redraw()					
-				
-		
-		
-		
+						
 					
 	def update_cluster_analysis_score(self, ax):
 		'''
@@ -2084,7 +2119,8 @@ class nonCategoricalPlotter(object):
 			coll.remove() 
 		
 		self.inmutableCollections = []	
-		self.plotter.addSwarm = False		
+		self.plotter.addSwarm = False	
+		self.addSwarm = False
 
 			
 	
@@ -2102,6 +2138,7 @@ class nonCategoricalPlotter(object):
 
 		self.filling_axis(subplotIdNumber,axisExport,plotType = 'add_swarm')
 		self.plotter.addSwarm = True	
+		self.addSwarm = True
 		
 				
 			
@@ -2196,9 +2233,17 @@ class nonCategoricalPlotter(object):
 		for eventBindingClass in [self._hclustPlotter,self.annotationClass,
 											self.pcaProjectionAnnotations]:
 			if eventBindingClass is not None:
-				eventBindingClass.disconnect_event_bindings()
-				
-
+				eventBindingClass.disconnect_event_bindings()								
+	
+	def __getstate__(self):
+	
+		state = self.__dict__.copy()
+		for attr in ['figure','colorMapDict', 'savedLegendCollections',
+					'pcaProjectionAnnotations','axisDict', 'LineSegments']:
+			if attr in state: 
+				del state[attr]
+		return state
+			#'_Plotter',
 
 
 			
@@ -2284,11 +2329,11 @@ class _scatterMatrixHelper(object):
 		Aceepts a numeric column from the dataCollection class. It sorts the index first 
 		to ensure that the right dots get the right color.
 		'''
-		
-		if self.colorMap not in ['Set4','Set5']:  
-			cmap = cm.get_cmap(self.colorMap) 
-		else:
-			cmap = ListedColormap(sns.color_palette(self.colorMap))
+		cmap = get_max_colors_from_pallete(self.colorMap)
+		#if self.colorMap not in ['Set4','Set5']:  
+		#	cmap = cm.get_cmap(self.colorMap) 
+		#e#lse:
+		#	cmap = ListedColormap(sns.color_palette(self.colorMap))
 			
 		## update data if missing columns 
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID)
@@ -2595,16 +2640,7 @@ class axisStyler(object):
 		'''
 		if title is not None:
 			self.ax.set_title(title)
-	
-	#def set_new_tick_labels(self,tickLabels,axis='x'):
-	#	'''
-	#	'''
-	#	if tickLabels is not None:
-	#		if axis == 'x':
-	#	
-	#			self.ax.set_xticklabels(tickLabels) 
-	#		else:
-	##			self.ax.set_yticklabels(tickLabels)					
+			
 	def rotate_axis_tick_labels(self, rotationXTicks):
 		'''
 		Rotates the xtick labels.
@@ -2744,15 +2780,15 @@ class _annotateScatterPoints(object):
 		ax = self.ax
 
 		for rowIndex in dataFrame.index:
-			textData = dataFrame[self.textAnnotationColumns].loc[rowIndex]
+			if rowIndex not in self.data.index:
+				continue
+			textData = self.data[self.textAnnotationColumns].loc[rowIndex]
 			textLabel = str(textData.iloc[0])
 			
 			key = rowIndex
-			xyDataLabel = tuple(dataFrame[self.numericColumns].loc[rowIndex])
-			
+			xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
 			xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
 			xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
-			
 			annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', arrowprops=arrow_args)
 		
 			self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)

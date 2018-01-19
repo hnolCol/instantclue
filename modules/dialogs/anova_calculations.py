@@ -131,7 +131,9 @@ class anovaCalculationDialog(object):
  		
  		ttk.Separator(self.cont, orient =  tk.VERTICAL).grid(sticky=tk.EW,pady=3,padx=2,columnspan=3)
  		betweenLabel.grid(sticky=tk.W, columnspan=2,padx=3,pady=5)
- 		if 'RepMeas' in self.anovaType:
+ 		if self.anovaType == '1W-ANVOVA-RepMeas':
+ 			numOfWithinFactors = 1
+ 		elif 'RepMeas' in self.anovaType:
  		## check if we have 
  			numOfWithinFactors = int(float(self.anovaType[-5]))
  		else:

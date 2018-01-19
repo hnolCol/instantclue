@@ -8,20 +8,20 @@ from modules.utils import *
 class ChartConfigurationPopup(object):
 	
 	
-	def __init__(self,platform,figure,canvas,plot_type,color_maps_axes,label_axes_scatter, 
-				 global_chart_parameter,grid,box):
+	def __init__(self,plotter,global_chart_parameter):
 				 
-		self.toplevel = None
+		if plotter.plotCount == 0:
+			tk.messagebox.showinfo('No chart ..','Please create a chart first ..')
+			return	
+		self.toplevel = None	
 		self.save_entries = []
 		self.platform = platform
-		self.plot_type = plot_type
-		self.figure = figure
-		self.canvas = canvas
-		self.fig_axes = figure.axes
-		self.show_grid  = grid
-		self.show_box = box
-		self.color_maps_axes = color_maps_axes
-		self.label_axes_scatter = label_axes_scatter
+		self.plot_type = plotter.currentPlotType
+		self.figure = plotter.figure
+		self.fig_axes = plotter.get_axes_of_figure()
+		self.show_grid  = plotter.showGrid
+		self.show_box = plotter.showSubplotBox
+		self.plotter = plotter
 		self.global_chart_parameter = global_chart_parameter
 		self.fig_axes = self.get_all_axes_to_change()
 		self.properties_axis = self.extract_properties_of_first_axis()
@@ -149,7 +149,7 @@ class ChartConfigurationPopup(object):
 			for ax in self.fig_axes:
 				ax.grid('off')
 		self.show_grid  = bool_	
-		self.canvas.draw()
+		self.figure.canvas.draw()
 
 
 	def remove_box(self):
@@ -166,23 +166,26 @@ class ChartConfigurationPopup(object):
 				ax.spines['right'].set_visible(False)
 				ax.spines['top'].set_visible(False) 
 		self.show_box = bool_		
-		self.canvas.draw()  
+		self.figure.canvas.draw()  
 			
 
 	def get_all_axes_to_change(self):
 		'''
-		Filters out axes that should not change: Label axes in scatters with categories or colormap axes.
+		Filters out axes that should not change: Label axes in scatters with categories 
+		or colormap axes.
 		Returns new self.fig_axes list
 		'''
 		fig_axes = self.fig_axes
+		ax_cbar, ax_label = [],[]
 	
-		if len(self.color_maps_axes) != 0 or len(self.label_axes_scatter ) != 0:
-			ax_cbar = None
-			ax_label = []
-			for key,cb in self.color_maps_axes.items():
-				ax_cbar = cb[-1]
-			ax_label = list(self.label_axes_scatter.values())
-			fig_axes = [ax for ax in fig_axes if ax != ax_cbar and ax not in ax_label]	
+		#if len(self.color_maps_axes) != 0:
+		#	ax_cbar = None
+		#	ax_label = []
+		#	for key,cb in self.color_maps_axes.items():
+		#		ax_cbar = cb[-1]
+		if self.plotter.categoricalPlotter is not None and self.plot_type == 'scatter':
+			ax_label = self.plotter.categoricalPlotter.scatterWithCategories.inmutableAxes
+		fig_axes = [ax for ax in fig_axes if ax != ax_cbar and ax not in ax_label]	
 		return fig_axes
 		
 	def extract_properties_of_first_axis(self):
@@ -241,7 +244,7 @@ class ChartConfigurationPopup(object):
                                  for text in textItems:
                                  	text.set_fontsize(int(float(value)))
                          
-                             self.canvas.draw() 
+                             self.figure.canvas.draw() 
                              
                     
                 
@@ -287,7 +290,7 @@ class ChartConfigurationPopup(object):
                  ent.delete(0,'end')
                  ent.insert(tk.END,value)
                  if draw:
-                     self.canvas.draw()   	
+                     self.figure.canvas.draw()   	
              
 	def apply_changes(self,event = None, ent_list = None,plot_type = None,axes= None):
 
@@ -338,7 +341,7 @@ class ChartConfigurationPopup(object):
                                         plt.setp(leg.get_title(), fontsize=str(value))
                                         plt.setp(leg.get_texts(), fontsize = str(value))
                  
-                 self.canvas.draw() 	
+                 self.figure.canvas.draw() 	
 
 	
 		
@@ -356,13 +359,10 @@ class ChartConfigurationPopup(object):
 				ymin,ymax = ax.get_ylim()
 				if abs(value - ymax) < ymax*0.001:
 					return
-				if plot_type == 'barplot':
-					ent.delete(0,'end')
-					ent.insert(tk.END,0.00)
-					return
+				
 				ax.set_ylim((ymin,value))
 				
-			self.canvas.draw()
+			self.figure.canvas.draw()
 			return
 			
 		elif sort == 'y-axes [min]:': 
@@ -370,8 +370,12 @@ class ChartConfigurationPopup(object):
 					ymin,ymax = ax.get_ylim()
 					if abs(value - ymin) < ymin * 0.001:
 						return
+					if plot_type == 'barplot' and ymin == 0:
+						ent.delete(0,'end')
+						ent.insert(tk.END,0.00)
+						return
 					ax.set_ylim((value,ymax))
-			self.canvas.draw()
+			self.figure.canvas.draw()
 			return
 		elif sort == 'x-axes [min]:':
 			for ax in fig_axes:
@@ -379,7 +383,7 @@ class ChartConfigurationPopup(object):
 				if abs(value - xmin) < xmin * 0.001:
 					return
 				ax.set_xlim((value,xmax))
-			self.canvas.draw() 
+			self.figure.canvas.draw() 
 			return 
 		elif sort == 'x-axes [max]:':
 			for ax in fig_axes:
@@ -387,7 +391,7 @@ class ChartConfigurationPopup(object):
 				if abs(value - xmax) < xmax* 0.001:
 					return 
 				ax.set_xlim((xmin,value))
-			self.canvas.draw()
+			self.figure.canvas.draw()
 			return 
 			
 	def center_popup(self,size):

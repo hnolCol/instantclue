@@ -40,11 +40,18 @@ class interactiveWidgetsHelper(object):
 		'''
 		self.mode = mode 
 		self.plotter = plotter
-		
+		if plotter.nonCategoricalPlotter is not None:
+			self.helper = plotter.nonCategoricalPlotter
+		elif plotter.currentPlotType == 'scatter':
+			self.helper = plotter.categoricalPlotter.scatterWithCategories
 		
 		if self.mode == 'colorLevel':
 			self.clear_color_helper_dicts()
-			self.colorMapDict = plotter.nonCategoricalPlotter.get_current_colorMapDict()
+			self.colorMapDict =self.helper.get_current_colorMapDict()
+			if len(self.colorMapDict) > 20:
+				tk.messagebox.showinfo('Info ..',
+					'Too many categorical values to display. No legend not drawn.')
+				return
 			self.defaultColor = plotter.colorScatterPoints
 			self.defaultColorHex = col_c(self.defaultColor)
 			self.color_label_widgets(self.colorMapDict)
@@ -60,7 +67,7 @@ class interactiveWidgetsHelper(object):
 			
 	def color_label_widgets(self, colorMapDict):
 		
-		catColumnList = self.plotter.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+		catColumnList = self.helper.sizeStatsAndColorChanges['change_color_by_categorical_columns']
 		
 		self.clean_color_frame_up()
 		self.colorframe = tk.Frame(self.frame, bg=MAC_GREY, relief=tk.GROOVE)
@@ -73,7 +80,6 @@ class interactiveWidgetsHelper(object):
 		
 		for group, color in colorMapDict.items():
 			if str(group).isspace() == False and str(group) != 'nan':
-				
 				hexColorFormat = col_c(color)
 				self.create_colorLabel_and_description(hexColorFormat,group)
 	
@@ -150,7 +156,7 @@ class interactiveWidgetsHelper(object):
 					indexInColorList += 1
 				
 				colorToBeUsed = self.selectedColors[group][indexInColorList]
-				w.configure(bg = colorToBeUsed) 
+				w.configure(bg = colorToBeUsed)
 				self.categoryToNewColor[group] = colorToBeUsed
 				
 		self.apply_changes()
@@ -161,18 +167,17 @@ class interactiveWidgetsHelper(object):
 		if len(self.colorLevelWidgets) == 0:
 			return
 			
-		self.colorMapDict = self.plotter.nonCategoricalPlotter.get_current_colorMapDict()
+		self.colorMapDict = self.helper.get_current_colorMapDict()
 		if self.colorMapDict is None:
 			return
-		rawColorMapDict = self.plotter.nonCategoricalPlotter.rawColorMapDict 
+		rawColorMapDict = self.helper.rawColorMapDict 
 		# we need the raw colorMap with user's changed to get the correct color
 		
 		for group, color in rawColorMapDict.items():
 			if str(group).isspace() == False and str(group) != 'nan':
 				
 				hexColor = col_c(color)
-				## update color list
-			
+				## update color list			
 				# get current color (if nan color, it should stay like this)
 				colorLabel = self.colorLevelWidgets[group]['colorLabel']
 				currentLabelCol = colorLabel.cget('bg')
@@ -185,14 +190,16 @@ class interactiveWidgetsHelper(object):
 					colorLabel.configure(bg=hexColor)
 				else:
 					pass
+				# update new standard color in the seelectable colors
+				# colors that will show up while clicking throught them
+				self.selectedColors[group][0] = hexColor
 
-	
 		
 	def apply_changes(self):
 		'''
 		'''
-		self.plotter.nonCategoricalPlotter.categoricalColorDefinedByUser = self.categoryToNewColor
-		self.plotter.nonCategoricalPlotter.update_colorMap()
+		self.helper.categoricalColorDefinedByUser = self.categoryToNewColor
+		self.helper.update_colorMap()
 		self.plotter.redraw()
 				
 	def clear_color_helper_dicts(self):
@@ -211,6 +218,8 @@ class interactiveWidgetsHelper(object):
 			self.colorframe.destroy()
 			del self.colorframe
 			self.colorLevelWidgets.clear()
+			self.categoryToNewColor.clear()
+			self.selectedColors.clear()	
 			
 		
 	def clean_frame_up(self):

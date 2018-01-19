@@ -58,6 +58,7 @@ import time
 import textwrap as tw 
 import string 
 import webcolors as wb
+import re
 
 from decimal import Decimal
 
@@ -154,6 +155,9 @@ class analyze_data(tk.Frame):
            self.build_label_frames()
            self.grid_widgets(controller)
            
+           
+           self.bind("<<ShowFrame>>",lambda event: self.update_main_menu(parent,controller))
+           
            ## sourceData holds all data frames , self.plt is the plotter class,
            ## anovaTestCollection saves all anova tests made
            ## curveFitCollection saves all curve fittings made by the user
@@ -241,7 +245,6 @@ class analyze_data(tk.Frame):
            
            self.release_event = None
            self.hclust_move_level = None
-           self.annotation_main = OrderedDict() 
            self.scat = None
            
            self.col_map_keys_for_main  = None
@@ -251,10 +254,7 @@ class analyze_data(tk.Frame):
            
            self.mot_button = None
            self.dimReduction_button_droped = None
-           self.color_pca_dict = dict() 
-           self.subsets_and_scatter_with_cat = OrderedDict() 
            self.regression_in_plot = dict()
-           self.label_axes_for_scatter = OrderedDict() 
            self.legend_collecion_for_drag = []           
                      
      def build_menus(self):
@@ -268,6 +268,8 @@ class analyze_data(tk.Frame):
            self.build_pca_export_menu()
            self.build_corrMatrix_menu()
            self.build_hclust_menu()   
+     	
+
            
      def build_label_frames(self):
                   
@@ -285,6 +287,7 @@ class analyze_data(tk.Frame):
            self.source_sideframe = tk.LabelFrame(self, text='Source Data', **settingVertFrames)
            self.analysis_sideframe = tk.LabelFrame(self, text='Analysis', **settingVertFrames)       
            self.mark_sideframe = tk.LabelFrame(self, text = "Slice and Marks", **settingVertFrames)
+           self.general_settings_sideframe = tk.LabelFrame(self, text = 'Settings', relief=tk.GROOVE, padx=3, pady=7, bg=MAC_GREY)
            self.receiverFrame['numeric'] = self.column_sideframe
            self.receiverFrame['category'] = self.category_sideframe
 
@@ -337,7 +340,6 @@ class analyze_data(tk.Frame):
                                      rowspan = 3,                                     
                                      sticky=tk.EW+tk.NW,
                                      padx=5)
-#           
            
            self.plotoptions_sideframe.grid(in_=self,
                                      row=1,
@@ -346,6 +348,14 @@ class analyze_data(tk.Frame):
                                      sticky=tk.NW,
                                      padx=5)           
            
+           self.general_settings_sideframe.grid(in_=self,
+                                     row=10,
+                                     column = 5,
+                                     rowspan=2,
+                                     sticky=tk.EW+tk.NW,
+                                     pady=(0,0),
+                                     padx=5)
+                                           
      def build_main_drop_down_menu_treeview(self):
          
            '''
@@ -840,7 +850,7 @@ class analyze_data(tk.Frame):
      				else:
      					return
      			else:
-     				newColumns = self.sourceData.df[columnForColumns]
+     				newColumns = self.sourceData.df[columnForColumns].astype(str)
      		# transpose data
      		data = self.sourceData.df.transpose()
      		# add new column names (selected by user)
@@ -848,6 +858,7 @@ class analyze_data(tk.Frame):
      		# add index as pure numbers
      		data.index = np.arange(0,len(data.index)) 
      		# inser a column with index holding old columns
+     		
      		indexName = self.sourceData.evaluate_column_name('Index',newColumns)
      		data.insert(0,indexName,self.sourceData.df_columns)
      		
@@ -1016,10 +1027,9 @@ class analyze_data(tk.Frame):
       	fit. 
       	'''
       	selectFitAndGrid = curve_fitting.displayCurveFitting(self.sourceData,self.plt,self.curveFitCollection) 
-      	fitsToPlot = selectFitAndGrid.curve_fits_to_plot  
       	categoricalColumns = self.curveFitCollection.get_columns_of_fitIds(fitsToPlot)
       	if len(categoricalColumns) > 0:
-      		self.plt.set_selectedCurveFits(fitsToPlot)
+      		self.plt.set_selectedCurveFits(selectFitAndGrid.curve_fits_to_plot)
       		self.plt.initiate_chart(numericColumns = [], categoricalColumns = categoricalColumns ,
       								 selectedPlotType = 'curve_fit', colorMap = self.cmap_in_use.get())
       	else:
@@ -1294,7 +1304,7 @@ class analyze_data(tk.Frame):
      
      def add_error(self):
      	'''
-     	
+     	Adds an error represented by a grey area around a time series signal.
      	'''
      	if self.plt.currentPlotType != 'time_series':
      		tk.messagebox.showinfo('Error..','Only useful for time series.')
@@ -1322,7 +1332,7 @@ class analyze_data(tk.Frame):
      								 infoText = 'Select columns that hold the error. For'+
      								 ' example the standard deviation of several signals over'
      								 ' time.\nIf you do not want to plot the error for one of'+
-     								 ' the plotted columns simply enter "None".'
+     								 ' the plotted columns simply enter "None".', h = 100,
      								 )
      			selection = dialog.selectionOutput
      			if len(selection) != 0:
@@ -1336,33 +1346,6 @@ class analyze_data(tk.Frame):
      		tk.messagebox.showinfo('Error ..','Please select only numerical columns (floats, and integers)')
      	
      		
-      
-
-         
-         
-         
-     def reduce_tick_to_n(self,ax,tick,n, rotation = 0):
-         
-         def get_lab(label,i,idx_):
-             if i in idx_:
-                 return label
-             else:
-                 return '' 
-         if tick == 'y':    
-             labels = ax.get_yticklabels() 
-         else:
-             labels = ax.get_xticklabels()        
-         n_labs = len(labels)
-         idx_ = [int(round(x,0)) for x in np.linspace(0,n_labs-1,num=n)]
-         
-         new_labs = [get_lab(label,i,idx_) for i,label in enumerate(labels)] 
-
-         if tick == 'y':
-             ax.set_yticklabels(new_labs)
-         else:
-              ax.set_xticklabels(new_labs, rotation =rotation)         
-
-       
 
      def iir_filter(self):
      	'''
@@ -1501,10 +1484,23 @@ class analyze_data(tk.Frame):
      			title, prompt =  askFloatTitlePrompt[metric]
      			## changed to use askstring instread of asfloat because 
      			## the function float() can also interprete entered strings
-     			## like 1/400
-     			promptN = ts.askstring(title,prompt,initialvalue='2')
-     			promptN = float(promptN)
+     			## such as 1/400
+     			promptValue = ts.askstring(title,prompt,initialvalue='2')
+     			try:
      			
+     				promptN = float(promptValue)
+     				
+     			except:
+     			
+     				promptNumbers = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", promptValue)
+     				try:
+     					promptN = float(promptNumbers[0]) 
+     				except:
+     					tk.messagebox.showinfo('Error ..',
+     						'Could not convert input to number.',
+     						parent=self)
+     				
+     				
      			if promptN is None:
      				return
      	
@@ -1517,10 +1513,7 @@ class analyze_data(tk.Frame):
      	
      	else:
      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-     		return     
-                  
-       
-       
+     		return            
              
                     
      def correct_baseline(self):
@@ -1582,9 +1575,7 @@ class analyze_data(tk.Frame):
      	else:
      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
      		return
-     													   
-        
-             
+     													                
 
          
      def save_current_session(self):
@@ -1619,6 +1610,7 @@ class analyze_data(tk.Frame):
                       button.destroy() 
              for button in self.selectedCategories.values():
                       button.destroy()    
+            
              self.plt.clean_up_figure()
              self.interactiveWidgetHelper.clean_frame_up()
              self.selectedNumericalColumns.clear()
@@ -1629,9 +1621,11 @@ class analyze_data(tk.Frame):
                       button.destroy() 
              
              self.selectedNumericalColumns.clear() 
-             self.but_stored[9].configure(image= self.add_swarm_icon)  
+             self.but_stored[9].configure(image= self.add_swarm_icon)
+               
              if replot:       
-             	plot_type = self.estimate_plot_type_for_default() 
+             	plot_type = self.estimate_plot_type_for_default()
+             	self.interactiveWidgetHelper.clean_frame_up() 
              	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
                                              catnames = list(self.selectedCategories.keys() ),
                                                             plot_type = plot_type)          
@@ -1641,13 +1635,19 @@ class analyze_data(tk.Frame):
                 self.selectedCategories.clear() 
                 if replot:     
                 	plot_type = self.estimate_plot_type_for_default() 
+                	self.interactiveWidgetHelper.clean_frame_up()
                 	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
                                              catnames = list(self.selectedCategories.keys() ),
                                                             plot_type = plot_type)       
+         
+        
+          
                   
      def open_saved_session(self):
-     	
-
+         '''
+         Opens a saved session. You select a folder/dir. But this will probably be changed
+         soon so that you can save files where ever you/the user want(s). 
+         '''
          savedSession = save_and_load_sessions.open_session()
          if savedSession is None:
          	return
@@ -1705,6 +1705,10 @@ class analyze_data(tk.Frame):
      		
      		     		
      def unpack_exports(self,axisDict,figureId,specAxisId=None,specificAxis = None,transferAxisId = None): 
+     		'''
+     		Unpack plotting details. Eg. read the last chart and main figure contents. 
+     		'''
+     		
      		for axisId,exportDetails in axisDict.items():
      			if specAxisId is not None:
      				if axisId != specAxisId:
@@ -1769,14 +1773,14 @@ class analyze_data(tk.Frame):
          										exportDetails['boxBool'],
          										exportDetails['gridBool'])
      					break
- 	
  		
  
   
      		
      def setup_main_figure(self): 
      	'''
-     	Setup main figure
+     	Setup main figure. Opens a dialog window to collect figures on a main 
+     	figure template. 
      	'''
      	main_figures.mainFigureTemplateDialog(self.mainFigureCollection)
    
@@ -1944,33 +1948,35 @@ class analyze_data(tk.Frame):
                   
      def build_analysis_tree(self):
         seps_tests =   ['Model fitting',
-                        'Compare-two-groups',
+                        'Compare two groups',
                         'Compare multiple groups',
                         'Two-W-ANOVA',
                         'Three-W-ANOVA',
                         'Cluster Analysis',
                         'Classification',
                         'Dimensional reduction',
-                        'Miscellaneous',
-                        'Curve fitting']
+                        'Correlation',
+                        'Curve fitting',
+                        'Miscellaneous',]
 
         self.options_for_test = dict({'Model fitting':['linear',
                                          # 'logarithmic',
                                           'lowess',
                                           #'expontential',
                                           ],
-                        'Compare-two-groups':['t-test','Welch-test',
+                        'Compare two groups':['t-test','Welch-test',
                                               'Wilcoxon [paired non-para]',
                                               'Whitney-Mann U [unparied non-para]'
                                               ],
                         'Compare multiple groups':['1W-ANOVA','1W-ANOVA-RepMeas','Kruskal-Wallis'],
                         'Miscellaneous':['Pairwise Comparision','AUC','Density'],
-                        'Classification':classification.availableMethods,
+                        'Classification':['CV based Grid Search'],#classification.availableMethods,
                         'Cluster Analysis':clustering.availableMethods,
                          'Two-W-ANOVA':['2W-ANOVA','2W-ANOVA-RepMeas(1fac)','2W-ANOVA-RepMeas(2fac)'],#,'Interactions'],
                          'Three-W-ANOVA':['3W-ANOVA','3W-ANOVA-RepMeas(1fac)','3W-ANOVA-RepMeas(2fac)','3W-ANOVA-RepMeas(3fac)'],
-                         'Dimensional reduction':list(stats.dimensionalReductionMethods.keys())
-                                       ,
+                         'Dimensional reduction':list(stats.dimensionalReductionMethods.keys()),
+                         'Correlation': ['Correlate rows to ..','Display correlations'],
+                                       
                                                   'Curve fitting':['Curve fit ..','Display curve fit(s)']})
         opt_two_groups = ['paired',
                           'unpaired']
@@ -1989,7 +1995,7 @@ class analyze_data(tk.Frame):
             for opt_test in self.options_for_test[heads]:
                     
                     sub1 = self.stats_tree.insert(main, 'end', str(opt_test), text = opt_test)
-                    if heads == 'Compare-two-groups':
+                    if heads == 'Compare two groups':
                         if opt_test in  ['t-test','Welch-test']:
                             for sub_opt in opt_two_groups:
                                  sub2 = self.stats_tree.insert(sub1, 'end','%s_%s' % (opt_test,sub_opt), text=sub_opt)
@@ -2362,10 +2368,23 @@ class analyze_data(tk.Frame):
      		dataFrameIid = '{}_{}'.format(fileIid,fileName)     	
      		self.DataTreeview.delete_entry_by_iid(dataFrameIid)
      		self.sourceData.delete_data_file_by_id(fileIid)
+     		self.remove_savedCalculations(fileIid)
+     		
+     		if len(self.sourceData.fileNameByID) == 0:
+     			self.clean_up_dropped_buttons(mode = 'num')
+     			self.clean_up_dropped_buttons(mode = 'cat')
      		
      	tk.messagebox.showinfo('Done..','Selected data frame(s) delted.')
       
-        
+     def remove_savedCalculations(self, dataId):
+     	'''
+     	Removes made calculations that were associated with the
+     	particular dataId.
+     	'''
+     	self.curveFitCollection.remove_fits_by_dataId(dataId)
+ 	
+ 	
+ 	   
         
      def on_slected_treeview_button3(self, event):
          
@@ -2609,8 +2628,14 @@ class analyze_data(tk.Frame):
              if widget == self.source_treeview:
              	return
              try:	
-                 self.cat_filtered = [col for col in self.DataTreeview.columnsSelected   if col not in list(self.selectedCategories) and self.sourceData.df[col].dtype != np.float64] 
-                 self.col_filtered = [col for col in self.DataTreeview.columnsSelected   if col not in list(self.selectedNumericalColumns) and (self.sourceData.df[col].dtype == np.float64 or self.sourceData.df[col].dtype == np.int64)]
+                 self.cat_filtered = [col for col in self.DataTreeview.columnsSelected  \
+                 if col not in list(self.selectedCategories) and self.sourceData.df[col].dtype != np.float64] 
+                
+                 self.col_filtered = [col for col in self.DataTreeview.columnsSelected   \
+                 if col not in list(self.selectedNumericalColumns) and \
+                 (self.sourceData.df[col].dtype == np.float64 or \
+                 self.sourceData.df[col].dtype == np.int64)]
+             
              finally:
                  if self.mot_button is not None:
                  	self.mot_button.destroy()
@@ -2712,11 +2737,9 @@ class analyze_data(tk.Frame):
               		
                      self.categorical_column_handler('Find category & annotate')
              else:    
-                 
                  self.numeric_filter_dialog()
                           
          elif widget == self.sliceMarkFrameButtons['tooltip']:
-         
              try:
                  self.tooltip_button_droped.destroy()
              except:
@@ -2798,7 +2821,7 @@ class analyze_data(tk.Frame):
              else:
              	alreadyUsedColors = []
              self.DataTreeview.columnsSelected = alreadyUsedColors + columnSelected
-             proceed = self.update_color(add_new_cat = True)
+             proceed = self.update_color()
              
              if proceed:
                  self.color_button_droped.configure(text = "Multiple")
@@ -2859,7 +2882,7 @@ class analyze_data(tk.Frame):
                          #self.calculate_area_under_courve()
                       
                      elif self.test in clustering.availableMethods:
-                     
+                     	
                      	clustering.clusteringDialog(self.sourceData,self.plt, self.DataTreeview, 
                      								self.clusterCollection , self.interactiveWidgetHelper,
                      								numericColumns = list(self.selectedNumericalColumns.keys()),
@@ -2867,13 +2890,19 @@ class analyze_data(tk.Frame):
                      								cmap = self.cmap_in_use.get())
                      	
                      								
-                     elif self.test in classification.availableMethods:
-                     	tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.')
-                     	return
-                     	classification.classifyingDialog(self.sourceData,self.plt, self.DataTreeview, 
-                     								self.classificationCollection, 
-                     								numericColumns = list(self.selectedNumericalColumns.keys()),
-                     								initialMethod = self.test)
+                     elif self.test == 'CV based Grid Search':
+                     
+                     	features = list(self.selectedNumericalColumns.keys())
+                     	targetColumn = list(self.selectedCategories.keys())
+                     	
+                     	classification.gridSearchClassifierOptimization(self.classificationCollection, self.sourceData,
+                     											features,targetColumn,plotter=self.plt)
+                     	#tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.')
+                     	#return
+                     	#classification.classifyingDialog(self.sourceData,self.plt, self.DataTreeview, 
+                     	#							self.classificationCollection, 
+                     	#							numericColumns = list(self.selectedNumericalColumns.keys()),
+                     	#							initialMethod = self.test)
                      								                       	
                       
                      elif 'ANOVA' in self.test:  
@@ -2894,7 +2923,7 @@ class analyze_data(tk.Frame):
                      elif self.test =='Pairwise Comparision':
                      	self.get_all_combs()
                       
-                     elif self.test in self.options_for_test['Compare-two-groups']:
+                     elif self.test in self.options_for_test['Compare two groups']:
                      	## note that the statistic results are being saved in self.plt associated with the plot
                      	## count number
 
@@ -2906,8 +2935,13 @@ class analyze_data(tk.Frame):
                         	self.twoGroupstatsClass = stats.interactiveStatistics(self.plt,
                         								self.sourceData,statTestInformation)
                         self.stat_button_droped.configure(command = self.show_statistical_test)
-                        #self.stat_button_droped.bind(right_click, self.statsClass.delete_all_stats)
-                                                
+                     
+                     
+                     elif self.test in  ['Correlate rows to ..','Display correlations']:
+                     
+                     	tk.messagebox.showinfo('Under construction ..','Under construction ..',parent=self)
+                     	return
+                                               
                      elif self.test == 'Display curve fit(s)':
                          
                           self.display_curve_fits()
@@ -3355,48 +3389,25 @@ class analyze_data(tk.Frame):
              	self.plt.nonCategoricalPlotter._scatterMatrix.change_size_by_numeric_column(self.DataTreeview.columnsSelected[0])
 
                      
-             else:    
-
-                 
-                 self.plt.nonCategoricalPlotter.change_size_by_numerical_column(self.DataTreeview.columnsSelected[0])
-                 self.plt.redraw()
-                 return
-                 
-                 size_data = self.sourceData.df[col_]
-                 
-                 if n_categories != 0:
-                 	min = size_data.min()
-                 	max = size_data.max()
-                 	for key, subset_and_scatter in self.subsets_and_scatter_with_cat.items():
-                 		subset,ax,scat = subset_and_scatter
-                 		
-                 		sizes = self.normalize_size(subset[col_],min = min, max=max) 
-                 		scat.set_sizes(sizes) 
-                 		subset['size'] = sizes               		
-                 		self.subsets_and_scatter_with_cat[key] = [subset,ax,scat]
-                 		
-                 	
+             elif plotType == 'scatter':    
+                 if self.plt.nonCategoricalPlotter is not None:
+                 	self.plt.nonCategoricalPlotter.change_size_by_numerical_column(self.DataTreeview.columnsSelected[0])
                  else:
-                 	self.plt.nonCategoricalPlotter.change_size_by_categorical_column(self.DataTreeview.columnsSelected[0])
-                 	self.plt.redraw()
-                 	return                 
+                 	self.plt.categoricalPlotter.scatterWithCategories.change_size_by_numerical_column(self.DataTreeview.columnsSelected[0])
+             
+             self.plt.redraw()
+             return    
+                
              
          else:
              
                     
              if plotType in ['scatter','PCA']:       
                  if n_categories == 0:
-                              
                  	self.plt.nonCategoricalPlotter.change_size_by_categorical_column(self.DataTreeview.columnsSelected[0])
-                 	self.plt.redraw()
-                 	return
-                
                  else:
-                 	for key, subset_and_scatter in self.subsets_and_scatter_with_cat.items():
-                 		
-                 		subset,ax,scat = subset_and_scatter
-                 		sizes = subset[col_].apply(lambda x: size_map_update[x])
-                 		scat.set_sizes(sizes)
+                 	self.plt.categoricalPlotter.scatterWithCategories.change_size_by_categorical_columns(self.DataTreeview.columnsSelected[0])
+                 self.plt.redraw()
                  
                  
              elif plot_type == 'scatter_matrix':
@@ -3408,7 +3419,7 @@ class analyze_data(tk.Frame):
                                                 
 
                         
-     def update_color(self, update=False, update_cat = False, add_new_cat = False, from_save = False):
+     def update_color(self):
 		         
          if self.DataTreeview.onlyNumericColumnsSelected:
          	colorColumn = self.DataTreeview.columnsSelected[0]
@@ -3416,24 +3427,32 @@ class analyze_data(tk.Frame):
          		tk.messagebox.showinfo('Note..','Numerical columns cannot be combined. Only {} will be used.'.format(colorColumn))
          		
          	if self.plt.currentPlotType in ['scatter','PCA']:	
-         	
-         		self.plt.nonCategoricalPlotter.change_color_by_numerical_column(colorColumn)
-         		
+         		if self.plt.nonCategoricalPlotter is not None:
+         			self.plt.nonCategoricalPlotter.change_color_by_numerical_column(colorColumn)
+         		else:
+         			self.plt.categoricalPlotter.scatterWithCategories.change_color_by_numerical_column(colorColumn)
          	elif self.plt.currentPlotType == 'scatter_matrix':
          	
          		self.plt.nonCategoricalPlotter._scatterMatrix.change_color_by_numeric_column(colorColumn)
          else:
+         
          	if self.plt.currentPlotType == 'scatter_matrix':
          	
          		self.plt.nonCategoricalPlotter._scatterMatrix.change_color_by_categorical_column(self.DataTreeview.columnsSelected)
          		
          	elif self.plt.currentPlotType in ['scatter','PCA']:
-         	
-         		self.plt.nonCategoricalPlotter.change_color_by_categorical_columns(self.DataTreeview.columnsSelected, updateColor=False)
-         		self.interactiveWidgetHelper.clean_color_frame_up()
-         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt)         		     		
-		
+         		
+         		if self.plt.nonCategoricalPlotter is not None:
+         			self.plt.nonCategoricalPlotter.change_color_by_categorical_columns(self.DataTreeview.columnsSelected, updateColor=False)
+         			self.interactiveWidgetHelper.clean_color_frame_up()
+         			self.interactiveWidgetHelper.create_widgets(plotter = self.plt)         		     		
+         		else:
+         			self.plt.categoricalPlotter.scatterWithCategories.change_color_by_categorical_columns(self.DataTreeview.columnsSelected, updateColor=False)       		     		
+         			self.interactiveWidgetHelper.clean_color_frame_up()
+         			self.interactiveWidgetHelper.create_widgets(plotter = self.plt) 
+         			
          self.plt.redraw()
+         
          
 
      def remove_curs(self,event,fig):
@@ -3698,7 +3717,6 @@ class analyze_data(tk.Frame):
              self.annotations_dict.clear() 
              self.remove_mpl_connection(plot_type = plot_type) 
              self.selection_press_event = None
-             self.subsets_and_scatter_with_cat.clear() 
              self.original_vals = []
              self.define_some_stuff_before_plot()
              gc.collect() 
@@ -3746,15 +3764,9 @@ class analyze_data(tk.Frame):
         
         
          elif plot_type == 'scatter' and n_categories > 0 and n_cols  > 0:
-         
-         	scatter_with_cat = scatter_with_categories.scatter_with_categories(self.sourceData.df,n_cols, n_categories,colnames,
-         										catnames,self.f1,50,GREY) 
-         										
-         	self.a = scatter_with_cat.return_axes()
-         	self.subsets_and_scatter_with_cat =  scatter_with_cat.get_subsets_and_scatters()
-         	self.label_axes_for_scatter = scatter_with_cat.return_label_axes()
-         	
-         	
+          	self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
+          	return
+        	
          elif plot_type == 'display_fit':
                  
  
@@ -3803,6 +3815,7 @@ class analyze_data(tk.Frame):
                              dat = data[data[catnames[0]] == cat]
                              sns.kdeplot(dat[colnames[0]], dat[colnames[1]], shade = True, shade_lowest = False, cmap = c_, ax = ax, alpha=0.5)
                          fill_axes.add_draggable_legend(ax,patches=patches, leg_title = 'Split on: '+str(catnames[0]))    
+                 
                  elif n_categories  == 2:
                      uniq_1 = list(data[catnames[0]].unique())
                      uniq_2 = list(data[catnames[1]].unique())
@@ -3838,33 +3851,7 @@ class analyze_data(tk.Frame):
              
              self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
              return
-             	
-             	             	
-                 
-                 
-               #               
-#                    ###IMPLEMENT THIS?? 
-   
-#                  elif self.split_on_cats_for_plot.get() == False:
-#                      colors = palette_new = sns.color_palette(self.cmap_in_use.get(), 
-#                                                           n_categories+1,
-#                                                          desat=0.75)
-#                      
-#                      dat_ = self.sourceData.df[[column]+catnames].dropna(how='any', subset=[column])
-#                      sns.distplot(dat_[column], color = colors[0], ax = ax_, hist=False)
-#                      for cat_ in catnames:
-#                          sub_ = dat_[dat_[cat_]=="+"]
-#                          
-#                          idx_ = catnames.index(cat_)
-#                          if len(sub_.index) > 0:
-#                              sns.distplot(sub_[column], color = colors[(idx_+1)], hist=False, ax = ax_)
-#                      i = 0
-#                      for cat_ in ['Compl.']+catnames:
-#                          ax_.plot([],[], label = cat_, c = colors[i])
-#                          i += 1
-# 
-#                          
-                                  
+             	                         
                 
          elif plot_type in ['hclust','corrmatrix']:
              
@@ -3879,19 +3866,11 @@ class analyze_data(tk.Frame):
 
 
              self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
-
-			
-             #cor_matrix = self.sourceData.df[colnames].corr()
-             #self.display_hclust(cols = colnames, plot_in_main = plot_in_main, ax_export = ax_export, fig_id = fig_id, corr_m = cor_matrix)
-             
              
         
          elif plot_type == 'time_series':
              
-             self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
-                 
-    
-             
+             self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)             
              
              
              
@@ -3934,38 +3913,13 @@ class analyze_data(tk.Frame):
                      self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
                      return                              
                  
-                                     
                  elif n_cols > 0 and n_categories > 1:  
-
                     
                      self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
                      return
                    	
                  else:
                      messagebox.showinfo('Error..','Not yet supported.')
-                     
-                                  
-                 
-            #  if n_cols > 1:
-#                  rotation = 90 
-#             
-#              
-#                  for ax in self.f1.axes:  
-#                      self.reduce_tick_to_n(tick = 'x',ax = ax, n=20, rotation = rotation)
-#                      
-#              if plot_type == 'swarm':
-#              	if plot_in_main == False:
-#              		for ax in self.f1.axes:
-#              			ax_coll = ax.collections
-#              			for coll in ax_coll:
-#              				coll.set(**self.settings_points)
-#              				#print(coll.get_hatch())
-#              	else:
-#              		ax_coll = ax_export.collections
-#              		for coll in ax_coll:
-#              			coll.set(**self.settings_points)
-   
-                 
              
          elif  plot_type == 'pointplot' :
          
@@ -3980,29 +3934,29 @@ class analyze_data(tk.Frame):
                  return
                  	
                  
-                 
-             elif  n_cols == 3:
-                 self.a[1] = self.f1.add_subplot(111, projection = '3d')
-                 self.f1.subplots_adjust(right = 0.8, top = 0.8, bottom = 0.05)  
-                 self.scat = self.a[1].scatter( self.filt_source_for_update[colnames[0]],self.filt_source_for_update[colnames[1]],self.filt_source_for_update[colnames[2]],
-                                     alpha= round(float(self.alpha_selected.get()),2), color=(211/255,211/255,211/255), edgecolor = "black", linewidth=0.3, s = int(float(self.size_selected.get()))) 
-                 
-             if plot_in_main == False:   
-                 for ax in self.a.values():
-                             value = self.global_chart_parameter[2]
-                             leg = ax.get_legend()
-                             if leg is not None:                             
-                                 plt.setp(leg.get_title(), fontsize=str(value))       
-                                 plt.setp(leg.get_texts(), fontsize = str(value))
-                             ax_art = ax.artists
-                                    
-                             for artist in ax_art:
-                                        if str(artist) == 'Legend':
-                                            leg = artist 
-                                            plt.setp(leg.get_title(), fontsize=str(value))
-                                            plt.setp(leg.get_texts(), fontsize = str(value))              
-    
-                              
+           #       
+#              elif  n_cols == 3:
+#                  self.a[1] = self.f1.add_subplot(111, projection = '3d')
+#                  self.f1.subplots_adjust(right = 0.8, top = 0.8, bottom = 0.05)  
+#                  self.scat = self.a[1].scatter( self.filt_source_for_update[colnames[0]],self.filt_source_for_update[colnames[1]],self.filt_source_for_update[colnames[2]],
+#                                      alpha= round(float(self.alpha_selected.get()),2), color=(211/255,211/255,211/255), edgecolor = "black", linewidth=0.3, s = int(float(self.size_selected.get()))) 
+#                  
+#              if plot_in_main == False:   
+#                  for ax in self.a.values():
+#                              value = self.global_chart_parameter[2]
+#                              leg = ax.get_legend()
+#                              if leg is not None:                             
+#                                  plt.setp(leg.get_title(), fontsize=str(value))       
+#                                  plt.setp(leg.get_texts(), fontsize = str(value))
+#                              ax_art = ax.artists
+#                                     
+#                              for artist in ax_art:
+#                                         if str(artist) == 'Legend':
+#                                             leg = artist 
+#                                             plt.setp(leg.get_title(), fontsize=str(value))
+#                                             plt.setp(leg.get_texts(), fontsize = str(value))              
+#     
+#                               
    
      
      def measure_time_diff_thread(self):
@@ -4242,10 +4196,8 @@ class analyze_data(tk.Frame):
             return
 
          	
-        chart_configurator = chart_configuration.ChartConfigurationPopup(platform,self.f1,self.canvas,plot_type,self.colormaps,
-             											self.label_axes_for_scatter,
-             											self.global_chart_parameter,self.plt.showGrid,
-             											self.plt.showSubplotBox) 
+        chart_configurator = chart_configuration.ChartConfigurationPopup(self.plt,
+        													self.global_chart_parameter)
 
         self.global_chart_parameter = chart_configurator.global_chart_parameter
         self.plt.showSubplotBox = chart_configurator.show_box
@@ -4441,8 +4393,8 @@ class analyze_data(tk.Frame):
          	
              _,catnames,plot_type,_ = self.plt.current_plot_settings
              size = self.settings_points['sizes'][0]
-             size_handle = size_configuration.SizeConfigurationPopup(platform,self.f1,self.canvas,plot_type,size, catnames,
-             				self.subsets_and_scatter_with_cat, self.axes_scata_dict,self.filt_source_for_update)
+             size_handle = size_configuration.SizeConfigurationPopup(self.plt)
+             				
 			
              self.settings_points['sizes'] = [size_handle.size]
              self.plt.set_scatter_point_properties(size = size_handle.size)
@@ -4507,26 +4459,6 @@ class analyze_data(tk.Frame):
          		return
             
              
-             
-
-         elif mode == 'Chart configuration':
-         
-
-             plot_type = self.plt.currentPlotType
-             if plot_type in ['PCA','corrmatrix','hclust']:
-             	tk.messagebox.showinfo('Not supported..','Configuration of this plot type is currently not supported.')
-             	return
-
-         	
-             chart_configurator = chart_configuration.ChartConfigurationPopup(platform,self.f1,self.canvas,plot_type,self.colormaps,
-             											self.label_axes_for_scatter,
-             											self.global_chart_parameter,self.plt.showGrid,
-             											self.plt.showSubplotBox) 
-
-             self.global_chart_parameter = chart_configurator.global_chart_parameter
-             self.plt.showSubplotBox = chart_configurator.show_box
-             self.plt.showGrid = chart_configurator.show_grid
-
 
          
          elif mode == 'Hierarchical Clustering Settings':
@@ -4716,7 +4648,7 @@ class analyze_data(tk.Frame):
          Opens a popup dialog to annotate desired rows.
          '''
          if len(self.plt.plotHistory) > 0:
-             if self.plt.currentPlotType != 'scatter':
+             if self.plt.currentPlotType not in ['scatter','PCA','cluster_analysis']:
                      return 
              self.categorical_column_handler('Annotate scatter points')
          
@@ -4895,12 +4827,14 @@ class analyze_data(tk.Frame):
                     self.sliceMarkFrameButtons['label'].configure(image = self.label_icon_norm)
                     self.sliceMarkFrameButtons['tooltip'].configure(image = self.tooltip_icon_norm)
                     self.sliceMarkFrameButtons['selection'].configure(image = self.selection_icon_norm)
+                    self.settingButton.configure(image = self.setting_icon_norm)
                     
                     self.but_col_icon = self.but_col_icon_norm
                     self.but_size_icon = self.but_size_icon_norm
                     self.but_tooltip_icon = self.but_tooltip_icon_norm
                     self.but_label_icon = self.but_label_icon_norm
                     self.but_stat_icon = self.but_stat_icon_norm
+                    
                     
                     if self.color_button_droped is not None:
                         self.color_button_droped.configure(image= self.but_col_icon)
@@ -4915,9 +4849,9 @@ class analyze_data(tk.Frame):
                     
                     
                     if platform == 'WINDOWS': 
-                        	NORM_FONT   = ("Helvetica", 8)
+                        	NORM_FONT   = (defaultFont, 8)
                     else:
-                        	NORM_FONT =  ("Helvetica",11) 
+                        	NORM_FONT =  (defaultFont,11) 
                     
                     ###### LIST FOR PLOT OPTIONS 
                     icon_list = [self.point_plot_icon_norm,self.scatter_icon_norm,self.time_series_icon_norm ,self.matrix_icon_norm,self.dist_icon_norm,self.barplot_icon_norm ,
@@ -4982,6 +4916,8 @@ class analyze_data(tk.Frame):
                     self.but_tooltip_icon = self.but_tooltip_icon_
                     self.but_label_icon = self.but_label_icon_
                     self.but_stat_icon = self.but_stat_icon_
+                    
+                    self.settingButton.configure(image=self.setting_icon)
                     
            
            
@@ -5060,11 +4996,13 @@ class analyze_data(tk.Frame):
                               
            self.box_icon,self.barplot_icon,self.scatter_icon,self.swarm_icon,self.time_series_icon\
            					,self.violin_icon,self.hclust_icon,self.corr_icon,self.point_plot_icon, \
-           					self.matrix_icon, self.dist_icon, self.add_swarm_icon_,self.remove_swarm_icon_  =   images.get_plot_options_icons()                   
+           					self.matrix_icon, self.dist_icon, self.add_swarm_icon_,self.remove_swarm_icon_,\
+           					self.setting_icon  =   images.get_plot_options_icons()                   
 
            self.box_icon_norm,self.barplot_icon_norm ,self.scatter_icon_norm ,self.swarm_icon_norm ,self.time_series_icon_norm \
            					,self.violin_icon_norm ,self.hclust_icon_norm ,self.corr_icon_norm ,self.point_plot_icon_norm , \
-           					self.matrix_icon_norm , self.dist_icon_norm, self.add_swarm_icon_norm , self.remove_swarm_icon_norm     = images.get_plot_options_icons_norm()
+           					self.matrix_icon_norm , self.dist_icon_norm, self.add_swarm_icon_norm , self.remove_swarm_icon_norm, \
+           					self.setting_icon_norm    = images.get_plot_options_icons_norm()
            
            self.open_file_icon_norm,self.save_session_icon_norm,self.open_session_icon_norm,self.add_data_icon_norm =  images.get_norm_data_upload_and_session_images()  
            
@@ -5178,11 +5116,7 @@ class analyze_data(tk.Frame):
         
 
            
-           
-           #self.fig_history_button = create_button(self.plotoptions_sideframe, 
-           	#										image = self.figure_history_icon, 
-           	#										command = self.show_graph_history)
-           	
+        
            
            self.main_fig = create_button(self, image = self.main_figure_icon, command = self.setup_main_figure) 
            sep_nav_ = ttk.Separator(self.plotoptions_sideframe, orient = tk.HORIZONTAL)
@@ -5267,8 +5201,16 @@ class analyze_data(tk.Frame):
             	chartButton.grid(in_ = self.plotoptions_sideframe, row = i ,column = columnPos, pady=pady)
             	if columnPos == 1:
            			i += 1
-           self.main_fig .grid(in_=self.plotoptions_sideframe)	
+           			           			           			
+           self.main_fig .grid(in_=self.plotoptions_sideframe,pady=(9,0))	
            
+           self.settingButton = create_button(self.general_settings_sideframe,
+           		image = self.setting_icon,
+           		command = lambda: tk.messagebox.showinfo('Under construction ..',
+           			'Under construction. Will allow to change settings on how chart are generated. (Error bar configuration etc)',
+           			parent=self))
+           			
+           self.settingButton.grid(padx=2,pady=2)                      
            style_tree = ttk.Style(self)
 
            if platform == 'WINDOWS':

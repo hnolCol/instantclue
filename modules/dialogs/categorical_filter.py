@@ -108,7 +108,8 @@ class categoricalFilter(object):
 		Close toplevel
 		'''
 		self.closed = True
-		del self.pt
+		if hasattr(self,'pt'):
+			del self.pt
 		self.toplevel.destroy() 	
 		
 
@@ -440,7 +441,6 @@ class categoricalFilter(object):
 		splitSearchString = [row for row in csv.reader([searchStrings], delimiter=',', quotechar='\"')][0]
 		
 		regExp = self.build_regex(splitSearchString,withSeparator=False)
-		
 		if self.annotateSearchString.get():
 		
 			if self.caseSensitive.get():

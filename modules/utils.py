@@ -9,6 +9,7 @@ import numpy as np
 from collections import OrderedDict
 from operator import itemgetter
 from decimal import Decimal
+import webbrowser
 import itertools
 import os
 import sys
@@ -48,6 +49,11 @@ websiteUrl = 'http://www.instantclue.uni-koeln.de'
 websiteUrlVideos = 'http://www.instantclue.uni-koeln.de/videos.html'
 webisteUrlTutorial = 'http://www.instantclue.uni-koeln.de/tutorials.html' 
 gitHubUrl = 'http://github.com/hnolCol/InstantClue'
+
+videoURLDict = dict()
+videoURLDict['main_figure'] = r'https://www.youtube.com/watch?v=5kSy53gpV5Y'
+
+
 path_file = os.path.dirname(sys.argv[0])
 tutorialPath = os.path.join(path_file,'InstantClueTutorial.pdf')
  
@@ -147,6 +153,32 @@ def evaluate_screen(screen_width,screen_height,w,h):
 
      return geom_
 		
+
+
+def open_video(event = None, type = None):
+	'''
+	Opens a video. The URL is saved in dict
+	
+	'''
+	url = videoURLDict[type]
+	webbrowser.open_new(url)	
+
+
+
+def make_label_button_like(label):
+	'''
+	'''
+	def on_enter(event):
+		w = event.widget
+		w.configure(relief=tk.GROOVE)
+	def on_leave(event):
+		w = event.widget
+		w.configure(relief=tk.FLAT)
+	
+	label.bind('<Enter>', on_enter)	
+	label.bind('<Leave>', on_leave)		
+
+
 
 def validate_float(self, action, index, value_if_allowed,
     prior_value, text, validation_type, trigger_type, widget_name):

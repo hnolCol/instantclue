@@ -15,7 +15,7 @@ class dataDisplayDialog(object):
 
 	def __init__(self, data, plotter = None, showOptionsToAddDf = False, 
 									dragDropLabel = False, analyzeClass = None,
-									dfOutputName = None, topmost = False):
+									dfOutputName = None, topmost = False, waitWindow = True):
 	
 		self.twodline = None
 		self.background = None
@@ -50,7 +50,7 @@ class dataDisplayDialog(object):
 			self.addDf = False
 			self.add_widgets(dragDropLabel)
 		
-		if dragDropLabel == False:
+		if dragDropLabel == False and waitWindow:
 			self.toplevel.wait_window()
 
 		

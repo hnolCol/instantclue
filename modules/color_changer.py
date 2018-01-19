@@ -106,7 +106,11 @@ class colorChanger(object):
 			self.plotter.nonCategoricalPlotter.update_colorMap(self.newColorMap)
 			self.interactiveWidgetHelper.update_new_colorMap()
 			return
-		
+		elif self.selectedPlotType in ['scatter'] and self.numbCategoricalColumns > 0:
+			self.plotter.categoricalPlotter.scatterWithCategories.update_colorMap(self.newColorMap)
+			self.interactiveWidgetHelper.update_new_colorMap()
+			return
+					
 		elif self.selectedPlotType == 'time_series':
 			
 			self.plotter.nonCategoricalPlotter.timeSeriesHelper.change_color_map(self.newColorMap)

@@ -286,7 +286,6 @@ class hierarchichalClustermapPlotter(object):
                                    			
 			ax.set_xlim(0, len(dendrogram['leaves']) * 10)
 			ax.set_ylim(0, max_dependent_coord * 1.05)
-                                   			
 
 		ax.add_collection(lines)
 		if ax == self.axRowDendro and create_background:

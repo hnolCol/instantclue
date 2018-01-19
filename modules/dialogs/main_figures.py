@@ -320,14 +320,16 @@ class mainFigureTemplateDialog(object):
 		labelAxisSetup = tk.Label(self.cont, text='Add subplot to figure',**titleLabelProperties)
 		labelInfoLab = tk.Label(self.cont, textvariable = self.infolabel,**titleLabelProperties)
 		labelFigIdLabel = tk.Label(self.cont, text = 'Figure {}'.format(self.figureId),**titleLabelProperties)
-		
+		helpVideo = tk.Label(self.cont, text = 'Watch the YouTube Introduction Video',**titleLabelProperties)
+		helpVideo.bind('<Button-1>',lambda event :open_video(event, type='main_figure'))
+		make_label_button_like(helpVideo)
 		
 		labelGridSetup.grid(row=1, column = 0, sticky=tk.W, columnspan=6, padx=3,pady=5)       
 		for id,variable in labelsAndGridInfo.items():
 			
 			labelText = variable[0]
 			if labelText == 'Position (row,column):':
-			
+				helpVideo.grid(row=1,column = 7,sticky=tk.E, columnspan=14, padx=30)
 				labelFigIdLabel.grid(row=2,column = 7, sticky = tk.E, columnspan=14, padx=30)
 				ttk.Separator(self.cont, orient = tk.HORIZONTAL).grid(sticky=tk.EW, columnspan=15,pady=4, row=3)  
 				labelAxisSetup.grid(row=4, column = 0, sticky=tk.W, columnspan=15,padx=3,pady=5)
@@ -429,7 +431,6 @@ class mainFigureTemplateDialog(object):
 												   ('globalChange',['Apply changes to all figures.',False]),
 												   ('variant',['Apply variant changes (upper ..) in figure',True])]))
 						
-									
 			if event.inaxes:
 				typesToCheck = ['collections','patches','annotations',
 								'lines','artists']
@@ -475,11 +476,12 @@ class mainFigureTemplateDialog(object):
 				except:
 					pass
 					
-				self.onRealeaseWithAxis = self.figure.canvas.mpl_connect('button_release_event',\
-				self.on_release_with_axis)
+
 				self.onMotionWithAxis = self.figure.canvas.mpl_connect('motion_notify_event',\
 				self.on_motion_with_axis)
-			
+				self.onRealeaseWithAxis = self.figure.canvas.mpl_connect('button_release_event',\
+				self.on_release_with_axis)
+							
 			elif event.button == 3 and event.inaxes:	
 				self.event = event				
 				idClicked = self.identify_id_of_axis(self.event.inaxes)
@@ -517,30 +519,26 @@ class mainFigureTemplateDialog(object):
 		'''
 		
 		if self.motionAxis is None:
-			try:
-				self.disconnect_on_axis_move_events()
-			except:
-				pass
+			self.disconnect_on_axis_move_events()
 			return
+			
 		try:
 			self.motionAxis.remove()
 		except:
 			pass
+		self.motionAxis = None
 		self.disconnect_on_axis_move_events()
-		
 		# check if event is in axis
-		if event.inaxes is None or hasattr(self,'idStart') == False:	
+		if event.inaxes is None or hasattr(self,'idStart') == False or event.dblclick:	
 			#redraw to remove label
 			self.redraw()
 			return
-		if event.dblclick:
-			self.redraw()
-			return
+
+			
 		idHover = self.identify_id_of_axis(event.inaxes)
-		
 		self.initiate_transfer(axisId = idHover,figureId=self.figureId,
 								idClicked = self.idStart)
-		self.motionAxis = None
+				
 	def disconnect_on_axis_move_events(self):
 		'''
 		'''
@@ -1084,9 +1082,7 @@ class mainFigureTemplateDialog(object):
 			idClicked = self.identify_id_of_axis(self.event.inaxes)
 		if axisId == idClicked and figureId == self.figureId:
 		
-			tk.messagebox.showinfo('Error..',
-				'Already in position.',
-				parent=self.toplevel)
+			self.infolabel.set('Error .. Already in that position.')
 			self.redraw()
 			return
 		else:

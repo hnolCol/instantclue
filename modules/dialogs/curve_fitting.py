@@ -117,6 +117,24 @@ class curveFitCollection(object):
 											 fitData = data,
 											 fittingFunc = fittingFunc,
 											 dataFrameID = dfId)
+	
+	def remove_fits_by_dataId(self,dataId):
+		'''
+		Removes fit by data id (data collection). Happens for example
+		when user deletes a complete data frame.
+		'''
+		toBeDeleted = []
+		for fitId, props in self.fitCollection.items():
+			if props['dataFrameID'] == dataId:
+				toBeDeleted.append(fitId)
+				
+		for fitId in toBeDeleted:
+			del self.fitCollection[fitId]
+			
+	def curve_fits_from_same_df(self,fitIds):
+		'''
+		'''				
+	
 	def get_columns_of_fitIds(self,fitIdList):
 		'''
 		'''
@@ -245,8 +263,8 @@ class curveFitter(object):
  		importLabel = tk.Label(self.cont, text = 'Import values from: ', bg = MAC_GREY)	
  		
  		## checkbutton if AUC should be calculated
- 		
  		checkbuttonAUC  = ttk.Checkbutton(self.cont, variable = self.calculateAUC, text = 'Calculate Area under Curve')
+ 		
  		
  		## define buttons
  		applyButton = ttk.Button(self.cont, text = 'Fit', command = self.fit_data,width=5)
@@ -263,6 +281,7 @@ class curveFitter(object):
  		
  		checkbuttonAUC.grid(row = rowButtons+1, column = 0, sticky = tk.W,padx = 3,
  							pady = (10,2), columnspan = 2)
+ 		
  		applyButton.grid(row = rowButtons+2, column = 0, sticky = tk.W+tk.S,pady = 10,padx=5)
  		closeButton.grid(row = rowButtons+2, column = 2,sticky = tk.E+tk.S,pady = 10,padx=5)
  		#self.cont.grid_rowconfigure(rowButtons+2,weight=1)
@@ -308,7 +327,8 @@ class curveFitter(object):
 			
 			return np.array(xValues)
 		except:
-			tk.messagebox.showinfo('Error ..','There was an error converting your x-value entries to floats.',
+			tk.messagebox.showinfo('Error ..',
+									'There was an error converting your x-value entries to floats.',
 									parent = self.toplevel)
 			return 
 		
@@ -406,11 +426,8 @@ class curveFitter(object):
 		
 		columnNames = self.get_column_names(fittingFunc)
 		data.columns = columnNames
-			
 		self.add_fit_data_to_source_df(data)
-		
 		dataTypeList = self.dfClass.get_data_types_for_list_of_columns(columnNames)
-		
 		self.dataTreeview.add_list_of_columns_to_treeview(self.dfID,dataTypeList,columnNames)
 		## report being done..
 		if castProgressbar:
@@ -425,29 +442,34 @@ class curveFitter(object):
 		Actually fits the polynominal using numpy's polyfit function.
 		Calculates also R^2 and optional the AUC.
 		'''
-		
-		
 		x,y = self.filter_x_y_for_nan(x,yRaw)
+		
 		if x.size < 3:
-			return None,None
-		
-		polynominalFit =  np.polyfit(x,y, deg=degree)
-		polynominal = np.poly1d(polynominalFit)
-		coeffString = get_elements_from_list_as_string(polynominal)
+			if calcAUC:
+				return self.nanString,np.nan,np.nan
+			else:
+				return self.nanString,np.nan
+		try:
+			polynominalFit =  np.polyfit(x,y, deg=degree)
+			polynominal = np.poly1d(polynominalFit)
+			coeffString = get_elements_from_list_as_string(polynominal)
 			
-		yFit = polynominal(x) 
-		
-		rSq = self.calculate_r_squared(x,y,yFit)
-		
-		
-		
-		rowIntIdx = self.df.index.get_loc(yRaw.name)
-		
-		if updatePB and rowIntIdx % self.reportProgress == 0: 
-			## updateText does not change label text - stays the same anyway
-			self.progressbar.update_progressbar_and_label(rowIntIdx/self.dfLength*100,
+			yFit = polynominal(x) 
+			rSq = self.calculate_r_squared(x,y,yFit)
+			rowIntIdx = self.df.index.get_loc(yRaw.name)
+			if updatePB and rowIntIdx % self.reportProgress == 0 and self.dfLength != 0: 
+				## updateText does not change label text - stays the same anyway
+				self.progressbar.update_progressbar_and_label(rowIntIdx/self.dfLength*100,
 											'Calculating ..', 
-											updateText = False)
+											updateText = True)
+		except:
+		
+			if calcAUC:
+				return self.nanString,np.nan,np.nan
+			else:
+				return self.nanString,np.nan
+		
+		
 		if calcAUC:
 			
 			areaUnderCurve = np.trapz(y = polynominal(xLinAUC),
@@ -464,8 +486,15 @@ class curveFitter(object):
 		'''
 		fitting a cubic spline
 		'''
-		x,y = self.filter_x_y_for_nan(x,yRaw)
-		tck = interpolate.splrep(x,y, s = s, full_output = 1)
+		try:
+			x,y = self.filter_x_y_for_nan(x,yRaw)
+			tck = interpolate.splrep(x,y, s = s, full_output = 1)
+		except:
+			if calcAUC:
+				return 'Error', np.nan, np.nan
+			else:
+				return 'Error', np.nan
+				
 		tupleVector = tck[0]
 
 		formatString  = '{};{};{}'.format(get_elements_from_list_as_string(tupleVector[0]),
@@ -523,7 +552,7 @@ class curveFitter(object):
 			
 				return poptString,pErrorString,rSquared
 		
-		except (RuntimeError):
+		except:
 			if calcAUC:
 			
 				return self.nanString,self.nanString,np.nan, np.nan
@@ -969,6 +998,7 @@ class displayCurveFitting(object):
 	
 		self.rowNumGrid = tk.StringVar() 
 		self.columnNumGrid = tk.StringVar()
+		self.labelColumn = tk.StringVar()
 		self.filterColumnsForFits = tk.BooleanVar(value=True)
 		self.tightLayout = tk.BooleanVar(value=True)
 		self.equalYLims = tk.BooleanVar(value=True)
@@ -1035,6 +1065,12 @@ class displayCurveFitting(object):
  							 **titleLabelProperties)
 		
 		labelGridLayout = tk.Label(self.cont, text = 'Grid layout (rows,columns): ', bg=MAC_GREY)
+		labelSubplotName = tk.Label(self.cont, text = 'Subplot annotation: ', bg = MAC_GREY)
+		
+		comboboxName = ttk.Combobox(self.cont, textvariable = self.labelColumn, 
+											  values = [],
+											  width = 18)
+		
 		
 		comboboxRow = ttk.Combobox(self.cont, textvariable = self.rowNumGrid, 
 											  values = list(range(1,31)),
@@ -1061,7 +1097,7 @@ class displayCurveFitting(object):
 		checkbuttonSameYLimit = ttk.Checkbutton(self.cont, text = 'Adjust y-limits', variable = self.equalYLims)
 		
 		CreateToolTip(checkbuttonSameYLimit,title_ = 'Adjust y-limits', 
-					  text= 'If check, y limits of all subplots will be the same.',
+					  text= 'If checked, y limits of all subplots will be the same.',
 					  pad = (1,1,1,1))
 					  
 		checkbuttonTightLayout = ttk.Checkbutton(self.cont, text = 'Tight layout', variable = self.tightLayout)
@@ -1077,10 +1113,13 @@ class displayCurveFitting(object):
 
 		labelTile.grid(padx=10, pady=15, columnspan=8, sticky=tk.W) 
 		                           
-		labelGridLayout.grid(row=1,column=0, sticky=tk.W)
-		comboboxRow.grid(row=1,column=1)
-		comboboxColumn.grid(row=1,column=2)
-		labelChooseFit.grid(row=2,column=0, padx=3,pady=2)
+		labelGridLayout.grid(row=1,column=0, sticky=tk.W,padx=4,pady=2)
+		comboboxRow.grid(row=1,column=1,padx=4,pady=2)
+		comboboxColumn.grid(row=1,column=2,padx=4,pady=2)
+		labelSubplotName.grid(row=2,column=0,padx=4,pady=2,sticky=tk.E)
+		comboboxName.grid(row=2,column=1,padx=4,columnspan=2,sticky=tk.EW)
+		
+		labelChooseFit.grid(row=3,column=0, padx=3,pady=2)
 		self.listboxCurveFits.grid(row=5, columnspan = 5,sticky=tk.NSEW,padx=3,pady=(3,0))
 		scrollListBoxHor.grid(sticky=tk.EW,columnspan=4)
 		scrollListBoxVer.grid(sticky=tk.NS+tk.W, row=5,column = 5)
@@ -1134,6 +1173,7 @@ class displayCurveFitting(object):
 		'''
 		self.curveFitsSelected = [self.columnsInListbox[idx] for idx in self.listboxCurveFits.curselection()]
 		
+		self.curveFitCollection.curve_fits_from_same_df(self.curveFitsSelected)
 					
 	def set_chart_settings(self):
 		'''
@@ -1141,7 +1181,11 @@ class displayCurveFitting(object):
 		gridLayout = [int(float(value)) for value in [self.rowNumGrid.get(),self.columnNumGrid.get()]]
 		adjustYlimit = self.equalYLims.get()
 		tightLayout = self.tightLayout.get()
-		self.get_selected_curve_fit()
+		#checks if same dataframe id underlying
+		if self.get_selected_curve_fit():
+			pass
+		else:
+			return
 		
 		if len(self.curveFitsSelected) == 0:
 			tk.messagebox.showinfo('Error..','Select a curve fit to plot.')

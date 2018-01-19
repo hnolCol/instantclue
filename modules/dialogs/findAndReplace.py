@@ -83,7 +83,8 @@ class findAndReplaceDialog(object):
 		'''
 		Close toplevel
 		'''
-		del self.pt
+		if hasattr(self,'pt'):
+			del self.pt
 		self.toplevel.destroy() 	
 		
 
