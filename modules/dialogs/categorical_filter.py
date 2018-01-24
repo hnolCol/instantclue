@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from itertools import chain
+from functools import reduce
 
 import csv
 import re
@@ -28,13 +29,9 @@ operationMessage = {'Find category & annotate':'Annotation done. Column has been
 				  'Find entry in hierarch. cluster':''}
 				
 
-
-
-
-
 class categoricalFilter(object):
 	'''
-	Categorical finder can be used for several operations. 
+	Categorical filter can be used for several operations. 
 	
 	=================
 	Operations
@@ -43,6 +40,7 @@ class categoricalFilter(object):
 		- Subset data on unique category
 		- Annotate scatter points 
 		- Find rows in hierarchichal clustering
+		- 
 	=================
 	
 	Annotate scatter points and Finding rows in hierarchichal clsustering may seem
@@ -71,7 +69,7 @@ class categoricalFilter(object):
 		self.annotateSearchString = tk.BooleanVar(value=False)
 		self.onlyFirstFind = tk.BooleanVar(value=False)
 		self.annotationColumn = tk.StringVar()
-		
+		self.protectEntry = 1
 		self.operationType = operationType
 		self.closed = False
 		
@@ -89,6 +87,7 @@ class categoricalFilter(object):
 		self.dataTreeview = dataTreeview
 		self.plt = plotterClass
 		self.columnForFilter = columnForFilter
+		print(self.columnForFilter)
 		
 		self.replaceDict = {True : "+",
                         False: self.dfClass.replaceObjectNan}
@@ -103,7 +102,7 @@ class categoricalFilter(object):
 		
 		self.toplevel.wait_window()
 		
-	def close(self):
+	def close(self,event = None):
 		'''
 		Close toplevel
 		'''
@@ -120,7 +119,8 @@ class categoricalFilter(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Categorical Filter - '+self.operationType) 
-		popup.grab_set() 
+		popup.grab_set()
+		popup.bind('<Escape>', self.close) 
         
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=520
@@ -147,7 +147,14 @@ class categoricalFilter(object):
                                      **titleLabelProperties)
  		labelSearch = tk.Label(self.cont_widgets, text = 'String :', bg = MAC_GREY) 
  		entrySearch = ttk.Entry(self.cont_widgets, textvariable = self.searchString)
+ 		entrySearch.unbind('<Command-v>')
  		
+ 		if self.operationType == 'Search string & annotate':
+ 			entrySearch.bind('<Control-v>', self.copy_from_clipboard)
+ 			entrySearch.bind('<Command-v>', self.copy_from_clipboard)
+ 		
+ 		entrySearch.bind('<Command-z>', self.undo) 	
+ 		entrySearch.bind('<Control-z>', self.undo) 			
  		entrySearch.bind('<Return>',lambda event: \
  		self.update_data_upon_search(event, forceUpdate = True))
  		
@@ -217,7 +224,7 @@ class categoricalFilter(object):
 
 		elif self.operationType == 'Search string & annotate':
 			
- 			self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype('str'),columns=[self.columnForFilter])
+ 			self.uniqueFlatSplitData = self.df[self.columnForFilter].astype('str')
 		
 		elif self.operationType in ['Annotate scatter points','Find entry in hierarch. cluster']:
  			if self.columnForFilter is None:
@@ -250,11 +257,19 @@ class categoricalFilter(object):
 		Updates data upon change of the StringVar self.searchString. Will return if
 		the search string is short. 
 		'''
+		if self.protectEntry < 1:
+			if self.protectEntry == -1:
+				self.protectEntry += 1
+				pass
+			elif self.protectEntry == 0:
+				self.searchString.set(self.outputString)
+				self.protectEntry += 1
+				
+				return		
 		
 		searchString = self.searchString.get()
 		nonEmptyString = searchString != ''
 		lenSearchString = len(searchString)
-		
 		if lenSearchString < 3 and nonEmptyString and forceUpdate == False:
 			## to avoid massive searching when data are big
 			return
@@ -281,9 +296,16 @@ class categoricalFilter(object):
 		
 			splitSearchString = [row for row in csv.reader([searchString], delimiter=',', quotechar='\"')][0]
 			regExp = self.build_regex(splitSearchString,withSeparator=False)
-			boolIndicator = dataToSearch[self.columnForFilter].str.contains(regExp,case = self.caseSensitive.get())
+			collectDf = pd.DataFrame()
+			for n,column in enumerate(self.columnForFilter):
+				
+				collectDf.loc[:,str(n)] = dataToSearch[column].str.contains(regExp,case = self.caseSensitive.get())
 			
+			boolIndicator = collectDf.sum(axis=1) >= 1			
 			subsetData = dataToSearch[boolIndicator]
+		
+ 			#self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype('str'),columns=[self.columnForFilter])
+		
 		else: 	
 			boolIndicator = dataToSearch[self.columnForFilter].str.contains(searchString).values
 		
@@ -448,25 +470,40 @@ class categoricalFilter(object):
 			else:
 				flag = re.IGNORECASE 
 				
-			if len(splitSearchString) > 1:	
+			if len(splitSearchString) > 1:
+				collectResults = pd.DataFrame()	
 				if self.onlyFirstFind.get(): 
-					groupIndicator  = self.uniqueFlatSplitData[self.columnForFilter].str.findall(regExp, flags = flag).astype(str)
-					uniqueValues = groupIndicator.unique()
-					replaceDict = self.build_replace_mapDict(uniqueValues,splitSearchString)
-					annotationColumn = groupIndicator.map(replaceDict)
+					for column in self.columnForFilter:
+						groupIndicator  = self.uniqueFlatSplitData[column].str.findall(regExp, flags = flag).astype(str)
+						uniqueValues = groupIndicator.unique()
+						replaceDict = self.build_replace_mapDict(uniqueValues,splitSearchString)
+						annotationColumn = groupIndicator.map(replaceDict)
+						collectResults[column] = annotationColumn
 				else:
-					groupIndicator  = self.uniqueFlatSplitData[self.columnForFilter].str.extract(regExp, flags = flag)
-					annotationColumn = groupIndicator.fillna('').astype(str).sum(axis=1).replace('',self.dfClass.replaceObjectNan)
-
+					for column in self.columnForFilter:
+						groupIndicator  = self.uniqueFlatSplitData[column].str.extract(regExp, flags = flag)
+						annotationColumn = groupIndicator.fillna('').astype(str).sum(axis=1)
+						collectResults[column] = annotationColumn
+				
+				if len(self.columnForFilter) == 1:
+					# simply take annotation column
+					pass
+				else:
+				
+					collectResults['annotationColumn'] = \
+					collectResults.apply(lambda x: self.combine_string(x), axis=1)
+					
+					annotationColumn = collectResults['annotationColumn']
+									
 			else: 
 				replaceDict = self.replaceDict
 				replaceDict[True] = splitSearchString[0]
 				boolIndicator = self.uniqueFlatSplitData[self.columnForFilter].str.contains(regExp,case = self.caseSensitive.get())
 				annotationColumn = boolIndicator.map(replaceDict)
 				
-			
 		else:
-			boolIndicator = self.uniqueFlatSplitData[self.columnForFilter].str.contains(regExp,case = self.caseSensitive.get())
+		
+			boolIndicator = pd.Series(self.uniqueFlatSplitData.index.isin(self.pt.model.df.index.values))
 			annotationColumn = boolIndicator.map(self.replaceDict)
 		
 		textString = get_elements_from_list_as_string(splitSearchString, maxStringLength = 15)
@@ -476,7 +513,28 @@ class categoricalFilter(object):
 		self.add_column_to_df_and_tree(columnName,annotationColumn)
 		
 		
+	def combine_string(self,row):
+		'''
+		Might not be the nicest solution and defo the lowest. (To do..)
+		But it returns the correct string right away without further
+		processing/replacement.
+		'''
+		nanString = ''
+		base = ''
+		if all(s == '' for s in row):
+			return self.dfClass.replaceObjectNan
+		else:
+			n = 0
+			for s in row:
+				if s != nanString:
+					if n == 0:
+						base = s
+						n+=1
+					else:
+						base = base+','+s
+			return base			
 		
+				
 	def build_replace_mapDict(self,uniqueValues,splitSearchString):
 		'''
 		Subsets the currently selected df from dfClass on selected categories. Categories are 
@@ -489,9 +547,8 @@ class categoricalFilter(object):
 				
 		====
 		'''
-		
 		replaceDict = dict() 
-		naString = self.dfClass.replaceObjectNan
+		naString = ''
 		
 		for value in uniqueValues:
 			if all(x in value for x in splitSearchString):
@@ -583,7 +640,37 @@ class categoricalFilter(object):
 		self.plt.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)
 		self.plt.redraw()
 		
-					
+	def copy_from_clipboard(self,event):
+		'''
+		Try to infer paste as a valid input in the search entry.
+		E.g separating each entry by comma and put string in ""
+		'''
+		data = pd.read_clipboard('\t',header=None).values.ravel()
+		output = r''
+		for value in data:
+			output = output + r',"{}"'.format(value)
+		self.outputString = output[1:]
+		self.searchString.set(self.outputString)
+		self.protectEntry = 0
+		
+	def undo(self,event):
+		'''
+		Undo/Delete last entry
+		'''
+		currentInput =  self.searchString.get()
+		lastSeparation = currentInput.split('","')
+		
+		if len(lastSeparation) == 1:
+			
+			self.searchString.set('')
+		else:
+			lenLastString = len(lastSeparation[-1])
+			totalLen = len(currentInput)
+			# -2 for ,"
+			idx = totalLen-2-lenLastString
+			truncString = currentInput[:idx]
+			self.searchString.set(truncString)
+			
 	def define_annotation_command_relation(self):
 		'''
 		Defines a dictionary describing the function to be used by applyButton.

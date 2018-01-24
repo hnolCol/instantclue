@@ -161,7 +161,7 @@ class colorChooseDialog(object):
 		self.frame = tk.Frame(self.toplevel)
 		
 	
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -177,7 +177,7 @@ class colorChooseDialog(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Color Configuration') 
 		popup.protocol('WM_DELETE_WINDOW', self.close)
-		
+		popup.bind('<Escape>', self.close) 
 		w = 790
 		h = 375
 		
@@ -326,7 +326,6 @@ class colorChooseDialog(object):
 	
 	
 	def define_menu(self):
- 
  		'''
  		'''
  		self.menu = tk.Menu(self.toplevel, **styleDict)
@@ -336,6 +335,7 @@ class colorChooseDialog(object):
  		'''
  		'''
  		paletteName = self.widgetClicked.cget('text')
+ 		del self.cbs[paletteName]
  		type = self.colorHelper.delete_palette(paletteName)
  		self.reshow_color_palettes(type)
  		    	
@@ -391,7 +391,7 @@ class createColorMapsDialog(object):
 		self.add_bindings()
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -407,7 +407,7 @@ class createColorMapsDialog(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Custom Color Palette') 
-         
+		popup.bind('<Escape>', self.close) 
 		popup.protocol('WM_DELETE_WINDOW', self.close)
 		w = 400
 		h = 440
@@ -641,7 +641,7 @@ class createColorMapsDialog(object):
 			hex_ = col_c(hex_)
 		self.update_sl(hex_)
 		self.labColorRep.configure(bg=hex_)
-		self.add_color()
+		self.add_color(color = hex_)
 				        
 	def add_bindings(self):
 		'''
@@ -664,7 +664,6 @@ class createColorMapsDialog(object):
 	def identify_rect(self,event):
 		'''
 		'''
-		
 		for id,rect in self.bars.items():
 			if rect.contains(event)[0]:
 				
@@ -685,6 +684,8 @@ class createColorMapsDialog(object):
 	def on_release(self,event = None):
 		'''
 		'''
+		if event is None:
+			return
 		if event.button == 1:
 			self.reorder_rects()
 			self.disconnect_motion()
@@ -820,23 +821,4 @@ class createColorMapsDialog(object):
          	x = w_screen/2 - size[0]/2
          	y = h_screen/2 - size[1]/2
          	self.toplevel.geometry('%dx%d+%d+%d' % (size + (x, y))) 
-         			
-         			
-
-def get_max_colors_from_pallete(cmapName):
-
-    if cmapName in ['Greys','Blues','Greens','Purples','Reds','BuGn','PuBu','PuBuGn',
-    				'BuPu','OrRd','BrBG','PuOr','Spectral','RdBu','RdYlBu','RdYlGn']:
-        n = 60
-    elif cmapName in ['Accent','Dark2','Pastel2','Set2','Set4']:
-        n=8
-    elif cmapName in ['Paired','Set3']:
-        n = 12
-    elif cmapName in ['Pastel1','Set1']:
-        n = 9
-    elif cmapName == 'Set5':
-        n = 13
-    
-    cmap = ListedColormap(sns.color_palette(cmapName, n_colors = n ,desat = 0.85))  
-    
-    return cmap            
+         			    

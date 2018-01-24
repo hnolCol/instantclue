@@ -29,7 +29,7 @@ class numericalFilterDialog(object):
 		
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -44,7 +44,7 @@ class numericalFilterDialog(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Numerical Filter') 
-         
+		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w = 600
 		h = 140 + self.numbNumericalColumns * 45

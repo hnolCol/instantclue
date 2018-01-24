@@ -20,17 +20,21 @@
     Website : http://www.instantclue.uni-koeln.de
     Original Publication: Not published yet
     
-    
+    For License information check https://opensource.org/licenses
+   
     Dependencies (alphabetic order):
+    
     -husl (color palettes)
-    -matplotlib
-    -numpy
-    -pandas
-    -pandastable (note: copied in source code, changes are indicated)
-    -scikit-learn
-    -scipy    
-    -seaborn
-    -statsmodels
+    -matplotlib (https://matplotlib.org/users/license.html)
+    -numpy (BSD 3 - https://docs.scipy.org/doc/numpy-1.10.0/license.html)
+    -pandas (BSD 3)
+    -pandastable (GPL v3 - note: copied in source code, changes are indicated)
+    -scikit-learn (BSD 3)
+    -scipy (‎BSD-new license - https://www.scipy.org/scipylib/license.html)
+    -seaborn (BSD 3)
+    -statsmodels (BSD 3 https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt)
+    
+    Please check the licence of the individual packages before redistribution.
 """
 
 

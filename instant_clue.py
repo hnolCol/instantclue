@@ -6,11 +6,13 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 
 import webbrowser
+import urllib.request as urllibReq
+
 import start_page
 import analyze_data
 
 import multiprocessing
-#multiprocessing.set_start_method('forkserver')
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -54,19 +56,20 @@ class instantClueApp(tk.Tk):
                         frame.grid_rowconfigure(6, weight=1) 
                 if F == analyze_data.analyze_data :
                         frame.grid_columnconfigure(3, weight=1, minsize=200)
-                        
-
                         frame.grid_rowconfigure(5, weight=1, minsize=345)
                         frame.grid_rowconfigure(11, weight=1, minsize=70)
 
                     
         self.show_frame(start_page.StartPage)
-       
-       
+        #self.check_for_new_version()
+
+
+        
         
     def create_menu(self, container):
-		
-        
+        '''
+        Creates tkinter menu.
+        '''
         menubar = tk.Menu(container)
         filemenu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=filemenu)
@@ -74,22 +77,58 @@ class instantClueApp(tk.Tk):
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Tutorial", command=lambda:webbrowser.open(webisteUrlTutorial))
         menubar.add_cascade(label="Help", menu=helpmenu)
+          
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Orig. Publication", command = lambda: webbrowser.open('http://google.de'))
         menubar.add_cascade(label="Read more", menu=helpmenu)
         
         return menubar
-        
-        
-	
+    
+    def check_for_new_version(self):
+    	'''
+    	Extracts the version from the html page (release_information.html) that holds
+    	information about recently updates. It simply checks takes the text from the 
+    	website and compares it to the current software version. 
+    	'''
+    	update = False
+    	try:
+    		releasePage = urllibReq.urlopen('http://www.instantclue.uni-koeln.de/release_information.html')
+    		text = str(releasePage.read())
+    		currentVersion = start_page.__VERSION__.split('.')
+    		textVersion = text.split('Version')[1].split('<')[0]
+    		textSplitVersion = textVersion.split('.')
+    	except:
+    		return
+    		
+    	if len(currentVersion) != len(textSplitVersion):
+    		return
+    		
+    	for n,num in enumerate(textSplitVersion):
+    		if float(num) > float(currentVersion[n]):
+    			update = True
+    			break	
+    	if update:
+    		quest = tk.messagebox.askquestion('New version available ..',
+    								  'There is a new version available {}.'.format(textVersion) +
+    								  ' Would you like to download?',
+    								  parent = self)
+    		
+    		if quest == 'yes':
+    			webbrowser.open('http://www.instantclue.uni-koeln.de/download/InstantClue_{}.zip'.format(platform.lower())) 
+    			   	
     def show_frame(self, cont):
-    	
-
+        '''
+        Raise frame.
+        '''
         frame = self.frames[cont]
         frame.tkraise()
         
-    def close_up(self):
-        quest =tk.messagebox.askquestion('Close..','Closing InstantClue.\nPlease confirm.')
+    def close_up(self, quest = None):
+        '''
+        Close the application.
+    	'''
+        if quest is None:
+        	quest =tk.messagebox.askquestion('Close..','Closing InstantClue.\nPlease confirm.')
         if quest == 'yes':
              for frame in self.frames.values():
                  frame.destroy()
@@ -109,6 +148,9 @@ if __name__ == "__main__":
      h = 1080
      appGeom = evaluate_screen(screen_width,screen_height,w,h)     
      app.geometry(appGeom)
+     # method after is not needed here but works much better
+     # with focusing afterwards frames
+     app.after(40,app.check_for_new_version)
      app.mainloop() 
      sys.exit(1)
      os._exit(1)

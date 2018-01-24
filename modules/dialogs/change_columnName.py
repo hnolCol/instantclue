@@ -24,7 +24,7 @@ class ColumnNameConfigurationPopup(object):
 		
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -40,7 +40,7 @@ class ColumnNameConfigurationPopup(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Change column name') 
-         
+		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.discard_changes)
 		w=450
 		h=100+int(len(self.columns))*33 ##emperically

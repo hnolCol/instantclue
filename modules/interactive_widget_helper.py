@@ -22,7 +22,6 @@ class interactiveWidgetsHelper(object):
 		- masterFrame - a frame to build this frame that is used as a container for
 		  the 'interactive' widgets. 
 	
-	
 	===================
 	'''	
 	def __init__(self, masterFrame):

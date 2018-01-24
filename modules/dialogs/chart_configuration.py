@@ -32,7 +32,7 @@ class ChartConfigurationPopup(object):
 		
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Closes the toplevel and saves changes made to pyplot global parameters. 
 		'''
@@ -57,7 +57,7 @@ class ChartConfigurationPopup(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Chart configuration') 
-         
+		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		if self.platform == "WINDOWS":
 			w = 375
@@ -178,11 +178,6 @@ class ChartConfigurationPopup(object):
 		fig_axes = self.fig_axes
 		ax_cbar, ax_label = [],[]
 	
-		#if len(self.color_maps_axes) != 0:
-		#	ax_cbar = None
-		#	ax_label = []
-		#	for key,cb in self.color_maps_axes.items():
-		#		ax_cbar = cb[-1]
 		if self.plotter.categoricalPlotter is not None and self.plot_type == 'scatter':
 			ax_label = self.plotter.categoricalPlotter.scatterWithCategories.inmutableAxes
 		fig_axes = [ax for ax in fig_axes if ax != ax_cbar and ax not in ax_label]	

@@ -30,6 +30,7 @@ from .utils import *
 
 if platform == 'WINDOWS':
 	sys.__stdout__ = sys.stdout	
+	
 fittingFuncs = curve_fitting._HelperCurveFitter()
 fitFuncsDict = fittingFuncs.get_fit_functions
 nonScatterPlotTypes = ['boxplot','barplot','violinplot','pointplot','swarm']
@@ -43,6 +44,10 @@ class _Plotter(object):
 		
 		self.plotHistory = OrderedDict() 
 		self.plotProperties = OrderedDict()
+		
+		self.logAxes = {'y':False,'x':False}
+		self.centerAxes = {'y':False,'x':False}
+		
 		self.axesLimits = OrderedDict()
 		self.clusterEvalScores = OrderedDict() 
 		self.statistics = OrderedDict()
@@ -60,6 +65,7 @@ class _Plotter(object):
 		
 		self.splitCategories = True
 		self.plotCumulativeDist = False
+		
 		## define cluster defaults
 		self.equalYLimits = True
 		self.tightLayout = True
@@ -106,8 +112,6 @@ class _Plotter(object):
 		self.categoricalPlotter = None
 		self.plotCount += 1
 		self.castMenu = True
-		
-		
 		
 		self.currentPlotType = selectedPlotType
 		numbNumbericColumns, numbCategoricalColumns = self.get_lenghts_of_lists([numericColumns,categoricalColumns])
@@ -189,6 +193,9 @@ class _Plotter(object):
 	
 	def get_dataID_used_for_last_chart(self):
 		'''
+		Return dataID that was used in the last chart. 
+		The data are stored by this ID in the self.sourceData
+		collection. 
 		'''
 		helper = self.get_active_helper()
 		if helper is not None:
@@ -205,6 +212,8 @@ class _Plotter(object):
 		
 	def get_active_helper(self):
 		'''
+		Returns the active helper function e.g. categorical or 
+		non-categorical helper. 
 		'''
 		if len(self.plotHistory) != 0:
 			if self.plotCount not in self.plotHistory:
@@ -292,9 +301,66 @@ class _Plotter(object):
 		axesLimits = self.axesLimits[plotCount]
 		self.set_limits_in_replot(ax,axesLimits[subplotNum])
 	
+
+	def log_axes(self,which='x', axes = None):
+		'''
+		Use log scale on particular axis
+		Parameter 
+		===========
+		which - define which axes to be used. (x,y) 
+		'''
+		if self.currentPlotType in ['hclust','corrmatrix']:
+			return		
+		if axes is None:
+			axes = self.get_axes_of_figure()
+		for ax in axes:
+			if self.logAxes[which]:
+				scale = 'linear'
+				self.logAxes[which] = False
+			else:
+				scale = 'symlog'
+				self.logAxes[which] = True
+			if which == 'x':
+				ax.set_xscale(scale)
+			elif which == 'y':
+				ax.set_yscale(scale)
+		self.update_axes_scales()
+				
+	def center_axes(self,which='x',lim = (0,1), axes = None):
+		'''
+		Center axis around 0.
+		Parameter 
+		===========
+		which - define which axes to be used. (x,y) 
+		'''
+		if self.currentPlotType in ['hclust','corrmatrix']:
+			return
+		if axes is None:
+			axes = self.get_axes_of_figure()
+		for ax in axes:
+			if self.centerAxes[which]:
+				self.centerAxes[which] = False
+			else:
+				self.centerAxes[which] = True
+				
+			if which == 'x':
+				ax.set_xlim(lim)
+			elif which == 'y':
+				ax.set_ylim(lim)
+		self.update_axes_scales()
+		
 	
+	def update_axes_scales(self):
+		'''
+		Update these params to the helper function
+		'''
+		plotter = self.get_active_helper()
+		plotter.set_axes_modifications([self.logAxes,self.centerAxes])
+		
+		
 	def reset_limits(self,subplotIdNumber,axisExport):
 		'''
+		Reset limits to axisExport by subplotIdNumber.
 		'''
 		
 		axes = self.get_axes_of_figure()
@@ -569,7 +635,9 @@ class _Plotter(object):
 				del state[list]
 		return state			
 	
-	
+
+
+
 class categoricalPlotter(object):
 
 	def __init__(self,_PlotterClass,sourceDataClass,figure, numericColumns,
@@ -607,9 +675,32 @@ class categoricalPlotter(object):
 			self.addSwarm = True
 		else:
 			self.addSwarm = False
+
+		self.logAxes = self.plotter.logAxes.copy()
+		self.centerAxes = self.plotter.centerAxes.copy()
+	
+	
+	def set_axes_modifications(self,dicts):
+		'''
+		'''
+		self.logAxes, self.centerAxes = dicts	
 		
-		
-		
+			
+	
+	def adjust_axis_scale(self, axes = None):
+		'''
+		'''
+		if axes is None:
+			axes = list(self.axisDict.values)
+		for which,bool in self.logAxes.items():
+				if bool:
+					for ax in axes:
+						if which == 'y':
+							ax.set_yscale('symlog')
+						else:
+							ax.set_xscale('symlog')
+					
+						
 	def add_axis_to_figure(self):
 		'''
 		Adds the needed axis for plotting. The arangement depends on the number of categories
@@ -1184,7 +1275,7 @@ class categoricalPlotter(object):
 			self.plotter.reset_limits(subplotIdNumber,axisExport)
 		else:
 			self.plotter.set_limits_in_replot(axisExport,limits)
-		
+		self.adjust_axis_scale(axes=[axisExport])
 		
 	def get_grid_layout_for_plotting(self,n,cols=3):
 		'''
@@ -1271,6 +1362,10 @@ class nonCategoricalPlotter(object):
 		self.axisDict = dict()  
 		self.categoricalColorDefinedByUser = dict()		
 		self.get_scatter_props()
+
+		self.logAxes = self.plotter.logAxes.copy()
+		self.centerAxes = self.plotter.centerAxes.copy()
+	
 		
 	def get_scatter_props(self):
 		'''
@@ -1278,6 +1373,16 @@ class nonCategoricalPlotter(object):
 		'''
 		self.sizeScatterPoints, self.alphaScatterPoints,\
 		self.colorScatterPoints = self.plotter.get_scatter_point_properties()
+	
+	
+	def set_axes_modifications(self,dicts):
+		'''
+		'''
+		self.logAxes, self.centerAxes = dicts
+		
+		
+	
+	
 			 	
 	def add_axis_to_figure(self):
 			

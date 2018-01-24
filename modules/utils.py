@@ -14,7 +14,7 @@ import itertools
 import os
 import sys
 from sys import platform as _platform
-
+from functools import reduce
 
 import tkinter as tk
 from tkinter import ttk  
@@ -32,8 +32,8 @@ def return_platform():
 
     
 platform = return_platform() 
-
 defaultFont = 'Verdana'
+
 if platform == 'WINDOWS':
 	corrFontSize = -1
 else:
@@ -336,7 +336,9 @@ def build_rgb_layer_dict(rgbColors,GREY,naColor):
 	
 	return layerColorDict
 		
-
+def str_join(df, sep, *cols):
+	return reduce(lambda x, y: x.astype(str).str.cat(y.astype(str), sep=sep), 
+                  	[df[col] for col in cols])
 
 
 		

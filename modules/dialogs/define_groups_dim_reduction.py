@@ -45,11 +45,12 @@ class defineGroupsDialog(object):
 		
 		self.toplevel.wait_window()
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
-		del self.pt
+		if hasattr(self, 'pt'):
+			del self.pt
 		self.toplevel.destroy() 	
 		
 
@@ -61,6 +62,7 @@ class defineGroupsDialog(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Define Groups') 
 		popup.grab_set() 
+		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=520
 		h=630

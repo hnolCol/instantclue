@@ -11,25 +11,31 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.4.2' #Date 11.01.2018
-
+__VERSION__ = '0.4.4' #Date 24.01.2018
 
 
 class StartPage(tk.Frame):
+
      def __init__(self,parent, controller):
           tk.Frame.__init__(self,parent, background="white")
+          
           self.get_images()
           self.build_widgets(controller)
           
           
      def get_images(self):
+          '''
+          Get images from image module.
+          '''
 
           self.data_analysis_icon,self.webisteLogo, self.videoTutorialLogo, \
           self.pdfTutorialLogo, self.sourceCodeLogo, self.LOGO = images.get_start_page_images()         						  
     
      def build_widgets(self, controller):
+          '''
+          Defines and grid widgets controller.
+          '''
     	
-          StartPage.version = __VERSION__
           self.label_LOGO = tk.Label(self, bg="white" ,image=self.LOGO)
 
           self.lab_version = tk.Label(self,

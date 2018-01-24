@@ -1,3 +1,10 @@
+'''
+Displays data in a pandastable. 
+Optional the user has the possibility to add the shown data frame to
+the source data tree view. 
+'''
+
+
 import tkinter as tk
 from tkinter import ttk             
 import tkinter.simpledialog as ts
@@ -54,7 +61,7 @@ class dataDisplayDialog(object):
 			self.toplevel.wait_window()
 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -80,6 +87,7 @@ class dataDisplayDialog(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Data   -   Rows: {}  x   Columns: {}'.format(self.data_shape[0],self.data_shape[1]))
+		popup.bind('<Escape>', self.close)
 		if self.topmost:
 			popup.attributes('-topmost', True)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
@@ -90,6 +98,7 @@ class dataDisplayDialog(object):
 		
 	def add_widgets(self,dragDropLabel = False):
 		'''
+		Grids the widget.
 		'''
 		buttonFrame = tk.Frame(self.toplevel,background = MAC_GREY)
 		buttonFrame.pack(fill = tk.BOTH)
@@ -105,6 +114,8 @@ class dataDisplayDialog(object):
 	
 	def initiate_add(self):
 		'''
+		Initiate the add to the source data treeview. In the analyze_data
+		object it will check simply if addDf is true or not. 
 		'''
 		if hasattr(self, 'dragDropLabel'):
 			self.add_to_data_collection()
@@ -115,6 +126,8 @@ class dataDisplayDialog(object):
 
 	def add_to_data_collection(self):
 		'''
+		Add the data to the collection. Used when "pairwise comparision has been
+		called before.  
 		'''
 		if self.dfOutputName  is not None:
 			self.analyzeClass.add_new_dataframe(self.pt.model.df,self.dfOutputName )

@@ -132,9 +132,7 @@ class scatterWithCategories(object):
 								size=self.size, alpha=self.alpha,picker=True)
 	
 			#ax_.plot(x_,y_,'o',color = self.color,ms = np.sqrt(self.size),
-					#markeredgecolor ='black',markeredgewidth =0.3)#,linestyle=None)
-					
-					
+					#markeredgecolor ='black',markeredgewidth =0.3)#,linestyle=None)					
 			if ax_.is_last_row() == False and self.numbCaetgoricalColumns < 3 and self.numbNumericalColumns > 1:
 			
 				ax_.set_xticklabels([])

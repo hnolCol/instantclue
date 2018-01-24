@@ -51,6 +51,7 @@ class findAndReplaceDialog(object):
 		self.exactMatch = tk.BooleanVar() 
 		self.saveLastString  = ''
 		
+		
 		if self.operationType == 'ReplaceRowEntries':
 		
 			self.columnForReplace = self.evaluate_column_selection(dataTreeview)
@@ -79,7 +80,7 @@ class findAndReplaceDialog(object):
 		self.prepare_data()
 		self.display_data()
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -96,7 +97,7 @@ class findAndReplaceDialog(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Find & replace - '+self.operationType) 
 		popup.grab_set() 
-        
+		popup.bind('<Escape>',self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=580
 		h=630
@@ -135,6 +136,9 @@ class findAndReplaceDialog(object):
  		 
  		entrySearch = ttk.Entry(self.cont_widgets, textvariable = self.searchString)
  		entryReplace = ttk.Entry(self.cont_widgets, textvariable = self.replaceString)
+ 		
+ 		entrySearch.bind('<Return>', \
+ 		lambda event :self.update_data_upon_search(forceUpdate = True))
  		
  		self.searchString.trace(mode="w", callback=self.update_data_upon_search) 
  		
@@ -182,29 +186,21 @@ class findAndReplaceDialog(object):
 			uniqueDataType = list(set(dataTreeview.dataTypesSelected))
 			if len(uniqueDataType) > 1:
 					tk.messagebox.showinfo('Error ..',
-						'Please select only columns of one data type',
-						parent=self.toplevel)
+						'Please select only columns of one data type')
 					return 
 					
-			elif uniqueDataType[0] == 'object' and lenSelectedColumns > 1:
-					tk.messagebox.showinfo('Info ..','For categorical columns, only one column can be selected.'+
-											' Using only first one: {}'.format(dataTreeview.columnsSelected[0]),
-											parent=self.toplevel)
-					columnForReplace = dataTreeview.columnsSelected[0]	
-
+			else:
+					columnForReplace = dataTreeview.columnsSelected
 		else:
-			columnForReplace = dataTreeview.columnsSelected[0]		
-		
+			columnForReplace = dataTreeview.columnsSelected		
 		
 		return columnForReplace
-			
 			
 		
 	def prepare_data(self):
 		'''
 		'''
 		if self.operationType == 'ReplaceRowEntries':	
-		
 			self.uniqueFlatSplitData = self.df.copy() 
 		else:
 		
@@ -229,7 +225,8 @@ class findAndReplaceDialog(object):
 		
 		self.pt.show()	
 		
-	def update_data_upon_search(self,varname = None, elementname = None, mode=None):
+	def update_data_upon_search(self,varname = None, elementname = None, mode=None,
+								forceUpdate = False):
 		'''
 		Traces user's input an changes the data shown in pandastable.
 		
@@ -248,10 +245,9 @@ class findAndReplaceDialog(object):
 		lenSearchString = len(searchString)
 		
 		if self.dataType == 'object':
-			if lenSearchString < 3 and nonEmptyString:
+			if lenSearchString < 3 and nonEmptyString and forceUpdate == False:
 				## to avoid massive searching when data are big
 				return
-			
 			if lenSearchString > 2:
 				## to start a new String search
 				if searchString[-2:] == ',"':			
@@ -270,8 +266,14 @@ class findAndReplaceDialog(object):
 			
 			splitSearchString = [row for row in csv.reader([searchString], delimiter=',', quotechar='\"')][0]
 			regExp = self.build_regex(splitSearchString)
-		
-			boolIndicator = dataToSearch[self.columnForReplace].str.contains(regExp,case = True)
+			
+			if self.operationType == 'ReplaceRowEntries':	
+				collectDf = pd.DataFrame() 
+				for n,column in enumerate(self.columnForReplace):
+					collectDf.loc[:,str(n)] = dataToSearch[column].str.contains(regExp,case = True)
+				boolIndicator = collectDf.sum(axis=1) >= 1
+			else:
+				boolIndicator = dataToSearch[self.columnForReplace].str.contains(regExp,case = True)
 			subsetData = dataToSearch[boolIndicator]
 			
 			self.saveLastString = searchString
@@ -279,9 +281,10 @@ class findAndReplaceDialog(object):
 		else:
 			valueList = self.transform_string_to_float_list(searchString)
 			valuesToReplace = np.asarray(valueList)			
-			#boolIndicator = self.uniqueFlatSplitData.applymap(lambda value: np.in1d(value,valuesToReplace).item(0)).sum(axis=1) > 0
+			
 			## 8 % tolerance to be shown.
-			boolIndicator = self.uniqueFlatSplitData.applymap(lambda value: np.isclose(value,valuesToReplace, rtol = 0.8).item(0)).sum(axis=1) > 0
+			boolIndicator = self.uniqueFlatSplitData.applymap(lambda value: \
+			np.isclose(value,valuesToReplace, rtol = 0.8).item(0)).sum(axis=1) > 0
 			
 			subsetData = self.uniqueFlatSplitData[boolIndicator]
 			
@@ -374,6 +377,7 @@ class findAndReplaceDialog(object):
 		elif replaceString == '':
 			tk.messagebox.showinfo('Error ..','Please insert string to be used for replacement.',parent=self.toplevel)
 			return
+	
 			
 		if self.dataType == 'object':
 			
@@ -382,9 +386,12 @@ class findAndReplaceDialog(object):
 			proceedBool,toReplaceList,valueList = self.evaluate_input(toReplaceList,valueList)
 			if proceedBool == False:
 				return
+				
 			
-			self.dfClass.df[self.columnForReplace].replace(toReplaceList,valueList,
+			for column in self.columnForReplace:
+					self.dfClass.df[column].replace(toReplaceList,valueList,
 														   regex=True,inplace=True)
+		
 		else:
 			searchList = self.transform_string_to_float_list(searchString)
 			replaceList = self.transform_string_to_float_list(replaceString)

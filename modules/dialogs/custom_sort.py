@@ -39,7 +39,7 @@ class customSortDialog(object):
 		
 		self.toplevel.wait_window()
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -53,6 +53,7 @@ class customSortDialog(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Customary Sorting') 
+		popup.bind('<Escape>',self.close)
 		popup.grab_set() 
 		popup.protocol("WM_DELETE_WINDOW", self.discard_changes)
 		w=400

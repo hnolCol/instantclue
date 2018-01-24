@@ -185,7 +185,7 @@ class DataCollection(object):
 		except ValueError:
 			return 'ValueError'
 			
-		if newDataType == 'object':
+		if newDataType in ['object','str']:
 			self.df[columnList].fillna(self.replaceObjectNan,inplace=True)
 			
 		self.update_columns_of_current_data()
@@ -258,7 +258,7 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		return newColumnNames
 		
-	def drop_rows_with_nan(self,columnLabelList,thresh=None):
+	def drop_rows_with_nan(self,columnLabelList,how,thresh=None):
 		'''
 		Drops rows with NaN
 		'''
@@ -266,8 +266,10 @@ class DataCollection(object):
 			pass
 		elif isinstance(columnLabelList,str):
 			columnLabelList = [columnLabelList]
-		self.df.dropna(subset=columnLabelList,inplace=True, thresh=thresh)
+		self.df.dropna(how = how,subset=columnLabelList,inplace=True, thresh=thresh)
 			
+			
+		
 	def duplicate_columns(self,columnLabelList):
 		'''
 		Duplicates a list of columns and inserts the column at the position + 1
@@ -360,6 +362,21 @@ class DataCollection(object):
 		if naFill is None:
 			naFill = self.replaceObjectNan
 		self.df[columnLabelList] = self.df[columnLabelList].fillna(naFill)
+	
+	
+	def fill_na_with_data_from_gauss_dist(self,columnLabelList,downshift,width):
+		'''
+		Replaces nans with random samples from standard distribution. 
+		'''
+		for numericColumn in columnLabelList:
+			data = self.df[numericColumn].values
+			mu, sigma = self.df[numericColumn].mean(), self.df[numericColumn].std()
+			newMu = mu - sigma * downshift
+			newSigma = sigma * width
+			mask = np.isnan(data)
+			data[mask] = np.random.normal(newMu, newSigma, size=mask.sum())
+			self.df[numericColumn] = data
+		
 	
 	def get_numeric_columns(self):
 		'''

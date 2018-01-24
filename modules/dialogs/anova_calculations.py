@@ -125,10 +125,8 @@ class anovaCalculationDialog(object):
  								textvariable = self.dependentVariable)
  		comboBox.grid(row=3,padx=5,pady=3,sticky=tk.E,column=1)
  		
-
  		betweenLabel = tk.Label(self.cont, text = 'Between Subject Factors', 
  								**titleLabelProperties)
- 		
  		ttk.Separator(self.cont, orient =  tk.VERTICAL).grid(sticky=tk.EW,pady=3,padx=2,columnspan=3)
  		betweenLabel.grid(sticky=tk.W, columnspan=2,padx=3,pady=5)
  		if self.anovaType == '1W-ANVOVA-RepMeas':

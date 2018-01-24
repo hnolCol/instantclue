@@ -140,6 +140,7 @@ class mainFigureCollection(object):
 	
 	def get_limits(self,axisId,figureId):
 		'''
+		Return axis limits.
 		'''
 		ax = self.mainFigureTemplates[figureId][axisId]['ax']
 		xLim = ax.get_xlim()
@@ -976,6 +977,7 @@ class mainFigureTemplateDialog(object):
 		
 	def disconnect_events(self):
 		'''
+		Disconnect events used to move around figure text.
 		'''
 		self.figure.canvas.mpl_disconnect(self.on_motion_event)	
 		self.figure.canvas.mpl_disconnect(self.on_click_event)		
@@ -983,6 +985,7 @@ class mainFigureTemplateDialog(object):
 		
 	def add_image_to_axis(self, pathToFile = None, axisId = None):
 		'''
+		Add an image to a selected subplot.
 		'''
 		if self.check_if_axes_created() == False:
 			return
@@ -1042,6 +1045,7 @@ class mainFigureTemplateDialog(object):
 				
 	def identify_id_of_axis(self,ax):	
 		'''
+		Get the id of an axes. ax is a matplotlib axis object.
 		'''
 		axClicked = ax
 		for id,props in self.figureProps.items():

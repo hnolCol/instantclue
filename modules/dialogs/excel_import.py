@@ -30,7 +30,7 @@ class ExcelImporter(object):
 		
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self, event = None):
 		'''
 		Close toplevel
 		'''
@@ -65,7 +65,7 @@ class ExcelImporter(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Excel Importer') 
-         
+		popup.bind('<Escape>', self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=880
 		h=430

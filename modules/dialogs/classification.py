@@ -1067,7 +1067,7 @@ class gridSearchClassifierOptimization(object):
 		
 		# get data
 		
-		X,Y = self.data[self.features].values, self.data[self.targetColumn].values
+		X,Y = self.data[self.features].values, np.ravel(self.data[self.targetColumn].values)
 			
 		## define k fold validation for nested cv
 		n_split_nested  = self.nestedCV['n_splits']
@@ -1146,16 +1146,24 @@ class gridSearchClassifierOptimization(object):
 			
 			collectRocCurveParam = dict() 
 			for n,class_ in enumerate(grid.classes_):
-				fpr, tpr, _ = roc_curve(Y[test_index],probsTest[:,n], pos_label=class_)
+				if len(grid.classes_) == 2 and class_ == '0':
+					continue
+				elif len(grid.classes_) == 2 and class_ == '1':
+					probs = probsTest
+				else: 
+					probs = probsTest[:,n]
+				print(n, class_)
+				fpr, tpr, _ = roc_curve(Y[test_index],probs, pos_label=class_)
 				collectRocCurveParam['fpr_'+class_] = fpr 
 				collectRocCurveParam['tpr_'+class_] = tpr 
 				collectRocCurveParam['AUC_'+class_] = auc(fpr,tpr)
-			
+			print(grid.best_estimator_)
 			predictionByBestEstimator[nSplit] = {'Y_test_pred':Y_test_pred,
 											  'best_params':grid.best_params_,
 											  'ClassificationReport':classReport,
 											  'roc_curve':collectRocCurveParam,
-											  'classes':grid.classes_}
+											  'classes':grid.classes_,
+											  'estimator': grid.best_estimator_}
 			
 			nSplit += 1
 			
@@ -1169,6 +1177,7 @@ class gridSearchClassifierOptimization(object):
 		self.plotter.initiate_chart(self.features,self.targetColumn,'grid_search_results',
 			self.plotter.get_active_helper().colorMap)
 		self.plotter.redraw()
+		progressBar.close()
 		return
 		
 		
