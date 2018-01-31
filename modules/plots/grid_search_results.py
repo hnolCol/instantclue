@@ -4,6 +4,8 @@ import numpy as np
 from scipy import interp
 from sklearn.metrics import roc_curve, auc
 
+from modules.utils import *
+
 class gridSearchVisualization(object):
 	'''
 	'''
@@ -55,18 +57,22 @@ class gridSearchVisualization(object):
 				print(all_fpr)
 				mean_tpr = np.zeros_like(all_fpr)
 				for class_ in self.rocCurves[1]['classes']:
+					print(interp(all_fpr, rocData['fpr_'+class_], rocData['tpr_'+class_]))
 					mean_tpr += interp(all_fpr, rocData['fpr_'+class_], rocData['tpr_'+class_])
 			
 				mean_tpr /= len(self.rocCurves[1]['classes'])
-				AUC = auc(all_fpr, mean_tpr)	
+				AUC = round(auc(all_fpr, mean_tpr),2)
+				###### PLOT AVERAGED RANK!!!
 			else:
 				all_fpr = fpr
 				mean_tpr = tpr
 				AUC = aucVal
-   			 			
+				
+			paramDetails = str(param).replace('FeatureSelection__','').replace('Classifier__','').replace('Pre-Processing__','')
+			   			 
 			self.axisDict[0].plot(all_fpr,mean_tpr,
-							lw = 0.5,
-							label='Split: {} {}\n (AUC: {})'.format(nSplit,str(param),AUC))
+							lw = 0.75,
+							label='Split: {} {}\n (AUC: {})'.format(nSplit,paramDetails ,AUC))
 				
 		# First aggregate all false positive rates
 #all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
@@ -85,10 +91,10 @@ class gridSearchVisualization(object):
 		
 		self.axisDict[1].bar(range(self.testScoreMeans.size),self.testScoreMeans.values)
 		
+		fill_axes_with_plot(plot_type='pointplot',y='mean_test_score',
+					hue='params',x='#CV',ax=self.axisDict[2], data = self.nCVResults)
+		sns.pointplot(y='mean_fit_time',hue='params',x='#CV',ax=self.axisDict[3], data = self.nCVResults)
 		
-		sns.pointplot(y='mean_test_score',hue='#CV',x='params',ax=self.axisDict[2], data = self.nCVResults)
-		
-		sns.pointplot(y='mean_fit_time',hue='#CV',x='params',ax=self.axisDict[3], data = self.nCVResults)
 		
 	def prepare_data(self):
   		'''

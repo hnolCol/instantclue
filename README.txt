@@ -25,6 +25,7 @@
     Dependencies (alphabetic order):
     
     -husl (color palettes)
+    -fastcluster
     -matplotlib (https://matplotlib.org/users/license.html)
     -numpy (BSD 3 - https://docs.scipy.org/doc/numpy-1.10.0/license.html)
     -pandas (BSD 3)

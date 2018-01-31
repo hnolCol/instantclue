@@ -155,7 +155,7 @@ class DataCollection(object):
 		elif metric == 'Median [row]':
 			self.df[newColumnName] = self.df[numericColumns].median(axis=1)
 		elif metric == 'x * N [row]':
-			self.df[newColumnName] = self.df[numericColumns] * promptN#.apply(lambda row, pow=promptN: np.multiply(row,pow),axis=1)
+			self.df[newColumnName] = self.df[numericColumns] * promptN
 		elif metric == 'N ^ x [row]':
 			self.df[newColumnName] = self.df[numericColumns].apply(lambda row, pow=promptN: np.power(pow,row),axis=1)
 		elif metric == 'x ^ N [row]':
@@ -234,7 +234,7 @@ class DataCollection(object):
 				
 	def delete_data_file_by_id(self,id):
 		'''
-		Deletes DataFile
+		Deletes DataFile by id
 		'''	
 		
 		del self.dfs[id]

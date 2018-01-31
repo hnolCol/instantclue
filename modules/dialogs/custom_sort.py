@@ -52,7 +52,7 @@ class customSortDialog(object):
 		Builds the toplevel to put widgets in 
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
-		popup.wm_title('Customary Sorting') 
+		popup.wm_title('Custom Sorting') 
 		popup.bind('<Escape>',self.close)
 		popup.grab_set() 
 		popup.protocol("WM_DELETE_WINDOW", self.discard_changes)
@@ -103,7 +103,7 @@ class customSortDialog(object):
 		
 		
 		scrVert.grid(row=1,column=3,sticky=tk.NS)
-		self.treeView.grid(row=1,column=0,columnspan=3,sticky=tk.NSEW)
+		self.treeView.grid(row=1,column=0,columnspan=3,sticky=tk.NSEW,padx=(10,0))
 		scrHor.grid(row=2,column=0,columnspan=3,sticky=tk.EW)
 		
 		self.treeView.bind('<B1-Motion>',self.on_motion)

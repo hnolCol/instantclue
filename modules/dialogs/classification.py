@@ -39,7 +39,8 @@ classDict = {'Random forest classifier':skEnsemble.RandomForestClassifier,
 			'Extra Trees Classifier':skEnsemble.ExtraTreesClassifier,
 			'Support Vector Machine': skSVM.SVC,
 			'Stochastic Gradient Descent':skLinear.SGDClassifier,
-			'Gaussian Naive Bayes':skNaiveBayes.GaussianNB}
+			'Gaussian Naive Bayes':skNaiveBayes.GaussianNB,
+			}
 			
 availableMethods = list(classDict.keys())
 
@@ -72,7 +73,8 @@ crossValidation = {'Kfold':{'function':skModel.KFold,'parameters':['n_splits','s
 
 featureSelection  = {'PCA':PCA,
 					'BestKFeature':skFeatSel.SelectKBest,
-					'NMF':NMF}
+					'NMF':NMF,
+					'IdentityFunction':skPreProc.FunctionTransformer}
 
 
 sgdLossFuncs = ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron', 'squared_loss', 'huber', 'epsilon_insensitive','squared_epsilon_insensitive']
@@ -89,17 +91,8 @@ randomForestWidgets = OrderedDict([('n_estimators',['50',list(range(10,100,10)),
 					 ('n_jobs',['-2','The number of jobs to use for the computation. This works by computing each of the n_init runs in parallel. If -1 all CPUs are used. If 1 is given, no parallel computing code is used at all, which is useful for debugging. For n_jobs below -1, (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one are used.']),
 					 ])
 					 
-extraTreeWidgets = OrderedDict([('n_estimators',['50',list(range(10,100,10)),'The number of trees in the forest.']),
-					 ('max_features',['sqrt',['sqrt','log2'],'The number of features to consider when looking for the best split:\nIf int, then consider max_features features at each split.\nIf float, then max_features is a percentage and int(max_features * n_features) features are considered at each split.\nIf “auto”, then max_features=sqrt(n_features).\nIf “sqrt”, then max_features=sqrt(n_features) (same as “auto”).\nIf “log2”, then max_features=log2(n_features).\nIf None, then max_features=n_features.\nNote: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than max_features features.']),
-					 ('max_depth',['None','The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.']),
-					 ('min_samples_split',['2','The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
-					 ('min_samples_leaf',['1','The minimum number of samples required to be at a leaf node:\nIf int, then consider min_samples_leaf as the minimum number.\nIf float, then min_samples_leaf is a percentage and ceil(min_samples_leaf * n_samples) are the minimum number of samples for each node.']),
-					 ('max_leaf_nodes',['None','Grow trees with max_leaf_nodes in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.']),
-					 ('oob_score',['True',trueFalse,'The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
-					 ('bootstrap',['True',trueFalse,'Whether bootstrap samples are used when building trees.']),
-					 ('class_weight',['balanced_subsample',['balanced_subsample','balanced','None'],'The “balanced” mode uses the values of y to automatically adjust weights inversely proportional to class frequencies in the input data as n_samples / (n_classes * np.bincount(y))\nThe “balanced_subsample” mode is the same as “balanced” except that weights are computed based on the bootstrap sample for every tree grown.']),
-					 ('n_jobs',['-2','The number of jobs to use for the computation. This works by computing each of the n_init runs in parallel. If -1 all CPUs are used. If 1 is given, no parallel computing code is used at all, which is useful for debugging. For n_jobs below -1, (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one are used.']),
-					 ])
+extraTreeWidgets = randomForestWidgets
+
 					 
 					 
 supportVectorWidgets = OrderedDict([('C',['1','Penalty parameter C of the error term.']),
@@ -556,14 +549,32 @@ class gridSearchClassifierOptimization(object):
 		'''
 		Builds the toplevel to put widgets in 
 		'''
-        
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Classifier Parameter Optimization') 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w = 1050
 		h= 930
 		self.toplevel = popup
-		self.center_popup((w,h))			
+		self.center_popup((w,h))	
+		#top = self.toplevel.winfo_toplevel()
+		#self.menuBar = tk.Menu(top)
+		#top['menu'] = self.menuBar
+		#self.subMenu = tk.Menu(self.menuBar)
+		#self.menuBar.add_cascade(label='Help', menu=self.subMenu)
+		#self.subMenu.add_command(label='About', command=lambda : print("hi"))
+    
+    
+
+    
+    
+    
+		# create a toplevel menu
+		#menubar = tk.Menu(self.toplevel)
+		#menubar.add_command(label="Hello!", command=lambda : print("hi"))
+		#menubar.add_command(label="Quit!", command=lambda : print("hi"))
+		# display the menu
+		#self.toplevel.config(menu=menubar)	
+	
 
 	def add_widgets_to_toplevel(self):
 		'''
@@ -575,24 +586,17 @@ class gridSearchClassifierOptimization(object):
 		self.cont.grid_columnconfigure(2,weight=1)
 		self.cont.grid_rowconfigure(2,weight=1)
 		
-		self.contCanvas = tk.Frame(self.cont,background="white") 
+		self.contCanvas = tk.Frame(self.cont,background=MAC_GREY) 
 		self.contCanvas.grid(row=2,column=0, sticky=tk.NSEW, columnspan=3)
-		
-		labelTitle = tk.Label(self.cont, text = 'Classifier Parameter Optimization', 
-                                     **titleLabelProperties)
-		#labelHelp = tk.Label(self.cont, text ='An optimization procedure includes several steps:\n1) Define a pipeline of steps like: feature/dimensionality reduction (PCA) - classifier'+
-		#										'\n2) Define specified parameters values for the steps in the pipeline like: number of features/components - min_sample_split(RFC)'+
-		#										'\n3) Set the number of cross evaluations and a score that should be used to evaluate parameters. You can choose also multiple scores for visualization but only the one to be used to find the best methods needs to be specified.',
-		#										justify=tk.LEFT, bg=MAC_GREY, wraplength=650)		
-		
-		
-		self.canvas = tk.Canvas(self.contCanvas)#, width=200, height=100)
+			
+		self.canvas = tk.Canvas(self.contCanvas, background = MAC_GREY)#, width=200, height=100)
 		self.canvas.pack(fill=tk.BOTH, expand=True)
 		
 		self.canvas.bind('<1>',self.on_item_click)
 		self.canvas.bind('<B1-Motion>',self.on_item_move)
 		self.canvas.bind('<ButtonRelease-1>',self.on_item_release)
 		self.canvas.bind('<Double-Button-1>', self.edit_settings)
+		self.canvas.bind(right_click, self.remove_item)
 						
 		self.create_basic_layout()
 		
@@ -600,18 +604,19 @@ class gridSearchClassifierOptimization(object):
 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
 		
 		
-		labelTitle.grid(row=0, columnspan=3, sticky=tk.W)
-		#labelHelp.grid(row=1, columnspan=3, sticky=tk.W, padx=3,pady=4)
 		runGridButton.grid(row=3,column= 0, sticky=tk.W, pady = 4, padx = 3)
 		closeButton.grid(row=3, column = 2, sticky = tk.E, pady = 4, padx = 3)
 		
 		
 	def edit_settings(self,event):
 		'''
+		Handles Double-Click events. Allows you to edit settings. 
 		'''
 		tagsOfSelection = self.canvas.gettags(tk.CURRENT)
 		if len(tagsOfSelection) > 0:
 			firstTag = tagsOfSelection[0]
+		else:
+			return
 		if firstTag == 'current':
 			return
 		else:
@@ -621,14 +626,45 @@ class gridSearchClassifierOptimization(object):
 			elif firstTag == 'nestedCV':
 				boom = defineGridSearchDialog('nestedCV', self.features)
 				self.nestedCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
-				print(self.nestedCV)
 			else:
 				boom = defineGridSearchDialog(tagsOfSelection[1].split('_')[1], self.features)
 				self.optimizeGrid[tagsOfSelection[1]] = boom.collectParamGrid
 				self.functionSettings[tagsOfSelection[1]] = boom.settingDict
 			
-
-
+	def remove_item(self,event):
+		'''
+		Handles right click action. Will remove certain items.
+		'''
+		tagsOfSelection = self.canvas.gettags(tk.CURRENT)
+		if len(tagsOfSelection) > 0:
+			firstTag = tagsOfSelection[0]
+		else:
+			return
+		if firstTag == 'current':
+			return
+		if firstTag in ['gridSearchCV','nestedCV']:
+			tk.messagebox.showinfo('Error ..',
+				'You cannot delelete this item.',
+				parent=self.toplevel)
+			return
+		else:
+			self.canvas.delete(firstTag)
+			print(self.optimizeGrid,self.functionSettings)
+			if firstTag in self.optimizeGrid:
+				del self.optimizeGrid[firstTag]
+			if firstTag in self.functionSettings:
+				del self.functionSettings[firstTag]		
+				
+		receiverBox = tagsOfSelection[0].split('_')[0]	
+		
+		coords = self.canvas.coords(receiverBox)
+		entries  = self.reciverRectangleEntries[receiverBox]
+		idx = entries.index(tagsOfSelection[1])
+		# delete entry and re-create items
+		del self.reciverRectangleEntries[receiverBox][idx]
+		del self.reciverRectangleImages[receiverBox][idx]
+		self.build_images_in_receiverbox(None,receiverBox,coords)
+	
 	def create_basic_layout(self):	
 		'''
 		'''
@@ -652,12 +688,11 @@ class gridSearchClassifierOptimization(object):
 					self.imagePositions[procedure] = (xPos,yPos)
 					k+=1
 			n += 1	
-			
-		#self.canvas.create_line(300,50,300,5000)	
-		
+					
 		
 	def on_item_release(self,event):
 		'''
+		Handles button-1 (left click) release. (e.g. drag and drop)
 		'''
 		if self._dragProps['item'] is not None:
 		
@@ -689,6 +724,7 @@ class gridSearchClassifierOptimization(object):
 		
 	def on_item_move(self,event):
 		'''
+		Change position of dragged item on canvas.
 		'''
 		if self._dragProps['item'] is not None:
 		
@@ -700,6 +736,7 @@ class gridSearchClassifierOptimization(object):
 										
 	def on_item_click(self,event):
 		'''
+		Handles item click events (Button-1 left-click)
 		'''
 		tagsOfSelection = self.canvas.gettags(tk.CURRENT)
 		if len(tagsOfSelection) > 0:
@@ -728,8 +765,10 @@ class gridSearchClassifierOptimization(object):
 		
 		branches = len(self.reciverRectangleEntries[receiverBoxTag])
 		imageList = self.reciverRectangleImages[receiverBoxTag]
-		
 		tagForItems = '{}_branchItems'.format(receiverBoxTag)
+		if len(imageList) == 0:
+			self.canvas.delete(tagForItems)
+			return		
 		self.canvas.delete(tagForItems)
 		branchEndPosition = self.create_branch_split(coords[0]+ centerWidth/2,yPos+25, 
 												portionLeft = 0.5, length = 0.7 * centerWidth, 
@@ -738,7 +777,6 @@ class gridSearchClassifierOptimization(object):
 												imageList = imageList,
 												addImageTags = True, addStartLine  =True,
 												yPosStartLine = yPos)
-		
 		
 		self.create_branch_bottom(centerXPosition = coords[0]+ centerWidth/2, yPositionBranch = branchEndPosition[-1][1], 
 											yPositionEnd = coords[3],portionLeft = 0.5, 
@@ -752,7 +790,6 @@ class gridSearchClassifierOptimization(object):
 			if tag in items:
 				return key
 		
-		
 				
 	def center_popup(self,size):
 
@@ -765,6 +802,7 @@ class gridSearchClassifierOptimization(object):
 	
 	def build_nested_cv(self):
 		'''
+		Creates items for nested cross validation
 		'''
 		endPoint = self.build_chain_of_images([self.dataIcon,self.crossValIcon])
 		branchEndPosition =  self.create_branch_split(centerXPosition = 600,yPosition = endPoint, portionLeft = 0.7,
@@ -886,7 +924,7 @@ class gridSearchClassifierOptimization(object):
 		    	
 			for n,xPosBranch in enumerate(positions):
 				self.canvas.create_line(xPosBranch, yPosition, xPosBranch, 
-									yPosition + connectionLength[n])
+									yPosition + connectionLength[n],tag = tagList[0])
 				if len(imageList) == numberBranch:
 					if addImageTags:
 						tagImg = tagList[n]+' '+extraTagList[n]
@@ -952,10 +990,10 @@ class gridSearchClassifierOptimization(object):
 		'''
 		'''
 		
-		
 		if 'FeatureSelection' in tag:
 			if funcName == 'BestKFeature':
-				func = featureSelection[funcName](skFeatSel.chi2,**settingDict)
+				
+				func = featureSelection[funcName](**settingDict)
 			else:
 				func = featureSelection[funcName](**settingDict)
 		elif 'Classifier' in tag:
@@ -966,19 +1004,16 @@ class gridSearchClassifierOptimization(object):
 			elif funcName == 'IdentityScaler':
 				settingDict['func'] = None
 			func = preProcessDict[funcName](**settingDict)
+			
 		return func
 			
 	def build_classifier_settings(self):
 		'''
+		Gets the classifier and its parameter to be optimized. 
 		'''
 		classiDict = dict()
 		if 'Classifier' in self.reciverRectangleEntries:
 			estimatorList = self.reciverRectangleEntries['Classifier']
-			## only one classifier possible
-			if len(estimatorList) == 0:
-				tk.messagebox.showinfo('No Estimator ..','Select an estimator.')
-				return
-			
 			estimator = estimatorList[0]
 			if estimator in self.functionSettings:
 				settingDict = self.functionSettings[estimator]
@@ -1058,7 +1093,16 @@ class gridSearchClassifierOptimization(object):
 	def perform_grid_search(self):
 		'''
 		'''
-		
+		estimatorList = self.reciverRectangleEntries['Classifier']
+		## only one classifier possible
+		if len(estimatorList) == 0:
+				tk.messagebox.showinfo('No Classifier ..','Select a classifier.',parent=self.toplevel)
+				return
+		elif len(estimatorList) > 1:
+			tk.messagebox.showinfo('Please note ..',
+				'At the moment only one estimator can be evaluated at one.',
+				parent=self.toplevel)
+			
 		progressBar = Progressbar('Grid search started ...')
 		paramGrid = []
 		pipelineSteps = []
@@ -1146,18 +1190,19 @@ class gridSearchClassifierOptimization(object):
 			
 			collectRocCurveParam = dict() 
 			for n,class_ in enumerate(grid.classes_):
-				if len(grid.classes_) == 2 and class_ == '0':
+				if len(grid.classes_) == 2 and class_ in ['0','','-']:
 					continue
-				elif len(grid.classes_) == 2 and class_ == '1':
+				elif len(grid.classes_) == 2 and class_ in ['+','1']:
 					probs = probsTest
 				else: 
 					probs = probsTest[:,n]
-				print(n, class_)
 				fpr, tpr, _ = roc_curve(Y[test_index],probs, pos_label=class_)
 				collectRocCurveParam['fpr_'+class_] = fpr 
 				collectRocCurveParam['tpr_'+class_] = tpr 
-				collectRocCurveParam['AUC_'+class_] = auc(fpr,tpr)
+				collectRocCurveParam['AUC_'+class_] = round(auc(fpr,tpr),2)
+			
 			print(grid.best_estimator_)
+			print(collectRocCurveParam)
 			predictionByBestEstimator[nSplit] = {'Y_test_pred':Y_test_pred,
 											  'best_params':grid.best_params_,
 											  'ClassificationReport':classReport,
@@ -1166,7 +1211,6 @@ class gridSearchClassifierOptimization(object):
 											  'estimator': grid.best_estimator_}
 			
 			nSplit += 1
-			
 			
 		progressBar.update_progressbar_and_label(100,'Done. Initiate visualization ..')
 		display_data.dataDisplayDialog(resultDF, waitWindow = False)
@@ -1252,6 +1296,10 @@ class gridSearchClassifierOptimization(object):
 							self.nmfIcon, self.evaluationIcon, \
 							self.identityFunctionIcon = images.get_workflow_builder_images()
 		
+		
+		self.rocAucIcon, self.accuracyIcon, self.precisionIcon,\
+		self.recallIcon, self.f1ScoreIcon =  images.get_scorer_images()
+		
 		self.itemsToDrag = OrderedDict([
 				('Pre-Processing',
 				{'UniformScaler':self.uniformScalerIcon,
@@ -1263,6 +1311,7 @@ class gridSearchClassifierOptimization(object):
 				{'PCA':self.pcaIcon,
 				'NMF':self.nmfIcon,
 				'BestKFeature':self.bestKFeatureIcon,
+				'IdentityFunction':self.identityFunctionIcon,
 				'RecursiveFeatureDetection':'',
 				'F-statistic':'',
 				}),
@@ -1275,10 +1324,13 @@ class gridSearchClassifierOptimization(object):
 				}),
 				
 				('Scorer',
-				{'roc_auc':'',
-				'accuracy':'',
-				})
+				{'roc_auc':self.rocAucIcon,
+				'accuracy':self.accuracyIcon,
+				'precision':self.precisionIcon,
+				'recall':self.recallIcon,
+				'f1':self.f1ScoreIcon})
 				])
+		
 		self.checkDragAndDropTags = []
 		self.receiverTags = dict()
 		
@@ -1288,6 +1340,25 @@ class gridSearchClassifierOptimization(object):
 			self.receiverTags[key] = items
 			self.reciverRectangleEntries[key] = []
 			self.reciverRectangleImages[key] = []
+
+
+defaultValues = {'score_func':'f_classif',
+			 'k':'10',
+			 'n_components':'5'}
+
+
+tooltipTextDict = {'KFold Procedure':'StratifiedKFold - This cross-validation object is a variation of KFold that returns '+
+'stratified folds. The folds are made by preserving the percentage of samples for each class.\n'+
+'StratifiedShuffleSplit - This cross-validation object is a merge of StratifiedKFold and'+
+' ShuffleSplit, which returns stratified randomized folds. The folds are made by preserving'+
+' the percentage of samples for each class.\n'+
+'Time Series Split - Provides train/test indices to split time series data samples that are'+
+' observed at fixed time intervals, in train/test sets. In each split, test indices must be '+
+'higher than before, and thus shuffling in cross validator is inappropriate.',
+'n_splis':'Number of splits.',
+'score_func':'Scoring function to evaluate importance of features. Note that for chi2 statistic all values have to be bigger than 0'
+}
+
 
 
 parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
@@ -1303,20 +1374,13 @@ parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
 					  ('alpha',['0.0001'])],
 					  'PCA':[('n_components',['4,3,2'])],
 					  'NMF':[('n_components',['4,3,2'])],
-					  'BestKFeature':[('k',['9,5,2'])],
+					  'BestKFeature':[('score_func',['f_classif','chi2']),('k',['9,5,2','5,3','3','all,4,3,1'])],
 					  'nestedCV':[('KFold Procedure',['StratifiedShuffleSplit','StratifiedKFold','Time Series Split']),
 					  ('n_splits',['3','5','10'])],
 					  'gridSearchCV':[('KFold Procedure',list(crossValidation.keys())),
 					  ('n_splits',['3','5','10'])]}
 					
 
-
-	# ('kernel',['rbf',['rbf','poly','linear'],'Specifies the kernel type to be used in the algorithm.']),
-	#				 ('degree',['3','Degree of the polynomial kernel function (‘poly’). Ignored by all other kernels.']),
-	#				 ('gamma',['auto','Kernel coefficient for ‘rbf’, ‘poly’ and ‘sigmoid’. If gamma is ‘auto’ then 1/n_features will be used instead.']),
-	#				 ('coef0',['0','In
-
-		
 		
 class defineGridSearchDialog(object):
 	
@@ -1354,7 +1418,7 @@ class defineGridSearchDialog(object):
 		popup.wm_title('Define Parameter for Grid Search') 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w = 410
-		h= 300
+		h= 350
 		self.toplevel = popup
 		self.center_popup((w,h))		
 
@@ -1370,8 +1434,8 @@ class defineGridSearchDialog(object):
 			infoText = 'Choose number of cross validations performed for parameter optimization by grid search'
 		else:
 			infoText = ('Define parameter for GridSearch with Cross Validation\n'+
-					'Usage: If you want to optimize a parameter you can have to'+
-					'give multiple parameters in the pattern: Value1,Value2,Value3.\n'+
+					'Usage: If you want to optimize a parameter you have to'+
+					'provide multiple parameters in the pattern: Value1,Value2,Value3. and check the checkbutton on the left hand side.\n'+
 					'If you give a single parameter: Value1. This parameter will be used as'+
 					' a constant parameter for the selected step in your pipeline.')
 		labelInfo = tk.Label(self.cont, text = infoText, bg = MAC_GREY, wraplength = 400, justify = tk.LEFT)
@@ -1380,22 +1444,26 @@ class defineGridSearchDialog(object):
 		for n,param in enumerate(parameters):
 			varCb = tk.BooleanVar()
 			cb = ttk.Checkbutton(self.cont, text = param[0], variable = varCb)
+			combo = ttk.Combobox(self.cont, values = param[1])
 			if self.procedure in abbrevDictRev:
 				description = widgetCollection[abbrevDictRev[self.procedure]][param[0]][-1]
+				defaultValue = widgetCollection[abbrevDictRev[self.procedure]][param[0]][0]
 				CreateToolTip(cb,title_=param[0],text= description)
-			combo = ttk.Combobox(self.cont, values = param[1])
-			
+				combo.set(defaultValue)
+			elif param[0] in defaultValues:
+				combo.set(defaultValues[param[0]])
+			if param[0] in tooltipTextDict:
+				CreateToolTip(cb,text= tooltipTextDict[param[0]])
+					
 			self.paramWidgets[param[0]] = {'CbVar':varCb,'Entry':combo} 
-			
 			cb.grid(row=n+1, column = 0, sticky=tk.W, pady=3,padx=3)
 			combo.grid(row=n+1, column = 1, sticky = tk.EW, pady=3,padx=3)
-			
 			
 		applyButton = ttk.Button(self.cont, text = 'Done', command = self.get_params)
 		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
 		
-		applyButton.grid()
-		closeButton.grid()
+		applyButton.grid(row = n+2, column = 0)
+		closeButton.grid(row = n+2, column = 1, sticky = tk.E)
 			
 	
 	def get_params(self):
@@ -1426,14 +1494,15 @@ class defineGridSearchDialog(object):
 			self.close() 
 		
 	def evaluate_and_transform_input(self):
-	
+		'''
+		Evaluate input for grid search. 
+		'''
 		
 		updatedDictGrid = dict()
 		updatedDictSettings = dict()
 		oldDictList = [self.collectParamGrid,self.settingDict]
 		newDictList = [updatedDictGrid,updatedDictSettings]
 		if self.procedure == 'GNB':
-		
 			return True
 			
 		elif self.procedure in ['nestedCV','gridSearchCV']:
@@ -1470,6 +1539,8 @@ class defineGridSearchDialog(object):
 							updateDict[key]  = values
 						elif key == 'degree':
 							updateDict[key] = int(float(values))
+						elif key == 'gamma' and values == 'auto':
+							updateDict[key] = values
 						else:
 							updateDict[key]  = float(values)
 				
@@ -1477,25 +1548,43 @@ class defineGridSearchDialog(object):
 			return True			
 					
 		elif self.procedure in ['PCA','BestKFeature','NMF']:
-				
-			for oldDict, updateDict in zip(oldDictList,newDictList):
 			
+			possibleStrings = ['all']
+			
+			for oldDict, updateDict in zip(oldDictList,newDictList):
+				
 				for key, values in oldDict.items():
+					if key == 'score_func' and self.procedure == 'BestKFeature':
+						updateDict[key] = scorerOptions[values]
+						continue						
+						
 					if isinstance(values,list):
-						intValues = [int(float(x)) for x in values if int(float(x)) <= self.numbFeatures]
+					
+						intValues = [int(float(x)) for x in values if \
+						int(float(x)) <= self.numbFeatures and x not in possibleStrings]
+						
 						if len(intValues) != 0:
+							if len(intValues) == len(values)+1:
+								intValues.append(possibleStrings)
 							updateDict[key] = intValues
+							
 						else:
-							tk.messagebox.showinfo('Erro ..','Invalid input in feature selection. Probably you entered a value higher than the number of features.')
+							tk.messagebox.showinfo('Error ..',
+								'Invalid input in feature selection. Probably you entered a value higher than the number of features.',
+								parent = self.toplevel)
 							return False
 					else:
-						intValue = int(float(values))
-						if intValue > self.numbFeatures:
-							tk.messagebox.showinfo('Error ..','Number of reduced features is higher than original feature number.')
+						if values in possibleStrings:
+							intValue = values
+						else:
+							intValue = int(float(values))
+						if isinstance(intValue,str) == False and intValue > self.numbFeatures:
+							tk.messagebox.showinfo('Error ..',
+								'Number of reduced features is higher than original feature number.',
+								parent = self.toplevel)
 							return False
 						else:
 							updateDict[key] = intValue
-					
 							
 			self.collectParamGrid,self.settingDict = updatedDictGrid,updatedDictSettings
 			return True
@@ -1572,168 +1661,7 @@ class defineGridSearchDialog(object):
   		
   		
   		
-  		
-  		
-  		
-  		 
-#parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
-#								('kernel',['rbf','linear','poly','rbf,linear,poly']),('gamma',['auto']),('coef0',['0'])],
-#					  'RFC':['n_estimators','max_features','max_depth',
-#					  'max_leaf_nodes','min_samples_split',
-#					  'min_samples_leaf','min_impurity_decrease'],
-#					  'GNB':[],
-##					  'SGD':['loss','epsilon','alpha'],
-#					  'PCA':[('n_components',['4,3,2'])],
-#					  'BestKFeature':[('k',['9,5,2'])]}
-   
-   
-         	
 
-#####################
-class predictCluster(object):
-	
-	def __init__(self, clusterCollection, dfClass, dataTreeview, numericColumns = []):
-	
-		self.clusterCollection = clusterCollection
-		self.dfClass = dfClass 
-		self.dataTreeview = dataTreeview 
-		
-		if len(numericColumns) == 0:
-			self.numericColumns  = self.dataTreeview.columnsSelected
-		else:
-			self.numericColumns = numericColumns
-			
-		self.availableClusterClasses = clusterCollection.get_names_of_analysis()
-		
-		if len(self.availableClusterClasses) == 0:
-			
-			tk.messagebox.showinfo('Error ..','Could not find any performed cluster analysis.')
-			return
-		
-		self.build_popup()
-		self.add_widgets_to_toplevel() 
-		
-		
-		
-		
-	def close(self):
-		'''
-		Closes the toplevel.
-		'''
-		
-		self.toplevel.destroy()
-         
-         			
-	def build_popup(self):
-		'''
-		Builds the toplevel to put widgets in 
-		'''
-        
-		popup = tk.Toplevel(bg=MAC_GREY) 
-		popup.wm_title('Predict clusters') 
-		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w = 520
-		h= 520
-		self.toplevel = popup
-		self.center_popup((w,h))			
-
-	def add_widgets_to_toplevel(self):
-		'''
-		'''
-		self.cont= tk.Frame(self.toplevel, background = MAC_GREY) 
-		self.cont.pack(expand =True, fill = tk.BOTH)
-		self.cont.grid_columnconfigure(1,weight=1)
-		
-		self.contClust = tk.Frame(self.cont,background=MAC_GREY)
-		self.contClust.grid(row=5,column=0,columnspan = 4, sticky= tk.NSEW)
-		self.contClust.grid_columnconfigure(1,weight=1)	
-		
-		labelTitle = tk.Label(self.cont, text = 'Predict cluster classes', 
-                                     **titleLabelProperties)
-                                     
-		labelInfo = tk.Label(self.cont, text = 'Select available cluster analysis for prediction.'+
-											   '\nThe result will be an additional column in the \ndata treeview per selected predictor indicating class labels.',
-											   justify=tk.LEFT, bg=MAC_GREY)
-											   
-		labelWarning = tk.Label(self.cont, text = 'Warning: Only the column order not the name is considered.\nThe columns need to be in the same order as they were at construction.',**titleLabelProperties)
-                                     
-                                     
-		self.create_widgets_for_clustClasses() 
-		
-		applyButton = ttk.Button(self.cont, text = 'Predict', command = self.perform_prediction)
-		closeButton = ttk.Button(self.cont, text = 'Close', command = self.close)
-		labelTitle.grid(row=0,padx=5,sticky=tk.W,pady=5, columnspan=3)
-		labelInfo.grid(row=1,padx=5,sticky=tk.W,pady=5, columnspan=4)
-		labelWarning.grid(row=2,padx=5,sticky=tk.W,pady=5, columnspan=4)
-		ttk.Separator(self.cont, orient = tk.HORIZONTAL).grid(row=3,columnspan=4,sticky=tk.EW, padx=1,pady=3)
-		
-		ttk.Separator(self.cont, orient = tk.HORIZONTAL).grid(row=6,columnspan=4,sticky=tk.EW, padx=1,pady=3)
-		applyButton.grid(row=7,column=0,padx=3,pady=5)
-		closeButton.grid(row=7,column=3,padx=3,pady=5, sticky=tk.E)
-        
-
-	def create_widgets_for_clustClasses(self):
-		'''
-		'''
-		self.clust_cbs_var = dict() 
-		for clustClass in self.availableClusterClasses:
-		
-			varCb = tk.BooleanVar(value = False) 
-			textInfo = self.clusterCollection.clusterClasses[clustClass].get_params()
-			infoDict = self.clusterCollection.clusterProperties[clustClass]
-			columnsInClustClass = infoDict['numericColumns']
-			
-			cb = ttk.Checkbutton(self.contClust, text = clustClass, variable = varCb) 
-			self.clust_cbs_var[clustClass] = varCb			
-			
-			if len(columnsInClustClass) != len(self.numericColumns):
-				cb.configure(state=tk.DISABLED) 
-				title_ = ' == Number of selected columns/features does NOT match the\nnumber of columns/features used in cluster class creation! == '
-			else:		
-				title_ =  'Cluster settings\nColumns: {}\n\nSilhouette-Score: {}\nCalinski-Score: {}'.format(get_elements_from_list_as_string(columnsInClustClass), 
-																		round(infoDict['silhouette-score'],3), round(infoDict['calinski-score'],2))
-			CreateToolTip(cb, text = str(textInfo).replace("'",''), title_ = title_)
-			cb.grid(sticky=tk.W, column=0,padx=3,pady=3)	
-    	
-	def perform_prediction(self):
-		'''
-		'''
-		dataToPredict = self.dfClass.df[self.numericColumns].dropna()
-		predictLabelsColumns = []
-		for key, variable in self.clust_cbs_var.items():
-			if variable.get():
-				infoDict = self.clusterCollection.clusterProperties[key]
-				
-				clustLabels = self.clusterCollection.clusterClasses[key].fit_predict(dataToPredict.as_matrix())
-				columnName = 'Predict {}'.format(key)
-				columnName = self.dfClass.evaluate_column_name(columnName)
-				dataToPredict.loc[:,columnName] = clustLabels
-				predictLabelsColumns.append(columnName)
-		
-		
-		self.dfClass.join_df_to_currently_selected_df(dataToPredict[predictLabelsColumns])
-		self.dataTreeview.add_list_of_columns_to_treeview(self.dfClass.currentDataFile, 
-														 'object', predictLabelsColumns)		
-		
-		
-		
-		tk.messagebox.showinfo('Done ..','Cluster prediction done. Prediction was added to the data treeview.')
-		del dataToPredict
-    		
-
-    	                                 		
-	def center_popup(self,size):
-
-         	w_screen = self.toplevel.winfo_screenwidth()
-         	h_screen = self.toplevel.winfo_screenheight()
-         	x = w_screen/2 - size[0]/2
-         	y = h_screen/2 - size[1]/2
-         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))     		
-		
-	
-	
-	
-	
 	
 	
 	

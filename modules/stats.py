@@ -11,7 +11,7 @@ from scipy.stats import ttest_rel
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD
-
+from sklearn.manifold import TSNE
 from collections import OrderedDict
 
 from modules.calculations.anova import Anova
@@ -21,7 +21,8 @@ from modules.utils import *
 dimensionalReductionMethods = OrderedDict([('Principal Component Analysis',PCA),
 								('Non-Negative Matrix Factorization',NMF),
 								('Incremental PCA',IncrementalPCA),
-								('Latent Semantic Analysis',TruncatedSVD)])
+								('Latent Semantic Analysis',TruncatedSVD)
+								])
 
 
 class dimensionReductionCollection(object):
@@ -34,6 +35,7 @@ class dimensionReductionCollection(object):
 	'''
 	def __init__(self):
 		self.id = 1
+		self.set_max_comps()
 		self.dimRedResults = OrderedDict()
 		
 	def save_calculation(self,resultDict,numericColumns,method, dfID):
@@ -58,7 +60,11 @@ class dimensionReductionCollection(object):
 		'''
 		'''
 		return self.dimRedResults[id]
-
+	
+	def set_max_comps(self,comps = 3):
+		'''
+		'''
+		self.nComponents = comps
 	
 	def get_drivers_and_components(self, id = None, which = 'Both'):
 		'''
@@ -91,7 +97,7 @@ class dimensionReductionCollection(object):
 		self.dimRedResults[self.id] = base
 		
 		
-def get_dimensionalReduction_results(dataFrame, method = 'PCA'):
+def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
 	'''
 	dataFrame might be either a pandas dataframe or directly a ndarray.
 	'''
@@ -99,13 +105,15 @@ def get_dimensionalReduction_results(dataFrame, method = 'PCA'):
 	
 	if isinstance(dataFrame, pd.DataFrame):
 		columnsNames = dataFrame.columns.values.tolist()
-		nComps = len(columnsNames)
+		if nComps is None:
+			nComps = len(columnsNames)
 		dataFrame.dropna(inplace=True) 
 		
 		data = dataFrame.as_matrix()
 	if method == 'Latent Semantic Analysis':
-		nComps -= 1
-	#to do : check if nComps is extremely high? 
+		if nComps is None:
+			nComps -= 1
+			
 	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps)
 	dimReductionClass.fit(data)
 	
@@ -412,7 +420,6 @@ class interactiveStatistics(object):
 		numbNumericColumns = len(self.numericColumns)
 		testGroups = []
 		idxKeys = ['indexClick1','indexClick2']
-		
 		if self.numbCategoricalColumns == 0:
 		
 			for n,idxKey in enumerate(idxKeys):
@@ -422,7 +429,28 @@ class interactiveStatistics(object):
 				columnData = self.numericColumns[idx]
 				self.saveClickCoords['group{}'.format(n+1)] = [columnData]
 				testGroups.append(self.dfClass.df[columnData].values)
-		
+				 		
+		elif self.plotter.splitCategories == False:
+			
+			positionsInPlot = np.linspace(0,self.numbCategoricalColumns,num=self.numbCategoricalColumns+1)
+			subplotNum = self.plotter.get_number_of_axis(self.saveClickCoords['axis'])
+			numericColumn = self.numericColumns[subplotNum]
+			for n, idxKey in enumerate(idxKeys):
+				idx = int(round(self.saveClickCoords[idxKey],0))
+				# +1 because we have one category "Whole population" extra
+				if idx >= self.numbCategoricalColumns+1:
+					idx -= 1
+				elif idx < 0:
+					idx = 0
+				
+				## overwrite exact xPosition to have algined singificance lines								   			
+				self.saveClickCoords[idxKey] = idx	
+				
+				columnData, categoricalColumn = self.get_data_if_no_split(idx,numericColumn)
+				groupName = '{}({})'.format(categoricalColumn,numericColumn,positionsInPlot)
+				self.saveClickCoords['group{}'.format(n+1)] = [groupName]	
+				testGroups.append(columnData)		
+					
 		elif self.numbCategoricalColumns == 1:
 			
 			categoricalValues = self.dfClass.get_unique_values(self.categoricalColumns[0])
@@ -480,6 +508,40 @@ class interactiveStatistics(object):
 											numericalColumnForTest = numericalColumn)
 			
 		return testGroups	
+
+	def get_data_if_no_split(self,idx,numericColumn,allPossiblePositions):
+		'''
+		This works only if "+" is found in data. 
+		'''
+		if idx != 0:
+			categoricalColumn = self.categoricalColumns[idx-1]
+		else:
+			categoricalColumn = 'Whole population'
+		
+				   
+			
+		idString = '{}_{}_{}'.format(idx,numericColumn,categoricalColumn)
+		# check if dict to save data exists, if not create
+		if hasattr(self,'savedData') == False:
+			self.savedData = dict() 
+		# if subsetting was performed already, just return data
+		elif idString in self.savedData:
+			return self.savedData[idString], categoricalColumn
+		
+		if idx != 0:
+			boolIndicator = self.dfClass.df[categoricalColumn].str.contains('^\+$')
+			data = self.dfClass.df.loc[boolIndicator,numericColumn].values
+		else:
+			data = self.dfClass.df[numericColumn].values
+		#save data to avoid re subsetting if used again
+		self.savedData[idString]  = data 
+		return data, categoricalColumn
+		
+		
+		
+		
+		
+		
 
 	def identify_and_subset_groups(self,positionsInPlot, possibleCombinations, numSeparationsInPlot, groupedData, 
 									numbCategoricalColumns = 1, numericalColumnForTest = None):
@@ -610,7 +672,7 @@ def compare_two_groups(testSettings,groupList):
 		paired = testSettings['paired']#self.selectedTest['paired']
 		test = testSettings['test']#self.selectedTest['test']
 		mode = testSettings['mode']# self.selectedTest['mode']	
-		print(paired,test,mode)
+		#print(paired,test,mode)
 		if test in ['t-test','Welch-test']:
 			if test == 'Welch-test':
 				equalVariance = False

@@ -63,7 +63,7 @@ class ChartConfigurationPopup(object):
 			w = 375
 		elif self.platform == 'MAC':
 			w = 420 
-		h=520
+		h=480
 		self.toplevel = popup
 		self.center_popup((w,h))
 		
@@ -80,12 +80,12 @@ class ChartConfigurationPopup(object):
 		lab1 = tk.Label(cont, text = 'Change chart settings', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
 		lab1.grid(padx=5,pady=15, columnspan=6 ,sticky=tk.W)
 		
-		settings = ['x-label:','y-label:','y-axes [min]:','y-axes [max]:','x-axes [min]:','x-axes [max]:','xy-label font size:',
+		settings = ['y-axes [min]:','y-axes [max]:','x-axes [min]:','x-axes [max]:','xy-label font size:',
 					'tick font size:','legend font size:','text label font size:']
 		for i,sett in enumerate(settings): 
 			if i == 0:
 				lab_inf = tk.Label(cont, text = 'Adjust sliders\nto change chart\nsettings dynamically:', justify=tk.LEFT, bg = MAC_GREY)
-				lab_inf .grid(row=i+1,padx = 5,rowspan=2,column=2)
+				lab_inf .grid(row=0,padx = 5,rowspan=1,column=2)
 			lab_s = tk.Label(cont, text = sett, bg = MAC_GREY)
 			lab_s.grid(row=i+1, padx=5,sticky=tk.E,pady=5)
 			ent = ttk.Entry(cont, width = 400)
@@ -191,10 +191,10 @@ class ChartConfigurationPopup(object):
 			return None
 		for ax in self.fig_axes[:1]:
 			ylim, xlim = list(ax.get_ylim()), list(ax.get_xlim())
-			x_label, y_label = ax.get_xlabel() , ax.get_ylabel()
+			#x_label, y_label = ax.get_xlabel() , ax.get_ylabel()
 			x_delta, y_delta = xlim[1]-xlim[0], ylim[1]-ylim[0]
 			
-		combine = [x_label,y_label] + ylim + xlim + self.global_chart_parameter + [x_delta,y_delta]
+		combine = ylim + xlim + self.global_chart_parameter + [x_delta,y_delta]
 		return combine
 		
 	def adjust_font_sizes(self,value,sort,ent,axes):

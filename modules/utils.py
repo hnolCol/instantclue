@@ -86,8 +86,9 @@ styleDict = {'tearoff':0,'background' : col_menu,'foreground':"black"}
 
 linkage_methods = ['single','complete','average','weighted','centroid','median','ward']
              
-pdist_metric = ['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation', 'cosine', 'dice', 'euclidean', 'hamming', 'jaccard', 'kulsinski', 'matching', 'minkowski',
-                'rogerstanimoto', 'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean']
+pdist_metric = ['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation', 'cosine', 
+				'dice', 'euclidean', 'hamming', 'kulsinski', 'matching', 'minkowski',
+                 'russellrao', 'seuclidean', 'sokalsneath', 'sqeuclidean']
 
   
    
@@ -178,6 +179,13 @@ def make_label_button_like(label):
 	label.bind('<Enter>', on_enter)	
 	label.bind('<Leave>', on_leave)		
 
+
+def clear_frame(frame):
+	'''
+	'''
+	for widget in frame.winfo_children():
+		widget.destroy()
+		
 
 
 def validate_float(self, action, index, value_if_allowed,
@@ -342,7 +350,7 @@ def str_join(df, sep, *cols):
 
 
 		
-def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot', 
+def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot', error = 0.95,
 							order = None,dodge=False, hue_order = None, inmutableCollections = [],
 							addSwarmSettings = {'label':None,'sizes':[20],'facecolor':'white',
 							'edgecolor':'black','linewidth':0.4,'alpha':1}):
@@ -366,11 +374,11 @@ def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot',
          elif plot_type == 'barplot':
                          sns.barplot(x= x, y=y, hue = hue, data=data, order = order, 
                          palette = cmap,errwidth=0.5, capsize=0.09, edgecolor=".25", ax = ax,
-                         hue_order = hue_order,n_boot = 500)
+                         hue_order = hue_order,n_boot = 500, ci = error)
          elif plot_type == 'pointplot':
                          sns.pointplot(x= x, y=y, hue = hue, data=data, order = order, capsize=0.05, 
                                      	errwidth=0.4, scale=0.55,palette=cmap,dodge=dodge,ax=ax,
-                                     	hue_order = hue_order,n_boot = 500)
+                                     	hue_order = hue_order,n_boot = 500, ci = error)
          elif plot_type == 'violinplot':
                          sns.violinplot(x= x, y=y, hue = hue, data=data, palette = cmap ,order=order, 
                          linewidth=0.65, ax = ax, hue_order = hue_order)

@@ -111,6 +111,7 @@ class scatterWithCategories(object):
 				else:			
 					x_ = group[self.numericalColumns[0]]
 					y_ = group[self.numericalColumns[1]]
+				
 
 			else:
 				### '''This is to plot nothing if category is not in data'''
@@ -130,7 +131,8 @@ class scatterWithCategories(object):
 				
 			scat = self.plotter.add_scatter_collection(ax_,x_,y_, color = self.color, 
 								size=self.size, alpha=self.alpha,picker=True)
-	
+			self.annotate_axes(ax_)
+														
 			#ax_.plot(x_,y_,'o',color = self.color,ms = np.sqrt(self.size),
 					#markeredgecolor ='black',markeredgewidth =0.3)#,linestyle=None)					
 			if ax_.is_last_row() == False and self.numbCaetgoricalColumns < 3 and self.numbNumericalColumns > 1:
@@ -155,6 +157,26 @@ class scatterWithCategories(object):
 			self.axes[i] = ax_
 			self.axes_combs[comb] = [ax_,scat]
 		self.add_labels_to_figure()	
+
+	def annotate_axes(self,ax_):
+		'''
+		'''
+		if ax_.is_first_col():
+			if self.numbNumericalColumns == 2:
+					text_ = self.numericalColumns[1]
+			else:
+					text_ = self.numericalColumns[0]
+			self.plotter.add_annotationLabel_to_plot(ax_,
+													text=text_,
+													rotation = 90)
+		if ax_.is_last_col():		
+			if self.numbNumericalColumns == 2:
+					text_ = self.numericalColumns[0]
+			else:
+					text_ = 'Index' 
+			self.plotter.add_annotationLabel_to_plot(ax_,
+														text=text_,
+														position = 'bottomright')
 
 	def save_color_and_size_changes(self,funcName,column):
 		'''
@@ -274,7 +296,7 @@ class scatterWithCategories(object):
 			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)		
 			self.data.sort_values('layer', ascending = True, inplace=True)	
 		self.group_data()				
-								
+						
 		for comb in self.all_combinations:
 			if comb in self.grouped_keys:
 				subset = self.grouped_data.get_group(comb)
@@ -282,7 +304,6 @@ class scatterWithCategories(object):
 				if updateColor:
 					axCollection = ax.collections
 					axCollection[0].set_facecolor(subset['color'].values)
-					
 				else:
 					# get the previous size
 					size = ax.collections[0].get_sizes()
@@ -295,12 +316,11 @@ class scatterWithCategories(object):
 					if self.numbNumericalColumns == 1:
 						n_data_group = len(subset.index)
 						x_ = range(0,n_data_group) 
-						y_ = subset[self.numericalColumns[0]]	
+						y_ = subset[self.numericalColumns[0]]								
 					else:			
 						x_ = subset[self.numericalColumns[0]]
 						y_ = subset[self.numericalColumns[1]]				
-				
-				
+														
 					self.plotter.add_scatter_collection(ax,x=x_,
 											y = y_, size=size,
 											color = subset['color'].values, picker = True)		
@@ -318,9 +338,7 @@ class scatterWithCategories(object):
 			self.colorMap = newColorMap
 		for functionName,column in self.sizeStatsAndColorChanges.items(): 
 			getattr(self,functionName)(column)  
-		
-		
-		
+				
 	def change_nan_color(self,newColor):
 		'''
 		'''
@@ -358,6 +376,7 @@ class scatterWithCategories(object):
 		
 		if self.numbCaetgoricalColumns == 1:
 			bottomSpace = 0.5
+			
 		else:
 			bottomSpace = 0.14
 		

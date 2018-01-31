@@ -19,8 +19,7 @@ from modules import color_changer
 from modules import stats
 from modules import save_and_load_sessions
 from modules import interactive_widget_helper
-
-
+# internal dialog window imports
 from modules.dialogs import chart_configuration
 from modules.dialogs import size_configuration
 from modules.dialogs import display_data
@@ -45,6 +44,8 @@ from modules.dialogs import VerticalScrolledFrame
 from modules.dialogs import custom_filter
 from modules.dialogs import color_configuration
 from modules.dialogs import correlations
+from modules.dialogs import settings
+
 
 from modules.dialogs.simple_dialog import simpleUserInputDialog
 from modules.utils import *
@@ -71,18 +72,14 @@ import gc
 #matplotlib imports 
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import cm
 from matplotlib.widgets import Lasso
 from matplotlib import colors
 from matplotlib import path
-from matplotlib.colors import LogNorm
 from matplotlib.ticker import MultipleLocator
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import matplotlib.ticker as mtick
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
 
 ## Import Seaborn and set the default settings
 import seaborn as sns
@@ -105,7 +102,6 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.formula.api import ols
-from statsmodels.stats.anova import anova_lm
 from statsmodels.stats.libqsturng import psturng
 
 
@@ -128,9 +124,6 @@ class analyze_data(tk.Frame):
            self.build_menus()
            self.build_label_frames()
            self.grid_widgets(controller)
-           
-           
-           self.bind("<<ShowFrame>>",lambda event: self.update_main_menu(parent,controller))
            
            ## sourceData holds all data frames , self.plt is the plotter class,
            ## anovaTestCollection saves all anova tests made
@@ -357,7 +350,7 @@ class analyze_data(tk.Frame):
            menuDict['column'].add_command(label='Count through', command = self.create_count_through_column)
            menuDict['column'].add_cascade(label='Drop rows with NaN ..', menu = menuDict['nanReplace'])
            for opt in nanDroppingOptions:
-           	menuDict['nanReplace'].add_command(label=opt, command = lambda : self.remove_rows_with_nan(opt))
+           	menuDict['nanReplace'].add_command(label=opt, command = lambda how = opt: self.remove_rows_with_nan(how))
            
            
            
@@ -924,7 +917,6 @@ class analyze_data(tk.Frame):
      		self.DataTreeview.add_list_of_columns_to_treeview(id = self.sourceData.currentDataFile,
         													dataType = 'object',
         													columnList = [columnName])
-            
      	if mode is not None:
         	tk.messagebox.showinfo('Done..',
         		'Custom filter was applied successfully. Well done.',
@@ -932,8 +924,6 @@ class analyze_data(tk.Frame):
           	
 
      def perform_export(self, axExport,axisId,figureTemplate, exportId = None):
-     		### to do - log transofrm of axes .. 
-     		## 
          '''
          Performs the export.
          Parameter
@@ -1179,7 +1169,10 @@ class analyze_data(tk.Frame):
      		idData = plotterInUse._hclustPlotter.dataID
      		self.sourceData.set_current_data_by_id(idData) 
      		columnName = plotterInUse._hclustPlotter.export_cluster_number_to_source()
-		
+     		if columnName is None:
+     			tk.messagebox.showinfo('Error ..','No row clustering was performed ..',parent=self)
+     			return
+				
      		self.DataTreeview.add_list_of_columns_to_treeview(idData,
      													dataType = 'object',
      													columnList = [columnName])
@@ -1386,7 +1379,6 @@ class analyze_data(tk.Frame):
      		if selectionIsFromSameData:
      			
      			dataId = self.plt.get_dataID_used_for_last_chart()
-     			print(dataId, selectionDataFrameId) 
      			if dataId != selectionDataFrameId:
      				tk.messagebox.showinfo('Error..','Error data must be from the same data used for plotting')
      				return
@@ -1654,7 +1646,7 @@ class analyze_data(tk.Frame):
      					axisId =axisId)
      				except:
      					tk.messagebox.showinfo('Error..',
-     						'Could not load image. Moved to another place?',
+     						'Could not load image. Moved file to another place?',
      						parent = self)
      				
      				if transferAxisId  is not None:
@@ -1797,7 +1789,6 @@ class analyze_data(tk.Frame):
      		testSettings = {'paired':self.paired,
      						'test':self.test,
      						'mode':self.mode}
-     		print(testSettings)	
      		for n,combination in enumerate(itertools.combinations(self.groupedStatsKeys,2)):
      			valuesGroup1 = self.groupedStatsData.get_group(combination[0])
      			valuesGroup2 = self.groupedStatsData.get_group(combination[1])
@@ -2084,11 +2075,11 @@ class analyze_data(tk.Frame):
      	if selectionIsFromSameData:
      		
      		self.sourceData.set_current_data_by_id(selectionDataFrameId) 
-     		thres = None
+     		thresh = None
      		if 'all' in how:
      			how = 'all'
      		elif 'any' in how:
-     			how = any
+     			how = 'any'
      		else:
      			thresh = ts.askinteger('Threshold ..',prompt = 'Please provide threshold for dropping rows with nan.\n'+
      									' A threshold of two means that at least 2 non-nan\nvalues are required '+
@@ -2882,10 +2873,24 @@ class analyze_data(tk.Frame):
                      #							self.classificationCollection, 
                      #							numericColumns = list(self.selectedNumericalColumns.keys()),
                      #							initialMethod = self.test)
-                     								                       	
+                     		
+                     	tk.messagebox.showinfo('Note ..','This activity is still under construction '+
+                     					'and should so far only be used to learn, not for real data analysis.',
+                     					parent = self)
+                     	if len(self.selectedNumericalColumns) < 2:
+                     		tk.messagebox.showinfo('Error ..',
+                     			'Need more features (numerical Columns) in receiver box.',
+                     			parent=self)
+                     		return					                       	
+                     	if len(self.selectedCategories) == 0:
+                     		tk.messagebox.showinfo('Error ..',
+                     			'Need at  least one categorical column. (Target variable, class)',
+                     			parent=self)	
+                     		return				                       	
+                                          	
                      	features = list(self.selectedNumericalColumns.keys())
                      	targetColumn = list(self.selectedCategories.keys())
-                     	
+                     	                     	
                      	classification.gridSearchClassifierOptimization(self.classificationCollection, self.sourceData,
                      											features,targetColumn,plotter=self.plt)
                       
@@ -3112,17 +3117,22 @@ class analyze_data(tk.Frame):
          '''
          Performs dimensional reduction on data.
          '''
-
+         self.plt.set_data_frame_of_last_chart()
          numericColumns = list(self.selectedNumericalColumns.keys())
+         numbNumericColumns = len(numericColumns)
          	
          if len(numericColumns) == 0:
              tk.messagebox.showninfo('Error..','Please add columns to the numeric data receiver box.')
              return 
          
+         nComps = self.dimensionReductionCollection.nComponents
+         if nComps > numbNumericColumns:
+         	nComps = numbNumericColumns
          	
          dimRedResult = stats.get_dimensionalReduction_results(self.sourceData.df[numericColumns],
-         													method = self.test)
-         # save PCA results (a pca can also be used to fit other unseen data)
+         													method = self.test,
+         													nComps = nComps)
+         # save dim red. results (a pca can also be used to fit other unseen data)
          self.dimensionReductionCollection.save_calculation(dimRedResult,
          													numericColumns,
          													self.test,
@@ -3236,7 +3246,6 @@ class analyze_data(tk.Frame):
 		==========
 		None - But new data frames are entered automatically from within the dialog
      	'''
-     	print(mode)
      	self.annot_label_scatter = False
      	if mode == 'Annotate scatter points' and len(self.DataTreeview.columnsSelected) == 0:
      		filterColumn  = None
@@ -3941,7 +3950,7 @@ class analyze_data(tk.Frame):
         box around subplots or grid lines
         '''
         plot_type = self.plt.currentPlotType
-        if plot_type in ['PCA','corrmatrix','hclust']:
+        if plot_type in ['PCA','corrmatrix','hclust','cluster_analysis']:
             tk.messagebox.showinfo('Not supported..','Configuration of this plot type is currently not supported.')
             return
 
@@ -4895,9 +4904,9 @@ class analyze_data(tk.Frame):
            
            self.settingButton = create_button(self.general_settings_sideframe,
            		image = self.setting_icon,
-           		command = lambda: tk.messagebox.showinfo('Under construction ..',
-           			'Under construction. Will allow to change settings on how charts are generated. (Error bar configuration etc)',
-           			parent=self))
+           		command = lambda: settings.settingsDialog(self.plt, self.colorHelper,self.dimensionReductionCollection)) #tk.messagebox.showinfo('Under construction ..',
+           			#'Under construction. Will allow to change settings on how charts are generated. (Error bar configuration etc)',
+           			#parent=self))
            			
            self.settingButton.grid(padx=2,pady=2)                      
            style_tree = ttk.Style(self)

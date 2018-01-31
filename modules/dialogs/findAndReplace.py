@@ -275,7 +275,6 @@ class findAndReplaceDialog(object):
 			else:
 				boolIndicator = dataToSearch[self.columnForReplace].str.contains(regExp,case = True)
 			subsetData = dataToSearch[boolIndicator]
-			
 			self.saveLastString = searchString
 
 		else:

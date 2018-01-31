@@ -68,6 +68,7 @@ class categoricalFilter(object):
 		self.caseSensitive = tk.BooleanVar(value=True)
 		self.annotateSearchString = tk.BooleanVar(value=False)
 		self.onlyFirstFind = tk.BooleanVar(value=False)
+		self.userRedExpression = tk.BooleanVar(value=False)
 		self.annotationColumn = tk.StringVar()
 		self.protectEntry = 1
 		self.operationType = operationType
@@ -87,7 +88,6 @@ class categoricalFilter(object):
 		self.dataTreeview = dataTreeview
 		self.plt = plotterClass
 		self.columnForFilter = columnForFilter
-		print(self.columnForFilter)
 		
 		self.replaceDict = {True : "+",
                         False: self.dfClass.replaceObjectNan}
@@ -141,7 +141,6 @@ class categoricalFilter(object):
  		self.create_preview_container() 
  		
  		self.doneIcon, self.refreshIcon = images.get_done_refresh_icons()
- 
  		
  		labelTitle = tk.Label(self.cont_widgets, text= operationTitle[self.operationType], 
                                      **titleLabelProperties)
@@ -151,13 +150,14 @@ class categoricalFilter(object):
  		
  		if self.operationType == 'Search string & annotate':
  			entrySearch.bind('<Control-v>', self.copy_from_clipboard)
- 			entrySearch.bind('<Command-v>', self.copy_from_clipboard)
- 		
- 		entrySearch.bind('<Command-z>', self.undo) 	
+ 			if platform == 'MAC':
+ 				entrySearch.bind('<Command-v>', self.copy_from_clipboard)
+ 		if platform == 'MAC':
+ 			entrySearch.bind('<Command-z>', self.undo) 	
+ 			
  		entrySearch.bind('<Control-z>', self.undo) 			
  		entrySearch.bind('<Return>',lambda event: \
  		self.update_data_upon_search(event, forceUpdate = True))
- 		
  		self.searchString.trace(mode="w", callback=self.update_data_upon_search)
  		
  		if self.operationType in ['Find category & annotate','Subset data on unique category']:
@@ -180,14 +180,20 @@ class categoricalFilter(object):
  			labelInfo = tk.Label(self.cont_widgets,text= 'For multiple search strings type: "String1","String2" ..', 
  								 bg=MAC_GREY, justify=tk.LEFT)
  		
- 			annotateStringCb = ttk.Checkbutton(self.cont_widgets, variable = self.annotateSearchString, text = 'Annotate matches by search string(s)')
- 			onlyFirstFind = ttk.Checkbutton(self.cont_widgets, variable = self.onlyFirstFind , text = 'Annotate combinations (String1,String2)')
- 			caseSensitive = ttk.Checkbutton(self.cont_widgets, variable = self.caseSensitive, text = 'Case sensitive')
- 			
+ 			annotateStringCb = ttk.Checkbutton(self.cont_widgets, 
+ 				variable = self.annotateSearchString, text = 'Annotate matches by search string(s)')
+ 			onlyFirstFind = ttk.Checkbutton(self.cont_widgets, 
+ 				variable = self.onlyFirstFind , text = 'Annotate combinations (String1,String2)',
+ 				command = self.check_cbs)
+ 			caseSensitive = ttk.Checkbutton(self.cont_widgets, 
+ 				variable = self.caseSensitive, text = 'Case sensitive')
+ 				
+ 			useRegRexpress = ttk.Checkbutton(self.cont_widgets, variable = self.userRedExpression, text = 'Input is a regular expression')
  			labelInfo.grid(row=1,column=0,columnspan=3,padx=3,sticky = tk.W,pady=4)
  			annotateStringCb.grid(row=2,column=0,columnspan=2,padx=3,sticky=tk.W) 
  			onlyFirstFind.grid(row=3,column=0,columnspan=2,padx=3,sticky=tk.W) 
- 			caseSensitive.grid(row=3,column=1,columnspan=2,padx=3,sticky=tk.E)
+ 			useRegRexpress.grid(row=3,column=1,columnspan=2,padx=3,sticky=tk.E)
+ 			caseSensitive.grid(row=2,column=1,columnspan=2,padx=3,sticky=tk.E)
  		
  		elif self.operationType in ['Annotate scatter points','Find entry in hierarch. cluster']:
  			
@@ -207,9 +213,9 @@ class categoricalFilter(object):
  		applyButton = tk.Button(self.cont_widgets, image=self.doneIcon, command = self.commandDict[self.operationType])
 
  		labelTitle.grid(row=0,column=0,padx=4, pady = 15, columnspan = 3, sticky=tk.W)
- 		labelSearch.grid(row=4,padx = 5, pady = 5, sticky=tk.W)
- 		entrySearch.grid(column = 1, row = 4, sticky=tk.EW, padx=2)
- 		applyButton.grid(row=4,column=2,sticky=tk.E,padx=2)
+ 		labelSearch.grid(row=5,padx = 5, pady = 5, sticky=tk.W)
+ 		entrySearch.grid(column = 1, row = 5, sticky=tk.EW, padx=2)
+ 		applyButton.grid(row=5,column=2,sticky=tk.E,padx=2)
  		
 	def prepare_data(self):
 		'''
@@ -293,14 +299,23 @@ class categoricalFilter(object):
 			dataToSearch = self.uniqueFlatSplitData
 			
 		if self.operationType == 'Search string & annotate':
-		
-			splitSearchString = [row for row in csv.reader([searchString], delimiter=',', quotechar='\"')][0]
-			regExp = self.build_regex(splitSearchString,withSeparator=False)
+			
+			
+			if self.userRedExpression.get():
+				regExp = re.escape(searchString)
+			else:
+				splitSearchString = [row for row in csv.reader([searchString], 
+											delimiter=',', quotechar='\"')][0]
+				regExp = self.build_regex(splitSearchString,withSeparator=False)
+				
 			collectDf = pd.DataFrame()
 			for n,column in enumerate(self.columnForFilter):
-				
-				collectDf.loc[:,str(n)] = dataToSearch[column].str.contains(regExp,case = self.caseSensitive.get())
-			
+				try:
+					collectDf.loc[:,str(n)] = \
+					dataToSearch[column].str.contains(regExp,
+													  case = self.caseSensitive.get())
+				except:
+					return
 			boolIndicator = collectDf.sum(axis=1) >= 1			
 			subsetData = dataToSearch[boolIndicator]
 		
@@ -308,13 +323,27 @@ class categoricalFilter(object):
 		
 		else: 	
 			boolIndicator = dataToSearch[self.columnForFilter].str.contains(searchString).values
-		
 			subsetData = dataToSearch[boolIndicator]
 		
 		self.pt.model.df = subsetData
 		self.pt.redraw()
 		
 		self.saveLastString = searchString 
+	
+	def check_cbs(self):
+		'''
+		Controls checkbuttons status
+		'''
+		if self.userRedExpression.get():
+			self.annotateSearchString.set(False)
+			self.onlyFirstFind.set(False)
+					
+		if self.onlyFirstFind.get():
+			self.annotateSearchString.set(True)
+			
+		
+		
+		
 		
 	def refresh_separator(self):
 		'''
@@ -460,9 +489,14 @@ class categoricalFilter(object):
 		====
 		'''
 		searchStrings = self.searchString.get() 
-		splitSearchString = [row for row in csv.reader([searchStrings], delimiter=',', quotechar='\"')][0]
-		
-		regExp = self.build_regex(splitSearchString,withSeparator=False)
+		collectResults = pd.DataFrame()	
+		if self.userRedExpression.get():
+			regExp = searchStrings
+		else:
+			splitSearchString = [row for row in csv.reader([searchStrings], 
+											delimiter=',', quotechar='\"')][0]
+								
+			regExp = self.build_regex(splitSearchString,withSeparator=False)
 		if self.annotateSearchString.get():
 		
 			if self.caseSensitive.get():
@@ -471,7 +505,6 @@ class categoricalFilter(object):
 				flag = re.IGNORECASE 
 				
 			if len(splitSearchString) > 1:
-				collectResults = pd.DataFrame()	
 				if self.onlyFirstFind.get(): 
 					for column in self.columnForFilter:
 						groupIndicator  = self.uniqueFlatSplitData[column].str.findall(regExp, flags = flag).astype(str)
@@ -486,24 +519,29 @@ class categoricalFilter(object):
 						collectResults[column] = annotationColumn
 				
 				if len(self.columnForFilter) == 1:
-					# simply take annotation column
-					pass
+					# simply take replaced annotation column
+					annotationColumn = \
+					annotationColumn.replace('',self.dfClass.replaceObjectNan).fillna(self.dfClass.replaceObjectNan)
 				else:
-				
 					collectResults['annotationColumn'] = \
 					collectResults.apply(lambda x: self.combine_string(x), axis=1)
-					
 					annotationColumn = collectResults['annotationColumn']
 									
 			else: 
 				replaceDict = self.replaceDict
 				replaceDict[True] = splitSearchString[0]
-				boolIndicator = self.uniqueFlatSplitData[self.columnForFilter].str.contains(regExp,case = self.caseSensitive.get())
+				for column in self.columnForFilter:
+					columnBoolIndicator = self.uniqueFlatSplitData[column].str.contains(regExp,case = self.caseSensitive.get())
+					collectResults[column] = columnBoolIndicator
+				boolIndicator = collectResults.sum(axis=1) >= 1
 				annotationColumn = boolIndicator.map(replaceDict)
 				
 		else:
-		
-			boolIndicator = pd.Series(self.uniqueFlatSplitData.index.isin(self.pt.model.df.index.values))
+			## simply label rows that match by "+"
+			for column in self.columnForFilter:
+					columnBoolIndicator = self.uniqueFlatSplitData[column].str.contains(regExp,case = self.caseSensitive.get())
+					collectResults[column] = columnBoolIndicator
+			boolIndicator = collectResults.sum(axis=1) >= 1
 			annotationColumn = boolIndicator.map(self.replaceDict)
 		
 		textString = get_elements_from_list_as_string(splitSearchString, maxStringLength = 15)
@@ -515,13 +553,13 @@ class categoricalFilter(object):
 		
 	def combine_string(self,row):
 		'''
-		Might not be the nicest solution and defo the lowest. (To do..)
+		Might not be the nicest solution and defo the slowest. (To do..)
 		But it returns the correct string right away without further
 		processing/replacement.
 		'''
 		nanString = ''
 		base = ''
-		if all(s == '' for s in row):
+		if all(s == nanString for s in row):
 			return self.dfClass.replaceObjectNan
 		else:
 			n = 0

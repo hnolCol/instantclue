@@ -1,11 +1,15 @@
 import numpy as np
 import pandas as pd 
-from itertools import chain 
 
 import os
 
 import tkinter as tk
 from tkinter import ttk
+
+from itertools import chain 
+
+import re
+
 from modules import images
 from modules.pandastable import core
 from modules.utils import *
@@ -295,35 +299,39 @@ class customFilterDialog(object):
 			return False
 		
 	def filter_and_close(self, mode = ''):
+		'''
+		Identifies categorical values that the user wish to keep. Identified by the icon type.
+		Then it builds for each tree view a regular expression to find the rows that match.
+		Parameter 
+		==========
+		Input  - mode Filter, Annotate, Subset .. 
+		
+		'''
 		self.mode = mode
 		data_ = self.data
 		operator = self.operator_var.get()
 		collect_subframes = pd.DataFrame()
 		for column,tree_ in self.trees.items():
 			tree = tree_[0]
-			
+			separator = tree_[1].get()			
 			remove_ = [tree.item(item)['text'] for item in tree.get_children() if tree.item(item)['image'][0] == str(self.trash_icon)]
 			keep_ = [tree.item(item)['text'] for item in tree.get_children() if tree.item(item)['image'][0] == str(self.keep_icon)]
+			regEx = self.build_regex(keep_, separator)
 			if len(keep_) == 0 and operator == 'AND':
 				tk.messagebox.showinfo('Error..','Your filter selection leads to an empty data frame. Aborting...', parent=self.toplevel)
 				return	
 			if operator == 'AND':
-					try:		
-						data_ = data_[data_[column].astype(str).str.contains('|'.join(keep_))]
-					except:
-						data_ = data_[data_[column].astype(str).apply(lambda row: self.custom_search(row,keep_))]
+					data_ = data_[data_[column].astype(str).str.contains(regEx)]
 			else:
-			
 				if self.annotate_category.get():
 					collect_subframes[column] = self.data[column].astype(str).apply(lambda row: self.custom_search_annotate(row,keep_))
 				else:
-					try:
-						collect_subframes[column] = self.data[column].astype(str).str.contains('|'.join(keep_))
-					except:
-						collect_subframes[column] = self.data[column].astype(str).apply(lambda row: self.custom_search(row,keep_))
-					
+					collect_subframes[column] = self.data[column].astype(str).str.contains(regEx)
+				
 			if data_.empty and operator == 'AND':
-				tk.messagebox.showinfo('Error..','Your filter selection leads to an empty data frame. Aborting...', parent=self.toplevel)
+				tk.messagebox.showinfo('Error..',
+					'Your filter selection leads to an empty data frame. Aborting...', 
+					parent=self.toplevel)
 				return
 		
 		if operator == 'OR' and self.annotate_category.get() == False:
@@ -345,27 +353,51 @@ class customFilterDialog(object):
 					if col == self.selectedColumns[0]:
 						pass
 					else:
-						collect_cols.append(list(collect_subframes[col]))
+						collect_cols.append(collect_subframes[col].values.tolist())
 				
 				data_.loc[:,'comb_'] = collect_subframes[self.selectedColumns[0]].str.cat(collect_cols,sep=';',na_rep ='-')				
 			
 				
 		if len(data_.index) == len(self.data.index) and self.mode != 'annotate' and self.annotate_category.get() == False:
 			tk.messagebox.showinfo('Error..','You have not selected a single category to be removed.', parent=self.toplevel)
-			return
-	
-		
+			return		
 		self.output_data_frame = data_	
 		self.close_toplevel()
-
+	         
+	
+	def build_regex(self,categoriesList,splitString, withSeparator = True):
+		'''
+		Build regular expression that will search for the selected category. Importantly it will prevent 
+		cross findings with equal substring
+		=====
+		Input:
+			List of categories that were selected by the user
+			Split String - String by which row-content is split to achieve unique categories.
+		====
+		'''
+		regExp = r''
+		
+		for category in categoriesList:
+			category = re.escape(category) #escapes all special characters
+			if withSeparator:
+				regExp = regExp + r'({}{})|(^{}$)|({}{}$)|'.format(category,splitString,category,splitString,category)
+			else:
+				regExp = regExp + r'({})|'.format(category)
+		regExp = regExp[:-1] #strip of last |
+		return regExp
+		
+		
 	def get_images(self):
 		'''
 		'''
 		self.dustbin_icon,self.car_icon,self.keep_icon,self.trash_icon = images.get_custom_filter_images()
 		
-			
+		
+		
+		
 	def get_data(self):
 		return self.output_data_frame, self.mode, self.annotate_category.get()
+
 				 
 	def close_toplevel(self):
 		self.toplevel.destroy()

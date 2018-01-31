@@ -44,10 +44,13 @@ class hierarchichalClustermapPlotter(object):
 		## updaten
 		self.plotter = Plotter
 		cmapClusterMap, self.cmapRowDendrogram, \
-		self.cmapColorColumn, self.metric, self.method = self.plotter.get_hClust_settings()
+		self.cmapColorColumn, self.metricRow, self.metricColumn, \
+		self.methodRow, self.methodColumn = self.plotter.get_hClust_settings()
 		
 		self.cmapClusterMap = get_max_colors_from_pallete(cmapClusterMap) ## to avoid same color over and over again
-
+		
+		self.Z_row = None
+		self.Z_col = None
 		
 		self.rectanglesForRowDendro = []
 		
@@ -193,27 +196,38 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.progressClass.update_progressbar_and_label(5,'Data collected ...')
 		
-		self.rowLinkage, self.rowMaxD = self.cluster_data(dataRowCluster)
-		self.Z_row = sch.dendrogram(self.rowLinkage, orientation='left', color_threshold= self.rowMaxD, 
+		if self.metricRow != 'None':
+		
+			self.rowLinkage, self.rowMaxD = self.cluster_data(dataRowCluster, 
+														  self.metricRow, self.methodRow)
+			self.Z_row = sch.dendrogram(self.rowLinkage, orientation='left', color_threshold= self.rowMaxD, 
 								leaf_rotation=90, ax = self.axRowDendro, no_plot=True)
 								
-		self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
+			self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
 		
-		self.add_dendrogram(self.Z_row,True,self.axRowDendro)
+			self.add_dendrogram(self.Z_row,True,self.axRowDendro)
 		
-		self.progressClass.update_progressbar_and_label(10,'Clustering rows done ...')
+			self.progressClass.update_progressbar_and_label(10,'Clustering rows done ...')
 		
-		columnLinkage,self.colMaxD  = self.cluster_data(dataColCluster)
+		else:
+			self.axRowDendro.axis('off')
+			
+		if self.metricColumn != 'None':
+			
+			columnLinkage,self.colMaxD  = self.cluster_data(dataColCluster, 
+														self.metricColumn, self.methodColumn)
 		
-		self.Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold= self.colMaxD, 
+			self.Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold= self.colMaxD, 
 								leaf_rotation=90, ax = self.axColumnDendro, no_plot=True)
 
-		self.progressClass.update_progressbar_and_label(14,'Draw dendrogram ...')
+			self.progressClass.update_progressbar_and_label(14,'Draw dendrogram ...')
 		
-		self.add_dendrogram(self.Z_col,False,self.axColumnDendro)
+			self.add_dendrogram(self.Z_col,False,self.axColumnDendro)
 		
-		self.progressClass.update_progressbar_and_label(43,'Clustering columns done ...')
-		
+			self.progressClass.update_progressbar_and_label(43,'Clustering columns done ...')
+		else:
+			self.axColumnDendro.axis('off')
+			
 		self.resort_data_frame(self.Z_row,self.Z_col)
 		
 		self.progressClass.update_progressbar_and_label(64,'Plotting color map ...')
@@ -242,14 +256,14 @@ class hierarchichalClustermapPlotter(object):
 		
 	
 		
-	def cluster_data(self, dataFrame):
+	def cluster_data(self, dataFrame, metric, method):
 		'''
 		'''
-		if  self.metric ==  'euclidean':   
-			linkage = fastcluster.linkage(dataFrame, method = self.method, metric = self.metric)   
+		if  metric ==  'euclidean':   
+			linkage = fastcluster.linkage(dataFrame, method = method, metric = metric)   
 		else:
-			distanceMatrix = scd.pdist(dataFrame, metric=self.metric)
-			linkage = sch.linkage(distanceMatrix,method=self.method)
+			distanceMatrix = scd.pdist(dataFrame, metric = metric)
+			linkage = sch.linkage(distanceMatrix,method = method)
 			del distanceMatrix
 			
 		maxD = 0.7*max(linkage[:,2])
@@ -276,7 +290,6 @@ class hierarchichalClustermapPlotter(object):
 			ax.set_ylim(0, self.yLimitRow)
 			ax.set_xlim(0, max_dependent_coord * 1.05)
 			ax.invert_xaxis()
-			
 
 		else:
 			lines = LineCollection([list(zip(x, y))
@@ -298,10 +311,18 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		Reorders data to be plotted as a heatmap
 		'''
-		dat = self.df.ix[:,Z_col['leaves']]
-		self.df = dat.iloc[Z_row['leaves']]
-		self.numericColumns = [self.numericColumns[idx] for idx in Z_col['leaves']]
-		 
+		if Z_col is not None:
+		
+			dat = self.df.ix[:,Z_col['leaves']]
+			self.numericColumns = [self.numericColumns[idx] for idx in Z_col['leaves']]
+			
+		else:
+		
+			dat = self.df
+			
+		if Z_row is not None:
+			self.df = dat.iloc[Z_row['leaves']]
+		
 		if self.labelColumn is None:
 		
 			self.labelColumn = self.df.index.tolist()
@@ -367,8 +388,10 @@ class hierarchichalClustermapPlotter(object):
 		## all available bindings
 		
 		
-		self.y_padding_clust = self.axClusterMap.callbacks.connect('ylim_changed', lambda event:self.on_ylim_change(event))
-		self.adjustRowMaxD = self.figure.canvas.mpl_connect('button_press_event', lambda event:self.move_rowMaxD_levels_and_relim(event))
+		self.y_padding_clust = \
+		self.axClusterMap.callbacks.connect('ylim_changed', lambda event:self.on_ylim_change(event))
+		self.adjustRowMaxD = \
+		self.figure.canvas.mpl_connect('button_press_event', lambda event:self.move_rowMaxD_levels_and_relim(event))
 		
 
 	def move_rowMaxD_levels_and_relim(self,event):
@@ -381,7 +404,8 @@ class hierarchichalClustermapPlotter(object):
 		
 		elif event.button != 1:
 			return
-			
+		elif hasattr(self,'rowMaxDLine') == False:
+			return	
 		elif self.rowMaxDLine.contains(event)[0]:
 			
 			self.motion_dendrogram = self.figure.canvas.mpl_connect('motion_notify_event' , 
@@ -466,6 +490,8 @@ class hierarchichalClustermapPlotter(object):
 		Adds cluster labels to left dendrogram. The multiplication by 10 comes from the values
 		given by scipy#s dendrogram function.
 		'''
+		if hasattr(self,'rowClusterLabel') == False:
+			return
 		if export == False:
 			self.clean_up_rectangles()
 		
@@ -507,12 +533,12 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		Adds lines to indicate lines for limits to distinguish clusters
 		'''
-			
-		self.rowMaxDLine  = self.axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
-		self.axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
-		
-		self.axRowDendro.draw_artist(self.rowMaxDLine)
-		self.figure.canvas.blit(self.axRowDendro.bbox)
+		if self.Z_col is not None:	
+			self.axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
+		if self.Z_row is not None:
+			self.rowMaxDLine  = self.axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')		
+			self.axRowDendro.draw_artist(self.rowMaxDLine)
+			self.figure.canvas.blit(self.axRowDendro.bbox)
          		
 	
 	def add_label_column(self,labelColumnList):
@@ -639,6 +665,8 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		important: the dataset is not checked again, needs to be done before. (set_current_data_by_id)
 		'''
+		if hasattr(self,'rowClusteLabel') == False:
+			return
 		clusterAnnotation = ['Cluster {}'.format(clustNumb) for clustNumb in self.rowClusterLabel]
 		# we need to get the original Data again to get the correct index self.df_copy
 
@@ -676,14 +704,20 @@ class hierarchichalClustermapPlotter(object):
 		Function to export the created Clustermap onto another axis (in the given range) 
 		'''
 		axRowDendro,axColumnDendro,axClusterMap,axLabelColor,axColormap  = self.add_axes_to_figure(specificAxis,figure,returnAxes=True)
-		self.add_dendrogram(self.Z_col,False,axColumnDendro)
-		self.add_dendrogram(self.Z_row,True,axRowDendro,create_background=False)
+		if self.Z_col is not None:	
+			self.add_dendrogram(self.Z_col,False,axColumnDendro)
+			axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
+		else:
+			axColumnDendro.axis('off')
+		if self.Z_row is not None:
+			self.add_dendrogram(self.Z_row,True,axRowDendro,create_background=False)
+			axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
+		else:	
+			axRowDendro.axis('off')
+		
 		im = axClusterMap.pcolormesh(self.df[self.numericColumns].values, cmap = self.cmapClusterMap)
 		plt.colorbar(im, cax=axColormap)
-		
-		
-		axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
-		axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
+				
 		self.adjust_axis_limits_and_labels(axClusterMap,axLabelColor,axRowDendro,axColumnDendro,axColormap,export=True)
 		
 		if self.fromSavedSession:

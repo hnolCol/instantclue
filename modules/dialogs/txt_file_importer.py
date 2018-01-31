@@ -77,8 +77,8 @@ class fileImporter(object):
 		'''
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
-		popup.wm_title('Import Files') 
-         
+		popup.wm_title('Import Files')
+		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=880
 		h=430

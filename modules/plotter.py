@@ -47,7 +47,7 @@ class _Plotter(object):
 		
 		self.logAxes = {'y':False,'x':False}
 		self.centerAxes = {'y':False,'x':False}
-		
+		self.errorBar = 95
 		self.axesLimits = OrderedDict()
 		self.clusterEvalScores = OrderedDict() 
 		self.statistics = OrderedDict()
@@ -131,7 +131,7 @@ class _Plotter(object):
 		
 		self.adjust_grid_and_box_around_subplot()
 		
-		if selectedPlotType in ['swarm','pointplot']	:
+		if selectedPlotType in ['swarm','pointplot','grid_search_results']	:
 			self.style_collection()
 		if redraw:
 			self.redraw()
@@ -203,6 +203,13 @@ class _Plotter(object):
 			return dataID
 		else:
 			return None
+	
+	
+	def set_data_frame_of_last_chart(self):
+		'''
+		'''
+		dataId = self.get_dataID_used_for_last_chart()
+		self.dfClass.set_current_data_by_id(dataId)
 		
 	def get_axes_of_figure(self):
 		'''
@@ -277,7 +284,7 @@ class _Plotter(object):
 		'''
 		Actually modifies the style of the collection
 		'''
-		if self.currentPlotType not in ['swarm','pointplot']:
+		if self.currentPlotType not in ['swarm','pointplot','grid_search_results']:
 			return
 		if ax is None:
 			axes = self.get_axes_of_figure()
@@ -309,7 +316,7 @@ class _Plotter(object):
 		===========
 		which - define which axes to be used. (x,y) 
 		'''
-		if self.currentPlotType in ['hclust','corrmatrix']:
+		if self.currentPlotType in ['hclust','corrmatrix','cluster_analysis']:
 			return		
 		if axes is None:
 			axes = self.get_axes_of_figure()
@@ -333,7 +340,7 @@ class _Plotter(object):
 		===========
 		which - define which axes to be used. (x,y) 
 		'''
-		if self.currentPlotType in ['hclust','corrmatrix']:
+		if self.currentPlotType in ['hclust','corrmatrix','cluster_analysis']:
 			return
 		if axes is None:
 			axes = self.get_axes_of_figure()
@@ -472,8 +479,8 @@ class _Plotter(object):
 		self.cmapRowDendrogram = 'Paired'
 		self.cmapColorColumn = 'Blues'
 		
-		self.metric = 'euclidean'
-		self.method = 'complete'
+		self.metric = self.metricRow = self.metricColumn = 'euclidean'
+		self.method = self.methodRow = self.methodColumn = 'complete'
 		
 		self.corrMatrixCoeff = 'pearson'
 		
@@ -511,7 +518,8 @@ class _Plotter(object):
 		'''
 		Returns als needed hclust settings
 		'''
-		return 	self.cmapClusterMap, self.cmapRowDendrogram, self.cmapColorColumn, self.metric, self.method
+		return 	self.cmapClusterMap, self.cmapRowDendrogram, self.cmapColorColumn,\
+		self.metricRow, self.metricColumn, self.methodRow, self.methodColumn
 
 	def remove_color_level(self):
 		
@@ -564,21 +572,27 @@ class _Plotter(object):
 		change_grid_setting(gridBool,axes)		
 				
 	
-	def add_annotationLabel_to_plot(self,ax,text,xy = None, xytext = None,position='topleft', xycoords = 'axes fraction', arrowprops = None):
+	def add_annotationLabel_to_plot(self,ax,text,xy = None, xytext = None, rotation = None,
+					position='topleft', xycoords = 'axes fraction', arrowprops = None):
 		'''
 		'''
+		ha = 'left'
+		va = 'top'
+		
 		if isinstance(text,str) == False:
 			text = str(text)
 		if position == 'topleft':
 			coordAxes = (0.05,0.95)
+		elif position == 'bottomright':
+			coordAxes = (0.9,0.05)
+			va = 'bottom'
+			ha = 'right'
 		else:
 			coordAxes = xy
 		xycoords = xycoords
-		ha = 'left'
-		va = 'top'
 
 		annLabel = ax.annotate(text,xy = coordAxes, xytext = xytext, xycoords = xycoords,
-					ha = ha, va= va, arrowprops=arrowprops) 
+					ha = ha, va= va, arrowprops=arrowprops, rotation = rotation) 
 		annLabel.draggable(state=True, use_blit =True)
 	
 
@@ -667,9 +681,11 @@ class categoricalPlotter(object):
 		self.selectedPlotType = selectedPlotType
 		self.adjustYLims = bool(self.plotter.equalYLimits)
 		self.tightLayout = bool(self.plotter.tightLayout)
-		
+		self.error = self.plotter.errorBar
 		self.add_axis_to_figure() 
+		
 		self.filling_axis(selectedPlotType) 
+		
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot()
 			self.addSwarm = True
@@ -803,13 +819,10 @@ class categoricalPlotter(object):
 			
 		
 					
-	def filling_axis(self,plotType,onlySelectedAxis = None, axisExport = None):
+	def filling_axis(self,plotType,onlySelectedAxis = None, axisExport = None, forceLegend = False):
 		'''
 		Takes care of data arrangements and plotting in created axis.
 		'''
-		
-			
-		
 		if plotType == 'countplot':
 		
 			totalRows = len(self.data.index)
@@ -864,13 +877,15 @@ class categoricalPlotter(object):
 					if ax.is_first_col():
 						titleLegend = get_elements_from_list_as_string(self.categoricalColumns,addString = 'Levels: ')
 						kwsLegend = dict(leg_title=titleLegend)
+						ylabel = 'Density'
 					else:
 						kwsLegend = dict() 
+						ylabel = ''
 						
-					axisStyler(ax, xlabel = numbColumn,ylabel = "Density", 
+					axisStyler(ax, xlabel = numbColumn, ylabel = ylabel, 
 								nTicksOnYAxis = 4,nTicksOnXAxis = 4, 
-								yLabelFirstCol = True, addLegendToFirstCol = True,
-								kwsLegend= kwsLegend)
+								addLegendToFirstSubplot = True,
+								kwsLegend= kwsLegend, forceLegend = forceLegend)
 
 			 				
 		elif plotType in ['boxplot','barplot','violinplot','swarm','add_swarm','pointplot']:
@@ -908,7 +923,7 @@ class categoricalPlotter(object):
 					dataForPlotting.dropna(subset=['Value'],inplace=True)					
 					fill_axes_with_plot(ax=ax, x='Column',y='Value',hue = None,
 									plot_type = plotType,cmap=self.colorMap,data=dataForPlotting,
-									order = complColumns, dodge = 0)
+									order = complColumns, dodge = 0, error = self.error)
 					
 					if self.numbNumericColumns > 3:
 						removeXTicks = True
@@ -918,6 +933,7 @@ class categoricalPlotter(object):
 								rotationXTicks=90,nTicksOnYAxis=4,
 								addLegendToFirstSubplot = True, 
 								removeXTicks = removeXTicks,
+								forceLegend = forceLegend,
 								kwsLegend = {'addPatches':True,
 											'legendItems' : complColumns,
 											'colorMap' : self.colorMap,
@@ -940,12 +956,13 @@ class categoricalPlotter(object):
 									plot_type = plotType,cmap=self.colorMap,data=self.sourcePlotData,
 									order = self.numericColumns,dodge = 0, 
 									hue_order = self.sourcePlotData[self.categoricalColumns[0]].unique(),
-									inmutableCollections = self.inmutableCollections)
+									inmutableCollections = self.inmutableCollections, error = self.error)
 					addLeg = True
 				else:
 					fill_axes_with_plot(ax=ax,x = self.categoricalColumns[0], y = self.numericColumns[0], hue = None,
 										plot_type = plotType, order = self.firstCategoryLevels,
-										data = self.data, cmap = self.colorMap, dodge=0)
+										data = self.data, cmap = self.colorMap, dodge=0,
+										error = self.error)
 					addLeg = False
 					kwsLeg  = {}
 					
@@ -971,10 +988,12 @@ class categoricalPlotter(object):
 					fill_axes_with_plot(ax = ax,x= self.categoricalColumns[0], y = numColumn, hue = self.categoricalColumns[1],
 										data = self.data, order = xAxisOrder, hue_order = hueOrder,
 										plot_type = plotType, cmap = self.colorMap,
-										inmutableCollections = self.inmutableCollections)
+										inmutableCollections = self.inmutableCollections,
+										error = self.error)
 					leg = ax.get_legend()
 					if leg is not None: leg.remove()					
 					axisStyler(ax,rotationXTicks=90,nTicksOnYAxis=4,addLegendToFirstSubplot = True,
+								forceLegend = forceLegend,
 								kwsLegend= {'leg_title':self.categoricalColumns[1]})
 					
 				
@@ -1004,7 +1023,8 @@ class categoricalPlotter(object):
 											y = numColumn, hue = self.categoricalColumns[1],
 											data = group, order = xAxisOrder, hue_order = hueOrder,
 											plot_type = plotType, cmap = self.colorMap,
-											inmutableCollections = self.inmutableCollections)
+											inmutableCollections = self.inmutableCollections,
+											error = self.error)
 						leg = ax.get_legend()
 						if leg is not None: leg.remove()
 						if plotType != 'add_swarm':
@@ -1020,6 +1040,7 @@ class categoricalPlotter(object):
 						axisStyler(ax,nTicksOnYAxis=4, xlabel = self.categoricalColumns[0], xLabelLastRow = xLabelLastRow,
 														ylabel = 'mean({})'.format(numColumn), yLabelFirstCol = True,
 														rotationXTicks = 90,addLegendToFirstSubplot = True,
+														forceLegend = forceLegend,
 														kwsLegend= {'leg_title':self.categoricalColumns[1]})
 														
 						subId += 1
@@ -1261,12 +1282,11 @@ class categoricalPlotter(object):
 		'''
 		Uses a specific axis to export this plot. Main purpose to use this in a main figure.
 		'''
-		self.filling_axis(self.currentPlotType,subplotIdNumber,axisExport)
+		self.filling_axis(self.currentPlotType,subplotIdNumber,axisExport,forceLegend=True)
 		
 		if self.addSwarm:
 			self.add_swarm_to_plot(subplotIdNumber,axisExport,export=True)
 		self.plotter.display_statistics(axisExport,subplotIdNumber,plotCount)
-		
 		self.plotter.adjust_grid_and_box_around_subplot(boxBool = boxBool,
 														gridBool = gridBool,
 														axes = [axisExport])
@@ -1275,6 +1295,7 @@ class categoricalPlotter(object):
 			self.plotter.reset_limits(subplotIdNumber,axisExport)
 		else:
 			self.plotter.set_limits_in_replot(axisExport,limits)
+		
 		self.adjust_axis_scale(axes=[axisExport])
 		
 	def get_grid_layout_for_plotting(self,n,cols=3):
@@ -1332,6 +1353,7 @@ class nonCategoricalPlotter(object):
 		if self.currentPlotType in ['scatter','cluster_analysis']:
 			self.data = self.data.dropna()
 		self.colorMap = colorMap
+		self.error = self.plotter.errorBar
 
 		self.define_variables()
 		
@@ -1379,10 +1401,7 @@ class nonCategoricalPlotter(object):
 		'''
 		'''
 		self.logAxes, self.centerAxes = dicts
-		
-		
-	
-	
+			
 			 	
 	def add_axis_to_figure(self):
 			
@@ -1411,7 +1430,8 @@ class nonCategoricalPlotter(object):
 			elif self.currentPlotType == 'cluster_analysis':
 				
 				grid_spec = plt.GridSpec(3,3) 
-				self.figure.subplots_adjust(right=0.88)
+				self.figure.subplots_adjust(right=0.88, hspace = 0.3)
+				
 				subplotspec1 = grid_spec.new_subplotspec(loc=(0,0),rowspan=2,colspan=2)
 				subplotspec2 = grid_spec.new_subplotspec(loc=(2,2),rowspan=1,colspan=1)
 				subplotspec3 = grid_spec.new_subplotspec(loc=(1,2),rowspan=1,colspan=1)
@@ -1946,8 +1966,6 @@ class nonCategoricalPlotter(object):
 				
 			self.style_axis(axisExport,subplotIdNumber)
 			
-			
-			
 	
 	
 			
@@ -1986,7 +2004,8 @@ class nonCategoricalPlotter(object):
 		
 			fill_axes_with_plot(ax=ax,x=None,y=None,hue = None,plot_type = plotType,
 								cmap=colorMap,data=dataInput,order=self.numericColumns,
-								inmutableCollections = self.inmutableCollections)
+								inmutableCollections = self.inmutableCollections,
+								error = self.error)
 			
 		
 		elif plotType == 'density':
@@ -2052,19 +2071,26 @@ class nonCategoricalPlotter(object):
 											plotCorrMatrix = plotCorrMatrix)
 		
 		elif plotType == 'cluster_analysis':
-		
+			axScores = None
+			ax = None
+			axCount = None
+			
 			if onlySelectedAxis is None:
 				ax = self.axisDict[0]
 				axScores = self.axisDict[1]
+				axCount = self.axisDict[2]
 				self.LineSegments = []
 				
 			else:
 				if onlySelectedAxis == 0:
 					ax = axisExport
-					axScores = None
-				else:
+				elif onlySelectedAxis == 2:
+					axCount = axisExport
+				elif onlySelectedAxis == 3:
 					axScores = axisExport
-					ax = None
+				else:
+					return
+			
 			if ax is not None:
 				ax.scatter(dataInput[self.numericColumns[0]],
 									dataInput[self.numericColumns[1]],
@@ -2074,9 +2100,9 @@ class nonCategoricalPlotter(object):
 									alpha =  self.alphaScatterPoints,
 									color = self.colorScatterPoints,
 									picker=True, label=None)
-			
-			sns.countplot(x = self.plotter.clusterLabels.columns.values.tolist()[0],
-						data = self.plotter.clusterLabels, ax=self.axisDict[2], palette = colorMap)
+			if axCount is not None:
+				sns.countplot(x = self.plotter.clusterLabels.columns.values.tolist()[0],
+						data = self.plotter.clusterLabels, ax=axCount, palette = colorMap)
 			
 			if axScores is not None:
 				self.update_cluster_analysis_score(axScores)
@@ -2208,9 +2234,10 @@ class nonCategoricalPlotter(object):
 		ax2.plot(x,calinski,marker='o',linestyle='dashed',markerfacecolor='white', 
 					markeredgewidth=0.4,markeredgecolor="black",
 					color='black', linewidth = 0.4)	
-		ax.set_ylim((0,1))
+		
 		axisStyler(ax,ylabel='Silhouette Score', xlabel = 'Cluster Analysis #') 	
 		axisStyler(ax2,ylabel='Calinski Harabaz') 
+		ax.set_ylim((0,1))
 
 	def remove_swarm(self):
 		'''

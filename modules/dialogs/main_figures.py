@@ -468,6 +468,7 @@ class mainFigureTemplateDialog(object):
 				del self.textsAdded[toDelete]
 			
 			elif event.button == 1 and event.inaxes and self.delete_axis_event is None:
+				
 				if self.check_if_event_is_over_artist(event):
 					return
 				if self.motionAxis is not None:
@@ -477,6 +478,7 @@ class mainFigureTemplateDialog(object):
 				except:
 					pass
 					
+				
 
 				self.onMotionWithAxis = self.figure.canvas.mpl_connect('motion_notify_event',\
 				self.on_motion_with_axis)
@@ -502,6 +504,15 @@ class mainFigureTemplateDialog(object):
 			if label.contains(event)[0]:
 				over = True
 				break
+		
+		for axisId in self.axisItems.keys():
+			ax = self.figureProps[axisId]['ax']
+			leg = ax.get_legend()
+			if leg is not None:
+				if leg.contains(event)[0]:
+					over = True
+					break
+			
 		if over == False:
 			typesToCheck = ['titles','legend texts','legend caption','annotations']
 			for axisId, artists in self.axisItems.items():
@@ -1081,8 +1092,10 @@ class mainFigureTemplateDialog(object):
 	def initiate_transfer(self,axisId,figureId,idClicked = None):
 		'''
 		'''
-
+		
 		if idClicked is None:
+			if self.event is None:
+				return
 			idClicked = self.identify_id_of_axis(self.event.inaxes)
 		if axisId == idClicked and figureId == self.figureId:
 		
