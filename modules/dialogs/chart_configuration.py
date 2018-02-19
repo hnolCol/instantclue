@@ -14,7 +14,7 @@ class ChartConfigurationPopup(object):
 			tk.messagebox.showinfo('No chart ..','Please create a chart first ..')
 			return	
 		self.toplevel = None	
-		self.save_entries = []
+		self.save_entries = dict()
 		self.platform = platform
 		self.plot_type = plotter.currentPlotType
 		self.figure = plotter.figure
@@ -63,7 +63,7 @@ class ChartConfigurationPopup(object):
 			w = 375
 		elif self.platform == 'MAC':
 			w = 420 
-		h=480
+		h=475
 		self.toplevel = popup
 		self.center_popup((w,h))
 		
@@ -90,7 +90,7 @@ class ChartConfigurationPopup(object):
 			lab_s.grid(row=i+1, padx=5,sticky=tk.E,pady=5)
 			ent = ttk.Entry(cont, width = 400)
 			ent.insert(tk.END, info[i])
-			self.save_entries.append(ent)
+			self.save_entries[sett] = ent
 			ent.grid(row=i+1,column=1,sticky=tk.W,pady=5)
 			if '[max]' in sett or '[min]' in sett:
 				if 'x-' in sett:
@@ -116,8 +116,9 @@ class ChartConfigurationPopup(object):
 				scale.grid(row=i+1,column=2,sticky=tk.E,pady=5,padx=3)                                  		
             
             
-		for entry in self.save_entries: 
-				entry.bind('<Return>', lambda event ,ent_list = self.save_entries , axes=self.fig_axes: self.apply_changes(event,ent_list,self.plot_type,axes))    
+            
+		for entry in self.save_entries.values(): 
+				entry.bind('<Return>', lambda event , axes=self.fig_axes: self.apply_changes(event,self.plot_type,axes))    
 		self.cb_grid = ttk.Checkbutton(cont, text = 'Grid', command = self.add_grid_lines_to_plot)
 		self.cb_grid.grid(row=i+2, column= 0, columnspan=2,padx=5, sticky=tk.W)
 		self.cb_grid.state(['!alternate'])  
@@ -125,6 +126,7 @@ class ChartConfigurationPopup(object):
 				self.cb_grid.state(['selected'])
 		else:
 				self.cb_grid.state(['!selected'])
+		
 		self.cb_box = ttk.Checkbutton(cont, text = 'Show box', command = self.remove_box)
 		self.cb_box.grid(row=i+2, column= 1, columnspan=2,padx=5, sticky=tk.W)
 		self.cb_box.state(['!alternate'])
@@ -132,7 +134,7 @@ class ChartConfigurationPopup(object):
 				self.cb_box.state(['selected']) 
 		else:
 				self.cb_box.state(['!selected'])
-		but_update = ttk.Button(cont,text = "Update", command = lambda ent_list = self.save_entries, axes=self.fig_axes : self.apply_changes(ent_list = ent_list,plot_type = self.plot_type,axes=axes))
+		but_update = ttk.Button(cont,text = "Update", command = lambda axes=self.fig_axes : self.apply_changes(plot_type = self.plot_type,axes=axes))
 		but_close = ttk.Button(cont, text = "Close", command = self.close)
 		but_update.grid(row=i+3, column=1,pady=5,padx=5, sticky=tk.E)
 		but_close.grid(row=i+3, column = 2 , pady=5, padx=5)	
@@ -287,44 +289,50 @@ class ChartConfigurationPopup(object):
                  if draw:
                      self.figure.canvas.draw()   	
              
-	def apply_changes(self,event = None, ent_list = None,plot_type = None,axes= None):
+	def apply_changes(self,event = None,plot_type = None,axes= None):
 
                  '''
                  Applies porperties via enter and button "update"
-                 '''             
-             
-                 axis_font = {'size':float(ent_list[6].get())}
-                 fig_axes = axes
-                 for ax in fig_axes:
-                 	 if ax.is_first_col() == True:
-                 	 	ax.set_ylabel(ent_list[1].get(), **axis_font)
-                 	 if ax.get_xlabel() != '':
-                 	 	ax.set_xlabel(ent_list[0].get(), **axis_font)
+                 '''     
+                         
+                 axis_font = {'size':float(self.save_entries['xy-label font size:'].get())} 	 	
+                 for ax in axes:
+                 	 xLabel,yLabel = ax.get_xlabel(), ax.get_ylabel()
+                 	 if xLabel != '':
+                 	 	ax.set_xlabel(xLabel,**axis_font)
+                 
+                 	 if yLabel != '':
+                 	 	ax.set_ylabel(yLabel,**axis_font)                  	 	
+                  	                 	
                  	 if plot_type == 'barplot':
                  	 	y_min = 0
                  	 else:
-                 	 	y_min = float(ent_list[2].get())
-                 	 ax.set_ylim((y_min,float(ent_list[3].get())))
-                 	 ax.set_xlim((float(ent_list[4].get()),float(ent_list[5].get())))
+                 	 	y_min = float(self.save_entries['y-axes [min]:'].get())
+                 	 ax.set_ylim((y_min,float(self.save_entries['y-axes [max]:'].get())))
+                 	 ax.set_xlim((float(self.save_entries['x-axes [min]:'].get()),
+                 	 			  float(self.save_entries['y-axes [max]:'].get())))
+                 	 
+                 	 tickFontSize = int(self.save_entries['tick font size:'].get())
                  	 for tick in ax.xaxis.get_major_ticks():
-                 	 	tick.label.set_fontsize(int(ent_list[7].get()))
+                 	 	tick.label.set_fontsize(tickFontSize)
                  	 for tick in ax.yaxis.get_major_ticks():
-                 	 	tick.label.set_fontsize(int(ent_list[7].get()))
+                 	 	tick.label.set_fontsize(tickFontSize)
+                 	 	
                  	 if self.cb_box.instate(['selected']):
                     
-                            for ax in fig_axes:
+                            for ax in axes:
                                 ax.spines['right'].set_visible(True)
                                 ax.spines['top'].set_visible(True)
                  	 else:
-                            for ax in fig_axes:
+                            for ax in axes:
                                 ax.spines['right'].set_visible(False)
                                 ax.spines['top'].set_visible(False)
                  	 textItems = ax.texts
                  	 if len(textItems) != 0:
                  	 	for txt in textItems:
-                 	 		txt.set_fontsize(int(float(ent_list[9].get())))
+                 	 		txt.set_fontsize(int(self.save_entries['text label font size:'].get()))
                  leg = ax.get_legend()
-                 value = int(ent_list[8].get())        
+                 value = int(self.save_entries['legend font size:'].get())        
                  if leg is not None:                             
                              plt.setp(leg.get_title(), fontsize=str(value))       
                              plt.setp(leg.get_texts(), fontsize = str(value))

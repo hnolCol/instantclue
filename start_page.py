@@ -11,7 +11,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.4.5' #Date 24.01.2018
+__VERSION__ = '0.4.6' #Date 19.02.2018
 
 
 class StartPage(tk.Frame):

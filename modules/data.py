@@ -190,6 +190,9 @@ class DataCollection(object):
 			
 		self.update_columns_of_current_data()
 		return 'worked'
+	
+	
+	
 		
 	def combine_columns_by_label(self,columnLabelList, sep='_'):
 		'''
@@ -206,7 +209,23 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		return columnNameEval
 
-			
+	def count_valid_values(self, numericColumnList):
+		'''
+		Input
+		Parameter 
+		===========
+		numericColumnList - list of numeric columns. 
+		
+		Output 
+		===========
+		Evaluated Column name
+		'''
+		columnName = get_elements_from_list_as_string(numericColumnList, addString =  'valid_values: ')
+		columnNameEval = self.evaluate_column_name(columnName)
+		validValues = self.df[numericColumnList].count(axis='columns')
+		self.df[columnNameEval] = validValues
+		return columnNameEval
+		
 	def delete_rows_by_index(self, index):
 		'''
 		Delete rows by index
@@ -368,9 +387,11 @@ class DataCollection(object):
 		'''
 		Replaces nans with random samples from standard distribution. 
 		'''
-		for numericColumn in columnLabelList:
+		means = self.df[columnLabelList].mean()
+		stdevs =  self.df[columnLabelList].std()
+		for n,numericColumn in enumerate(columnLabelList):
 			data = self.df[numericColumn].values
-			mu, sigma = self.df[numericColumn].mean(), self.df[numericColumn].std()
+			mu, sigma = means[n], stdevs[n]
 			newMu = mu - sigma * downshift
 			newSigma = sigma * width
 			mask = np.isnan(data)

@@ -109,7 +109,7 @@ class curveFitCollection(object):
 		'''
 		self.fitCollection = OrderedDict() 
 	
-	def save_performed_fit(self,fitIdName, columnNames,xValues,data, fittingFunc, dfId):
+	def save_performed_fit(self,fitIdName, columnNames,xValues, data, fittingFunc, dfId):
 		'''
 		'''
 		self.fitCollection[fitIdName] = dict(columnNames = columnNames,
@@ -133,7 +133,13 @@ class curveFitCollection(object):
 			
 	def curve_fits_from_same_df(self,fitIds):
 		'''
-		'''				
+		'''	
+		dfIds = [self.fitCollection[fitId]['dataFrameID'] for fitId in fitIds]	
+		if any(dfId != dfIds[0] for dfId in dfIds):
+			return False
+		else:
+			return True
+				
 	
 	def get_columns_of_fitIds(self,fitIdList):
 		'''
@@ -144,7 +150,6 @@ class curveFitCollection(object):
 			# filter uniques 
 			columnsFilter = [col for col in columnNames if col not in collectList]
 			collectList = collectList + columnsFilter
-		
 		
 		return collectList		  
 
@@ -179,13 +184,10 @@ class curveFitter(object):
 		self.curveFitCollection = curveFitCollection # place to store fits
 		
 		self.build_toplevel() 
-		self.build_widgets()
-		
-		
-		
+		self.build_widgets()		
 		self.toplevel.wait_window() 	
 	
-	def close(self):
+	def close(self,event=None):
 		'''
 		Close toplevel
 		'''
@@ -199,7 +201,7 @@ class curveFitter(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Curve fitting') 
-         
+		popup.bind('<Escape>',self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=370
 		h=530
@@ -209,9 +211,7 @@ class curveFitter(object):
 	def build_widgets(self):
  		'''
  		Builds the dialog for interaction with the user.
- 		'''	 
- 		
- 		
+ 		'''	  		
  		self.cont= tk.Frame(self.toplevel, background =MAC_GREY) 
  		self.cont.pack(expand =True, fill = tk.BOTH)
  		self.cont.grid_columnconfigure(1,weight=1)
@@ -219,7 +219,6 @@ class curveFitter(object):
  		self.cont.grid_rowconfigure(5,weight=1)
  		labelTile = tk.Label(self.cont, text = 'Fit each row to x-values by given model.',
  												**titleLabelProperties)
-                            
                             
  		labelTile.grid(padx=10, pady=15, columnspan=6, sticky=tk.W)
  		for n,text in enumerate(labelsTexts):
@@ -235,7 +234,8 @@ class curveFitter(object):
  		
  		self.nameOfFit.set('Curve fit {}'.format(len(self.curveFitCollection.fitCollection)))
  		
- 		optionmenuFit =  ttk.OptionMenu(self.cont, self.fittingFunction,'polynomial fit',*self.fittingFunctions)
+ 		optionmenuFit =  ttk.OptionMenu(self.cont, self.fittingFunction,
+ 								'polynomial fit',*self.fittingFunctions)
  		
  		optionmenuFit.grid(row = 1, column = 1, pady = 3, padx = 5,sticky = tk.EW, columnspan = 2) 
  		comboboxDegree.grid(row = 2, column = 1, pady = 3, padx = 5,sticky = tk.EW, columnspan = 2)
@@ -1003,7 +1003,7 @@ class displayCurveFitting(object):
 		self.tightLayout = tk.BooleanVar(value=True)
 		self.equalYLims = tk.BooleanVar(value=True)
 		self.dfClass = dfClass
-		#self.columns = dfClass.get_columns_of_current_data()
+		self.columns = dfClass.get_columns_of_current_data()
 		#self.data = dfClass.get_current_data()
 		
 		self.plotter = Plotter
@@ -1011,7 +1011,7 @@ class displayCurveFitting(object):
 		helperFit = _HelperCurveFitter()
 		
 		self.fittingFunctions = helperFit.get_fit_functions
-		self.courveFitCollection = courveFitCollection
+		self.curveFitCollection = courveFitCollection
 		
 		self.customGridLayout = OrderedDict()
 		self.subplotDataIdxDict = OrderedDict()
@@ -1068,7 +1068,7 @@ class displayCurveFitting(object):
 		labelSubplotName = tk.Label(self.cont, text = 'Subplot annotation: ', bg = MAC_GREY)
 		
 		comboboxName = ttk.Combobox(self.cont, textvariable = self.labelColumn, 
-											  values = [],
+											  values = self.columns,
 											  width = 18)
 		
 		
@@ -1080,6 +1080,7 @@ class displayCurveFitting(object):
 											  width = 8)
 		self.rowNumGrid.set('3')
 		self.columnNumGrid.set('3')
+		self.labelColumn.set('Row Number')
 											  
 		labelChooseFit  = tk.Label(self.cont, text = 'Choose curve fit to display: ', bg=MAC_GREY)
 		scrollListBoxVer = ttk.Scrollbar(self.cont, orient = tk.VERTICAL)
@@ -1136,13 +1137,12 @@ class displayCurveFitting(object):
 		'''
 		customChartDialog = customChartLayout(self.dfClass, colorScheme ='Reds')	
 		self.subplotDataIdxDict = customChartDialog.subplotNumDataIdx
-		#print(self.subplotDataIdxDict)
 		
 	def find_curve_fittings(self):
 		'''
 		'''
 		
-		self.curveFits = list(self.courveFitCollection.fitCollection.keys())
+		self.curveFits = list(self.curveFitCollection.fitCollection.keys())
  		
  		
 	def fill_listbox(self, itemsToAdd = None, listbox = None):
@@ -1172,30 +1172,38 @@ class displayCurveFitting(object):
 		'''
 		'''
 		self.curveFitsSelected = [self.columnsInListbox[idx] for idx in self.listboxCurveFits.curselection()]
-		
-		self.curveFitCollection.curve_fits_from_same_df(self.curveFitsSelected)
-					
+		allFitsFromSameData =  self.curveFitCollection.curve_fits_from_same_df(self.curveFitsSelected)
+		return allFitsFromSameData
+						
 	def set_chart_settings(self):
 		'''
+		Check fit settings.
 		'''
 		gridLayout = [int(float(value)) for value in [self.rowNumGrid.get(),self.columnNumGrid.get()]]
 		adjustYlimit = self.equalYLims.get()
 		tightLayout = self.tightLayout.get()
+		labelColumn = self.labelColumn.get()
 		#checks if same dataframe id underlying
 		if self.get_selected_curve_fit():
 			pass
 		else:
+			tk.messagebox.showinfo('Error ..',
+					'Data fits can only be combined if the data are from same file.',
+					parent=self.toplevel)
 			return
 		
 		if len(self.curveFitsSelected) == 0:
-			tk.messagebox.showinfo('Error..','Select a curve fit to plot.')
+		
+			tk.messagebox.showinfo('Error..',
+					'Select a curve fit to plot.',
+					parent=self.toplevel)
 			return
-			
 		self.plotter.set_curveFitDisplay_settings(gridLayout,
-												  self.courveFitCollection.fitCollection,
+												  self.curveFitCollection.fitCollection,
 												  self.subplotDataIdxDict,
 												  adjustYlimit,
-												  tightLayout)
+												  tightLayout,
+												  labelColumn)
 		self.close()
 											
 	def center_popup(self,size):

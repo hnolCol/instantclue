@@ -13,8 +13,13 @@ hierarchClustering = OrderedDict([('Metric [row]',['None']+pdist_metric),
 								  ('Row Cluster Color','colorSchemes'),
 								  ('Extra Data Color','colorSchemes')]) #
 
+binnedScatter = OrderedDict([('Number of bins',list(range(3,20))),
+							 ('Scale counts (1-0)',['True','False']),
+							 ])#
+
 generalSettings = OrderedDict([
-							   ('Error bar',['Confidence Interval (95%)','Standard deviation'])])
+							   ('Error bar',['Confidence Interval (95%)','Standard deviation']),
+							   ])
 
 abbrError = {'Confidence Interval (95%)':95,
 			'Standard deviation':'sd'}
@@ -22,16 +27,21 @@ abbrError = {'Confidence Interval (95%)':95,
 dimensionalReduction = OrderedDict([('Components',5)])
 
 
-allSettings = OrderedDict([('Dimensional Reduction',dimensionalReduction),
-						   ('General Settings',generalSettings),
-						   ('Hierarchical Clustering',hierarchClustering)])
+allSettings = OrderedDict([('General Settings',generalSettings),
+						   ('Hierarchical Clustering',hierarchClustering),
+						   ('Binned Scatter',binnedScatter),
+						   ('Dimensional Reduction',dimensionalReduction)])
 
 attrNames = {'Row Cluster Color':'cmapRowDendrogram',
 			'Extra Data Color':'cmapColorColumn',
 			'Metric [row]':'metricRow',
 			'Metric [column]':'metricColumn',
 			'Linkage [row]':'methodRow',
-			'Linkage [column]':'methodColumn'}
+			'Linkage [column]':'methodColumn',
+			'Number of bins':'numbBins',
+			'Scale counts (1-0)':'scaleBinsInScatter',
+			}
+
 
 
 tooltipText = {'Error bar':'Define how the error bars in point- and bar-plots should be calculated. Providing a number between 0-100 will update the confidence interval size.',
@@ -73,6 +83,7 @@ class settingsDialog(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Settings') 
 		popup.bind('<Escape>', self.close) 
+		popup.bind('<Tab>',self.switch_settings)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=450
 		h=500
@@ -183,7 +194,12 @@ class settingsDialog(object):
 		elif self.type.get() == 'General Settings':
 			if option == 'Error bar':
 				return self.plotter.errorBar
-				
+		elif self.type.get() == 'Binned Scatter':
+			if option == 'Number of bins':
+				return self.plotter.numbBins
+			elif option == 'Scale counts (1-0)':
+				return str(self.plotter.scaleBinsInScatter)
+			
 
 	def change_settings(self):
 		'''
@@ -206,6 +222,11 @@ class settingsDialog(object):
 						
 			self.dimRedCollection.set_max_comps(ncomps)	
 		
+		elif type == 'Binned Scatter':
+			
+			self.binned_scatter_adjustment()
+		
+		
 		self.close()
 	
 	
@@ -223,7 +244,19 @@ class settingsDialog(object):
 					'Could not convert input to float/integer.' + addErrorString,
 					parent=self.toplevel)
 
-
+	def binned_scatter_adjustment(self):
+		'''
+		'''
+		for key,var in self.settingsVar.items():
+			if key == 'Number of bins':
+				value = int(float(var.get()))
+			elif key in ['Scale counts (1-0)','Color encode counts']:
+				value = stringBool[var.get()]
+				
+			setattr(self.plotter,attrNames[key],value)
+		
+		
+		
 	def error_bar_adjustment(self):
 		'''
 		'''
@@ -241,7 +274,19 @@ class settingsDialog(object):
 					
 			if ciValue <= 100:
 					self.plotter.errorBar = ciValue
+	
+	def switch_settings(self,event):
+		'''
+		'''	
+		type = self.type.get() 
+		if type in allSettings:
+			idx = list(allSettings.keys()).index(self.type.get())
+			if idx == len(allSettings)-1:
+				idx = -1
+			self.type.set(list(allSettings.keys())[idx+1])
+			self.refresh_settings()
 		
+			
 	def center_popup(self,size):
          	'''
          	Casts poup and centers in screen mid

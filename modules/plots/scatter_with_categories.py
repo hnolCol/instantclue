@@ -8,6 +8,138 @@ import itertools
 import matplotlib.patches as patches
 
 from modules.utils import *
+from modules.plots.axis_styler import axisStyler
+
+class binnedScatter(object):
+	'''
+	'''
+	def __init__(self,plotter,dfClass,numericColumns, categoricalColumns):
+		'''
+		'''
+		self.plotter = plotter
+		self.dfClass = dfClass
+		self.numBins = self.plotter.numbBins
+		self.scaleCounts = bool(self.plotter.scaleBinsInScatter)
+				
+		self.axisDict = dict()
+		self.numericColumns = numericColumns
+		self.categoricalColumns = categoricalColumns
+		
+		self.get_scatter_plot_props()
+		self.prepare_data()
+		if hasattr(self,'sizeData'):
+			self.replot()
+	
+	
+	def replot(self):
+		'''
+		Replot chart. (Needed when session is loaded)
+		'''
+		self.create_axis()
+		self.fill_axis()
+		self.style_axis()
+	
+	def get_scatter_plot_props(self):
+		'''
+		'''
+		self.sizeScatterPoints, self.alphaScatterPoints,\
+		self.colorScatterPoints = self.plotter.get_scatter_point_properties()
+		
+		self.scatProps = {'alpha':self.alphaScatterPoints,
+						  'facecolor':self.colorScatterPoints,
+						  'linewidth':0.3,
+						  'edgecolor':'black'}
+		
+	
+	def prepare_data(self):
+		'''
+		Prepare data. Histogram data and find counts
+		'''
+		rawData = self.dfClass.get_current_data_by_column_list(columnList = self.numericColumns + self.categoricalColumns)
+		
+		data = rawData[self.numericColumns].dropna().values
+		
+		twoDimHist = np.histogram2d(data[:,0], data[:,1], bins = self.numBins)		
+		xs = twoDimHist[1]
+		ys = twoDimHist[2]
+		binnedData = []
+		for (i, j),v in np.ndenumerate(twoDimHist[0]):
+			if v != 0:
+				binnedData.append((xs[i], ys[j], v))
+		binnedData = np.array(binnedData)
+		
+		
+		self.rawCounts = binnedData[:,2]
+		if self.scaleCounts:
+			sizeData = scale_data_between_0_and_1(binnedData[:,2])
+			# emperically
+			self.sizeData = (sizeData+0.01)*250 
+		else:
+			self.sizeData = binnedData[:,2]+15
+			
+		xyData = list(twoDimHist[-2:])
+		self.xyData = binnedData[:,:2]
+				
+		
+	def create_axis(self):
+		'''
+		Add axis to figure.
+		'''
+		self.axisDict[0] = self.plotter.figure.add_subplot(111)
+		
+	def fill_axis(self, specificAxis = None):
+		'''
+		Plot the actual data.
+		'''
+		if specificAxis is None:
+			ax = self.axisDict[0]
+		else:
+			ax = specificAxis
+		ax.scatter(x = self.xyData[:,0], 
+								y = self.xyData[:,1],
+								sizes=self.sizeData,
+								label = None,**self.scatProps)
+		self.add_legend(ax)
+		
+	def style_axis(self,ax=None):
+		'''
+		Style axis.
+		'''
+		if ax is None:
+			ax = self.axisDict[0]
+			
+		axisStyler(ax,forceLegend=True,
+						kwsLegend = dict(leg_title='Counts',ncols=3),
+						nTicksOnYAxis = 5, nTicksOnXAxis = 5)
+		
+		 	
+	def add_legend(self, ax):
+		'''
+		Add legend to figure.
+		'''
+		summary = dict() 	
+		#maybe sorting first would be better and then take indexes	
+		summary['min'], summary['max'], summary['mean'] = \
+		np.argmin(self.sizeData), np.argmax(self.sizeData), arg_mean_median(self.sizeData,'mean')
+		
+		for metric in ['min','mean','max']:
+			ax.scatter([],[],label= '{} ({})'.format(int(self.rawCounts[summary[metric]]),metric), 
+								sizes = [self.sizeData[summary[metric]]],
+								**self.scatProps)
+	
+		
+	def export_selection(self, specificAxis):
+		'''
+		export selection
+		'''
+		self.fill_axis(specificAxis)
+		self.style_axis(specificAxis)
+		
+
+
+
+
+
 	
 class scatterWithCategories(object):
 
@@ -51,7 +183,7 @@ class scatterWithCategories(object):
 		
 		n_rows,n_cols = self.calculate_grid_subplot()
 		self.prepare_plotting(n_rows,n_cols) 
-		
+			
 	
 	def replot(self):
 		'''
@@ -76,7 +208,7 @@ class scatterWithCategories(object):
 			max_y = self.data[self.numericalColumns[0]].max()
 			
 			
-		elif self.numbNumericalColumns == 2:
+		else:
 			# Plot numeric column against numeric column if there are two columns
 			min_x, max_x = self.data[self.numericalColumns[0]].min(), self.data[self.numericalColumns[0]].max()
 			min_y, max_y = self.data[self.numericalColumns[1]].min(), self.data[self.numericalColumns[1]].max()

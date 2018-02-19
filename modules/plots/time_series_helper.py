@@ -6,7 +6,36 @@ import numpy as np
 import tkinter as tk
 		
 from modules.utils import *	
-			
+
+
+class aucResultCollection(object):
+	'''
+	Used to saved auc caclulations to be accessed at a later time.
+	'''
+	def __init__(self):
+		'''
+		'''
+		self.aucCalculations = OrderedDict([('Id',[]),
+											('Time Column',[]),
+											('Numeric Column',[]),
+											('Low Bound',[]),
+											('Upper Bound',[]),
+											('Area Under Curve',[])])
+	def save_result(self,resultDict):
+		'''
+		'''
+		for key, value in resultDict.items():
+			self.aucCalculations[key].append(value)
+	
+	@property
+	def performedCalculations(self):
+		df = pd.DataFrame.from_dict(self.aucCalculations)
+		return df
+				
+
+
+
+
 class _timeSeriesHelper(object):
 	'''
 	This class handles actions on time series plot:
@@ -290,7 +319,9 @@ class _timeSeriesHelper(object):
 		for key,value in param.items():
 		
 			self.aucCalculations[key].append(value)
+		# save for long term storage ;) 
 		
+		self.plotter.store_auc_result(param)
 		
 	def evaluate_x_vals(self):
 		'''

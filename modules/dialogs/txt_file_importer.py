@@ -61,7 +61,7 @@ class fileImporter(object):
 		
 		self.toplevel.wait_window() 	
 	
-	def close(self):
+	def close(self,event=None):
 		'''
 		Close toplevel
 		'''

@@ -71,7 +71,7 @@ class mergeDataFrames(object):
 		
 		self.toplevel.wait_window()
 	
-	def close(self):
+	def close(self,event=None):
 		'''
 		Closes the dialog window.
 		'''
@@ -85,7 +85,7 @@ class mergeDataFrames(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Combine data frames') 
-         
+		popup.bind('<Escape>', self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=540
 		h=430

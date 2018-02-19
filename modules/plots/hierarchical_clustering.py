@@ -161,7 +161,7 @@ class hierarchichalClustermapPlotter(object):
 					axis.set_navigate(False)
 			self.axRowDendro,self.axColumnDendro,self.axClusterMap,\
 									self.axLabelColor,self.axColormap = axRowDendro,axColumnDendro,axClusterMap,axLabelColor,axColormap 
-			fig.canvas.draw()
+			self.plotter.redraw()
 	
 	def __getstate__(self):
 	
@@ -244,7 +244,7 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.progressClass.update_progressbar_and_label(85,'Draw heatmap ...')
 		
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 		
 		self.progressClass.update_progressbar_and_label(100,'Done ...')
 		self.progressClass.close()
@@ -286,9 +286,9 @@ class hierarchichalClustermapPlotter(object):
                                             independent_coord)],
                                    			**line_kwargs)
 			self.yLimitRow = len(dendrogram['leaves']) * 10
-			
+			self.xLimitRow = max_dependent_coord * 1.05
 			ax.set_ylim(0, self.yLimitRow)
-			ax.set_xlim(0, max_dependent_coord * 1.05)
+			ax.set_xlim(0, self.xLimitRow)
 			ax.invert_xaxis()
 
 		else:
@@ -296,13 +296,16 @@ class hierarchichalClustermapPlotter(object):
                                     		for x, y in zip(independent_coord,
                                             dependent_coord)],
                                    			**line_kwargs)	
-                                   			
-			ax.set_xlim(0, len(dendrogram['leaves']) * 10)
-			ax.set_ylim(0, max_dependent_coord * 1.05)
+			self.xLimitCol =  len(dendrogram['leaves']) * 10
+			self.yLimitCol =  max_dependent_coord * 1.05  
+			ax.set_xlim(0, self.xLimitCol)
+			ax.set_ylim(0, self.yLimitCol)
+			
+
 
 		ax.add_collection(lines)
 		if ax == self.axRowDendro and create_background:
-			self.figure.canvas.draw()
+			self.plotter.redraw()
 			self.backgroundRow = self.figure.canvas.copy_from_bbox(self.axRowDendro.bbox)
 			
 	
@@ -424,7 +427,7 @@ class hierarchichalClustermapPlotter(object):
 		self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
 		self.add_cluster_label(self.axRowDendro)
 		
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 		
 
 				
@@ -441,21 +444,37 @@ class hierarchichalClustermapPlotter(object):
 		self.axRowDendro.draw_artist(self.rowMaxDLine)
 		self.figure.canvas.blit(self.axRowDendro.bbox)
 		
-
-                 
    
-	def reset_ylimits(self):
+	def reset_ylimits(self,redraw=True):
 		'''
 		Resets limit to original scale.
 		'''
 		self.axClusterMap.set_ylim(0,self.yLimitRow/10)
-		self.figure.canvas.draw()
-		
+		if redraw:
+			self.plotter.redraw()
+	
+	def reset_xlimits_of_dendro(self,event=None):
+		'''
+		'''
+		if hasattr(self, 'xLimitRow'):
+			self.axRowDendro.set_xlim((0, self.xLimitRow))
+			self.axRowDendro.invert_xaxis()
+		if hasattr(self, 'xLimitCol'):
+			self.axColumnDendro.set_xlim((0, self.xLimitCol))
+			self.axColumnDendro.set_ylim((0, self.yLimitCol))
+			
+			
 	
 	def on_ylim_change(self,event = None):
 		'''
 		'''
 		newYLimits = self.axClusterMap.get_ylim()
+		if newYLimits[0] == 0 and newYLimits[1] == 1:
+			self.reset_xlimits_of_dendro()
+			self.reset_ylimits()
+			return
+			
+		
 		newYLimits = [round(x,0) for x in newYLimits]
 		numberOfRows = newYLimits[1]-newYLimits[0]	
 		
@@ -484,6 +503,7 @@ class hierarchichalClustermapPlotter(object):
 		updatedLim = self.axClusterMap.get_ylim()	
 		self.axLabelColor.set_ylim(updatedLim)
 		self.axRowDendro.set_ylim((updatedLim[0]*10,updatedLim[1]*10))
+		self.plotter.redraw()
 		
 	def add_cluster_label(self, axRowDendro, export = False):
 		'''
@@ -552,6 +572,8 @@ class hierarchichalClustermapPlotter(object):
 			self.labelColumn = self.df[labelColumnList[0]].values.tolist()
 		else:
 			self.update_tick_labels_of_rows()
+		self.on_ylim_change()
+		self.plotter.redraw()
 
 		
 	def update_tick_labels_of_rows(self):
@@ -581,12 +603,14 @@ class hierarchichalClustermapPlotter(object):
 	def add_color_column(self,colorColumnList):
 		'''
 		'''
+		self.reset_ylimits(redraw=False)
+		self.colorData = pd.DataFrame()
 		self.colorColumnList = colorColumnList
 		numbInput = len(colorColumnList)
 		self.df = self.dfClass.join_missing_columns_to_other_df(self.df,id=self.dataID,
 																  definedColumnsList=colorColumnList)
-		if numbInput > 1:
-			self.adjust_colorLabel_axis(numbInput)
+		# adjust color column axis
+		self.adjust_colorLabel_axis(numbInput)
 				
 		self.axLabelColor.axis('on')	
 															  
@@ -594,19 +618,24 @@ class hierarchichalClustermapPlotter(object):
 		
 		dataTypes = self.dfClass.get_data_types_for_list_of_columns(colorColumnList)
 		
+		# get all unique values
+		uniqueValuesPerColumn = self.dfClass.get_unique_values(colorColumnList, forceListOutput=True)
+		uniqueValuesTotal = np.unique(np.concatenate(uniqueValuesPerColumn))
+		
+		factorDict = dict(zip(uniqueValuesTotal.tolist(),np.arange(0,uniqueValuesTotal.size)))
+		factorDict['-'] = factorDict['nan'] = -1
+		#self.colorData[colorColumnList] = self.df.replace(factorDict)
+		
 		for n,column in enumerate(colorColumnList):
-		
-			if dataTypes[n] not in [np.int64,np.float64]:
-				self.colorData[column] = pd.factorize(self.df[column])[0]+1
-			else:
-				self.colorData[column] = self.df[column]
-		
+			self.colorData[column] = self.df[column].map(factorDict)
+			
+
 		self.draw_color_data(self.axLabelColor,numbInput)
 		
 		self.update_tick_labels_of_rows()
 		## hides the labels or shows them if appropiate (e.g no overlap) 
 		self.on_ylim_change()
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 
 	def find_index_and_zoom(self,idx):
 		'''
@@ -637,7 +666,7 @@ class hierarchichalClustermapPlotter(object):
 		self.colorData = pd.DataFrame()
 		self.colorColumnList  = []
 		self.update_tick_labels_of_rows()
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 		label.destroy()
 
 	def remove_labels(self, event = '', label = None):
@@ -647,7 +676,7 @@ class hierarchichalClustermapPlotter(object):
 		self.labelColumnList = []
 		self.update_tick_labels_of_rows()
 		self.on_ylim_change(event)
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 		label.destroy()
 		
 	def change_cmap_of_cluster_map(self,newCmap):
@@ -665,7 +694,7 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		important: the dataset is not checked again, needs to be done before. (set_current_data_by_id)
 		'''
-		if hasattr(self,'rowClusteLabel') == False:
+		if hasattr(self,'rowClusterLabel') == False:
 			return
 		clusterAnnotation = ['Cluster {}'.format(clustNumb) for clustNumb in self.rowClusterLabel]
 		# we need to get the original Data again to get the correct index self.df_copy

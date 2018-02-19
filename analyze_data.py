@@ -46,6 +46,7 @@ from modules.dialogs import color_configuration
 from modules.dialogs import correlations
 from modules.dialogs import settings
 
+from modules.plots.time_series_helper import aucResultCollection
 
 from modules.dialogs.simple_dialog import simpleUserInputDialog
 from modules.utils import *
@@ -105,9 +106,6 @@ from statsmodels.formula.api import ols
 from statsmodels.stats.libqsturng import psturng
 
 
-t_dict =dict() 
-
-
 class analyze_data(tk.Frame):
 	 
             
@@ -137,6 +135,9 @@ class analyze_data(tk.Frame):
            self.clusterCollection = clustering.clusterAnalysisCollection()
            self.classificationCollection =classification.classifierAnalysisCollection()
            self.colorHelper = color_configuration.colorMapHelper()
+           self.statResultCollection = stats.statisticResultCollection()
+           self.aucResultCollection = aucResultCollection()
+           
            
            self.interactiveWidgetHelper = interactive_widget_helper.interactiveWidgetsHelper(self.mark_sideframe)
            # add empty figure to GUI 
@@ -164,7 +165,6 @@ class analyze_data(tk.Frame):
            
            self.colormaps = dict()
            self.data_set_information = OrderedDict()
-           self.tooltip_data = None
            
            ##scatter matrix dicts
            self.performed_stats = OrderedDict() 
@@ -178,10 +178,7 @@ class analyze_data(tk.Frame):
            self.add_swarm_to_new_plot =False
            self.swarm_but = 0
            self.split_on_cats_for_plot = tk.BooleanVar(value = True)
-           
-                  
            self.selection_press_event = None 
-           self.tooltip_inf = None 
            self.pick_label = None 
            self.pick_freehand  = None 
            self._3d_update = None
@@ -212,7 +209,9 @@ class analyze_data(tk.Frame):
            self.build_main_figure_menu()
            self.build_pca_export_menu()
            self.build_corrMatrix_menu()
-           self.build_hclust_menu()   
+           self.build_hclust_menu() 
+           self.build_scatter_menu()
+           self.build_analysis_menu()
      	
 
            
@@ -342,12 +341,15 @@ class analyze_data(tk.Frame):
            self.menu.add_cascade(label="Sort data by ..", menu = menuDict['sort'])
            menuDict['column'].add_command(label = 'Rename', command = self.rename_columns)
            menuDict['column'].add_command(label='Duplicate', command = self.duplicate_column)           
-           menuDict['column'].add_command(label='Delete', command = self.delete_column)
-           menuDict['column'].add_command(label="Combine",command = self.combine_selected_columns)
+           menuDict['column'].add_command(label='Delete', accelerator = 'Delete',
+           		command = self.delete_column)
+           menuDict['column'].add_command(label="Combine",accelerator = "{}+M".format(ctrlString),
+           		command = self.combine_selected_columns)
            menuDict['column'].add_cascade(label="Split on ..", menu = menuDict['split'])
            menuDict['column'].add_cascade(label='Change data type to..', menu = menuDict['dataType'])
            menuDict['column'].add_cascade(label="Replace", menu = menuDict['replace'])
            menuDict['column'].add_command(label='Count through', command = self.create_count_through_column)
+           menuDict['column'].add_command(label='Count valid values', command = self.count_valid_values)
            menuDict['column'].add_cascade(label='Drop rows with NaN ..', menu = menuDict['nanReplace'])
            for opt in nanDroppingOptions:
            	menuDict['nanReplace'].add_command(label=opt, command = lambda how = opt: self.remove_rows_with_nan(how))
@@ -365,7 +367,7 @@ class analyze_data(tk.Frame):
            for splitString in splitOptions:
                menuDict['split'].add_command(label=splitString, 
                							   command = lambda splitString = splitString:  self.split_column_content_by_string(splitString)) 
-           menuDict['replace'].add_command(label='Find & Replace', command = lambda: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))        
+           menuDict['replace'].add_command(label='Find & Replace', accelerator  = "{}+R".format(ctrlString), command = lambda: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))        
            for i,replaceOption in enumerate(replace_options):
                menuDict['replace'].add_command(label=replaceOption, command = lambda replaceOption = replaceOption:  self.replace_data_in_df(replaceOption))   
            
@@ -411,11 +413,12 @@ class analyze_data(tk.Frame):
            												command = self.calculate_density)
            menuDict['main'].add_command(label ="Filters ..",state=tk.DISABLED,foreground='darkgrey')
            menuDict['main'].add_separator()
-           menuDict['main'].add_command(label="Annotate Numeric Filter", command = self.numeric_filter_dialog)
+           menuDict['main'].add_command(label="Annotate Numeric Filter", accelerator = "{}+N".format(ctrlString), 
+           		command = self.numeric_filter_dialog)
            menuDict['main'].add_cascade(label="Categorical Filters", menu = menuDict['categories'])
            menuDict['categories'].add_command(label="Find Category & Annotate", 
            	command = lambda : self.categorical_column_handler('Find category & annotate'))
-           menuDict['categories'].add_command(label="Find String(s) & Annotate", 
+           menuDict['categories'].add_command(label="Find String(s) & Annotate", accelerator = "{}+F".format(ctrlString),
            	command = lambda: self.categorical_column_handler('Search string & annotate'))
            menuDict['categories'].add_command(label = 'Custom Categorical Filter', 
            	command = self.custom_filter) 
@@ -453,8 +456,9 @@ class analyze_data(tk.Frame):
            menuDict['transform'].add_command(label = 'Dimensional Reduction Model', command = self.apply_dimRed)
            menuDict['main'].add_separator()
            menuDict['main'].add_cascade(label='Export', menu= menuDict['export'] )    
-           menuDict['export'].add_command(label='To excel', command = lambda: self.export_data_to_file(data = self.sourceData.df))
-           menuDict['export'].add_command(label='To txt', command = lambda: self.export_data_to_file(data = self.sourceData.df, format_type = 'txt'))
+           menuDict['export'].add_command(label='To .txt', command = lambda: self.export_data_to_file(data = self.sourceData.df, format_type = 'txt'))
+           menuDict['export'].add_command(label='To Excel', command = lambda: self.export_data_to_file(data = self.sourceData.df))
+           menuDict['export'].add_command(label='To Clipboard', command = lambda: self.copy_file_to_clipboard(self.sourceData.df))
            
            
      def build_pca_export_menu(self):
@@ -495,14 +499,35 @@ class analyze_data(tk.Frame):
      
      def build_merge_menu(self):
 
-         self.merge_data_frames_menu = tk.Menu(self, **styleDict)
+         self.data_frame_menu = tk.Menu(self, **styleDict)
          
-         self.merge_data_frames_menu.add_command(label='Dataframe drop-down menu', state = tk.DISABLED,foreground="darkgrey")
-         self.merge_data_frames_menu.add_separator()
-         self.merge_data_frames_menu.add_command(label='Re-Sort columns', command = lambda: self.design_popup(mode='Re-Sort Columns'))
-         self.merge_data_frames_menu.add_command(label='Concatenate', command = lambda: self.join_data_frames('Concatenate'))
-         self.merge_data_frames_menu.add_command(label='Merge', command = lambda: self.join_data_frames('Merge')) 
-         self.merge_data_frames_menu.add_command(label = "Delete", command = self.delete_data_frame_from_source)
+         self.data_frame_menu.add_command(label='Dataframe drop-down menu', state = tk.DISABLED,foreground="darkgrey")
+         
+         self.data_frame_menu.add_separator()
+         self.data_frame_menu.add_command(label = 'Collapse Tree', command = self.update_all_dfs_in_treeview)         
+         self.data_frame_menu.add_command(label='Re-Sort columns', command = lambda: self.design_popup(mode='Re-Sort Columns'))
+         self.data_frame_menu.add_separator()
+         self.data_frame_menu.add_command(label='Concatenate', command = lambda: self.join_data_frames('Concatenate'))
+         self.data_frame_menu.add_command(label='Merge', command = lambda: self.join_data_frames('Merge')) 
+         self.data_frame_menu.add_command(label = "Delete", command = self.delete_data_frame_from_source)
+
+     def build_scatter_menu(self):
+     	
+     	
+     	
+         self.scatter_menu = tk.Menu(self, **styleDict)
+         self.scatter_menu.add_checkbutton(label='Binned Scatter', command = self.activate_binning_in_scatter)
+        
+     def build_analysis_menu(self):
+     	
+     	self.analysis_menu = tk.Menu(self, **styleDict)
+     	resultMenu = tk.Menu(self, **styleDict)
+     	
+     	self.analysis_menu.add_cascade(label='Results', menu = resultMenu)
+     	resultMenu.add_command(label='Compare two groups', command = lambda : self.show_statistical_test(True))
+     	resultMenu.add_command(label='ANOVA', command = self.show_anova_results)
+     	resultMenu.add_command(label='Area under curve', command = lambda : self.show_auc_calculations(True))
+     	
      	 	
      	 		
      def build_datatype_menu(self):
@@ -514,6 +539,8 @@ class analyze_data(tk.Frame):
          self.data_type_menu.add_command(label='Sort columns alphabetically', command = self.re_sort_source_data_columns)
          self.data_type_menu.add_command(label='Colum names - Find and replace', command = lambda : findAndReplace.findAndReplaceDialog('ReplaceColumns',
          																				self.sourceData,self.DataTreeview))
+         self.data_type_menu.add_separator()
+         self.data_type_menu.add_command(label = 'Collapse Tree', command = self.update_all_dfs_in_treeview)
          
      def build_selection_export_menu(self):
         
@@ -561,6 +588,15 @@ class analyze_data(tk.Frame):
      	x = self.winfo_pointerx()
      	y = self.winfo_pointery()
      	menu.post(x,y)
+     	
+     	
+     def activate_binning_in_scatter(self,value = None):
+     	'''
+     	'''
+     	if self.plt.binnedScatter:
+     		self.plt.binnedScatter = False
+     	else:
+     		self.plt.binnedScatter = True
 
      def display_corrmatrix_results(self):
      	'''
@@ -935,6 +971,11 @@ class analyze_data(tk.Frame):
          				   is the class that stores all axes and texts etc in a main
          				   figure template
          '''
+         if self.plt.currentPlotType == 'scatter' and self.plt.categoricalPlotter is not None:
+         	tk.messagebox.showinfo('Error ..',
+         		'This chart can currently not be expoted to main figure templates.')				
+         	return
+         	
          figureTemplate['template'].clear_axis(axExport)
 		
          plotExporter = self.plt.get_active_helper()
@@ -966,6 +1007,7 @@ class analyze_data(tk.Frame):
       	fit. 
       	'''
       	selectFitAndGrid = curve_fitting.displayCurveFitting(self.sourceData,self.plt,self.curveFitCollection) 
+      	fitsToPlot = selectFitAndGrid.curve_fits_to_plot 
       	categoricalColumns = self.curveFitCollection.get_columns_of_fitIds(fitsToPlot)
       	if len(categoricalColumns) > 0:
       		self.plt.set_selectedCurveFits(selectFitAndGrid.curve_fits_to_plot)
@@ -982,7 +1024,7 @@ class analyze_data(tk.Frame):
          '''
          if (event.dblclick or event.button > 1) and event.inaxes is None:
          	self.is_just_outside(event)
-     	      	 	
+     	  
          if event.inaxes is None:
              return
          if event.button == 1:
@@ -1033,53 +1075,7 @@ class analyze_data(tk.Frame):
      		
       		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
      		     	        
-         
-     def destroy_tt(self,event):
-     	try:
-     		self.tooltip_data.destroy()   
-     	except:
-     		pass
-     
-     	
-     def show_tt(self,text = None):
-     	
-     			if self.tooltip_data is not None:
-     				self.tooltip_data.destroy()
-     			if text is None:
-     				text = self.tt_text	
-     			self.tooltip_data = tk.Toplevel(background="white")
-     			if platform == 'MAC':     			
-     				self.tooltip_data.tk.call("::tk::unsupported::MacWindowStyle","style",self.tooltip_data._w, "plain", "none")
-     			else:
-     				self.tooltip_data.wm_overrideredirect(True)
-     				
-     			self.tooltip_data.attributes('-topmost',True,'-alpha',0.955)
-     				 
-     			label = tk.Label(self.tooltip_data, text=text, font = NORM_FONT,relief=tk.SOLID,
-                          borderwidth=0.0,
-                          wraplength=250, justify=tk.LEFT,
-                                         background = "white")
-     			label.pack(padx=8,pady=8)
-     			x = self.winfo_pointerx()
-     			y = self.winfo_pointery()
-     			self.focus_force()
-     			self.source_treeview.focus_set() 
-
-     			self.tooltip_data.wm_geometry("+%d+%d" % (x+8, y+8))
-     			self.tooltip_data.bind('<Motion>', self.destroy_tt)
-     			self.tooltip_data.bind('<ButtonPress>',self.destroy_tt)
-     			
-     def identify_item_and_start_tooltip(self,event):
-         '''
-         Currently disabled.
-         '''
-         return    
-         iid = self.source_treeview.identify_row(event.y)
-         
-         for iid_ in self.DataTreeview.columnsIidSelected:
-         	self.source_treeview.selection_remove(iid_)
-         self.source_treeview.selection_add(iid) 	
-         #if iid in self.items_selected and len(self.items_selected) > 1: 
+        
      
      def select_data(self):
      	'''
@@ -1180,10 +1176,14 @@ class analyze_data(tk.Frame):
      		tk.messagebox.showinfo('Done ..','Cluster numbers were added.', parent=self)
      
              
-     def copy_file_to_clipboard(self, data):
+     def copy_file_to_clipboard(self, data= None, fromSelection = False):
          '''
          Copies data to clipboard
          '''
+         if fromSelection:
+         	columns = self.DataTreeview.columnsSelected
+         	data = self.sourceData.get_current_data_by_column_list(columns)
+         	
          data.to_clipboard(excel=True, na_rep = "NaN",index=False, encoding='utf-8', sep='\t') 
 
          
@@ -1213,9 +1213,7 @@ class analyze_data(tk.Frame):
      	
      	columnName = 'Select_{}_{}'.format(len(selectionIndex),
      								get_elements_from_list_as_string(colnames))
-     	columnName = self.sourceData.evaluate_column_name(columnName)
-     	
-     					
+     	columnName = self.sourceData.evaluate_column_name(columnName)     					
      	true_false_map = dict(zip([False,True], [self.sourceData.replaceObjectNan,'+']))
      	
      	boolIndicator = pd.Series(self.sourceData.df.index.isin(selectionIndex), index = self.sourceData.df.index,
@@ -1227,7 +1225,35 @@ class analyze_data(tk.Frame):
      	'Categorical column ({}) has been added. Indicating if data of that row were in selection.'.format(columnName),\
      	parent = self)
 
-         
+        
+     def count_valid_values(self):
+     	'''
+     	Count valid values
+     	'''
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only numerical columns for this type of calculation.')
+     		return
+     	 
+     	selectionIsFromSameData,selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData:
+     	
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		columnName = self.sourceData.count_valid_values(self.DataTreeview.columnsSelected)  
+     		self.DataTreeview.add_list_of_columns_to_treeview(selectionDataFrameId,
+     													dataType = 'int64',
+     													columnList = [columnName],
+     													)   		
+     		tk.messagebox.showinfo('Done ..','Counting done. New column added (integers).')
+     	else:
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only columns from one file.')     
+     	
+     	
+     		
+        
+        
+        
      def create_count_through_column(self):
      	'''
      	Counts through the data in current order.
@@ -1246,6 +1272,9 @@ class analyze_data(tk.Frame):
      		
      		self.sourceData.set_current_data_by_id(currentDataFrameId)
      		tk.messagebox.showinfo('Done ..','Index column was added to the treeview.')
+     	
+     	else:
+     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
 	
          
          
@@ -1275,8 +1304,13 @@ class analyze_data(tk.Frame):
      	 	corrColumns = []
      	 	for col in numericalColumns:
      	 		if self.sourceData.df[col].min() < 0 or self.sourceData.df[col].max() > 1:
-     	 			tk.messagebox.showinfo('Error..','You need to select an untransformed p-value column with data in [0,1]. If you have -log10 transformed p-values please transform them first using 10^p.') 
-     	 			continue
+     	 			tk.messagebox.showinfo('Error..',
+     	 			'You need to select an untransformed p-value column with data in [0,1].'+
+     	 			'If you have -log10 transformed p-values please transform them first using 10^p.') 
+     	 			if col == numericalColumns[-1]:
+     	 				return
+     	 			else:
+     	 				continue
      	 		data_ = self.sourceData.df.dropna(subset=[col]) 
      	 		if 'storey' not in method:
      	 			reject, corr_pvals,_,_ = multipletests(data_[col], alpha = alpha, 
@@ -1517,7 +1551,7 @@ class analyze_data(tk.Frame):
                       button.destroy() 
              
              self.selectedNumericalColumns.clear() 
-             self.but_stored[9].configure(image= self.add_swarm_icon)
+             self.but_stored[10].configure(image= self.add_swarm_icon)
                
              if replot:       
              	plot_type = self.estimate_plot_type_for_default()
@@ -1554,7 +1588,9 @@ class analyze_data(tk.Frame):
      						  'clusterAnalysis':self.clusterCollection,
      						  'classificationAnalysis':self.classificationCollection,
      						  'anovaTests':self.anovaTestCollection,
-     						  'dimReductionTests':self.dimensionReductionCollection}
+     						  'dimReductionTests':self.dimensionReductionCollection,
+     						  'statCollection':self.statResultCollection,
+     						  'aucCollection':self.aucResultCollection}
      						  
      	try:					  
      		performed = save_and_load_sessions.save_session(saveCollectionDict)
@@ -1584,6 +1620,9 @@ class analyze_data(tk.Frame):
          self.classificationCollection = savedSession['classificationAnalysis']
          self.anovaTestCollection = savedSession['anovaTests']
          self.dimensionReductionCollection = savedSession['dimReductionTests']
+         self.statResultCollection = savedSession['statCollection']
+         self.aucResultCollection = savedSession['aucCollection']
+         
          self.plt.define_new_figure(self.f1)
          self.plt.reinitiate_chart()
          if self.plt.nonCategoricalPlotter is not None:
@@ -1931,6 +1970,7 @@ class analyze_data(tk.Frame):
                              lambda event, stats_tree=self.stats_tree: self.retrieve_test_from_tree(event,stats_tree)) 
         self.stats_tree.bind("<B1-Motion>", lambda event,analysis = True: self.on_motion(event, analysis)) 
         self.stats_tree.bind("<ButtonRelease-1>", lambda event, analysis =True: self.release(event,analysis)) 
+        self.stats_tree.bind(right_click, self.on_slected_analysis_button3)
         self.stats_tree.column("#0",minwidth=800)
         
         for heads in seps_tests:
@@ -1951,6 +1991,8 @@ class analyze_data(tk.Frame):
                         else:
                                 for direction in direct_test:
                                     self.stats_tree.insert(sub1, 'end', '%s_%s' % (str(opt_test),str(direction)), text=direction)
+        
+        #grid items
         sourceScroll = ttk.Scrollbar(self, orient = tk.HORIZONTAL, command = self.stats_tree.xview)
         sourceScroll2 = ttk.Scrollbar(self,orient = tk.VERTICAL, command = self.stats_tree.yview)
         self.stats_tree.configure(xscrollcommand = sourceScroll.set,
@@ -2043,11 +2085,15 @@ class analyze_data(tk.Frame):
      		return
      	
      
-     def delete_column(self):
+     def delete_column(self,event=None):
      	'''
      	Removes selected columns. Changes dataframe selection if needed. Eventually
      	it will change back to the previous selected dataframe.
      	'''
+     	if event is not None:
+     		if len(self.DataTreeview.columnsSelected) == 0:
+     			return
+     	
      	
      	currentDataFrameId = self.sourceData.currentDataFile
      	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
@@ -2251,7 +2297,7 @@ class analyze_data(tk.Frame):
         
          if plot_type  not in ['boxplot','violinplot','barplot','add_swarm']:
              
-             self.but_stored[9].configure(image = self.add_swarm_icon)
+             self.but_stored[10].configure(image = self.add_swarm_icon)
              self.swarm_but = 0
              self.plt.addSwarm = False                 
                           
@@ -2266,12 +2312,12 @@ class analyze_data(tk.Frame):
                  return
                  
              if self.swarm_but == 0:
-                 self.but_stored[9].configure(image= self.remove_swarm_icon)
+                 self.but_stored[10].configure(image= self.remove_swarm_icon)
                  self.add_swarm_to_figure()  
                  self.swarm_but = 1
                  
              else:
-                 self.but_stored[9].configure(image = self.add_swarm_icon)
+                 self.but_stored[10].configure(image = self.add_swarm_icon)
                  self.swarm_but = 0
                  help = self.plt.get_active_helper() 
                  help.remove_swarm()
@@ -2341,15 +2387,19 @@ class analyze_data(tk.Frame):
      	'''
      	self.curveFitCollection.remove_fits_by_dataId(dataId)
  	
+     def on_slected_analysis_button3(self, event):
+     	'''
+     	'''
+     	self.post_menu(menu=self.analysis_menu)
  	
- 	   
+ 		   
         
      def on_slected_treeview_button3(self, event):
          '''
          Button-3 drop-down menu.
          '''
          if self.DataTreeview.onlyDataFramesSelected:
-         	self.post_menu(menu = self.merge_data_frames_menu)
+         	self.post_menu(menu = self.data_frame_menu)
          elif self.DataTreeview.onlyDataTypeSeparator:
          	self.post_menu(menu=self.data_type_menu)
          else:
@@ -2373,8 +2423,10 @@ class analyze_data(tk.Frame):
              self.data_types_selected   =   self.DataTreeview.dataTypesSelected
              if analysis:
              	but_text = str(self.test) 
+             	self.frame.configure(bd=2,relief=tk.SOLID)
              else:
              	but_text=str(self.DataTreeview.columnsSelected)[1:-1]
+             	self.indicate_drag_drop_areas(self.data_types_selected[0])
 
              self.mot_button = tk.Button(self, text=but_text, bd=1,
                                      		   fg="darkgrey", bg=MAC_GREY)
@@ -2387,16 +2439,17 @@ class analyze_data(tk.Frame):
              	self.mot_button_dict.clear()	
              
              self.mot_button_dict[self.mot_button] = self.mot_button
-             
+                          
          x = self.winfo_pointerx() - self.winfo_rootx()
          y = self.winfo_pointery() - self.winfo_rooty()
          
          self.mot_button.place( x= x-20 ,y = y-30) ## offset because otherwise dropped widget will always be the same button
                          
          if analysis:
-            
+             
              if self.widget == self.canvas.get_tk_widget():
                  self.mot_button.configure(fg = "blue")
+                 
              else:
                  self.mot_button.configure(fg = "darkgrey")
                  
@@ -2404,32 +2457,41 @@ class analyze_data(tk.Frame):
                  if len(self.data_types_selected) == 0:
                  	return
                  unique_dtypes_selected = self.data_types_selected[0]
+                 if self.widget in self.dataTypeSpecWidgets[unique_dtypes_selected]:
+                 	self.mot_button.configure(fg="blue")
                  
+                 elif self.widget == self.color_button_droped and unique_dtypes_selected  in ['object','int64']:
+                 	self.mot_button.configure(fg="blue")
+                 	
+                 else:
+                 	self.mot_button.configure(fg = "darkgrey") 
+       
 
-                 if unique_dtypes_selected == 'float64':
-                     
-                     if self.widget in [self.tx_space,self.column_sideframe] or self.widget in self.sliceMarkButtonsList: 
-                         self.mot_button.configure(fg = "blue")
-                         return
-      
-                 elif unique_dtypes_selected == 'int64':
-                     
-                     if self.widget in [self.tx_space,
-                     					self.cat_space,self.color_button_droped,
-                     					self.column_sideframe,self.category_sideframe] or self.widget in self.sliceMarkButtonsList:
-                         self.mot_button.configure(fg = "blue")
-                         return
-                         
-                 elif unique_dtypes_selected == 'object':      
 
-                     if self.widget in [self.cat_space,self.color_button_droped,
-                     		 			self.category_sideframe] or self.widget in self.sliceMarkButtonsList:
-
-                         self.mot_button.configure(fg = "blue")
-                         return
-                
-                 self.mot_button.configure(fg = "darkgrey") 
-                     
+     def indicate_drag_drop_areas(self, dataType, frameRelief=tk.SOLID):
+     	'''
+     	Change frames that accept are drag and drop areas 
+     	'''
+     	
+     	if dataType == 'float64':
+     		frames = [self.column_sideframe,self.mark_sideframe]
+     	     	
+     	elif dataType == 'object':
+     		frames =  [self.category_sideframe,self.mark_sideframe]
+     	
+     	elif dataType == 'int64':
+     		frames =  [self.column_sideframe,self.category_sideframe,self.mark_sideframe]
+     	
+     	for frame in frames:
+     	
+     		if frame == self.mark_sideframe and \
+     		(self.plt.currentPlotType  not in \
+     		['scatter','hclust','PCA','scatter_matrix','cluster_analysis','line_plot'] \
+     		or (self.plt.currentPlotType == 'scatter' and self.plt.binnedScatter)):
+     		
+     			continue
+     			
+     		frame.config(relief=frameRelief)     	
                          
      def delete_dragged_buttons(self, event, but_name, columns=False):
          '''
@@ -2477,7 +2539,6 @@ class analyze_data(tk.Frame):
                                   pass
          mpl_connections = [                      
                             self.selection_press_event,
-                            self.tooltip_inf,
                             self.pick_label,
                             self.pick_freehand,
                             self._3d_update,
@@ -2499,7 +2560,6 @@ class analyze_data(tk.Frame):
              buttons_dropped = buttons_dropped[:-1]
          for but in buttons_dropped:
                 if but is not None:
-                    
                     but.destroy() 
                     but = None    
            
@@ -2587,6 +2647,8 @@ class analyze_data(tk.Frame):
              return
             
          widget = self.winfo_containing(event.x_root, event.y_root)
+         self.frame.configure(bd=2,relief=tk.FLAT)
+         self.indicate_drag_drop_areas(self.data_types_selected[0],frameRelief=tk.GROOVE)
 
 
          if self.mot_button is not None:
@@ -2724,8 +2786,10 @@ class analyze_data(tk.Frame):
              self.tooltip_button_droped = create_button(self.interactiveWidgetHelper.frame, text = s, 
              											image= self.but_tooltip_icon, 
              											compound=tk.CENTER)
+             
              self.tooltip_button_droped.bind(right_click, self.remove_tool_tip_active) 
              self.tooltip_button_droped.grid(columnspan=2, padx=1, pady=1) 
+             
                 
                 
          elif widget == self.sliceMarkFrameButtons['size']:
@@ -2752,12 +2816,15 @@ class analyze_data(tk.Frame):
             if len(self.plt.plotHistory) == 0:
                 return
             last_plot_type = self.plt.currentPlotType
+            
                              
             if self.color_button_droped is not None:
                  self.color_button_droped.destroy()
                  self.color_button_droped = None 
                  
             s =  self.return_string_for_buttons(self.DataTreeview.columnsSelected  [0])
+            if self.plt.binnedScatter and last_plot_type == 'scatter':
+            	return
             
             self.color_button_droped = create_button(self.interactiveWidgetHelper.frame, text = s, 
              											image= self.but_col_icon, 
@@ -2790,6 +2857,8 @@ class analyze_data(tk.Frame):
              if self.plt.nonCategoricalPlotter is not None:
              	if 'change_color_by_categorical_columns' in self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges:
              		alreadyUsedColors = self.plt.nonCategoricalPlotter.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+             	elif 'change_color_by_categorical_columns' in self.plt.nonCategoricalPlotter.linePlotHelper.sizeStatsAndColorChanges:
+             		alreadyUsedColors = self.plt.nonCategoricalPlotter.linePlotHelper.sizeStatsAndColorChanges['change_color_by_categorical_columns']
              else:
              	alreadyUsedColors = []
              self.DataTreeview.columnsSelected = alreadyUsedColors + columnSelected
@@ -2903,7 +2972,7 @@ class analyze_data(tk.Frame):
                      											  self.anovaTestCollection)
                      	
                      	self.stat_button_droped.configure(command = lambda : \
-                     	self.show_anova_results(id = self.anovaTestCollection.id))
+                     	self.show_anova_results())
                     	                    	
                      elif self.test =='Kruskal-Wallis':
                          self.perform_one_way_anova_or_kruskall()
@@ -2922,7 +2991,8 @@ class analyze_data(tk.Frame):
                         	self.twoGroupstatsClass.selectedTest = statTestInformation
                         else:
                         	self.twoGroupstatsClass = stats.interactiveStatistics(self.plt,
-                        								self.sourceData,statTestInformation)
+                        								self.sourceData,statTestInformation,
+                        								self.statResultCollection)
                         self.stat_button_droped.configure(command = self.show_statistical_test)
                      
                      
@@ -2952,6 +3022,8 @@ class analyze_data(tk.Frame):
                          self.dimReduction_button_droped.grid(columnspan=2, padx=0, pady=1) 
                          self.perform_dimReduction_analysis() 
                          
+     
+     
      def curve_fit(self,from_drop_down = True):
      	'''
      	Dialogue window to calculate curve fit. 
@@ -2971,23 +3043,31 @@ class analyze_data(tk.Frame):
      	  
      	curve_fitting.curveFitter(columns,self.sourceData,self.DataTreeview,self.curveFitCollection)
         
-        
-      
-     
-     def show_anova_results(self, id):
+             
+     def show_anova_results(self):
      	'''
-     	Display anova results
+     	Display anova results.
      	'''
+     	if len(self.anovaTestCollection.anovaResults) == 0:
+     		tk.messagebox.showinfo('Error ..','No ANOVA test results found.')
+     		return
      	anova_results.anovaResultDialog(self.anovaTestCollection)
 	
 	                   
-     def show_statistical_test(self):
+     def show_statistical_test(self, showAllTests = False):
      	'''
      	Displays calculated statistics in a pandastable. 
      	Allows the user to add these data to the data collection and 
      	treeview. Which then can be could be used for plotting. 
      	'''
-     	data = self.twoGroupstatsClass.performedTests
+     	if showAllTests:
+     		data = self.statResultCollection.performedTests
+     	else:
+     		data = self.twoGroupstatsClass.performedTests
+     	if len(data.index) == 0:
+     		tk.messagebox.showinfo('Error ..','No test results found..')
+     		return
+     		
      	dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
      	
      	if dataDialog.addDf:
@@ -2996,12 +3076,17 @@ class analyze_data(tk.Frame):
      	del dataDialog
      	
      
-     def show_auc_calculations(self):
+     def show_auc_calculations(self, showAllTests = False):
      	'''
      	Display determined AUC in pandastable.
-     	Users can also add the data frame to the source
+     	Users can also add the data frame to the source data tree view
      	'''
-     	df = self.plt.nonCategoricalPlotter.timeSeriesHelper.get_auc_data()
+     	
+     	if showAllTests:
+     		df = self.aucResultCollection.performedCalculations
+     	else:
+     		df = self.plt.nonCategoricalPlotter.timeSeriesHelper.get_auc_data()
+     	
      	dataDialog = display_data.dataDisplayDialog(df,showOptionsToAddDf=True)
      	if dataDialog.addDf:
      		del dataDialog
@@ -3038,7 +3123,6 @@ class analyze_data(tk.Frame):
          	self.plt.redraw()
          	
     
-    
      def remove_sizes_(self,event):    
          '''
          Resets the size of scatter points to the basic level.
@@ -3069,10 +3153,14 @@ class analyze_data(tk.Frame):
          if self.plt.plotCount != 0:
          	color_changer.colorChanger(self.plt,self.sourceData,colormap, self.interactiveWidgetHelper)
                   	     	
+    
      def remove_tool_tip_active(self,event):
-         
+         '''
+         Removes tooltip activity.
+         '''
+         self.plt.disconnect_tooltips()
          self.tooltip_button_droped.destroy() 
-         self.canvas.mpl_disconnect(self.tooltip_inf)
+         
          
      def remove_annotations_from_current_plot(self,event):
          '''
@@ -3080,6 +3168,7 @@ class analyze_data(tk.Frame):
          '''
          quest = tk.messagebox.askquestion('Deleting labels..','This step will remove all labels from your plot.\nPlease confirm..')
          if quest == 'yes':
+         	
           	self.plt.nonCategoricalPlotter.annotationClass.remove_all_annotations()
           	self.plt.nonCategoricalPlotter.annotationClass.disconnect_event_bindings()
           	self.plt.nonCategoricalPlotter.annotationClass = None
@@ -3217,7 +3306,9 @@ class analyze_data(tk.Frame):
                  
   
      def return_string_for_buttons(self, items_for_col, lim = 12):        
-         
+         '''
+         Return string 
+         '''
          string_length  = len(items_for_col)
          if string_length > lim:
                 s = items_for_col[:lim-1]+'..'
@@ -3398,12 +3489,22 @@ class analyze_data(tk.Frame):
          	elif self.plt.currentPlotType == 'scatter_matrix':
          	
          		self.plt.nonCategoricalPlotter._scatterMatrix.change_color_by_numeric_column(colorColumn)
+         	elif self.plt.currentPlotType == 'line_plot':
+         		
+         		self.plt.nonCategoricalPlotter.linePlotHelper.change_color_by_numerical_column(self.DataTreeview.columnsSelected, updateColor=False)
+         	
          else:
          
          	if self.plt.currentPlotType == 'scatter_matrix':
          	
          		self.plt.nonCategoricalPlotter._scatterMatrix.change_color_by_categorical_column(self.DataTreeview.columnsSelected)
+                  	
+         	elif self.plt.currentPlotType == 'line_plot':
          		
+         		self.plt.nonCategoricalPlotter.linePlotHelper.change_color_by_categorical_columns(self.DataTreeview.columnsSelected, updateColor=False)
+         		self.interactiveWidgetHelper.clean_color_frame_up()
+         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt) 
+         	 
          	elif self.plt.currentPlotType in ['scatter','PCA']:
          		
          		if self.plt.nonCategoricalPlotter is not None:
@@ -3766,17 +3867,13 @@ class analyze_data(tk.Frame):
                               size=9, ha='left')
           self.canvas.draw()
           
+          
+     
      def add_tooltip_information(self):
-         try:
-             self.label_button_droped.destroy()
-             self.label_button_droped = None
-             self.canvas.mpl_disconnect(self.pick_label)
-             self.canvas.mpl_disconnect(self.pick_freehand)
-         except:
-             pass 
-         self.tooltip_inf = self.canvas.mpl_connect('motion_notify_event', self.onHover)
-        
-         
+     	'''
+     	'''
+     	self.plt.add_tooltip_info(self.DataTreeview.columnsSelected)
+     	         
                  
          
      def make_labels_selectable(self):
@@ -3908,38 +4005,6 @@ class analyze_data(tk.Frame):
              del self.lasso 
              self.canvas.draw_idle()
              
-             
-
-     def onHover(self,event):
-            
-             global t, started, xdata, ydata
-             started = 1 
-   
-             try:
-                 self.hover_annot.remove() 
-             except:
-                 pass 
-             
-             xdata = event.xdata
-             ydata = event.ydata
-             self.start_time = time.time() 
-             
-             t = perpetualTimer(0.1, self.measure_time_diff_thread)
-             if started == 1:
-
-                 for t_in_dict in t_dict.values():                         
-                         t_in_dict.cancel()
-                        
-                 t_dict[str(xdata)+str(t)] = t     
-                 t.start() 
-                 
-             else:
-                 pass 
-             
-             if 'Axes' not in str(event.inaxes):
-                 t.cancel()
-                 started = 0
-                 return 
          
             
      def configure_chart(self):
@@ -4177,186 +4242,6 @@ class analyze_data(tk.Frame):
          			else:
          				pass
          		return
-            
-             
-
-         
-         elif mode == 'Hierarchical Clustering Settings':
-         
-             def close_and_save(popup,vars_,cbs):
-                 for i,met in enumerate(self.hclust_metrices):
-                     self.hclust_metrices[i] = vars_[i].get() 
-                 self.calculate_row_dendro = cbs[0].get() 
-                 self.calculate_col_dendro = cbs[1].get()    
-                 tk.messagebox.showinfo('Done..','Settings are saved and will be used for the next clustering', parent=popup)
-                 popup.destroy()
-                 
-             def update(vars_,cbs):
-                 popup.destroy()
-                 items_that_differ = [i for i,var_  in enumerate(vars_) if var_.get() != self.hclust_metrices[i]]
-                 for i,met in enumerate(self.hclust_metrices):
-                     self.hclust_metrices[i] = vars_[i].get()  
-                 
-                 if self.calculate_row_dendro != cbs[0].get() or self.calculate_col_dendro != cbs[1].get():
-                 
-                     self.calculate_row_dendro = cbs[0].get() 
-                     self.calculate_col_dendro = cbs[1].get()   
-                     update_needed = True
-                 else:
-                     update_needed = False
-                 
-                 if all(x > 3 for x in items_that_differ) and update_needed == False:
-                     add_draw = True
-                     if 6 in items_that_differ:
-
-                         cmap = get_cmap.get_max_colors_from_pallete(self.hclust_metrices[6])  
-                         self.hclust_axes['im'].set_cmap(cmap)
-                         self.reduce_tick_to_n(self.hclust_axes['colormap'],'y',3)
-                         
-                     if 5 in items_that_differ:                         
-                          cmap = get_cmap.get_max_colors_from_pallete(self.hclust_metrices[5])  
-                          if 'color_im' in self.hclust_axes:
-                              self.hclust_axes['color_im'].set_cmap(cmap)  
-                              tk.messagebox.showinfo('Error..','No color axis yet.')
-                     if self.color_added is not None:
-                          self.add_new_color_column(column = self.color_added, redraw= False)
-                          if self.color_added  is not None:
-                             self.add_information_to_labeling_rows()
-                          ax = self.hclust_axes['map']
-                          self.on_ylim_panning(ax, just_rename = True, redraw=False)
-                          
- 
-                     if 4 in items_that_differ:
-                          add_draw = False
-                          line = self.hclust_axes['cluster_line_left']
-                          x_data = line.get_xdata()[0]
-                          self.hclust_axes['left'].clear()  
-                          Y_row = self.hclust_axes['row_link']  
-                          cmap = self.hclust_metrices[4]
-                          rgb_vals = sns.color_palette(cmap,len(list(set(self.clust_h))),desat=0.75)
-                          colors = [col_c(color) for color in rgb_vals]     
-                          sch.set_link_color_palette(colors)
-                          Z_row = sch.dendrogram(Y_row, orientation='left', color_threshold= x_data, leaf_rotation=90, ax = self.hclust_axes['left'])
-                          self.add_cluster_number_to_dendo(self.hclust_axes['left'])
-                          self.adjust_lines_in_hclust(self.hclust_axes['left'])
-                          self.hclust_axes['left'].set_xticks([])
-                          self.canvas.draw()                        
-                          self.background_hclust = self.canvas.copy_from_bbox(self.hclust_axes['left'].bbox)
-                          self.hclust_axes['cluster_line_left'] = self.hclust_axes['left'].axvline(x_data, linewidth=1.5, color = '#1f77b4')        
-                          self.hclust_axes['left'].draw_artist(self.hclust_axes['cluster_line_left'])
-                          self.canvas.blit(self.hclust_axes['left'].bbox)
-                                                   
-                     if add_draw == False:
-                         pass
-                     else:
-                         
-                         self.canvas.draw()
-                     tk.messagebox.showinfo('Done..','Hierarchichal Cluster updated.')
-                 else:
-                     
-                     self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
-                                   catnames = list(self.selectedCategories.keys() ),
-                                                plot_type = 'hclust')    
-                     tk.messagebox.showinfo('Done..','Hierarchichal Cluster had to be re-calculated for your changes. Additional colormaps as well as labels are not preserved.')
-                     
-                 
-                 
-                 
-             
-             w = 500
-             popup.attributes('-topmost', True)
-             popup.grab_set() 
-             cont = self.create_frame(popup)  
-             cont.pack(fill='both', expand=True)
-             cont.grid_columnconfigure(1, weight=1)
-             
-             
-             lab_text =  'Change settings for hierarchical clustering'
-             
-             lab_main = tk.Label(cont, text= lab_text, 
-                                     font = LARGE_FONT, 
-                                     fg="#4C626F", 
-                                     justify=tk.LEFT, bg = MAC_GREY)
-             
-             lab_main.grid(padx=10, pady=15, columnspan=6, sticky=tk.W)
-             
-             
-             vb_dist_row = tk.StringVar()
-             vb_linkage_row= tk.StringVar()
-             vb_dist_col = tk.StringVar()
-             vb_linkage_col= tk.StringVar()
-             calc_dendro_row = tk.BooleanVar()
-             calc_dendro_col = tk.BooleanVar()
-             calc_dendro_row.set(self.calculate_row_dendro)
-             calc_dendro_col.set(self.calculate_col_dendro)
-             cbs = [calc_dendro_row ,calc_dendro_col ]
-             vars_ = []
-             m = 0
-             for dendo in ['row','column']:
-                 title = tk.Label(cont, text = 'Settings for '+dendo, bg=MAC_GREY,font = LARGE_FONT, 
-                                     fg="#4C626F")
-                 title.grid(padx=10, pady=6, columnspan=2, sticky=tk.W,column=0)
-                 sep = ttk.Separator(cont, orient =  tk.HORIZONTAL)
-                 sep.grid(sticky=tk.EW, columnspan=2)
-                 
-                 cbs_ = ttk.Checkbutton(cont, text = "Calculate {} dendrogram".format(dendo), variable = cbs[m] )
-                 cbs_.grid(padx=10, pady=3, sticky=tk.W,column=0)
-                 m+=1
-                 dist_label = tk.Label(cont, text = 'Distance metric: ', bg=MAC_GREY)
-                 dist_label.grid(padx=10, pady=3, sticky=tk.W,column=0)
-                 row_ = int(float(dist_label.grid_info()['row']))
-                 if dendo == 'row':
-                     idx_met = 0
-                     vb_dist = vb_dist_row
-                     vb_linkage = vb_linkage_row
-                 else:
-                     idx_met= 2
-                     vb_dist = vb_dist_col
-                     vb_linkage = vb_linkage_col
-                 om_dist = ttk.OptionMenu(cont, vb_dist ,self.hclust_metrices[idx_met], *pdist_metric)
-                 om_dist.grid(padx=10,pady=3,column=1, sticky=tk.E, row=row_ )
-                 link_label = tk.Label(cont, text = 'Linkage method: ', bg=MAC_GREY)
-                 link_label.grid(padx=10, pady=3, sticky=tk.W,column=0, row=row_ +1)
-                 om_dist = ttk.OptionMenu(cont, vb_linkage , self.hclust_metrices[idx_met+1], *linkage_methods)
-                 om_dist.grid(padx=10,pady=3,column=1, sticky=tk.E,row=row_ +1)
-                 vars_.append(vb_dist)
-                 vars_.append(vb_linkage)
-                 
-             col_pal_ = tk.Label(cont, text = 'Color palettes', bg=MAC_GREY,font = LARGE_FONT, 
-                                     fg="#4C626F")  
-             col_pal_.grid(padx=10, pady=15, columnspan=2, sticky=tk.W,column=0)
-             sep = ttk.Separator(cont, orient =  tk.HORIZONTAL)
-             sep.grid(sticky=tk.EW, columnspan=2,padx=10)
-             
-             col_lab = tk.Label(cont, text = 'Choose color palette for clusters in dendrogram: ', bg=MAC_GREY)
-             col_lab.grid(padx=10, pady=3, sticky=tk.W,column=0)
-             vb_col_dendo = StringVar()
-             om_dist = ttk.OptionMenu(cont, vb_col_dendo , self.hclust_metrices[4], *color_schemes)
-             om_dist.grid(padx=10,pady=3,column=1, sticky=tk.E, row= col_lab.grid_info()['row'])
-             vars_.append(vb_col_dendo)
-             
-             vb_col_color_column = StringVar()
-             col_lab = tk.Label(cont, text = 'Choose color palette for additional colormap: ', bg=MAC_GREY)
-             col_lab.grid(padx=10, pady=3, sticky=tk.W,column=0)
-            
-             om_dist = ttk.OptionMenu(cont, vb_col_color_column , self.hclust_metrices[5], *color_schemes)
-             om_dist.grid(padx=10,pady=3,column=1, sticky=tk.E, row= col_lab.grid_info()['row'])
-             vars_.append(vb_col_color_column)
-             col_lab = tk.Label(cont, text = 'Choose color palette for heatmap: ', bg=MAC_GREY)
-             col_lab.grid(padx=10, pady=3, sticky=tk.W,column=0)
-             vb_col_clust = StringVar()
-             om_dist = ttk.OptionMenu(cont, vb_col_clust, self.hclust_metrices[-1], *color_schemes)
-             om_dist.grid(padx=10,pady=3,column=1, sticky=tk.E, row= col_lab.grid_info()['row'])
-             vars_.append(vb_col_clust)
-             okay_but = ttk.Button(cont, text='Update', command = lambda vars_=vars_, cbs=cbs: update(vars_,cbs))    
-             close_but = ttk.Button(cont, text = 'Close & Save', command =lambda popup=popup,vars_=vars_, cbs = cbs: close_and_save(popup,vars_,cbs))    
-             okay_but.grid(padx=50, pady=8, sticky=tk.NS+tk.W,column=0)
-             close_but.grid(padx=10, pady=8, sticky=tk.NS+tk.W,column=1, row = okay_but.grid_info()['row'])
-             
-             cont.grid_rowconfigure(okay_but.grid_info()['row'], weight=1)
-             
-
-                         
        
          center(popup,size=(w,h))
          if 'excel' in mode or 'add_error' in mode or 'choose subject column' in mode or 'choose subject and repeated measure column' in mode or 'Color' in mode: 
@@ -4375,26 +4260,19 @@ class analyze_data(tk.Frame):
      
      
      def reset_dicts_and_plots(self):
-     	
-          if True:
-              self.source_treeview.delete(*self.source_treeview.get_children())     
-              for button in self.selectedNumericalColumns.values():
-                  button.destroy() 
-              for button in self.selectedCategories.values():
-                  button.destroy()    
-              self.selectedCategories.clear()
-              self.selectedNumericalColumns.clear() 
-              self.but_stored[9].configure(image= self.add_swarm_icon)
-              
-
-              self.swarm_but = 0
-              self.add_swarm_to_new_plot = False
-              self.remove_mpl_connection()
-              self.performed_stats.clear() 
-              self.data_set_information.clear()
-
-              self.f1.clf() 
-              self.canvas.draw()               
+        '''
+        Resetting dicts.
+        '''
+        self.source_treeview.delete(*self.source_treeview.get_children())     
+        self.clean_up_dropped_buttons(replot=False) 
+        self.but_stored[9].configure(image= self.add_swarm_icon)
+        self.swarm_but = 0
+        self.add_swarm_to_new_plot = False
+        self.remove_mpl_connection()
+        self.performed_stats.clear() 
+        self.data_set_information.clear()
+        self.plt.clean_up_figure()    
+        self.plt.redraw()          
               
           
      def source_file_upload(self, pathUpload = None, resetTreeEntries = True):
@@ -4470,6 +4348,7 @@ class analyze_data(tk.Frame):
           if resetTreeEntries:
 
           	self.plt = plotter._Plotter(self.sourceData,self.f1)
+          	self.plt.set_auc_collection(self.aucResultCollection)
 
           	self.plt.set_scatter_point_properties(GREY,round(float(self.alpha_selected.get()),2),
           								int(float(self.size_selected.get())))
@@ -4571,7 +4450,7 @@ class analyze_data(tk.Frame):
                         	NORM_FONT =  (defaultFont,11) 
                     
                     ###### LIST FOR PLOT OPTIONS 
-                    icon_list = [self.point_plot_icon_norm,self.scatter_icon_norm,self.time_series_icon_norm ,self.matrix_icon_norm,self.dist_icon_norm,self.barplot_icon_norm ,
+                    icon_list = [self.line_icon_norm,self.point_plot_icon_norm,self.scatter_icon_norm,self.time_series_icon_norm ,self.matrix_icon_norm,self.dist_icon_norm,self.barplot_icon_norm ,
                                  self.box_icon_norm,self.violin_icon_norm, self.swarm_icon_norm ,self.add_swarm_icon_norm
                                  ,self.hclust_icon_norm,self.corr_icon_norm,self.config_plot_icon_norm] 
                     for i, icon in enumerate(icon_list):
@@ -4611,9 +4490,7 @@ class analyze_data(tk.Frame):
                     self.delete_all_button_num.configure(image = self.delete_all_cols_norm)
                     self.delete_all_button_cat.configure(image = self.delete_all_cols_norm)
                     	
-                    	
               		
-                    #self.label_nav.configure(font = ('Helvetica',5))
                 elif icon_ == 'LARGE':
                     
                     self.uploadFrameButtons['upload'].configure(image=self.open_file_icon)
@@ -4664,7 +4541,7 @@ class analyze_data(tk.Frame):
                     	NORM_FONT =  (defaultFont,12) 
                     
                   
-                    icon_list = [self.point_plot_icon,self.scatter_icon,self.time_series_icon ,self.matrix_icon,self.dist_icon,self.barplot_icon ,
+                    icon_list = [self.line_icon,self.point_plot_icon,self.scatter_icon,self.time_series_icon ,self.matrix_icon,self.dist_icon,self.barplot_icon ,
                                  self.box_icon,self.violin_icon, self.swarm_icon ,self.add_swarm_icon
                                  ,self.hclust_icon,self.corr_icon,self.config_plot_icon] 
                     for i, icon in enumerate(icon_list):
@@ -4713,12 +4590,12 @@ class analyze_data(tk.Frame):
            self.box_icon,self.barplot_icon,self.scatter_icon,self.swarm_icon,self.time_series_icon\
            					,self.violin_icon,self.hclust_icon,self.corr_icon,self.point_plot_icon, \
            					self.matrix_icon, self.dist_icon, self.add_swarm_icon_,self.remove_swarm_icon_,\
-           					self.setting_icon  =   images.get_plot_options_icons()                   
+           					self.setting_icon, self.line_icon  =   images.get_plot_options_icons()                   
 
            self.box_icon_norm,self.barplot_icon_norm ,self.scatter_icon_norm ,self.swarm_icon_norm ,self.time_series_icon_norm \
            					,self.violin_icon_norm ,self.hclust_icon_norm ,self.corr_icon_norm ,self.point_plot_icon_norm , \
            					self.matrix_icon_norm , self.dist_icon_norm, self.add_swarm_icon_norm , self.remove_swarm_icon_norm, \
-           					self.setting_icon_norm    = images.get_plot_options_icons_norm()
+           					self.setting_icon_norm, self.line_icon_norm    = images.get_plot_options_icons_norm()
            
            self.open_file_icon_norm,self.save_session_icon_norm,self.open_session_icon_norm,self.add_data_icon_norm =  images.get_norm_data_upload_and_session_images()  
            
@@ -4843,10 +4720,13 @@ class analyze_data(tk.Frame):
                                          padx=4)
 
            
-           chartTypes = ['pointplot','scatter','time_series','scatter_matrix','density','barplot','boxplot','violinplot', 'swarm','add_swarm','hclust','corrmatrix','configure']
+           chartTypes = ['line_plot','pointplot','scatter','time_series','scatter_matrix',
+           		'density','barplot','boxplot','violinplot', 'swarm','add_swarm',
+           		'hclust','corrmatrix','configure']
            tooltip_info = tooltip_information_plotoptions
            # we are using the icon in desired order to create plot/chart options
            iconsForButtons = [
+                                    self.line_icon,
                                     self.point_plot_icon,
                                     self.scatter_icon,                                 
                                     self.time_series_icon,
@@ -4866,7 +4746,7 @@ class analyze_data(tk.Frame):
            for n, buttonIcon in enumerate(iconsForButtons):
 
             	chartType = chartTypes[n]
-            	if chartType in ['density','hclust','configure',
+            	if chartType in ['boxplot','hclust','configure',
             					'barplot','corrmatrix']:
             		pady = (5,1)
             	else:
@@ -4892,10 +4772,14 @@ class analyze_data(tk.Frame):
             		chartButton.bind(right_click, lambda event: self.post_menu(event,self.hclust_menu))
             	elif chartType == 'corrmatrix':
             		chartButton.bind(right_click, lambda event: self.post_menu(event,self.corrMatrixMenu))
-            	if n & 1:
+            	elif chartType == 'scatter':
+            		chartButton.bind(right_click, lambda event: self.post_menu(event,self.scatter_menu))
+            	if (n & 1 and chartType not in ['configure','hclust']) or chartType == 'corrmatrix':
             		columnPos = 1
             	else:
             		columnPos = 0
+            	if chartType == 'hclust':	
+            		i += 1
             	chartButton.grid(in_ = self.plotoptions_sideframe, row = i ,column = columnPos, pady=pady)
             	if columnPos == 1:
            			i += 1
@@ -4924,18 +4808,33 @@ class analyze_data(tk.Frame):
            self.source_treeview.column("#0",minwidth=800)
            self.source_treeview.bind("<B1-Motion>", self.on_motion) 
            self.source_treeview.bind("<ButtonRelease-1>", self.release) 
-          # self.source_treeview.bind("<Double-Button-1>", self.identify_item_and_start_tooltip)
-           #self.source_treeview.bind('<Motion>', self.destroy_tt)
+           self.source_treeview.bind("<BackSpace>", self.delete_column)
+           self.source_treeview.bind("<Delete>", self.delete_column)
            
+           if platform == 'MAC':
+           
+           		self.source_treeview.bind('<Command-c>', lambda event: self.copy_file_to_clipboard(fromSelection = True))
+           		self.source_treeview.bind('<Command-f>', lambda event: self.categorical_column_handler('Search string & annotate'))
+           		self.source_treeview.bind('<Command-r>', lambda event: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))
+           		self.source_treeview.bind('<Command-n>', lambda event: self.numeric_filter_dialog())
+           		self.source_treeview.bind('<Command-m>', lambda event: self.combine_selected_columns())
+      		
+           elif platform == 'WINDOWS':
+           		self.source_treeview.bind('<Control-c>', lambda event: self.copy_file_to_clipboard(fromSelection = True))
+           		self.source_treeview.bind('<Control-f>', lambda event: self.categorical_column_handler('Search string & annotate'))
+           		self.source_treeview.bind('<Control-r>', lambda event: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))
+           		self.source_treeview.bind('<Control-n>', lambda event: self.numeric_filter_dialog())
+           		self.source_treeview.bind('<Control-m>', lambda event: self.combine_selected_columns())
+           		         		
            self.source_treeview.bind(right_click, self.on_slected_treeview_button3)
-                          
+
+
            sourceScroll = ttk.Scrollbar(self, orient = tk.HORIZONTAL, command = self.source_treeview.xview)
            sourceScroll2 = ttk.Scrollbar(self,orient = tk.VERTICAL, command = self.source_treeview.yview)
            self.source_treeview.configure(xscrollcommand = sourceScroll.set,
                                           yscrollcommand = sourceScroll2.set)
            
            self.build_analysis_tree()
-           
            
            self.data_button = create_button(self.source_sideframe, 
            						image = self.streteched_data, 
@@ -4976,6 +4875,18 @@ class analyze_data(tk.Frame):
            sourceScroll2.pack(in_= self.source_sideframe, side = tk.LEFT, fill=tk.Y, anchor=tk.N)
            self.source_treeview.pack(in_= self.source_sideframe, padx=0, expand=True, fill=tk.BOTH, anchor = tk.NE) 
            sourceScroll.pack(in_= self.source_sideframe, padx=0,anchor=tk.N, fill=tk.X) 
+           
+           intWidgets = [self.tx_space,self.cat_space,self.color_button_droped,
+           		self.column_sideframe,self.category_sideframe] + self.sliceMarkButtonsList
+                     					
+           floatWidgets = [self.tx_space,self.column_sideframe] + self.sliceMarkButtonsList
+               					
+           objectWidgets = [self.cat_space,self.color_button_droped,self.category_sideframe] + self.sliceMarkButtonsList 
+           
+           self.dataTypeSpecWidgets = {'float64':floatWidgets,
+           							   'int64':intWidgets,
+           							   'object':objectWidgets}
+
            
            self.frame.grid(in_=self,
                                      row=5,

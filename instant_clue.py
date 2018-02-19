@@ -149,7 +149,7 @@ if __name__ == "__main__":
      appGeom = evaluate_screen(screen_width,screen_height,w,h)     
      app.geometry(appGeom)
      # method after is not needed here but works much better
-     # with focusing afterwards frames
+     # with focusing afterwards frames have been created
      app.after(40,app.check_for_new_version)
      app.mainloop() 
      sys.exit(1)

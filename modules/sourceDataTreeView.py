@@ -9,7 +9,8 @@ import pandas as pd
 from collections import OrderedDict
 from modules.utils import *
 
-columnTypeNaming = OrderedDict([('float64','Numeric Floats'),('int64','Integers'),('object','Categories'),('bool','Boolean')])
+columnTypeNaming = OrderedDict([('float64','Numeric Floats'),
+	('int64','Integers'),('object','Categories'),('bool','Boolean')])
 
 
 class sourceDataTreeview(object):

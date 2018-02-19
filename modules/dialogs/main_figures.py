@@ -415,6 +415,12 @@ class mainFigureTemplateDialog(object):
 		'''
 		'''
 		if event.dblclick:
+			for axisId, artists in self.axisItems.items():
+				leg = self.figureProps[axisId]['ax']
+				if leg is not None:
+					print(leg.__dict__)
+					leg.use_blit = False
+					
 					
 			for id,label in self.textsAdded.items():
 				if label.contains(event)[0]:

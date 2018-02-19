@@ -22,10 +22,12 @@ from collections import OrderedDict
 from modules import stats
 from modules.plots.hierarchical_clustering import hierarchichalClustermapPlotter
 from modules.plots.time_series_helper import _timeSeriesHelper
-from modules.plots.scatter_with_categories import scatterWithCategories
+from modules.plots.scatter_with_categories import scatterWithCategories, binnedScatter
 from modules.plots.grid_search_results import gridSearchVisualization 
+from modules.plots.line_plot import linePlotHelper
 from modules.dialogs import curve_fitting
-
+from modules.plots.grid_search_results import chartToolTip
+from modules.plots.axis_styler import axisStyler
 from .utils import *
 
 if platform == 'WINDOWS':
@@ -45,9 +47,17 @@ class _Plotter(object):
 		self.plotHistory = OrderedDict() 
 		self.plotProperties = OrderedDict()
 		
+		self.tooltips = dict() 
+		self.onMotionEvents = dict()
+		
 		self.logAxes = {'y':False,'x':False}
 		self.centerAxes = {'y':False,'x':False}
 		self.errorBar = 95
+		self.numbBins = 10
+		self.scaleBinsInScatter = True
+		
+		self.binnedScatter = False
+		
 		self.axesLimits = OrderedDict()
 		self.clusterEvalScores = OrderedDict() 
 		self.statistics = OrderedDict()
@@ -97,7 +107,19 @@ class _Plotter(object):
 					plotterClass.disconnect_event_bindings()
 				except:
 					pass
-			
+		## disconnect tooltip events
+		self.disconnect_tooltips()
+		
+		
+	def disconnect_tooltips(self):		
+		'''
+		Disconnect tooltip activity.
+		'''
+		if len(self.onMotionEvents) != 0:
+			for event in self.onMotionEvents.values():
+				self.figure.canvas.mpl_disconnect(event)	
+			self.onMotionEvents.clear()
+			self.tooltips.clear()
 				
 	def initiate_chart(self,numericColumns,categoricalColumns,selectedPlotType, colorMap, 
 							specificAxis= None, redraw = True):
@@ -164,6 +186,8 @@ class _Plotter(object):
 			for helper in plotHelper:
 				if helper is not None:
 					helper.define_new_figure(figure)
+		
+		
 	
 	@property
 	def current_plot_settings(self):
@@ -236,8 +260,18 @@ class _Plotter(object):
 		'''
 		Redraws the canvas
 		'''
+		for tooltip in self.tooltips.values():
+			tooltip.set_invisible(update =False)
+		
 		self.figure.canvas.draw() 
-	
+		
+		self.update_tooltip_background()
+			
+	def update_tooltip_background(self):
+		'''
+		'''	
+		for tooltip in self.tooltips.values():
+			tooltip.update_background(redraw = False)
 	
 	def set_scatter_point_properties(self,color = None,alpha = None,size = None):
 		'''
@@ -458,8 +492,18 @@ class _Plotter(object):
 						midXPosition, h =  props['linesAndText']['textPos']
 						line = ax.plot(xValuesLine,yValuesLine,**signLineProps) 
 						text_stat = ax.text(midXPosition, h, pValue, **standardTextProps)
-				
-					
+
+
+	def set_auc_collection(self,aucClass):
+		'''
+		'''
+		self.aucCollection = aucClass
+	
+	def store_auc_result(self,param):
+		'''
+		'''
+		self.aucCollection.save_result(param)	
+						
 	def set_dim_reduction_data(self, calculationResults):
 		'''
 		A dimensional reduction calculations results in a dict having two
@@ -484,7 +528,8 @@ class _Plotter(object):
 		
 		self.corrMatrixCoeff = 'pearson'
 		
-	def set_curveFitDisplay_settings(self,gridLayout,curveFitCollectionDict,subplotDataIdxDict,equalYLimits,tightLayout):
+	def set_curveFitDisplay_settings(self,gridLayout,curveFitCollectionDict,
+					subplotDataIdxDict,equalYLimits,tightLayout,labelColumn):
 		'''
 		'''
 		self.curveFitLayout = gridLayout
@@ -492,6 +537,7 @@ class _Plotter(object):
 		self.subplotDataIdxDict = subplotDataIdxDict
 		self.equalYLimits = equalYLimits
 		self.tightLayout = tightLayout
+		self.labelColumn = labelColumn
 		
 	def set_selectedCurveFits(self,curveFitList):
 		'''
@@ -528,6 +574,8 @@ class _Plotter(object):
 				self.nonCategoricalPlotter.reset_color_and_size_level(resetColor=True)
 			else:
 				self.categoricalPlotter.scatterWithCategories.remove_color_and_size_changes(which='color')
+		elif self.currentPlotType == 'line_plot':
+			self.nonCategoricalPlotter.linePlotHelper.remove_color()
 				
 	def remove_size_level(self):
 		'''
@@ -617,6 +665,74 @@ class _Plotter(object):
 			return collection
 		else:
 			return None
+
+
+	def add_tooltip_info(self,annotationColumnList,scatterCombination=None,redraw=True):
+		'''
+		Add tooltip information.
+		'''
+		if self.currentPlotType == 'scatter_matrix':
+			combinationsID , axesInScatterMatrix = zip(*list(self.nonCategoricalPlotter._scatterMatrix.axisWithScatter.values()))
+			
+		axes = self.get_axes_of_figure()		
+		
+		for n,ax in enumerate(axes):
+				
+			if (self.currentPlotType in ['scatter','scatter_matrix','line_plot']) or \
+			(self.currentPlotType in ['cluster_analysis','PCA'] and n == 0) or \
+			(self.currentPlotType  == 'hclust' and n == 2):
+			
+			
+				if self.currentPlotType == 'PCA':
+					numericColumns = ['Comp_1','Comp_2']
+				
+				elif self.currentPlotType == 'scatter_matrix':
+					if ax in axesInScatterMatrix:
+						idx = axesInScatterMatrix.index(ax)
+						scatterCombination = combinationsID[idx]
+						numericColumns = [self.nonCategoricalPlotter._scatterMatrix.numericColumns[idx] for idx in scatterCombination]
+						if idx == 0:
+							redraw = True
+						else:
+							redraw = False
+					else:
+						continue
+				else:
+					numericColumns = None
+				
+				self.tooltips[n] = chartToolTip(self,ax,'')
+				self.tooltips[n].update_background(redraw)
+				
+				self.onMotionEvents[n] = self.figure.canvas.mpl_connect('motion_notify_event', self.onTooltipHover)			
+				
+				if self.currentPlotType != 'hclust':
+					self.tooltips[n].annotate_data_in_collections(self.dfClass,
+															annotationColumnList,
+															numericColumns,axisId = n,
+															scatterCombination = scatterCombination)
+				else:
+					self.tooltips[n].annotate_cluster_map(self.dfClass,annotationColumnList)	
+						
+							
+	def onTooltipHover(self,event):
+  		'''
+  		Handles hover events.
+  		'''
+  		if event.inaxes:
+  			n = self.get_number_of_axis(event.inaxes)
+  			if n in self.tooltips:
+  			
+  				if self.currentPlotType == 'hclust':
+  					self.tooltips[n].evaluate_event_in_cluster(event)
+  				elif self.currentPlotType == 'line_plot':
+  					self.tooltips[n].evaluate_event_in_lineCollection(event)
+  				else:
+  					self.tooltips[n].evaluate_event_for_collection(event)
+  		else:
+  			for tooltip in self.tooltips.values():
+  				tooltip.set_invisible()        
+         
+	
 					
 					
 	def setup_basic_design(self):
@@ -642,7 +758,9 @@ class _Plotter(object):
 		matplotlib.rcParams['savefig.dpi'] = 600      
 		
 	def __getstate__(self):
-	
+		'''
+		Promotes sterilizing of this class (pickle)
+		'''		
 		state = self.__dict__.copy()
 		for list in [ 'axes', 'figure']:#, 'nonCategoricalPlotter', 'plotHistory']:
 			if list in state:
@@ -671,6 +789,13 @@ class categoricalPlotter(object):
 		self.dfClass = sourceDataClass
 		self.dataID = sourceDataClass.currentDataFile
 		
+		if selectedPlotType == 'curve_fit':
+			self.labelColumnForFits = self.plotter.labelColumn 
+			if self.labelColumnForFits in self.dfClass.df.columns:
+				self.categoricalColumns.append(self.labelColumnForFits)
+				
+			
+		
 		if selectedPlotType != 'grid_search_results':
 			self.data = sourceDataClass.get_current_data_by_column_list(columnList = self.numericColumns+self.categoricalColumns)
 		
@@ -681,6 +806,7 @@ class categoricalPlotter(object):
 		self.selectedPlotType = selectedPlotType
 		self.adjustYLims = bool(self.plotter.equalYLimits)
 		self.tightLayout = bool(self.plotter.tightLayout)
+		
 		self.error = self.plotter.errorBar
 		self.add_axis_to_figure() 
 		
@@ -849,7 +975,6 @@ class categoricalPlotter(object):
 		
 		elif plotType == 'density':
 			groupedData = self.data.groupby(self.categoricalColumns, sort=False)
-			
 			groupNames = [name for name,group in groupedData] #ugly but grouped.data.groups.keys() has random order
 			colorDict = match_color_to_uniqe_value(groupNames ,self.colorMap)
 			cdf = self.plotter.get_dist_settings()
@@ -943,12 +1068,18 @@ class categoricalPlotter(object):
 
 				if onlySelectedAxis is not None:
 					ax = axisExport		
-					### self.sourcePlotData still exists. 	
 				else:
 					ax = self.axisDict[0]
-					if self.numbNumericColumns > 1:
+				
+				if self.numbNumericColumns > 1:
 					
-						self.sourcePlotData = pd.melt(self.data, self.categoricalColumns[0], var_name = "Columns", value_name = "Value")
+					if hasattr(self,'sourcePlotData') == False:
+						
+						self.sourcePlotData = pd.melt(self.data, 
+								self.categoricalColumns[0], 
+								var_name = "Columns", 
+								value_name = "Value")
+				
 				kwsLeg = {'leg_title':self.categoricalColumns[0]}
 		
 				if self.numbNumericColumns != 1:	
@@ -958,6 +1089,7 @@ class categoricalPlotter(object):
 									hue_order = self.sourcePlotData[self.categoricalColumns[0]].unique(),
 									inmutableCollections = self.inmutableCollections, error = self.error)
 					addLeg = True
+				
 				else:
 					fill_axes_with_plot(ax=ax,x = self.categoricalColumns[0], y = self.numericColumns[0], hue = None,
 										plot_type = plotType, order = self.firstCategoryLevels,
@@ -1045,9 +1177,12 @@ class categoricalPlotter(object):
 														
 						subId += 1
 				
-				
+		#self.aggregateScatterWithCategories = True
+		#self.aggregateMethod = 'count'		
+		
 		elif plotType == 'scatter':
-			self.scatterWithCategories = scatterWithCategories(self.plotter,self.dfClass,
+		
+				self.scatterWithCategories = scatterWithCategories(self.plotter,self.dfClass,
 								self.figure, self.categoricalColumns,self.numericColumns,
 								self.colorMap)
 	
@@ -1106,21 +1241,27 @@ class categoricalPlotter(object):
 				for fitId, columnNames in self.columnsForFit.items():
 										
 					xValues = self.xValuesForFit[fitId]
+
 					if mulitpleCurvefits:
-						yValues = subsetData.values
+						yValues = subsetData[columnNames].values
 						try:
 							xValues,yValues = self.filter_x_and_y_for_nan(xValues,yValues)
 						except:
 							pass
-						try:
+						
+						if True:
 							coeffFuncs = self.get_fit_properties(self.plotter.curveFitCollectionDict[fitId]['fitData'],
 									subsetData.name,self.fitFuncForFit[fitId])
 							xLine,yLine, argMaxY = self.calculate_line_for_fit(xValues,self.fitFuncForFit[fitId],coeffFuncs)
 							if numFit == 0:					
-								self.plotter.add_annotationLabel_to_plot(ax,'ID: {}'.format(subsetData.name),
+								if self.labelColumnForFits not in self.data.columns:
+									label = 'ID: {}'.format(subsetData.name)
+								else:
+									label = str(subsetData[self.labelColumnForFits])
+								self.plotter.add_annotationLabel_to_plot(ax,label,
 																	  xy = (xLine.item(argMaxY),yLine.item(argMaxY))) 
 							ax.plot(xLine,yLine, label = fitId)	
-						except:
+						else:
 							pass
 						
 						if xValues.size > 0 and yValues.size > 0 :
@@ -1178,11 +1319,13 @@ class categoricalPlotter(object):
  		'''
  		'''
  		self.figure = figure
+ 		self.axisDict = {}
  		            						
 	def disconnect_event_bindings(self):
 		'''
 		'''
-		pass
+		if hasattr(self,'gridSearchPlotter'):
+			self.gridSearchPlotter.disconnect_events()
 	
 	def remove_swarm(self):
 		'''
@@ -1282,6 +1425,8 @@ class categoricalPlotter(object):
 		'''
 		Uses a specific axis to export this plot. Main purpose to use this in a main figure.
 		'''
+		
+			
 		self.filling_axis(self.currentPlotType,subplotIdNumber,axisExport,forceLegend=True)
 		
 		if self.addSwarm:
@@ -1340,6 +1485,7 @@ class nonCategoricalPlotter(object):
 		self.plotter = plotter
 		self.figure = figure
 		
+		
 		self.numericColumns = numericColumns
 		self.categoricalColumns = categoricalColumns
 		self.numbNumericColumns = numbNumbericColumns
@@ -1348,6 +1494,7 @@ class nonCategoricalPlotter(object):
 		self.dataID = sourceDataClass.currentDataFile
 		if selectedPlotType == 'PCA':
 			self.data = self.plotter.dimRedResults['data']['Drivers']
+			self.numericColumns = self.data.columns.values.tolist()
 		else:
 			self.data = sourceDataClass.get_current_data_by_column_list(columnList = self.numericColumns)
 		if self.currentPlotType in ['scatter','cluster_analysis']:
@@ -1395,6 +1542,8 @@ class nonCategoricalPlotter(object):
 		'''
 		self.sizeScatterPoints, self.alphaScatterPoints,\
 		self.colorScatterPoints = self.plotter.get_scatter_point_properties()
+		
+		self.binnedScatter = bool(self.plotter.binnedScatter)
 	
 	
 	def set_axes_modifications(self,dicts):
@@ -1409,9 +1558,8 @@ class nonCategoricalPlotter(object):
 			if self.currentPlotType in nonScatterPlotTypes:
 				self.axisDict[0] = self.figure.add_subplot(221) 
 				self.adjust_margin_of_figure_for_non_scatter()
-			elif self.currentPlotType in ['hclust','scatter_matrix','corrmatrix']:
+			elif self.currentPlotType in ['hclust','scatter_matrix','corrmatrix','line_plot']:
 				pass
-				
 				
 			elif self.currentPlotType == 'density':
 			
@@ -1444,7 +1592,6 @@ class nonCategoricalPlotter(object):
 				self.axisDict[0] = self.figure.add_subplot(111) 
 	
 
-				
 	def replot(self):
 		'''
 		This handles a replot of the initilized plot.
@@ -1453,12 +1600,13 @@ class nonCategoricalPlotter(object):
 		self.createIntWidgets = False
 		if self.currentPlotType in ['hclust','corrmatrix']:
 			self._hclustPlotter.replot() 
-
 		elif self.currentPlotType == 'scatter_matrix':
 			self._scatterMatrix.replot()
-					
+		elif self.currentPlotType == 'scatter' and self.binnedScatter:
+			self.binnedScatterHelper.replot()	
+		elif self.currentPlotType == 'line_plot':
+			self.linePlotHelper.replot()
 		else:
-		
 			self.axisDict = dict() 
 			self.add_axis_to_figure() 
 			self.filling_axis()
@@ -1470,8 +1618,7 @@ class nonCategoricalPlotter(object):
 				axNum = self.plotter.get_number_of_axis(ax)	
 				self.plotter.display_statistics(ax,axNum)
 				self.plotter.set_limits_in_replot(ax,axesLimits[axNum])
-			
-			
+							
 			### add color changes 
 			for functionName,column in self.sizeStatsAndColorChanges.items():
 				if functionName == 'change_color_by_categorical_columns':
@@ -1487,10 +1634,7 @@ class nonCategoricalPlotter(object):
 				textColumn = self.annotationClass.textAnnotationColumns
 				self.bind_label_event(textColumn)
 			
-			
-
-
-				
+	
 	def add_color_and_size_changes_to_dict(self,changeDescription,keywords):
 		'''
 		Adds information on how to modify the chart further
@@ -1602,13 +1746,11 @@ class nonCategoricalPlotter(object):
 		self.add_color_and_size_changes_to_dict('change_color_by_numerical_column',numericColumn)
 		
 		
-		
 	def change_size_by_numerical_column(self, numericColumn, specificAxis = None, ):
 		'''
 		change sizes of scatter points by a numerical column
 		'''
-	
-		## update data if missing columns 
+		## update data if missing columns is used to encode color
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
 																  definedColumnsList=[numericColumn])	
 		if specificAxis is None:
@@ -1810,6 +1952,7 @@ class nonCategoricalPlotter(object):
 		or the color that represents in categorical column changes the nan string defined upon upload of
 		the user. For other plottypes this changes simply the artist facecolor (boxplot,violin,bar) 
 		'''
+		
 		if self.currentPlotType == 'scatter_matrix':
 		
 			self._scatterMatrix.colorScatterPoints = newColor	
@@ -1817,8 +1960,10 @@ class nonCategoricalPlotter(object):
 			return
 		
 		self.colorScatterPoints = newColor
-		
-		ax = self.axisDict[0]
+		if 0 in self.axisDict:
+			ax = self.axisDict[0]
+		else:
+			return
 		
 		## check if changes have been made on color and disable any further modification.
 		if ignoreMadeChanges:
@@ -1935,7 +2080,13 @@ class nonCategoricalPlotter(object):
 		if self.currentPlotType in ['hclust','corrmatrix']:
 			axisExport.axis('off')
 			self._hclustPlotter.export_selection(axisExport,exportFigure)
+		elif self.currentPlotType == 'line_plot':
+			self.linePlotHelper.export_selection(axisExport)
+		elif self.currentPlotType == 'scatter' and self.binnedScatter:
 			
+			self.binnedScatterHelper.export_selection(axisExport)
+				
+					
 		else:	
 			self.filling_axis(subplotIdNumber,axisExport) 
 			if self.addSwarm:
@@ -1977,6 +2128,7 @@ class nonCategoricalPlotter(object):
 		'''
 		
 		self.figure = figure
+		self.axisDict = {}
 		for plotHelper in [self._hclustPlotter,self.annotationClass,self._scatterMatrix]:
 			if plotHelper is not None:
 				plotHelper.figure = figure
@@ -1990,10 +2142,11 @@ class nonCategoricalPlotter(object):
 		'''
 		dataInput = self.data
 		colorMap = self.colorMap
+		
 		if plotType is None:
 			plotType = self.currentPlotType
 		
-		if plotType not in ['density','scatter_matrix','hclust','corrmatrix','PCA']:
+		if plotType not in ['density','scatter_matrix','hclust','corrmatrix','PCA','line_plot']:
 			if onlySelectedAxis is None:
 				ax = self.axisDict[0]
 			else:
@@ -2046,10 +2199,17 @@ class nonCategoricalPlotter(object):
 			
 			
 		elif plotType == 'scatter':
-		
-			if self.numbNumericColumns == 2:
 			
-				ax.scatter(dataInput[self.numericColumns[0]],
+			if self.numbNumericColumns == 2:
+				if self.binnedScatter:
+				
+					self.binnedScatterHelper = binnedScatter(self.plotter,self.dfClass, 
+							self.numericColumns, self.categoricalColumns)
+				
+				else:
+			
+			
+					ax.scatter(dataInput[self.numericColumns[0]],
 									dataInput[self.numericColumns[1]],
 									edgecolor = 'black',
 									linewidth = 0.3,
@@ -2057,7 +2217,12 @@ class nonCategoricalPlotter(object):
 									alpha =  self.alphaScatterPoints,
 									color = self.colorScatterPoints,
 									picker=True, label = None)
-									
+		
+		
+		elif plotType == 'line_plot':
+		
+			self.linePlotHelper = linePlotHelper(self.plotter,self.dfClass,self.numericColumns,self.colorMap)
+								
 		elif plotType == 'scatter_matrix':
 		
 			self._scatterMatrix  = _scatterMatrixHelper(self.plotter,self.dfClass,self.figure,self.numericColumns,
@@ -2302,7 +2467,7 @@ class nonCategoricalPlotter(object):
 	
 		plotType = self.currentPlotType
 		
-		if plotType in ['hclust','corrmatrix']:
+		if plotType in ['hclust','corrmatrix','scatter_matrix','line_plot']:
 			return
 		if ax is None and plotType !='scatter_matrix':
 			ax = self.axisDict[0]
@@ -2311,8 +2476,6 @@ class nonCategoricalPlotter(object):
 		
 			axisStyler(ax, xlabel=None, ylabel = None,rotationXTicks = 90,nTicksOnYAxis=4)
 			
-		elif plotType == 'scatter_matrix':
-			pass
 		elif plotType == 'time_series':
 			axisStyler(ax,xlabel=self.numericColumns[0],ylabel = 'Value',
 						forceLegend = True, kwsLegend={'leg_title':'Time series'})
@@ -2384,18 +2547,20 @@ class nonCategoricalPlotter(object):
 class _scatterMatrixHelper(object):
 	
 	
-	def __init__(self,_PlotterClass,sourceDataClass,figure,numericColumns,numbNumbericColumns,colorMap,dataInput):
+	def __init__(self,plotter,sourceDataClass,figure,numericColumns,numbNumbericColumns,colorMap,dataInput):
 		self.addedAxis = dict()	
+		self.axisWithScatter = dict()
 		self.categoricalColorDefinedByUser = dict()
-		
+		self.linesInPlots = dict()
 		self.dfClass = sourceDataClass	
 		self.dataID = self.dfClass.currentDataFile			
 		self.data = dataInput
-		
-		self.get_scatter_point_properties(_PlotterClass)
+		self.plotter=plotter
+		self.get_scatter_point_properties(plotter)
 		self.numericColumns = numericColumns
 		self.numbNumericColumns = numbNumbericColumns
 		self.colorMap = colorMap
+		 
 		
 		self.figure = figure
 		
@@ -2406,6 +2571,7 @@ class _scatterMatrixHelper(object):
 		
 		self.add_axes_to_figure()
 		self.fill_axes()
+		self.add_bindings()
 		
 		
 		
@@ -2422,7 +2588,135 @@ class _scatterMatrixHelper(object):
 			ax.set_xlim(self.axisLimits)
 			ax.set_ylim(self.axisLimits)
 			self.addedAxis[colComb] = ax
+		
+
+	def disconnect_events(self):
+		'''
+		'''
+		for event in [self.onPressEvent, self.onReleaseEvent]:
+			self.plotter.figure.canvas.mpl_disconnect(event)
+		
+	def add_bindings(self):
+		'''
+		'''
+		self.rectangleProps = dict(xy=None,linewidth=0.6,edgecolor="darkgrey",clip_on=False,
+							  fill= True,facecolor = "lightgrey", animated=True, alpha=0.2)
+		self.onPressEvent = self.plotter.figure.canvas.mpl_connect('button_press_event', self.on_press)
+		self.onReleaseEvent = self.plotter.figure.canvas.mpl_connect('button_release_event', self.on_release)
+		
+	def identify_data(self,event):
+		'''
+		Identify data to mark.
+		'''
+		xRange = (self.rectangleProps['xy'][0],
+			self.rectangleProps['xy'][0] + self.rectangleProps['width'])	
+		yRange = (self.rectangleProps['xy'][1],
+			self.rectangleProps['xy'][1] + self.rectangleProps['height'])
+				
+		for combination,ax in self.axisWithScatter.values():
+			if ax == event.inaxes:
+				columnNames = [self.numericColumns[idx] for idx in combination]
+				break
+		boolXData = self.data[columnNames[1]].between(min(xRange),max(xRange))
+		boolYData = self.data[columnNames[0]].between(min(yRange),max(yRange))
+		if 'color' not in self.data.columns:
+			self.data['bool'] = np.sum([boolXData,boolYData], axis=0) == 2
+			self.data['bool'] = self.data['bool'].map({False:"lightgrey",True:"blue"})
+			
+		for combination,ax in self.axisWithScatter.values():
+			columnNames = [self.numericColumns[idx] for idx in combination]
+			row,column = combination
+			dataToPlot = self.data.dropna(subset=columnNames)
+			collection = ax.collections[0]
+			collection.set_facecolor(dataToPlot['bool'])
+			ax.draw_artist(collection)
+		
+				
+			
+	def calculate_rectangle(self,event):
+		'''
+		Get width and height of the rectangle that indicates selection
+		'''
+		if self.rectangleProps['xy'] is None:
+			self.rectangleProps['xy'] = (event.xdata,event.ydata)
+			self.background = self.plotter.figure.canvas.copy_from_bbox(self.plotter.figure.bbox)
+		
+		width = event.xdata - self.rectangleProps['xy'][0]
+		height = event.ydata - self.rectangleProps['xy'][1]
+		self.rectangleProps['height'] = height
+		self.rectangleProps['width'] = width
+		
+	def on_press(self,event):
+		'''
+		'''
+		
+		if event.inaxes is None:
+			return
+			
+		ax = event.inaxes
+		self.set_default_color()
+		self.plotter.redraw()
+		self.calculate_rectangle(event)
+		self.rectangleSelection = mpatches.Rectangle(**self.rectangleProps)
+		ax.add_patch(self.rectangleSelection)
+		self.onMotionEvent = self.plotter.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
+			
+	def on_motion(self,event):
+		'''
+		'''
+		if event.inaxes is None:
+			self.plotter.figure.canvas.mpl_disconnect(self.onMotionEvent)
+			self.rectangleProps['xy'] = None
+			return
+			
+		self.plotter.figure.canvas.restore_region(self.background)			
+		ax = event.inaxes
+		self.calculate_rectangle(event)
+		self.identify_data(event)
+		self.rectangleSelection.set_width(self.rectangleProps['width'])
+		self.rectangleSelection.set_height(self.rectangleProps['height'])
+		ax.draw_artist(self.rectangleSelection)
+		self.plotter.figure.canvas.blit(self.plotter.figure.bbox)
+		
+	# self.figure.canvas.restore_region(background)
+# 		rectangle.set_xy((x,y))  
+# 		ax.draw_artist(rectangle)
+# 		self.figure.canvas.blit(ax.bbox)    
+#           
+# 	def disconnect_label_and_update_annotation(self,event,rectangle,annotation,keyClosest):
+# 		'''
+# 		Mouse release event. disconnects event handles and updates the annotation dict to
+# 		keep track for export
+# 		'''
+# 		self.figure.canvas.mpl_disconnect(self.rectangleMoveEvent)
+# 		self.figure.canvas.mpl_disconnect(self.releaseLabelEvent)
+# 		
+# 		xyRectangle = rectangle.get_xy()
+# 		annotation.set_position(xyRectangle)
+# 		
+# 		rectangle.remove()
+# 		self.plotter.redraw() 
+# 		self.selectionLabels[keyClosest]['xytext'] = xyRectangle
+# 
+# 	def get_rectangle_size_on_text(self,ax,text,inv):
+# 		'''
+# 		Returns rectangle to mimic the position
+# 		'''	
+# 		renderer = self.figure.canvas.get_renderer() 
+# 		fakeText = ax.text(0,0,s=text)
+# 		patch = fakeText.get_window_extent(renderer)
+# 		xy0 = list(inv.transform((patch.x0,patch.y0)))
+# 		xy1 = list(inv.transform((patch.x1,patch.y1)))
+# 		fakeText.remove()
+# 		widthText = xy1[0]-xy0[0]			
+		
+					
 	
+	def on_release(self,event):	
+		'''
+		'''		
+		self.plotter.figure.canvas.mpl_disconnect(self.onMotionEvent)
+		self.rectangleProps['xy'] = None
 	
 	def replot(self):
 		'''
@@ -2446,7 +2740,7 @@ class _scatterMatrixHelper(object):
 		
 			columnNames = [self.numericColumns[idx] for idx in combination]
 			row,column = combination
-			dataToPlot = data.dropna(subset=columnNames)
+			dataToPlot = self.data.dropna(subset=columnNames)
 			
 			ax = self.addedAxis[row*self.numbNumericColumns+column]
 			
@@ -2524,8 +2818,8 @@ class _scatterMatrixHelper(object):
 			sizeUsed = axCollection[0].get_sizes()
 			
 			axCollection[0].remove() 	
-			self.add_scatter_collection(ax,x=dataToPlot[columnNames[0]],
-										y = dataToPlot[columnNames[1]], size=sizeUsed,
+			self.add_scatter_collection(ax,x=dataToPlot[columnNames[1]],
+										y = dataToPlot[columnNames[0]], size=sizeUsed,
 										color = dataToPlot['color'])
 	
 	
@@ -2627,9 +2921,9 @@ class _scatterMatrixHelper(object):
 					
 						self.saveCombination.append(combination)
 						dataToPlot = data.dropna(subset=columnNames)
-						
-						self.add_scatter_collection(ax,dataToPlot[columnNames[0]],
-													dataToPlot[columnNames[1]])
+						self.axisWithScatter[str(combination)] = [combination,ax]
+						self.add_scatter_collection(ax,dataToPlot[columnNames[1]],
+													dataToPlot[columnNames[0]])
 						
 						
 					if ax.is_last_col() and ax.is_first_row():
@@ -2640,192 +2934,7 @@ class _scatterMatrixHelper(object):
 						plt.setp(ax.get_yticklabels() , visible=False) 
 						plt.setp(ax.get_xticklabels() , visible=False)
 
-                              
-							
-	
-							 
-								
-					
-					
-class axisStyler(object):
-	'''
-	little class to efficiently style axis. 
-	'''
-	def __init__(self,ax,xlabel = None,ylabel= None,rotationXTicks = None, nTicksOnYAxis = None, nTicksOnXAxis = None,
-					title = None,xLabelLastRow = False,removeXTicks = False, yLabelFirstCol = False, showYTicksOnlyFirst = True,
-					canvasHasBeenDrawn = False, addLegendToFirstCol = False, addLegendToFirstSubplot = False, kwsLegend = dict(),
-					newXLim = None, newYLim = None, forceLegend = False):
-		self.ax = ax
-		self.canvasHasBeenDrawn = canvasHasBeenDrawn
-		
-		if xLabelLastRow:
-			if self.ax.is_last_row():
-				self.set_axis_x_label(xlabel)
-			else:
-				self.set_axis_x_label('')
-				#self.remove_xticks_from_axis()
-		else:
-			self.set_axis_x_label(xlabel) 
-
-		if yLabelFirstCol:
-		
-			if self.ax.is_first_col():
-				self.set_axis_y_label(ylabel)
-			else:
-				self.set_axis_y_label('')
-				if showYTicksOnlyFirst:
-					self.remove_yticks_from_axis()
-				
-		else:
-			self.set_axis_y_label(ylabel)
-			
-		
-		self.set_title(title)
-		
-		if nTicksOnYAxis is None and nTicksOnXAxis is not None:
-			self.rotate_axis_tick_labels(rotationXTicks)
-			
-		self.reduce_tick_number(nTicksOnYAxis,nTicksOnXAxis,rotationXTicks)
-		
-		if newXLim is not None:
-			ax.set_xlim(newXLim)
-		if newYLim is not None:
-			ax.set_ylim(newYLim)
-		if removeXTicks:
-			self.remove_xticks_from_axis()
-		
-				
-		if ax.is_first_col() or forceLegend:
-			if (addLegendToFirstSubplot == True and ax.is_first_row()) or\
-			 (addLegendToFirstCol and ax.is_first_col()) or forceLegend:
-				#if ax.get_legend() is not None:
-				#	leg = ax.get_legend()
-				#	leg.remove()
-
-				if len(kwsLegend) == 0:
-					self.add_legend_to_axis(ax)
-				else:
-					if 'addPatches' in kwsLegend:
-						legendItems = kwsLegend['legendItems']
-						colorMap = kwsLegend['colorMap']
-						patches = []
-						if isinstance(colorMap,str):
-							colors = sns.color_palette(colorMap,len(legendItems),desat = 0.75)
-						elif isinstance(colorMap, list):
-							colors = colorMap
-						if 'patchKws' not in kwsLegend:
-							kwsLegend['patchKws'] = {}
-						
-						for n,name in enumerate(legendItems):
-							col = colors[n]
-							patches.append(mpatches.Patch(edgecolor='black',
-                                                           linewidth=0.6,
-                                                           facecolor=col, 
-                                                           label=name,
-                                                            **kwsLegend['patchKws']))
-							
-						kwsLegend['patches'] = patches
-						del kwsLegend['legendItems'] 
-						del kwsLegend['colorMap']
-						del kwsLegend['addPatches']
-						del kwsLegend['patchKws']
-													
-					self.add_legend_to_axis(ax,**kwsLegend)
-	
-	def add_legend_to_axis(self,ax,patches = [] , leg_title = '', leg_font_size = '8',handles= None , labels = None, ncols=2, collection_list_legend = None):
-		
-		if len(patches) > 0:
-			leg = ax.legend(handles = patches, bbox_to_anchor=(0., 1.0), loc=3, title = leg_title,
-                                   ncol=ncols, borderaxespad=0.)
-		elif handles is not None and labels is not None:
-			leg = x.legend(handles,labels, bbox_to_anchor=(0., 1.0), loc=3, title = leg_title, ncol=ncols, borderaxespad=0.)                                  
-		else:
-			leg  = ax.legend( bbox_to_anchor=(0., 1.0), loc=3, title = leg_title,
-                                   ncol=ncols, borderaxespad=0.)
-            
-		if leg is not None:
-			leg.draggable(state=True, use_blit=True)
-			leg._legend_box.align = 'left'
-			#title = leg.get_title()
-			#title.set_ha('left')
-			#leg.set_title(title)
-			
-	def set_axis_x_label(self,xlabel):
-		'''
-		'''
-		
-		if xlabel is not None:
-			
-			if isinstance(xlabel,str):
-				self.ax.set_xlabel(xlabel)
-				
-	def set_axis_y_label(self,ylabel):
-		''' 
-		'''
-		if ylabel is not None:
-			
-			if isinstance(ylabel,str):
-				self.ax.set_ylabel(ylabel)			
-				
-	def set_title(self,title):
-		'''
-		'''
-		if title is not None:
-			self.ax.set_title(title)
-			
-	def rotate_axis_tick_labels(self, rotationXTicks):
-		'''
-		Rotates the xtick labels.
-		Y-tick labeling is not supported.
-		'''
-		if rotationXTicks is not None:
-			self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation = rotationXTicks)   			
-		
-	def remove_yticks_from_axis(self):
-		'''
-		'''
-		self.ax.set_yticklabels(['' for item in self.ax.get_yticklabels()])	
-		
-			
-	def remove_xticks_from_axis(self):
-		self.ax.set_xticklabels(['' for item in self.ax.get_xticklabels()])	
-		
-	def reduce_tick_number(self,nTicksOnYAxis,nTicksOnXAxis,rotationXTicks):
-		'''
-		Reduces tick numbers to N
-		'''
-		def getLabelOrEmptyString(label,index,newLabelIndexes):
-			if index in newLabelIndexes:
-				return label
-			else:
-				return ''
-		
-		if nTicksOnYAxis is not None:
-			if self.canvasHasBeenDrawn:
-			
-				yAxisTickLabels = self.ax.get_yticklabels() 
-				numbYAxisTickLabels = len(yAxisTickLabels) 
-				newYLabelsIndexes = [int(round(x,0)) for x in np.linspace(0,numbYAxisTickLabels-1, num = nTicksOnYAxis)]
-				newYLabels = [getLabelOrEmptyString(label,i,newYLabelsIndexes) for i,label in enumerate(yAxisTickLabels)]
-				
-			else:
-				#y tick labels are all '' if canvas has not been drawn yet
-				self.ax.yaxis.set_major_locator(mtick.MaxNLocator(nTicksOnYAxis))    
-			
-		if nTicksOnXAxis is not None:
-			if self.canvasHasBeenDrawn:
-				xAxisTickLabels = self.ax.get_xticklabels() 
-				numbXAxisTickLabels = len(xAxisTickLabels) 
-				newXLabelsIndexes = [int(round(x,0)) for x in np.linspace(0,numbXAxisTickLabels-1, num = nTicksOnXAxis)]
-			
-				newxLabels = [getLabelOrEmptyString(label,i,newXLabelsIndexes) for i,label in enumerate(xAxisTickLabels)]
-			
-				self.ax.set_xticklabels(newxLabels, rotation = rotationXTicks)
-			else:
-				self.ax.xaxis.set_major_locator(mtick.MaxNLocator(nTicksOnXAxis))    
-		elif rotationXTicks is not None:
-			self.rotate_axis_tick_labels(rotationXTicks)
-			
+                              			
 		
 class _annotateScatterPoints(object):
 	'''

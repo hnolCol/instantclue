@@ -1549,7 +1549,7 @@ class defineGridSearchDialog(object):
 					
 		elif self.procedure in ['PCA','BestKFeature','NMF']:
 			
-			possibleStrings = ['all']
+			possibleStrings = ['all',"'all'"]
 			
 			for oldDict, updateDict in zip(oldDictList,newDictList):
 				
@@ -1575,7 +1575,7 @@ class defineGridSearchDialog(object):
 							return False
 					else:
 						if values in possibleStrings:
-							intValue = values
+							intValue = possibleStrings[0]
 						else:
 							intValue = int(float(values))
 						if isinstance(intValue,str) == False and intValue > self.numbFeatures:

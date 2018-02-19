@@ -30,14 +30,17 @@ def return_platform():
         
     return platform    
 
-    
+
+
 platform = return_platform() 
 defaultFont = 'Verdana'
 
 if platform == 'WINDOWS':
 	corrFontSize = -1
+	ctrlString = 'Control' 
 else:
 	corrFontSize = 0
+	ctrlString = 'Command' 
 LARGE_FONT = (defaultFont, 11+corrFontSize, "bold")
 NORM_FONT = (defaultFont, 11+corrFontSize)
 SMALL_FONT = (defaultFont,7+corrFontSize)
@@ -90,6 +93,9 @@ pdist_metric = ['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation
 				'dice', 'euclidean', 'hamming', 'kulsinski', 'matching', 'minkowski',
                  'russellrao', 'seuclidean', 'sokalsneath', 'sqeuclidean']
 
+
+stringBool = {'True':True,
+			  'False':False}
   
    
 def merge_two_dicts(x,y):
@@ -186,6 +192,17 @@ def clear_frame(frame):
 	for widget in frame.winfo_children():
 		widget.destroy()
 		
+		
+def arg_mean_median(x,which):
+	'''
+	'''
+	if which == 'median':
+		value = np.median(x)
+	else:
+		value = np.mean(x)
+	idx = find_nearest_index(x,value)
+	return idx
+			
 
 
 def validate_float(self, action, index, value_if_allowed,
@@ -260,7 +277,7 @@ def col_c(color):
 		y = tuple([int(float(z) * 255) for z in color])
 		hexCol = "#{:02x}{:02x}{:02x}".format(y[0],y[1],y[2])
 	elif isinstance(color,list):
-		y = tuple([int(float(z) * 255) for z in color])
+		y = tuple([int(float(z) * 255) for z in color[:3]])
 		hexCol = "#{:02x}{:02x}{:02x}".format(y[0],y[1],y[2])
 	elif 'xkcd:'+str(color) in XKCD_COLORS:
 		hexCol = XKCD_COLORS['xkcd:'+str(color)]
@@ -298,6 +315,59 @@ def scale_data_between_0_and_1(inputData,min = None,max = None):
 	outputData = (inputData-min)/(max-min)
 	return outputData
 	
+	
+def cartesian(arrays, out=None):
+    """
+    Source : https://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
+    ===============================================
+    Generate a cartesian product of input arrays.
+	
+    Parameters
+    ----------
+    arrays : list of array-like
+        1-D arrays to form the cartesian product of.
+    out : ndarray
+        Array to place the cartesian product in.
+
+    Returns
+    -------
+    out : ndarray
+        2-D array of shape (M, len(arrays)) containing cartesian products
+        formed of input arrays.
+
+    Examples
+    --------
+    >>> cartesian(([1, 2, 3], [4, 5], [6, 7]))
+    array([[1, 4, 6],
+           [1, 4, 7],
+           [1, 5, 6],
+           [1, 5, 7],
+           [2, 4, 6],
+           [2, 4, 7],
+           [2, 5, 6],
+           [2, 5, 7],
+           [3, 4, 6],
+           [3, 4, 7],
+           [3, 5, 6],
+           [3, 5, 7]])
+
+    """
+
+    arrays = [np.asarray(x) for x in arrays]
+    dtype = arrays[0].dtype
+
+    n = np.prod([x.size for x in arrays])
+    if out is None:
+        out = np.zeros([n, len(arrays)], dtype=dtype)
+	
+    m = np.int(n / arrays[0].size)
+    out[:,0] = np.repeat(arrays[0], m)
+    
+    if arrays[1:]:
+        cartesian(arrays[1:], out=out[0:m,1:])
+        for j in range(1, arrays[0].size):
+            out[j*m:(j+1)*m,1:] = out[0:m,1:]
+    return out	
 
 def minimumEditDistance(s1,s2):
 	#'''
@@ -922,6 +992,8 @@ class cd():
         os.chdir(self.savedPath)
 
 tooltip_information_plotoptions = [
+        ["At least two numeric column. Each row is plotted against the column index. Add categorical columns by using the color encoding icon.",
+         "Lineplot\n\nInput:"],
         ["At least one numeric column\nMax. Categories for factorplot: 3\nData are represented by a single point showing the confidence interval (0.95) and are connected if they belong to the same group.",
          "Pointplot\n\nInput:"],
         ["At least two numeric columns (maximum 3)\ Categories for factorplot: up to 3 supported. More categories can be added using the color option. Simply drag & drop the desired numerical or categorical column to the color button.\nAdditional categories can be added using drag & drop to the newly created color button.",

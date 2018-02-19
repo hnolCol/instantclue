@@ -36,17 +36,20 @@ class interactiveWidgetsHelper(object):
 		
 	def create_widgets(self, mode = 'colorLevel', plotter = None):
 		'''
+		Create tkinter widgets
 		'''
 		self.mode = mode 
 		self.plotter = plotter
-		if plotter.nonCategoricalPlotter is not None:
+		if plotter.currentPlotType == 'line_plot':
+			self.helper = plotter.nonCategoricalPlotter.linePlotHelper
+		elif plotter.nonCategoricalPlotter is not None:
 			self.helper = plotter.nonCategoricalPlotter
 		elif plotter.currentPlotType == 'scatter':
 			self.helper = plotter.categoricalPlotter.scatterWithCategories
 		
 		if self.mode == 'colorLevel':
 			self.clear_color_helper_dicts()
-			self.colorMapDict =self.helper.get_current_colorMapDict()
+			self.colorMapDict = self.helper.get_current_colorMapDict()
 			if len(self.colorMapDict) > 20:
 				tk.messagebox.showinfo('Info ..',
 					'Too many categorical values to display. No legend not drawn.')
@@ -60,6 +63,7 @@ class interactiveWidgetsHelper(object):
 		
 	def create_frame(self):
 		'''
+		Creates frame to put labels in indicating color and categorical value
 		'''
 		self.frame = tk.Frame(self.master,bg=MAC_GREY, relief=tk.GROOVE)
 		self.frame.grid(columnspan=2, sticky=tk.EW, padx=5)

@@ -128,7 +128,8 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
 	else:
 		outputDict['ReconstructionError'] = dimReductionClass.reconstruction_err_
 		
-	outputDict['Drivers'] = pd.DataFrame(drivers, index = dataFrame.index, columns = columnsNames[:nComps])
+	outputDict['Drivers'] = pd.DataFrame(drivers, index = dataFrame.index, 
+		columns = ['Comp_'+str(i+1) for i in range(components.shape[0])])
 	outputDict['Predictor'] = dimReductionClass
 	return outputDict
 	
@@ -229,18 +230,47 @@ def round_on_resolution(value,precision):
 	precision: float number
 	'''
 	return round(value/precision) * precision
+
+
+class statisticResultCollection(object):
+	'''
+	'''
+	def __init__(self):
+		'''
+		'''
+		self.displayStatsPerformed = pd.DataFrame(columns = ['index','group1','group2','test settings',
+															'p-value','test-statistic'])
+		
+	def save_test(self, df):
+		'''
+		'''
+		self.displayStatsPerformed = self.displayStatsPerformed.append(df, ignore_index = True)
+		
+	
+	@property
+	def performedTests(self):
+		'''
+		'''
+		return self.displayStatsPerformed
+		
+		
+
+
+
 	
 
 class interactiveStatistics(object):
 	'''
 	'''
-	def __init__(self,plotter,dfClass,selectedTest):
+	def __init__(self,plotter,dfClass,selectedTest,resultCollection):
 		'''
 		'''
 		self.subplotId = None
 		self.saveStatsPerformed = OrderedDict()
 		self.displayStatsPerformed = pd.DataFrame(columns = ['index','group1','group2','test settings',
 															'p-value','test-statistic'])
+		
+		self.resultCollection = resultCollection
 		self.saveClickCoords = dict() 
 		self.textPValues = []
 		self.selectedTest = selectedTest
@@ -614,6 +644,7 @@ class interactiveStatistics(object):
 				
 		dfResult = pd.DataFrame(collectData, columns = self.displayStatsPerformed.columns, index = [0])		
 		self.displayStatsPerformed = self.displayStatsPerformed.append(dfResult, ignore_index = True)
+		self.resultCollection.save_test(dfResult)
 		self.plotter.save_statistics(self.saveStatsPerformed,self.displayStatsPerformed)
 		self.reset_identification_process()		
 		
