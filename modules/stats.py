@@ -1,3 +1,25 @@
+"""
+	""CLASS TO HANDLE STATISTICAL TESTS""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
+
+
 import numpy as np
 import pandas as pd
 import itertools
@@ -8,6 +30,8 @@ from scipy.stats import wilcoxon
 from scipy.stats import ranksums
 from scipy.stats import ttest_ind
 from scipy.stats import ttest_rel
+
+from scipy import interpolate
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD
@@ -110,6 +134,7 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
 		dataFrame.dropna(inplace=True) 
 		
 		data = dataFrame.as_matrix()
+	
 	if method == 'Latent Semantic Analysis':
 		if nComps is None:
 			nComps -= 1
@@ -118,7 +143,7 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
 	dimReductionClass.fit(data)
 	
 	components = dimReductionClass.components_
-	drivers = dimReductionClass.fit_transform(data)
+	drivers = dimReductionClass.transform(data)
 	
 	outputDict['Components'] = pd.DataFrame(components, columns = columnsNames,
 										index = ['Comp_'+str(i+1) for i in range(components.shape[0])])
@@ -413,11 +438,12 @@ class interactiveStatistics(object):
 			self.saveClickCoords['indexClick1'] = indexClick
 			self.saveClickCoords['xyCoordsClick1'] = (xDataEvent,event.ydata)
 			self.saveClickCoords['axis'] = event.inaxes
+			self.visualize_first_click()
 			return
 		
 			
 		elif 'indexClick2' not in self.saveClickCoords:
-			
+			self.remove_first_click()
 			if indexClick == self.saveClickCoords['indexClick1']:
 				tk.messagebox.showinfo('Same group ..','Same data selected. Resetting ..')
 				self.reset_identification_process()
@@ -426,21 +452,41 @@ class interactiveStatistics(object):
 			if event.inaxes != self.saveClickCoords['axis']:
 				tk.messagebox.showinfo('Error ..','Statistical testing in interactive mode is only'+
 								 ' possible within a subplot. You can use "Get all combinations"'+
-								 ' from the drop-down menu to compare all groups pairwise. Resetting ..')
+								 ' from the misc menu to compare all groups pairwise. Resetting ..')
 				self.reset_identification_process()
 				return
 			
 			self.saveClickCoords['indexClick2'] = indexClick
 			self.saveClickCoords['xyCoordsClick2'] = (xDataEvent,event.ydata)
 			
+						
 			groupList = self.get_groups()
 			testResult = self.perform_test(groupList)
 			
 			self.saveClickCoords['testResult'] = testResult
 			
 			self.plot_sigLines_and_pValue()
-				
-					
+
+
+	def remove_first_click(self, redraw = False):
+		'''
+		Removes cross to indicate clicked group
+		'''
+		if hasattr(self,"scatFirstClick") and self.scatFirstClick is not None:
+			self.scatFirstClick.remove()
+			if redraw:
+				self.plotter.redraw()		
+
+	def visualize_first_click(self):
+		'''
+		Adds red cross to indicated the selected group
+		'''
+		self.scatFirstClick = self.saveClickCoords['axis'].scatter(
+													self.saveClickCoords['indexClick1'],
+													self.saveClickCoords['xyCoordsClick1'][1],
+													c = "red", marker = 'X',
+													)
+		self.plotter.redraw()					
 		
 	def get_groups(self):
 		'''

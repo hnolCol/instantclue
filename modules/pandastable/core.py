@@ -4,7 +4,7 @@
 Comment:
 This great packages was created by Damien Ferrell. We included it in
 the module path of Instant Clue because we modified especially the menu
-to not have style/logic errors for users. (e.g. you can change an upload 
+to not have style/logic errors for users. (e.g. you can change an upload
 new data sets otherwise that are not tracked easily by Instant Clue.
 Licence is below and also in the folder modules/pandastable.
 All changes are indicated by a "#changed" before the section
@@ -41,7 +41,7 @@ except:
     import tkFileDialog as filedialog
     import tkSimpleDialog as simpledialog
     import tkMessageBox as messagebox
-    
+
 from tkinter import font
 import math, time
 import os, types
@@ -144,7 +144,7 @@ class Table(Canvas):
         self.linewidth=1.0
         self.rowheaderwidth=50
         self.showkeynamesinheader=False
-        ##changed 
+        ##changed
         self.thefont = ('Arial',11)
         self.cellbackgr = '#F4F4F3'
         self.entrybackgr = 'white'
@@ -2298,7 +2298,7 @@ class Table(Canvas):
     		else:
     			return
     	elif format_type == 'csv':
-     	
+
      		fileName = filedialog.asksaveasfilename(title='Select name for saving file',
     										defaultextension = '.csv' ,
     										initialfile='export_data_',
@@ -2307,32 +2307,32 @@ class Table(Canvas):
      			data.to_csv(fileName, index = None, na_rep = 'NaN', sep=',')
      		else:
      			return
-      		    		
+
     	elif format_type == 'Excel':
 
      		fileName = filedialog.asksaveasfilename(title='Select name for saving file',
     										defaultextension = '.xlsx' ,
     										initialfile='export_data_',
     										filetypes = [('Excel files', '.xlsx')])
-     		if len(fileName) != 0:    										
+     		if len(fileName) != 0:
      			data.to_excel(fileName, index = None,
-     										sheet_name = 'InstantClue Data', 
-     										na_rep = 'NaN') 
-     		else:    		
-     			return								
-			    		
-    		     	
+     										sheet_name = 'InstantClue Data',
+     										na_rep = 'NaN')
+     		else:
+     			return
+
+
     	elif format_type == 'Clipboard':
      		data.to_clipboard(excel=True, na_rep = 'NaN',
-     						  index=False, encoding='utf-8', sep='\t')  
-    	
+     						  index=False, encoding='utf-8', sep='\t')
+
     	if format_type != 'Clipboard':
-    		messagebox.showinfo('Done..','File has been saved!')  	
-    		  	
-   
-    	
-    	
-    	
+    		messagebox.showinfo('Done..','File has been saved!')
+
+
+
+
+
 
     def get_memory(self, ):
         """memory usage of current table"""
@@ -2396,7 +2396,7 @@ class Table(Canvas):
                         #"Delete Column(s)" : lambda: self.deleteColumn(),
                         "Clear Data" : lambda: self.deleteCells(rows, cols),
                         "Select All" : self.selectAll,
-                        "To txt" : lambda : self.saveCurrentDf('txt'), 
+                        "To txt" : lambda : self.saveCurrentDf('txt'),
                         "To csv" : lambda : self.saveCurrentDf('csv'),
                         "To Excel" : lambda : self.saveCurrentDf('Excel'),
                         "To Clipbaord" : lambda : self.saveCurrentDf('Clipboard'),
@@ -2423,12 +2423,12 @@ class Table(Canvas):
                 #, "Delete Column(s)"]
         general = ["Select All"]#,'Save as']#, "Filter Rows",
                   # "Show as Text", "Table Info", "Preferences"]
-                   
-		# changed!! 
+
+		# changed!!
         filecommands = ['To txt','To csv', 'To Excel','To Clipbaord' ]#['New','Load','Import csv','Save','Save as','Export']
         plotcommands = []#['Plot Selected','Hide plot','Show plot']
         tablecommands = []#['Table to Text','Clean Data','Clear Formatting']
-    	
+
 
         def createSubMenu(parent, label, commands):
             menu = Menu(parent, tearoff = 0)
@@ -2477,6 +2477,7 @@ class Table(Canvas):
 
         popupmenu.add_separator()
         createSubMenu(popupmenu, 'File', filecommands)
+        ## changed
         #createSubMenu(popupmenu, 'Plot', plotcommands)
         #createSubMenu(popupmenu, 'Table', tablecommands)
         popupmenu.bind("<FocusOut>", popupFocusOut)
@@ -3245,10 +3246,10 @@ class Table(Canvas):
                                                      defaultextension='.txt',
                                                      initialdir = self.currentdir,
                                                      )
-                                                     
-            
-                                                     
-                                                     
+
+
+
+
         if filename:
             self.model.save(filename)
             self.filename = filename

@@ -1,3 +1,26 @@
+"""
+	""MERGE DATA FRAMES""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
+
+
+
 import pandas as pd
 import numpy as np
 
@@ -7,15 +30,15 @@ from tkinter import ttk
 from modules.pandastable import core 
 from modules.utils import *
 from modules import images
-
+from modules.dialogs.simple_dialog import simpleListboxSelection
 
 parameters = {'Merge':OrderedDict([('how',['left','right','outer','inner']),
-					('indicator',['True','False']),
-					('suffixes',['_x,_y']),
-					('left data frame','all'),
-					('right data frame','all')]),
+						('indicator',['True','False']),
+						('suffixes',['_x,_y']),
+						('left data frame','all'),
+						('right data frame','all')]),
 					
-		  'Concatenate':OrderedDict([('join',['outer','inner']),
+		  	  'Concatenate':OrderedDict([('join',['outer','inner']),
 		  				 ('ignore_index',['True','False']),
 		  				 ('axis',['index','columns']),
 		  				 ('Data frames','all')])}
@@ -52,6 +75,7 @@ class mergeDataFrames(object):
 		'''
 		self.treeviews = OrderedDict()
 		self.dfColumns = dict()
+		self.dfSelection = dict()
 		self.joinOptions = dict()
 		self.dataTreeView = dataTreeView 
 		self.dataFrameList = dataTreeView .dataFramesSelected
@@ -87,7 +111,7 @@ class mergeDataFrames(object):
 		popup.wm_title('Combine data frames') 
 		popup.bind('<Escape>', self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=540
+		w=620
 		h=430
 		self.toplevel = popup
 		self.center_popup((w,h))
@@ -136,15 +160,24 @@ class mergeDataFrames(object):
 					self.enter_information_in_treeview(self.treeviews[label],self.fileNames)
 					
 			n+=1
+		if self.method == 'Merge': 
 			
-					
+			defineLeftColsButton = ttk.Button(self.cont, text  = 'Columns [left]', 
+											command = lambda : self.subset_dfs('left'))
+			defineRightColsButton = ttk.Button(self.cont, text  = 'Columns [right]', 	
+											command = lambda : self.subset_dfs('right'))
+			defineLeftColsButton.grid(row= n +1, padx=15, sticky=tk.W,column=0,pady=10)
+			defineRightColsButton.grid(row= n + 1, padx=15, sticky=tk.E, column=4,pady=10)		
+		
+							
 		combineButton = ttk.Button(self.cont, text = str(self.method), 
 									command = self.perform_operation)
 		closeButton = ttk.Button(self.cont, text = 'Close', 
 									command = self.close)
 		
-		combineButton.grid(row= n +1, padx=15, sticky=tk.W,column=0,pady=10)
-		closeButton.grid(row= n +1, padx=15, sticky=tk.E, column=5,pady=10)
+
+		combineButton.grid(row= n +2, padx=15, sticky=tk.W,column=0,pady=10)
+		closeButton.grid(row= n +2, padx=15, sticky=tk.E, column=4,pady=10)
 	
 	def enter_information_in_treeview(self,treeview,iidAndItemDict):
 		'''
@@ -175,8 +208,10 @@ class mergeDataFrames(object):
 				dfColumnDict['{}_{}'.format(dfID,column)] = column
 			if n == 0:
 				self.dfColumns['left data frame'] = dfColumnDict
+				self.dfSelection['left data frame'] = []
 			elif n == 1:	
 				self.dfColumns['right data frame'] = dfColumnDict
+				self.dfSelection['right data frame'] = []
 		
 		
 	def extract_merge_props(self,columnsForMerge = None):
@@ -218,9 +253,32 @@ class mergeDataFrames(object):
 			# get the column names for merge
 			props['left_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['left data frame']] #cutoff the data frame id from the iid = columnName
 			props['right_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['right data frame']]
-			self.evaluate_input(props)	
+			if self.evaluate_input(props) is None:
+				return	
 		return props	
-	
+
+	def extract_columns(self,props):
+		
+		collect = []
+		for key,selection in self.dfSelection.items():
+			allColumns = list(self.dfColumns[key].values())
+			
+			if len(selection) == 0:
+				collect.append(allColumns)
+				
+			else:
+				side = key.split(' ')[0]
+				selectedColumns = [column for column in allColumns  if \
+								   column in props['{}_on'.format(side)] or column in selection]
+				collect.append(selectedColumns)		
+		
+		return collect
+			
+			
+			
+			
+			
+				
 	def evaluate_input(self,props):
 		'''
 		Evaluates input of columns to be used for merging. We take this extra computing
@@ -232,16 +290,19 @@ class mergeDataFrames(object):
 		rightId = self.dataFrameList[1]
 		nonSuitableColumn = []
 		
+		if len(props['left_on']) != len(props['right_on']):
+			tk.messagebox.showinfo('Error ..','Number of columns to be used for matching'+
+								' has to be the same for left and right data frames.',parent =self.toplevel)
+			return 
+		
 		self.dfClass.set_current_data_by_id(leftId)
 		uniqueValues = self.dfClass.get_unique_values(props['left_on'],forceListOutput=True)
 		rows = self.dfClass.get_row_number()
 		for n,column in enumerate(props['left_on']):
 			if uniqueValues[n].size != rows:
 				nonSuitableColumn.append(column)
-
 			
 			
-		
 		# now check right df
 		self.dfClass.set_current_data_by_id(rightId)
 		uniqueValues = self.dfClass.get_unique_values(props['right_on'],forceListOutput=True)
@@ -251,13 +312,34 @@ class mergeDataFrames(object):
 				nonSuitableColumn.append(column)
 		
 		if len(nonSuitableColumn) != 0:
-			tk.messagebox.showinfo('Warning ..','Warning - Column(s) used for merging contain(s)'+
+			quest = tk.messagebox.askquestion('Warning ..','Warning - Column(s) used for merging contain(s)'+
 					' less unique values than rows. Unexpected results are possible.\n'+
-					' Columns: {}'.format(get_elements_from_list_as_string(nonSuitableColumn)),
+					' Columns: {}\n Abort?'.format(get_elements_from_list_as_string(nonSuitableColumn)),
 					parent= self.toplevel)
-	
+			if quest == 'yes':
+				return
+		return True
 		
-					
+		
+	def subset_dfs(self,which):
+		'''
+		'''
+		columnKey = '{} data frame'.format(which)
+		if columnKey not in self.dfColumns:
+			return
+		else:
+			columns = list(self.dfColumns[columnKey].values())
+			
+			
+		dialog = simpleListboxSelection('Selected columns will be \nused for merging.',
+										columns)
+		selection = dialog.selection
+		print(selection)
+		self.dfSelection[columnKey] = selection
+		print(self.dfSelection)
+		
+		
+		
 			
 	def create_treeview_frame(self, row):
 		'''
@@ -347,9 +429,14 @@ class mergeDataFrames(object):
 										get_elements_from_list_as_string(dfsFileNames,maxStringLength=10))
 		else:
 			propsMerge = self.extract_merge_props(columnsForMerge)
+			## check if user has selected columns to use	
+			if propsMerge is None:
+				return		
+			leftCol, rightCol = self.extract_columns(propsMerge)			
 			
-			leftDf = self.dfClass.dfs[self.dataFrameList[0]]
-			rightDf = self.dfClass.dfs[self.dataFrameList[1]]
+			leftDf = self.dfClass.dfs[self.dataFrameList[0]][leftCol]
+			rightDf = self.dfClass.dfs[self.dataFrameList[1]][rightCol]
+			
 			try:
 				newDf = pd.merge(leftDf, rightDf, sort = False, **propsMerge)
 			except Exception as e:
@@ -371,6 +458,9 @@ class mergeDataFrames(object):
 										  'This does not happen using "inner" join.', parent = self.toplevel)
 		self.close()
 
+
+
+
 	def open_help(self):
 		'''
 		Opens a tkinter toplevel and display a help picture.
@@ -382,7 +472,7 @@ class mergeDataFrames(object):
 			else:
 				key = 'join'
 			value = self.joinOptions[key].get()
-			if platform == 'WINDOWS':
+			if platform in ['WINDOWS','LINUX']:
 				self.tw.wm_overrideredirect(True)
 			else:
 				self.tw.tk.call("::tk::unsupported::MacWindowStyle","style",self.tw._w, "plain", "none")

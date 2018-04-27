@@ -1,3 +1,23 @@
+"""
+	""ANOVA CALULCATIONS""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import pandas as pd
 import numpy as np
 import scipy
@@ -7,12 +27,12 @@ from collections import OrderedDict
 
 
 '''
-########### PLEASE NOTE ############
-The main part of this code is a copy of pyvttbl that was designed for python2 and 
-had its own dataframe structure. Here it is adjusted to work with pandas dataframes and
-python3. 
-### FOR ANY CROSS REFERENCES AND LICENCE CHECK OUT:
-https://pypi.python.org/pypi/pyvttbl
+============ PLEASE NOTE ===============
+*The main part of this code is a copy of pyvttbl that was designed for python2 and 
+*had its own dataframe structure. Here it is adjusted to work with pandas dataframes and
+*python3. 
+*### FOR ANY CROSS REFERENCES AND LICENCE CHECK OUT:
+*https://pypi.python.org/pypi/pyvttbl
 '''
 
 
@@ -949,11 +969,7 @@ class Anova(object):
 										else:
 											collectionDict[columnHeader].append('-')
 							
-						
-		#for i in range(1,len(wFactors)+1):
-			#for efs in self.unique_combinations(wFactors,i):
-				#r = self.results[tuple(efs)]
-				#print(efs2)			
+		
 				errorSource ='Error(%s)'%' *'.join([f for f in efs if
                                              f not in bFactors])
 				
@@ -1017,8 +1033,8 @@ class Anova(object):
 				 d=np.floor(d/2.)
 		return list(np.array(list(np.zeros(int((p-len(b)))))+b)+1)
 
+	
 	def matrix_rank(self,arr,tol=1e-8):
-		
 		'''
 		'''
 		arr = np.asarray(arr)
@@ -1035,6 +1051,7 @@ class Anova(object):
 			for i in range(len(items)):
 				for cc in self.unique_combinations(items[i+1:],n-1):
 					yield [items[i]]+cc   
+	
 	def observed_power(self,df,dfe,nc,alpha=0.05,eps=1.0):
 		'''
 		http://zoe.bme.gatech.edu/~bv20/public/samplesize.pdf

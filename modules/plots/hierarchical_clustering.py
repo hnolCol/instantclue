@@ -1,3 +1,22 @@
+"""
+	""HIERARCHICAL CLUSTERING""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
 import pandas as pd
 import numpy as np
 
@@ -34,6 +53,8 @@ class hierarchichalClustermapPlotter(object):
 		self.colorData = pd.DataFrame() 
 		self.labelColumn = None
 		self.numericColumns = numericColumns
+		self.dfClass = dfClass
+		self.dataID = dfClass.currentDataFile
 		
 		self.figure = figure
 		
@@ -57,14 +78,25 @@ class hierarchichalClustermapPlotter(object):
 		self.labelColumnList = []
 		self.colorColumnList = []
 
+		self.get_data()
+			
 
-		data = dfClass.get_current_data_by_column_list(numericColumns)
-		self.df = data.dropna(subset=numericColumns)
 			
-		if self.plotCorrMatrix:
-			self.corrMethod = self.plotter.corrMatrixCoeff
-			self.df = self.df.corr(method = self.corrMethod).dropna()
-			
+		
+		
+		self.lenDf = len(self.df.index)
+		self.axClusterMapXLimits = (0,len(numericColumns))
+		
+		self.create_cluster_map()
+		
+	def get_data(self):
+		'''
+		Retrieve data from dfClass. 
+		'''
+		
+		data = self.dfClass.get_current_data_by_column_list(self.numericColumns )
+		self.df = data.dropna(subset=self.numericColumns )
+		
 		if self.df.empty:
 			self.progressClass.update_progressbar_and_label(100,
 						'Aborting! NaN Filtering resulted\nin an empty data frame ...')	
@@ -72,13 +104,9 @@ class hierarchichalClustermapPlotter(object):
 								
 		self.df_copy = self.df.copy()
 		
-		
-		self.lenDf = len(self.df.index)
-		self.dataID = dfClass.currentDataFile
-		self.axClusterMapXLimits = (0,len(numericColumns))
-		self.dfClass = dfClass
-		
-		self.create_cluster_map()
+		if self.plotCorrMatrix:
+			self.corrMethod = self.plotter.corrMatrixCoeff
+			self.df = self.df.corr(method = self.corrMethod).dropna()
 				
 	def add_axes_to_figure(self,specificAxis,fig = None, returnAxes = False):
 		'''
@@ -113,7 +141,7 @@ class hierarchichalClustermapPlotter(object):
 			addFactorMainWidth =  -0.15+len(self.numericColumns) * 0.008 
 			
 			if width*0.4+addFactorMainWidth > 0.75:
-				addFactorMainWidth = width*0.4/0.75
+				addFactorMainWidth = width*0.35
 				
 		if self.plotCorrMatrix and specificAxis is None:
 			## to produce a corr matrix in the topleft corner of the graph
@@ -162,20 +190,14 @@ class hierarchichalClustermapPlotter(object):
 			self.axRowDendro,self.axColumnDendro,self.axClusterMap,\
 									self.axLabelColor,self.axColormap = axRowDendro,axColumnDendro,axClusterMap,axLabelColor,axColormap 
 			self.plotter.redraw()
-	
-	def __getstate__(self):
-	
-		state = self.__dict__.copy()
-		if 'progressClass' in state:
-			del state['progressClass'] # cannot pickle tkinter app
-		if 'backgroundRow' in state:
-			del state['backgroundRow'] # cannot pickle canvas.background copy ..
-		return state
+
 		
 	
-	def replot(self):
+	def replot(self, updateData = False):
 		'''
 		'''
+		if updateData:
+			self.get_data()
 		self.progressClass = Progressbar('Hierarchical Clustering ..')
 		self.create_cluster_map()
 		
@@ -226,6 +248,7 @@ class hierarchichalClustermapPlotter(object):
 		
 			self.progressClass.update_progressbar_and_label(43,'Clustering columns done ...')
 		else:
+			
 			self.axColumnDendro.axis('off')
 			
 		self.resort_data_frame(self.Z_row,self.Z_col)
@@ -377,13 +400,31 @@ class hierarchichalClustermapPlotter(object):
 		
 		## format colormap 
 		axColormap.tick_params(axis=u'y', which=u'both',length=2.3,direction='out')
-		axColormap.yaxis.set_major_locator(mtick.MaxNLocator(3)) 
+		ticks = axColormap.get_yticklabels()
+		nTicks = len(ticks)
+		newTicks = ['' for n in range(nTicks)]		
+		for n in np.linspace(start=0,stop=nTicks-1,
+								num=3,endpoint=True):
+			idx = int(n) 
+			newTicks[idx] = ticks[idx].get_text() 
+					
+		axColormap.set_yticklabels(newTicks)
+		
+		
+		
+		#axColormap.yaxis.set_major_locator(mtick.MaxNLocator(5)) 
 		
 		## adds cluster numbers to dendrogram
 		if self.plotCorrMatrix == False:
 			self.add_cluster_label(axRowDendro, export = export)
 		else:
 			axRowDendro.set_yticklabels([])
+
+	
+			
+			
+			
+		
 
 	def add_some_bindings(self):
 		'''
@@ -449,8 +490,14 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		Resets limit to original scale.
 		'''
+		if hasattr(self,'yLimitRow') == False:
+			
+			self.yLimitRow = len(self.df.index)*10
+		
 		self.axClusterMap.set_ylim(0,self.yLimitRow/10)
+		
 		if redraw:
+		
 			self.plotter.redraw()
 	
 	def reset_xlimits_of_dendro(self,event=None):
@@ -483,6 +530,7 @@ class hierarchichalClustermapPlotter(object):
 			ax = self.axClusterMap
 			
 		else:
+			self.axClusterMap.set_yticklabels([])
 			ax = self.axLabelColor
 			
 			
@@ -513,6 +561,7 @@ class hierarchichalClustermapPlotter(object):
 		if hasattr(self,'rowClusterLabel') == False:
 			return
 		if export == False:
+			
 			self.clean_up_rectangles()
 		
 		uniqeClustlabel, countsClust = np.unique(self.rowClusterLabel, return_counts=True)
@@ -546,7 +595,10 @@ class hierarchichalClustermapPlotter(object):
 		Deletes all rectangles drawn to indicate clusters
 		'''
 		for rectangle in self.rectanglesForRowDendro:
-			rectangle.remove()
+			try:
+				rectangle.remove()
+			except:
+				pass
 		self.rectanglesForRowDendro = []
 				
 	def add_maxD_lines(self):
@@ -811,5 +863,12 @@ class hierarchichalClustermapPlotter(object):
 		
 				self.figure.canvas.mpl_disconnect(event)
 		
-
-		
+	
+	def __getstate__(self):
+	
+		state = self.__dict__.copy()
+		if 'progressClass' in state:
+			del state['progressClass'] # cannot pickle tkinter app
+		if 'backgroundRow' in state:
+			del state['backgroundRow'] # cannot pickle canvas.background copy ..
+		return state		

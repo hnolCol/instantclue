@@ -44,6 +44,7 @@ class gridSearchVisualization(object):
 		self.axisDict[2] = self.figure.add_subplot(233)
 		self.axisDict[3] = self.figure.add_subplot(234)
 		self.axisDict[4] = self.figure.add_subplot(235)
+		self.figure.subplots_adjust(wspace=0.35,hspace=0.28)
 	
 	def fill_axes(self):
 		'''
@@ -53,6 +54,7 @@ class gridSearchVisualization(object):
 			rocData = predData['roc_curve']
 			param = predData['best_params']
 			for class_ in self.rocCurves[1]['classes']:
+				class_ = str(class_)
 				if 'tpr_'+class_ not in rocData:
 					continue
 				tpr = rocData['tpr_'+class_]
@@ -60,12 +62,13 @@ class gridSearchVisualization(object):
 				aucVal = rocData['AUC_'+class_]
 				
 			if len(self.rocCurves[1]['classes']) > 2:
-				all_fpr = np.unique(np.concatenate([rocData['fpr_'+class_] for class_ in self.rocCurves[1]['classes']]))
-				print(all_fpr)
+				all_fpr = np.unique(np.concatenate([rocData['fpr_'+str(class_)] for class_ in self.rocCurves[1]['classes']]))
+				#print(all_fpr)
 				mean_tpr = np.zeros_like(all_fpr)
-				for class_ in self.rocCurves[1]['classes']:
-					print(interp(all_fpr, rocData['fpr_'+class_], rocData['tpr_'+class_]))
-					mean_tpr += interp(all_fpr, rocData['fpr_'+class_], rocData['tpr_'+class_])
+				for inClass in self.rocCurves[1]['classes']:
+					inClass = str(inClass)
+					#print(interp(all_fpr, rocData['fpr_'+class_], rocData['tpr_'+class_]))
+					mean_tpr += interp(all_fpr, rocData['fpr_'+inClass], rocData['tpr_'+inClass])
 			
 				mean_tpr /= len(self.rocCurves[1]['classes'])
 				AUC = round(auc(all_fpr, mean_tpr),2)
@@ -79,7 +82,11 @@ class gridSearchVisualization(object):
 			   			 
 			self.axisDict[0].plot(all_fpr,mean_tpr,
 							lw = 0.75,
-							label='Split: {} {}\n (AUC: {})'.format(nSplit,paramDetails ,AUC))
+							label='{}\n (AUC: {},n: {})'.\
+							format(paramDetails.replace("'",'').replace('{','').replace('}','')
+							,AUC,nSplit))
+		self.axisDict[0].set_xlabel('False Positive Rate (1-Specificity)')
+		self.axisDict[0].set_ylabel('True Positive Rate (Sensitivity)')
 				
 		# First aggregate all false positive rates
 #all_fpr = np.unique(np.concatenate([fpr[i] for i in range(n_classes)]))
@@ -98,8 +105,11 @@ class gridSearchVisualization(object):
 		order = self.nCVResults['params'].unique().tolist()
 		
 		self.axisDict[1].bar(range(self.testScoreMeans.size),self.testScoreMeans.values)
+		self.axisDict[1].set_ylabel('Mean Test Score {}'.format(self.scorePrefix))
 		
-		fill_axes_with_plot(plot_type='pointplot',y='mean_test_score',cmap=self.colorMap,
+		
+		
+		fill_axes_with_plot(plot_type='pointplot',y='mean_test_{}'.format(self.scorePrefix),cmap=self.colorMap,
 					hue='params',x='#CV',ax=self.axisDict[2], data = self.nCVResults)
 		#sns.pointplot(y='mean_fit_time',hue='params',x='#CV',ax=self.axisDict[3], data = self.nCVResults)
 		
@@ -107,7 +117,7 @@ class gridSearchVisualization(object):
 					hue='params',x='#CV',ax=self.axisDict[3], data = self.nCVResults,
 					hue_order = order)
 		
-		fill_axes_with_plot(plot_type='barplot',y='rank_test_score',cmap=self.colorMap,
+		fill_axes_with_plot(plot_type='barplot',y='rank_test_{}'.format(self.scorePrefix),cmap=self.colorMap,
 					hue = None, x='params',ax=self.axisDict[4], data = self.nCVResults,
 					order = order)
 		
@@ -127,14 +137,15 @@ class gridSearchVisualization(object):
   		'''
   		## get parameter columns
   		paramColumns = [column for column in self.nCVResults.columns if 'param_' in column]
-  		print(paramColumns) 
+  		#print(paramColumns) 
   		## group data 
   		groupedResults = self.nCVResults.groupby(paramColumns) 
   		# get combinations in nested cv
   		groupNames = groupedResults.groups.keys() 
-  		print(groupNames)
-  		self.testScoreMeans = groupedResults['mean_test_score'].mean()
-  		print(self.testScoreMeans)
+  		#print(groupNames)
+  		self.scorePrefix = self.rocCurves[1]['scorerPrefix']
+  		self.testScoreMeans = groupedResults['mean_test_{}'.format(self.scorePrefix)].mean()
+  		#print(self.testScoreMeans)
   	
 	def shorten_params(self,param):
 		'''
@@ -295,7 +306,7 @@ class chartToolTip(object):
 		self.define_bbox()
 		self.define_text()
 		self.build_tooltip()
-		self.extract_ax_props(ax)
+		self.extract_ax_props()
 		
 				
 	
@@ -399,12 +410,13 @@ class chartToolTip(object):
 			self.plotter.figure.canvas.blit(self.ax.bbox)
 		
 	
-	def extract_ax_props(self,ax):
+	def extract_ax_props(self):
 		'''
 		'''
+	
 		self.axProps = dict()
-		self.axProps['xlim'] = ax.get_xlim()
-		self.axProps['ylim'] = ax.get_ylim()
+		self.axProps['xlim'] = self.ax.get_xlim()
+		self.axProps['ylim'] = self.ax.get_ylim()
 		self.axProps['xDiff'] = self.axProps['xlim'][1] - self.axProps['xlim'][0]
 		self.axProps['yDiff'] = self.axProps['ylim'][1] - self.axProps['ylim'][0]
 		
@@ -491,7 +503,6 @@ class chartToolTip(object):
 		if argMax == 0 and add[0] != 2:	
 			self.set_invisible()
 			return
-		
 		textData = self.annotationData[argMax]
 		text = get_elements_from_list_as_string(textData).replace(', ','\n')
 		self.update_position(event,text)
@@ -516,11 +527,13 @@ class chartToolTip(object):
 			n = 0
 			for comb in helper.scatterWithCategories.all_combinations:
 				if comb in helper.scatterWithCategories.grouped_keys:
-					
 					if axisId == n:
 						data =  helper.scatterWithCategories.grouped_data.get_group(comb)
+						data = dfClass.join_missing_columns_to_other_df(data,id=dataID,
+												 definedColumnsList = annotationColumnList)
 						break		
 					n+=1
+						
 		elif hasattr(helper,'linePlotHelper'):
 			data = helper.linePlotHelper.data
 			data = dfClass.join_missing_columns_to_other_df(data,id=dataID,
@@ -548,15 +561,18 @@ class chartToolTip(object):
 			
 		
 		self.xData = data[numericColumns[0]].values
+		
 		if len(numericColumns) > 1:
 			self.yData = data[numericColumns[1]].values 
 		else:
 			self.yData = np.arange(0,self.xData.size)
+			
 		self.annotationData = data[annotationColumnList].values
 	
 	
 	def evaluate_event_in_lineCollection(self,event):
 		'''
+		Check event for Line Collections
 		'''		
 		xValue = int(event.xdata)
 		if abs(xValue - event.xdata) > 0.2:
@@ -581,6 +597,7 @@ class chartToolTip(object):
 
 	def annotate_cluster_map(self,dfClass,annotationColumnList):
 		'''
+		Initiate Tooltip in hierarchical clustering.
 		'''
 		helper = self.plotter.get_active_helper()
 		dataID = self.plotter.get_dataID_used_for_last_chart()
@@ -592,6 +609,7 @@ class chartToolTip(object):
 					
 	def evaluate_event_in_cluster(self,event):
 		'''
+		Evaluate event over a hierarchical clustering. 
 		'''
 		idx = int(event.ydata)
 		textData = self.annotationData[idx]

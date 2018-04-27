@@ -10,6 +10,7 @@ from modules.utils import *
 from itertools import chain
 from collections import OrderedDict
 
+import xml.etree.ElementTree as ET
 
 
 
@@ -102,10 +103,12 @@ class fileImporter(object):
  		labTitle = tk.Label(self.cont_widgets, text = 'Settings for file upload',
                                       **titleLabelProperties)  
  		labPreview = tk.Label(self.cont_widgets, text = 'Preview', **titleLabelProperties)
- 		labInfo = tk.Label(self.cont_widgets, text = 'If you do not want upload all columns - select columns and delete them using the drop-down menu', bg=MAC_GREY)
+ 		labInfo = tk.Label(self.cont_widgets, text = 'If you do not want upload all columns - select'+
+ 						' columns and delete them using the drop-down menu.\nPlease'+
+ 						'note that deleting rows in the preview will not effect the data.', bg=MAC_GREY)
  		     		
  		buttonClose = ttk.Button(self.cont_widgets, text = "Close", command = self.discard_changes, width=9)
- 		buttonLoad = ttk.Button(self.cont_widgets, text = "Upload", width=9, command  = self.save_changes)
+ 		buttonLoad = ttk.Button(self.cont_widgets, text = "Load", width=9, command  = self.save_changes)
  		self.toplevel.bind('<Return>', self.save_changes)
  		
  		buttonUpdate = ttk.Button(self.cont_widgets, text = "Update", width = 9, command = self.update_preview)
@@ -123,8 +126,8 @@ class fileImporter(object):
 
 
  		buttonClose.grid(padx=3, row=6,column=5, pady=3, sticky=tk.E) 
- 		buttonLoad.grid(padx=3, row=5, column=5, pady=3, sticky=tk.E)
- 		buttonUpdate.grid(padx=3, row=4, column=5, pady=3, sticky=tk.E)
+ 		buttonLoad.grid(padx=3, row=4, column=5, pady=3, sticky=tk.E)
+ 		buttonUpdate.grid(padx=3, row=5, column=5, pady=3, sticky=tk.E)
  		
  		
  		labPreview.grid(padx=5,pady=5, row=8, column=0, sticky = tk.W) 
@@ -290,7 +293,155 @@ class fileImporter(object):
 			self.pt.parentframe.destroy()												
 			self.close()
 
+
+
+class XML2DataFrame:
+
+    def __init__(self, xml_data):
+    	#self.root = xml_data
+    	
+        self.root = ET.XML(xml_data)
+
+    def parse_root(self, root):
+        return [self.parse_element(child) for child in iter(root)]
+
+    def parse_element(self, element, parsed=None):
+        if parsed is None:
+            parsed = dict()
+        for key in element.keys():
+            parsed[key] = element.attrib.get(key)
+        if element.text:
+            parsed[element.tag] = element.text
+        for child in list(element):
+            self.parse_element(child, parsed)
+        return parsed
+
+    def process_data(self):
+        structure_data = self.parse_root(self.root)
+        return pd.DataFrame(structure_data)
+
+
+class xmlImporter(object):	
 	
+	def __init__(self,pathUpload):
+
+		self.load_file(pathUpload)	
+		
+		
+		self.replaceObjectNan = '-'	
+		self.build_toplevel()
+		self.build_widgets()
+		self.initiate_preview(self.df)
+		self.toplevel.wait_window() 
+
+
+	def load_file(self, pathUpload):
+	
+		tree = ET.parse(pathUpload)
+		root = tree.getroot()
+		xml2df = XML2DataFrame(ET.tostring(root))
+		self.df = xml2df.process_data()
 				
+		
+	def close(self,event=None):
+		'''
+		Close toplevel
+		'''
+		if hasattr(self,'pt'):
+			self.pt.remove()
+			del self.pt	
+		self.toplevel.destroy() 
+
+	def build_toplevel(self):
+	
+		'''
+		Builds the toplevel to put widgets in 
+		'''
+        
+		popup = tk.Toplevel(bg=MAC_GREY) 
+		popup.wm_title('Import Files')
+		popup.bind('<Escape>', self.close) 
+		popup.protocol("WM_DELETE_WINDOW", self.close)
+		w=880
+		h=430
+		self.toplevel = popup
+		self.center_popup((w,h))
+		
+	def build_widgets(self):
+ 		'''
+ 		Builds the dialog for interaction with the user.
+ 		'''	 
+ 		self.cont= tk.Frame(self.toplevel, background =MAC_GREY) 
+ 		self.cont.pack(expand =True, fill = tk.BOTH)
+ 		self.cont_widgets = tk.Frame(self.cont,background=MAC_GREY) 
+ 		self.cont_widgets.pack(fill=tk.X, anchor = tk.W) 
+ 		self.cont_widgets.grid_columnconfigure(1,weight=1)
+ 		self.create_preview_container() 
+ 		labTitle = tk.Label(self.cont_widgets, text = 'Settings for file upload',
+                                      **titleLabelProperties)  
+ 		labPreview = tk.Label(self.cont_widgets, text = 'Preview', **titleLabelProperties)
+ 		     		
+ 		buttonClose = ttk.Button(self.cont_widgets, text = "Close", command = self.discard_changes, width=9)
+ 		buttonLoad = ttk.Button(self.cont_widgets, text = "Load", width=9, command  = self.save_changes)
+ 		self.toplevel.bind('<Return>', self.save_changes)
+ 		
+ 		labTitle.grid(padx=5,pady=5, columnspan=7, sticky=tk.W) 
+ 		labPreview.grid(padx=5,pady=5, row=8, column=0, sticky = tk.W) 
+ 		
+ 		buttonClose.grid(padx=3, row=6,column=5, pady=3, sticky=tk.E) 
+ 		buttonLoad.grid(padx=3, row=5, column=5, pady=3, sticky=tk.E)
+ 		 		 		
+ 			
+	def create_preview_container(self,sheet = None):
+		'''
+		Creates preview container for pandastable. Mainly to delete everything easily and fast.
+		'''
+		self.cont_preview  = tk.Frame(self.cont,background='white') 
+		self.cont_preview.pack(expand=True,fill=tk.BOTH)
+	
+	def initiate_preview(self,df):
+		'''
+		Actually displaying the data.
+		'''
+	 
+		self.pt = core.Table(self.cont_preview,
+						dataframe = df, 
+						showtoolbar=False, 
+						showstatusbar=False)	
+						
+		self.pt.parentframe.master.unbind_all('<Return>') #we use this as a shortcut to upload data- will give every time an error	
+		self.pt.show()	
+	
+	def discard_changes(self):
+	
+ 		'''
+ 		No Export and close toplevel
+ 		'''
+ 		self.data_to_export = None
+ 		self.close()							
+	
+	def save_changes(self, event = None):
+		'''
+		Defines self.data_to_export to set the data to be exported of the importer class
+		'''
+		columnsToUpload = self.pt.model.df.columns
+		#print(columnsToUpload)
+		
+		self.data_to_export = self.pt.model.df[columnsToUpload]
+		if self.data_to_export is None:
+			return
+		else:
+			self.pt.parentframe.destroy()												
+			self.close()	
+	def center_popup(self,size):
+         	'''
+         	Casts poup and centers in screen mid
+         	'''
+	
+         	w_screen = self.toplevel.winfo_screenwidth()
+         	h_screen = self.toplevel.winfo_screenheight()
+         	x = w_screen/2 - size[0]/2
+         	y = h_screen/2 - size[1]/2
+         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y))) 				
          
 		

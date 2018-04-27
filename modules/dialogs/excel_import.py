@@ -1,3 +1,22 @@
+"""
+	""Imports files from Excel""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
 import tkinter as tk
 from tkinter import ttk             
 import tkinter.simpledialog as ts
@@ -87,7 +106,7 @@ class ExcelImporter(object):
  		
  		
 		## define widgets 
- 		labTitle = tk.Label(self.cont_widgets, text = 'Selected Excel file contains several sheets.\nYou can choose one or load all. Use the interactive mode to customize the file import ...',
+ 		labTitle = tk.Label(self.cont_widgets, text = 'Selected Excel file contains several sheets.\nYou can choose one or load all ...',
                                       font = LARGE_FONT, fg="#4C626F",bg = MAC_GREY, justify=tk.LEFT)  
  		labSheets = tk.Label(self.cont_widgets, text = 'Excel Sheets:', bg=MAC_GREY) 
  		labHeaderRow = tk.Label(self.cont_widgets, text = 'Headers are in row:', bg=MAC_GREY)
@@ -145,7 +164,7 @@ class ExcelImporter(object):
 		Actually displaying the data.
 		'''
 	 
-		df_ = self.data[sheet]
+		df_ = self.data[sheet]#.iloc[0:50,]
 		self.get_shape_and_display(df_)
 		self.pt = core.Table(self.cont_preview,
 						dataframe = df_, 
@@ -179,7 +198,9 @@ class ExcelImporter(object):
 		try:
 			row_ = int(float(self.headerRow.get())-1)	
 		except:
-			tk.messagebox.showinfo('Error..','Cannot convert entry string to integer.')	
+			tk.messagebox.showinfo('Error..',
+							'Cannot convert entry string to integer.',
+							parent = self.toplevel)	
 			return
 		
 		columnList = self.evaluate_columns(self.data[self.current_sheet].iloc[row_,:])	
@@ -188,7 +209,9 @@ class ExcelImporter(object):
 		
 		## basically only needed because we cannot undo this. (maybe in the future..)
 		
-		quest_to_delete = tk.messagebox.askquestion('Delete ?','Would you like to delete this row from your data?')
+		quest_to_delete = tk.messagebox.askquestion(
+					'Delete ?','Would you like to delete this row from your data?',
+					parent = self.toplevel)
 		
 		if quest_to_delete == 'yes':
 			self.pt.model.deleteRows(rowlist = [row_])

@@ -1,3 +1,23 @@
+"""
+	""USER DEFINED SETTINGS""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import tkinter as tk
 from tkinter import ttk    
 
@@ -19,7 +39,7 @@ binnedScatter = OrderedDict([('Number of bins',list(range(3,20))),
 
 generalSettings = OrderedDict([
 							   ('Error bar',['Confidence Interval (95%)','Standard deviation']),
-							   ])
+							   ('Aggegrate num. encoding colors',['mean','sum'])])
 
 abbrError = {'Confidence Interval (95%)':95,
 			'Standard deviation':'sd'}
@@ -50,6 +70,7 @@ tooltipText = {'Error bar':'Define how the error bars in point- and bar-plots sh
 			   'Row Cluster Color':'Color map for cluster labeling.',
 			   'Metric [row]':'Metric to be used for clustering rows in data frame. If you select None no clustering will be performed.',
 			   'Metric [col]':'Metric to be used for clustering columns in data frame. If you select None no clustering will be performed.',
+			   'Aggegrate num. encoding colors':'Method to use to aggregate multiple columns to size/color encode numerical data '
 			   }
 
 
@@ -194,6 +215,8 @@ class settingsDialog(object):
 		elif self.type.get() == 'General Settings':
 			if option == 'Error bar':
 				return self.plotter.errorBar
+			elif option == 'Aggegrate num. encoding colors':
+				return self.plotter.aggMethod
 		elif self.type.get() == 'Binned Scatter':
 			if option == 'Number of bins':
 				return self.plotter.numbBins
@@ -213,6 +236,7 @@ class settingsDialog(object):
 		elif type == 'General Settings':
 		
 			self.error_bar_adjustment()
+			self.adjust_agg_method()
 		
 		elif type == 'Dimensional Reduction':
 		
@@ -255,8 +279,16 @@ class settingsDialog(object):
 				
 			setattr(self.plotter,attrNames[key],value)
 		
-		
-		
+	def adjust_agg_method(self):
+		'''
+		'''
+		input = self.settingsVar['Aggegrate num. encoding colors'].get()		
+		if input not in ['mean','sum']:
+			tk.messagebox.showinfo('Error ..','Cannot interpret agg. method input.',parent=self.toplevel)
+			return
+		else:
+			setattr(self.plotter,'aggMethod',input)
+			
 	def error_bar_adjustment(self):
 		'''
 		'''

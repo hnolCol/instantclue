@@ -1,3 +1,22 @@
+"""
+	""CUSTOM FILTERING""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
 import numpy as np
 import pandas as pd 
 
@@ -21,16 +40,10 @@ class customFilterDialog(object):
 	
 		self.data = dfClass.get_current_data()
 		self.selectedColumns = selectedColumns
-		self.get_images()
-		self.mot_button = None
-		self.items_selected = None
-		self.widget = None
-		self.output_data_frame = None
-		self.mode = None
-		self.operator_var = tk.StringVar(value='OR') 
-		self.annotate_category = tk.BooleanVar(value=False)
 		
-		self.trees = dict() 
+		
+		self.get_images()
+		self.define_variables()
 		self.create_toplevel() 		
 		self.build_menu()
 		self.build_widgets() 
@@ -38,16 +51,26 @@ class customFilterDialog(object):
 		
 		self.toplevel.wait_window()
 		
-		
+	def define_variables(self):
+		'''
+		'''
+		self.mot_button = None
+		self.items_selected = None
+		self.widget = None
+		self.output_data_frame = None
+		self.mode = None
+		self.trees = dict() 
+		self.operator_var = tk.StringVar(value='OR') 
+		self.annotate_category = tk.BooleanVar(value=False)
+				
 	def create_toplevel(self):
 		self.toplevel = tk.Toplevel() 
 		self.toplevel.wm_title('Custom Categorical Filter...')
-
 		self.toplevel.protocol("WM_DELETE_WINDOW", self.close_toplevel)
+		self.toplevel.bind('<Escape>', self.close_toplevel)
 		cont = tk.Frame(self.toplevel, background =MAC_GREY)
 		cont.pack(expand=True, fill='both')
 		cont.grid_rowconfigure(4,weight = 1) 
-		
 		self.cont = cont
 		
 		
@@ -118,7 +141,6 @@ class customFilterDialog(object):
 			tree_data.bind("<Double-Button-1>", self.keep_clicked_items)
 			tree_data.bind(right_click, self.cast_menu)
 			
-				
 			var_.trace(mode="w", callback= lambda varname, elementname, mode, tree=tree_data,column=column, var_ = var_: self.on_trace(varname, elementname, mode, tree,column,var_))
 			self.trees[column] = [tree_data,combo_sep,search_entry]
 		
@@ -139,13 +161,23 @@ class customFilterDialog(object):
 		filt_label = tk.Label(cont_buttons, text = 'Perform filtering using this ...', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)	
 		operator_label = tk.Label(cont_buttons, text = 'operator for filtering: ', bg=MAC_GREY)
 		operator_om = ttk.OptionMenu(cont_buttons, self.operator_var, self.operator_var.get(), *['AND','OR'])
-		filt_button1 =  ttk.Button(cont_buttons, text='Filter', command = lambda: self.filter_and_close(mode='remove')) 
-		filt_button2 =  ttk.Button(cont_buttons, text='Subset', command = lambda: self.filter_and_close(mode = 'subset')) 
-		filt_button3 =  ttk.Button(cont_buttons, text='Annotate ', command = lambda: self.filter_and_close(mode = 'annotate')) 
+		
+		filt_button1 =  ttk.Button(cont_buttons, text='Filter', command = \
+		lambda: self.filter_and_close(mode='remove')) 
+		filt_button2 =  ttk.Button(cont_buttons, text='Subset', command = \
+		lambda: self.filter_and_close(mode = 'subset')) 
+		filt_button3 =  ttk.Button(cont_buttons, text='Annotate ', command = \
+		lambda: self.filter_and_close(mode = 'annotate'))
+		
+		CreateToolTip(filt_button1, text = 'This activity will remove all rows that do match any given criteria')
+		CreateToolTip(filt_button2, text = 'This activity creates a new data frame containing data that match any of the given criteria')
+		CreateToolTip(filt_button3, text = 'Adds a column indicating rows that match given criteria by a "+" sign.'+
+			' Adds the categorical value instead of a "+" sign if the check button "Annotate matching'+
+			' categories" is enabled.')		
 		
 		close_button = ttk.Button(cont_buttons, text='Close', command = self.close_toplevel) 
 		cb_matches = ttk.Checkbutton(cont_buttons,text='Annotate matching categories', variable = self.annotate_category)
-		
+		CreateToolTip(cb_matches, text = 'If checked, rows that match given criteria will be annotated by their category value (name)')
 		
 		filt_label.grid(row=0, column = 0 ,padx=10,pady=3,columnspan=3)
 		ttk.Separator(cont_buttons, orient= tk.HORIZONTAL).grid(sticky=tk.EW, columnspan=12, in_ = cont_buttons,pady=(2,4))
@@ -157,8 +189,15 @@ class customFilterDialog(object):
 		filt_button2.grid(row=3, column = 2 ,padx=2,pady=3,in_ = cont_buttons,sticky=tk.EW)
 		filt_button3.grid(row=3, column = 4 ,padx=2,pady=3,in_ = cont_buttons,sticky=tk.EW)
 		close_button.grid(row=3, column = 6 ,padx=(5,2),pady=3,in_ = cont_buttons,sticky=tk.EW) 
+
+
+
 		
 	def update_separator(self,event):
+		'''
+		If User updates the separator: Splits data on given separator 
+		and adds them to the tree view. 
+		'''
 		widget = event.widget
 		sep_ = widget.get() 
 		
@@ -171,7 +210,9 @@ class customFilterDialog(object):
 		
 
 	def add_data_to_trees(self, data = None, column= None, new_separator = False):
-		
+		'''
+		Adds data in tree view.
+		'''
 		if new_separator:
 			tree_ = self.trees[column][0]
 			tree_.delete(*tree_.get_children())
@@ -195,6 +236,7 @@ class customFilterDialog(object):
 			
 	def get_unique_vals(self,column,combo_sep):
 		'''
+		Return unique values.
 		'''
 		if self.data[column].dtype in [np.float64,np.int64]:
 			dat_ = self.data[column].astype(str)
@@ -399,6 +441,8 @@ class customFilterDialog(object):
 		return self.output_data_frame, self.mode, self.annotate_category.get()
 
 				 
-	def close_toplevel(self):
+	def close_toplevel(self, event = None):
+		'''
+		'''
 		self.toplevel.destroy()
 		

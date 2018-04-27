@@ -1,3 +1,27 @@
+"""
+	""TREEVIEW - DATA ORGANIZATION""
+	* Data are presented by their column names
+	* This classs handles clicks by user, filters unwanted selection
+	* and organizes the data.
+	
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import tkinter as tk
 from tkinter import ttk  
 import tkinter.font as tkFont
@@ -30,6 +54,7 @@ class sourceDataTreeview(object):
 		self.dataTypesSelected = []
 		
 		self.stopDragDrop = True
+		self.stopSelection = False
 		self.do_some_bindings()
 
 	def add_all_data_frame_columns_from_dict(self,columnDataTypeRelationshipDict,fileNameDict = {}):
@@ -144,6 +169,7 @@ class sourceDataTreeview(object):
 		'''
 		Checks if treeview item was selected alreay - dont remove it for better drag & drop experience
 		'''
+		self.stopSelection = False
 		iid = self.sourceDataTree.identify_row(event.y) 
 		
 		if iid in self.allItemsSelected:
@@ -151,8 +177,22 @@ class sourceDataTreeview(object):
 			self.currentClickItemWasSelected = True
 		else:
 			self.currentClickItemWasSelected = False
+			
+		if iid.split('_')[-1] in ['float64','int64','object','bool']:
+			self.stopSelection = True
 		
-
+		
+		
+	
+	def check_for_shift(self,event):
+		'''
+		Checks if shift is pressed.
+		'''
+		s = event.state
+		self.pressedShift =  (s & 0x1) != 0
+		
+		    
+    
 	def create_file_name_header(self,id,fileName):
 		'''
 		'''
@@ -190,12 +230,21 @@ class sourceDataTreeview(object):
 		for iid in currentSelection:
 			self.delete_entry_by_iid(iid)
 	
+	def deselect_all_items(self,event = None):
+		'''
+		Removes all selected items
+		'''
+		selection = self.get_current_selection()
+		for item in selection:
+			self.sourceDataTree.selection_remove(item)
+	
+	
 	def do_some_bindings(self):
 		'''
 		'''
 		self.sourceDataTree.bind('<<TreeviewSelect>>', self.on_treeview_selection)
 		self.sourceDataTree.bind('<1>', self.check_if_item_was_selected)
-		
+	
 	
 	def evaluate_output_for_single_df(self, dataFramesSelected):
 		'''
@@ -265,12 +314,20 @@ class sourceDataTreeview(object):
 	def on_treeview_selection(self,event):
 		'''
 		handles item selection of the sourceDataTree
-		'''
-		
+		'''		
 		self.onlyDataFramesSlected = False
 		self.onlyDataTypeSeparator = False
+
 		
 		if self.currentClickItemWasSelected:
+			# avoid strange selection in treeview when double clikc + shift on separtor
+			if self.stopSelection:
+				for iid in self.get_current_selection():
+					self.sourceDataTree.selection_remove(iid)
+				self.stopSelection = False
+				self.currentClickItemWasSelected = False
+				return
+			
 			for iid in self.allItemsSelected:
 				for iid in self.allItemsSelected:
 					self.sourceDataTree.selection_add(iid) 
@@ -279,7 +336,7 @@ class sourceDataTreeview(object):
 				self.currentClickItemWasSelected = False			
 		else:
 			self.allItemsSelected = self.get_current_selection() 
-			
+		
 		
 		self.onlyDataFramesSelected = all([self.sourceDataTree.parent(itemIID) == '' for itemIID in self.allItemsSelected])
 		self.dataFramesSelected = self.get_data_frames_from_selection(self.allItemsSelected)	
@@ -290,6 +347,9 @@ class sourceDataTreeview(object):
 		
 		self.onlyDataTypeSeparator =  all(items in list(columnTypeNaming.values()) \
 		for items in [self.sourceDataTree.item(iid)['text'] for iid in self.allItemsSelected])
+				
+		
+		self.currentClickItemWasSelected = False
 		
 		if self.onlyDataTypeSeparator:
 			self.stopDragDrop = True
@@ -299,7 +359,6 @@ class sourceDataTreeview(object):
 		numColumnsSelected = len(self.columnsSelected)
 		if len(self.dataFramesSelected) > 1 and numColumnsSelected == 0:
 			### only dfs selected - needed to cast a different menu upon right_click 
-			
 			self.onlyDataFramesSlected = True
 			self.stopDragDrop = True
 			return

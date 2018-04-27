@@ -1,13 +1,54 @@
+"""
+	""DATA MANAGEMENT IN INSTANT CLUE""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
+"""
+Principles
+=============
+Data frames are stored by an internal id in a dict. 
+Columns added are automatically tested for duplicates.
+Simple calculations on data are performed in this class as well.
+
+Live Filtering 
+
+Maskig a certain part of the data frame using the live filter 
+activity is performed like:
+ - store boolean array in dict that has the same id as the data frame
+ - data for activities are received by get_current_data, get_current_data_by_id,
+   or get_current_data_by_columnList. If the id is present in the masking
+   dict, data are returned in a trunkated way. 
+   Note that this can always be de-activated by "ignoreMasking = True".
+   The liver filter is a dialog window. If closed, all masking is lost.
+"""
 
 import numpy as np
 from scipy.signal import lfilter
 from sklearn.neighbors import KernelDensity
-
+from sklearn.feature_selection import VarianceThreshold
+from itertools import compress, chain
 import pandas as pd
 
 
 from collections import OrderedDict
+from modules.dialogs.categorical_filter import categoricalFilter
 from modules.utils import *
+import time
 
 def z_score(x):
 	mean = x.mean()
@@ -35,11 +76,13 @@ class DataCollection(object):
 		self.currentDataFile = None
 		self.df = pd.DataFrame()
 		self.df_columns = []
+		self.dataFrameId = 0
 		self.dfs = OrderedDict()
 		self.dfsDataTypesAndColumnNames = OrderedDict() 
 		self.fileNameByID = OrderedDict() 
 		self.rememberSorting = dict()
 		self.replaceObjectNan = '-'
+		self.clippings = dict() 
 	
 	
 	def add_data_frame(self,dataFrame, id = None, fileName = ''):
@@ -48,7 +91,7 @@ class DataCollection(object):
 		'''
 		if id is None:
 			id = self.get_next_available_id()
-		
+				
 		self.extract_data_type_of_columns(dataFrame,id)
 		self.dfs[id] = dataFrame
 		self.fileNameByID[id] = fileName
@@ -191,8 +234,6 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		return 'worked'
 	
-	
-	
 		
 	def combine_columns_by_label(self,columnLabelList, sep='_'):
 		'''
@@ -209,6 +250,99 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		return columnNameEval
 
+		
+	def create_clipping(self, dataID, rowIdxBool):
+		'''
+		data ID - ID that was given data frame when added to this class
+		rowIdx - rows to be temporariley kept.
+		'''
+ 	
+		self.clippings[dataID] = rowIdxBool	
+
+
+	def create_categorical_modules(self, categoricalColumn, aggregate = 'median', 
+									sepString =';', id = None, progressBar = None):
+		'''
+		Input
+		Parameter 
+		=============
+		- categoricalColumn
+		- aggregate - method to aggregate 
+		- sepString - split string to find unique categories 
+		- progressBar - progressBar object to put information out to the user.
+		
+		Output 
+		=============
+		'''
+		if id is not None:
+			self.set_current_data_by_id(id)
+		
+		if aggregate not in ['mean','median','sum']:
+			return None, None
+		
+		if isinstance(categoricalColumn,str):	
+			
+			categoricalColumn = [categoricalColumn]
+			
+		if progressBar is None:
+			progressBar.update_progressbar_and_label(0,'Find unique categories ..')
+						
+		splitData = self.df[categoricalColumn[0]].astype('str').str.split(sepString).values
+		flatSplitData = list(set(chain.from_iterable(splitData)))
+				
+				
+		numericColumns = self.dfsDataTypesAndColumnNames[self.currentDataFile]['float64']
+		df = pd.DataFrame() 
+		collData = []
+		
+		if progressBar is not None:
+			nUniqueCats = len(flatSplitData)
+			progressBar.update_progressbar_and_label(0,'Found {} categories ..'.format(nUniqueCats))
+		
+		for n,category in enumerate(flatSplitData):
+			
+			regExp = categoricalFilter.build_regex('',
+												[category],
+												splitString = sepString)
+			
+			boolIndicator = self.df[categoricalColumn[0]].str.contains(regExp)
+			dfSubset = self.df.loc[boolIndicator,:]
+			
+			if aggregate == 'median':
+				aggData = dfSubset[numericColumns].median(axis=0)
+			elif aggregate == 'mean':
+				aggData = dfSubset[numericColumns].mean(axis=0)
+			elif aggregate == 'sum':
+				aggData = dfSubset[numericColumns].sum(axis=0)
+
+			
+			if progressBar is not None and n % 30 == 0:
+				progressBar.update_progressbar_and_label(n/nUniqueCats * 100,
+											'Found {} categories .. {}/{}'.format(nUniqueCats,n,nUniqueCats))
+			
+			collData.append(pd.Series(np.append(aggData,np.array(category))))
+				
+		df = df.append(collData,ignore_index=True)
+		df.columns = numericColumns + categoricalColumn
+		df[numericColumns] = df[numericColumns].astype(np.float64)
+		if progressBar is not None:
+				progressBar.update_progressbar_and_label(100,
+											'Done .. ')
+				progressBar.close()
+		id = self.get_next_available_id()
+		fileName = 'Cat. Modules - {}'.format(categoricalColumn[0])
+		self.add_data_frame(df,id,fileName) 
+		
+		return id, fileName			
+		
+
+	def reset_clipping(self,dataID):
+		'''
+		Removes all clippings made
+		'''
+		if dataID in self.clippings:
+			del self.clippings[dataID]
+		
 	def count_valid_values(self, numericColumnList):
 		'''
 		Input
@@ -276,7 +410,20 @@ class DataCollection(object):
 			newColumnNames.append(newColumnName) 
 		self.update_columns_of_current_data()
 		return newColumnNames
-		
+	
+	def substract_columns_by_value(self,columnAndValues,baseString):
+		'''
+		columnAndValues - dict - keys = columns, values = value
+		'''
+		newColumnNames = []
+		for column, correctionValue in columnAndValues.items():
+			name = '{} {}'.format(baseString,column)
+			newColumnName = self.evaluate_column_name(name)
+			self.df[name] = self.df[column] - correctionValue
+			newColumnNames.append(newColumnName) 
+		self.update_columns_of_current_data()
+		return newColumnNames
+				
 	def drop_rows_with_nan(self,columnLabelList,how,thresh=None):
 		'''
 		Drops rows with NaN
@@ -305,7 +452,35 @@ class DataCollection(object):
 			self.insert_column_at_index(columnIndex, columnColumn, newColumnData)
 			
 		self.update_columns_of_current_data()
-		return columnLabelListDuplicate
+		return columnLabelListDuplicate	
+	
+	def substract_columns_by_column(self,columnLabelList, divColumn):
+		'''
+		
+		'''
+		if divColumn in self.df.columns:
+			columnNames = []
+			for column in columnLabelList:
+				columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
+				self.df[columnName] = self.df[column] - self.df[divColumn]
+				columnNames.append(columnName)
+			self.update_columns_of_current_data()
+			return columnNames	
+
+	def divide_columns_by_column(self,columnLabelList, divColumn):
+		'''
+		
+		'''
+		if divColumn in self.df.columns:
+			columnNames = []
+			for column in columnLabelList:
+				columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
+				self.df[columnName] = self.df[column] / self.df[divColumn]
+				columnNames.append(columnName)
+			self.update_columns_of_current_data()
+			return columnNames
+			
+			
 		
 	def evaluate_columnNames_of_df(self, df):
 		'''
@@ -374,6 +549,12 @@ class DataCollection(object):
 		self.set_current_data_by_id(id=id)
 		self.export_current_data(format=format) 		
 	
+	def fill_na_in_columnList_by_rowMean(self,columnLabelList):
+		'''
+		'''
+		self.df[columnLabelList] = \
+		self.df[columnLabelList].apply(lambda row: row.fillna(row.mean()), axis=1)
+	
 	def fill_na_in_columnList(self,columnLabelList,naFill = None):
 		'''
 		Replaces nan in certain columns by value
@@ -398,15 +579,40 @@ class DataCollection(object):
 			data[mask] = np.random.normal(newMu, newSigma, size=mask.sum())
 			self.df[numericColumn] = data
 		
+	def fit_transform(self,obj,columns,namePrefix = 'Scaled'):
+		'''
+		'''
+		for column in columns:
+			X = self.df[column].dropna().values.reshape(-1, 1)
+			normX = getattr(obj,'fit_transform')(X)
+		
+		print(normX)
 	
+	
+	def get_categorical_columns_by_id(self,id = None):
+		'''
+		Returns columns names that are objects
+		'''
+		if id is None:
+			return []
+			
+		catColumns = self.dfsDataTypesAndColumnNames[id]['object'] 
+		
+		return catColumns		     	
+	
+	def get_numeric_columns_by_id(self,id):
+		'''
+		Returns columns names that are float and integers
+		'''
+		numColumns = self.dfsDataTypesAndColumnNames[id]['float64'] + \
+		self.dfsDataTypesAndColumnNames[id]['int64']
+		
+		return numColumns			
 	def get_numeric_columns(self):
 		'''
 		Returns columns names that are float and integers
 		'''
-		numColumns = self.dfsDataTypesAndColumnNames[self.currentDataFile]['float64'] + \
-		self.dfsDataTypesAndColumnNames[self.currentDataFile]['int64']
-		
-		return numColumns
+		return self.get_numeric_columns_by_id(self.currentDataFile) 
 		
 	def get_data_as_list_of_tuples(self, columns, data = None):
 		'''
@@ -418,7 +624,7 @@ class DataCollection(object):
 			data = self.df
 		tuples = list(zip(data[columns[0]], data[columns[1]]))
 		return tuples
-		
+	
 						
 	def get_columns_data_type_relationship(self):
 		'''
@@ -470,28 +676,53 @@ class DataCollection(object):
 		'''
 		return self.dfs[id].columns.values.tolist()
 	
-	def get_current_data_by_column_list(self,columnList):
+	def get_current_data_by_column_list(self,columnList, rowIdx = None, ignore_clipping = False):
 		'''
 		Returns sliced self.df
+		row idx - boolean list/array like to slice data further.
 		'''	
-		return self.df[columnList]
+		if rowIdx is None or ignore_clipping:
+			if self.currentDataFile in self.clippings:
+				rowIdx = self.clippings[self.currentDataFile]
+			else:
+			
+				return self.df[columnList]
 		
-	def get_current_data(self):
+		df = self.df[columnList]
+		return df.loc[rowIdx,:]
+		
+	def get_current_data(self, rowIdx = None, ignoreClipping = False):
 		'''
 		Returns current df 
 		'''
-		return self.df
+		return self.get_data_by_id(self.currentDataFile,False,rowIdx,ignoreClipping) 
 		
-	def get_data_by_id(self,id, setDataToCurrent = False):
+		
+	def get_data_by_id(self,id, setDataToCurrent = False, rowIdx = None, ignoreClipping = False):
 		'''
 		Returns df by id that was given in function: addDf(self)..
 		'''
-			
+
+		if id in self.clippings:
+			rowIdx = self.clippings[id]
+		
 		if setDataToCurrent:
+		
 			self.set_current_data_by_id(id = id) 
-			return self.df
+			
+			if ignoreClipping or rowIdx is None:
+				
+				return self.df
+			
+			else: 
+				return self.df.loc[rowIdx,:]
+				
 		else:
-			return self.dfs[id]
+			if ignoreClipping or rowIdx is None:
+			
+				return self.dfs[id]
+			else:
+				return self.dfs[id].loc[rowIdx,:]
 	
 	def get_file_name_of_current_data(self):
 		'''
@@ -523,8 +754,9 @@ class DataCollection(object):
 		'''
 		To provide consistent labeling, use this function to get the id the new df should be added
 		'''
-		addedDataFrames = len(self.dfs)
-		idForNextDataFrame = 'DataFrame: {}'.format(addedDataFrames)
+		#addedDataFrames = len(self.dfs)
+		self.dataFrameId += 1
+		idForNextDataFrame = 'DataFrame: {}'.format(self.dataFrameId)
 		
 		return idForNextDataFrame
 	
@@ -682,23 +914,23 @@ class DataCollection(object):
 	def transform_data(self,columnNameList,transformation):
 		'''
 		Calculates data transformation and adds these to the data frame.
-		'''
-	
-		
-		newColumnNames = [self.evaluate_column_name('{}_{}'.format(transformation,columnName)) for columnName in columnNameList]
+		'''	
+		newColumnNames = [self.evaluate_column_name('{}_{}'.format(transformation,columnName)) \
+		for columnName in columnNameList]
+		s1 = time.time() 
 		if transformation == 'Z-Score_row':
 			transformation = 'Z-Score'
-			axis = 1
+			axis_ = 1
 		elif transformation == 'Z-Score_col':
 			transformation = 'Z-Score' 
-			axis = 0 
+			axis_ = 0 
 		else:
-			axis = 0 
-		transformedDataFrame = self.df[columnNameList].apply(calculations[transformation], axis=axis)
+			axis_ = 0 
+		#surprisingly this is afater than simply np.log2(self.df[columnNameList])
+		transformedDataFrame = self.df[columnNameList].apply(calculations[transformation], axis=axis_)
 		transformedDataFrame.columns = newColumnNames
-		
-		transformedDataFrame[~np.isfinite(transformedDataFrame)] = np.nan
-		
+		if transformation != 'Z-Score':
+			transformedDataFrame[~np.isfinite(transformedDataFrame)] = np.nan
 		self.df[newColumnNames] = transformedDataFrame
 		self.update_columns_of_current_data()
 		
@@ -745,7 +977,37 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		
 		
+	def remove_columns_with_low_variance(self,columns,thres = 0.5,copy=False):
+		'''
+		Calculates variance per columns. Remove columns bewlo threshold.
+		'''
+		data = self.df[columns]
+		try:
+			model = VarianceThreshold(thres).fit(data)
+		except:
+			return
+
+		boolIndicator = model.get_support()
+		newFeatures = list(compress(columns,boolIndicator))
+		if np.sum(boolIndicator) == len(columns):
+			return 'Same'
 		
+		if copy:
+			newFeatureNames = [self.evaluate_column_name('VarFilt_{}'.format(feature)) \
+						   for feature in newFeatures]
+			self.df[newFeatureNames] = self.df[newFeatures]
+			self.update_columns_of_current_data()	
+				
+			return newFeatureNames
+		else:
+			
+			toDelete = [feature for n,feature in enumerate(columns) if boolIndicator[n] == False]
+			self.delete_columns_by_label_list(toDelete)
+			return toDelete
+		
+		
+		
+				
 	def save_current_data(self):
 		'''
 		Save the current active df into the dictionary self.dfs
@@ -759,6 +1021,8 @@ class DataCollection(object):
 		'''
 		if id is None:
 			return
+		if id not in self.dfs:
+			return
 		
 		if self.currentDataFile != id:
 			if self.df.empty == False:
@@ -767,10 +1031,7 @@ class DataCollection(object):
 		
 			self.df = self.dfs[id]
 			self.df_columns = self.df.columns.values.tolist()
-			
-			self.currentDataFile = id
-					
-		
+			self.currentDataFile = id		
 				
 	def sort_columns_alphabetically(self):
 		'''

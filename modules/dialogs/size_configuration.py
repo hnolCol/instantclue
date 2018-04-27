@@ -5,14 +5,175 @@ import matplotlib.pyplot as plt
 
 from modules.utils import *
 
+
+
+class sizeIntervalDialog(object):
+	
+	def __init__(self,plotter):
+	
+	
+		self.plotter = plotter
+		
+		self.define_variables()
+		self.build_toplevel()
+		self.build_widgets() 		
+		
+	def define_variables(self):
+		'''
+		Setup variables.
+		'''
+		minSize, maxSize = self.plotter.get_size_interval()
+		
+		self.minVar = tk.IntVar(value = minSize)
+		self.maxVar = tk.IntVar(value = maxSize)
+		
+		self.entries = dict()
+		
+		
+	def close(self,event=None):
+		'''
+		Close toplevel
+		'''
+		self.toplevel.destroy() 
+		
+			
+	def build_toplevel(self):
+	
+		'''
+		Builds the toplevel to put widgets in 
+		'''
+        
+		popup = tk.Toplevel(bg=MAC_GREY) 
+		popup.wm_title('Size range') 
+		popup.protocol("WM_DELETE_WINDOW", self.close)
+		popup.bind('<Escape>',self.close)
+		w=230
+		h=120
+		self.toplevel = popup
+		self.center_popup((w,h))
+
+	def build_widgets(self):
+		'''
+		Puts widgets on toplevel
+		'''
+		cont = tk.Frame(self.toplevel,background = MAC_GREY)
+		cont.pack(fill='both', expand=True)
+		labelTitle = tk.Label(cont, text = 'Set size interval', **titleLabelProperties)
+		CreateToolTip(labelTitle, text = 'Move slides to adjust level. Chart will be updated upon release.')
+		
+		labelTitle.grid(row= 0,column=0, sticky = tk.W,
+						columnspan=3,padx=3,pady=10)		
+		for n,var in enumerate([self.minVar,self.maxVar]):
+			entScale = ttk.Entry(cont,width=5) 
+			
+			if n == 0:
+				txt_ = 'Minimum: '
+				self.entries['min'] = entScale
+				
+			else:
+				txt_ = 'Maximum: '
+				self.entries['max'] = entScale
+			
+			entScale.insert(0,var.get())
+			# create label
+			labelScale = tk.Label(cont,text = txt_ , bg = MAC_GREY)
+			# add tooltip 
+			CreateToolTip(labelScale, text = 'Set the min and max of the size interval.'+
+				'If min > max higher values or sorted categories appear smaller.') 
+			
+			
+			sizeScale = tk.Scale(cont, from_ = 10, to = 500, 
+								 resolution=1, variable = var, sliderlength = 20,
+								 orient =  tk.HORIZONTAL, showvalue = 1, bg = MAC_GREY)			
+			sizeScale.bind('<ButtonRelease-1>', self.apply_change)
+			entScale.bind('<Return>', lambda event:self.apply_change(event,fromEntry=True))
+			
+			labelScale.grid(row=n+1,column=0,sticky=tk.S+tk.E)
+			sizeScale.grid(row=n+1,column=1)
+			entScale.grid(row=n+1,column=2,sticky=tk.S)
+		
+	def empty_entries(self):
+		'''
+		'''
+		for entry in self.entries.values():
+			entry.delete(0,tk.END)
+	
+	def update_entries(self,min,max):
+		'''
+		'''
+		self.entries['min'].insert(0,min)
+		self.entries['max'].insert(0,max)
+	
+	def update_slider(self,min,max):
+		'''
+		'''
+		self.minVar.set(min)
+		self.maxVar.set(max)
+			
+	def apply_change(self,event,fromEntry = False):	
+		'''
+		'''
+		if fromEntry:
+			try:
+				min, max = int(float(self.entries['min'].get())),\
+				int(float(self.entries['max'].get()))
+			except:
+				tk.messagebox.showinfo('Error..',
+					'Could not convert input to float.',
+					parent=self.toplevel)
+				return
+			self.update_slider(min,max)
+			
+		else:
+			min, max = self.minVar.get(), self.maxVar.get()
+			self.empty_entries()
+			self.update_entries(min,max)
+
+		
+		self.plotter.set_size_interval(min,max)
+		if self.plotter.nonCategoricalPlotter is not None:
+			self.plotter.nonCategoricalPlotter.update_size_interval_in_chart()
+		elif self.plotter.categoricalPlotter is not None:
+			if hasattr(self.plotter.categoricalPlotter, 'scatterWithCategories'): 
+				self.plotter.categoricalPlotter.scatterWithCategories.update_size_interval_in_chart()
+		
+		self.plotter.redraw()
+		
+		
+	def center_popup(self,size):
+         	'''
+         	Casts the popup in center of screen
+         	'''
+
+         	w_screen = self.toplevel.winfo_screenwidth()
+         	h_screen = self.toplevel.winfo_screenheight()
+         	x = w_screen/2 - size[0]/2
+         	y = h_screen/2 - size[1]/2
+         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))  	
+             
+
+
 class SizeConfigurationPopup(object):
 	
 	
 	def __init__(self,plotter):
+	
+	
+		if plotter.get_active_helper() is None:
+			return			
 			
-						
 		self.plot_type = plotter.currentPlotType 
-				
+		
+		if self.plot_type in ['boxplot','violinplot','density','hclust',
+							'corrmatrix','barplot','line_plot']:
+							
+			tk.messagebox.showinfo('Invisible effect ..','Changing the size will effect the '+
+								   'point size for other chart types but are not visibile in'+
+								   ' the selected chart. Please note that "added swarms" cannot'+
+								   ' be adjusted in size.')
+			
+							
+		
 		self.catergoricalColumns = plotter.get_active_helper().categoricalColumns
 		self.figure = plotter.figure
 		self.canvas = self.figure.canvas
@@ -30,7 +191,7 @@ class SizeConfigurationPopup(object):
 		
 		self.toplevel.wait_window() 
 		
-	def close(self):
+	def close(self,event=None):
 		'''
 		Close toplevel
 		'''
@@ -48,6 +209,7 @@ class SizeConfigurationPopup(object):
 		popup.wm_title('Size configuration') 
          
 		popup.protocol("WM_DELETE_WINDOW", self.close)
+		popup.bind('<Escape>',self.close)
 		w=180
 		h=120
 		self.toplevel = popup
@@ -66,7 +228,7 @@ class SizeConfigurationPopup(object):
              cont.grid_columnconfigure(0,weight=1)
              self.size_selected.set(str(self.size))
 		
-             label_des = tk.Label(cont, text = 'Change size of marker:', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
+             label_des = tk.Label(cont, text = 'Change size of marker:', **titleLabelProperties)
              entry_size = ttk.Entry(cont, textvariable= self.size_selected, width=500) 
              
              entry_size.bind('<Return>', lambda event, val = self.size_selected.get():self.change_size(val,event = event))

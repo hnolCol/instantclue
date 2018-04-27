@@ -1,3 +1,4 @@
+
 import sys
 import os
 import tkinter as tk
@@ -11,7 +12,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.4.6' #Date 19.02.2018
+__VERSION__ = '0.4.7' #Date 25.04.2018
 
 
 class StartPage(tk.Frame):
@@ -44,7 +45,8 @@ class StartPage(tk.Frame):
                               font = NORM_FONT,
                               fg ="#4C626F")
           
-          self.labelWelcome = tk.Label(self, text="Welcome To Instant Clue \n\nInteractive Scientific Visualization and Analysis\n\n\n",
+          self.labelWelcome = tk.Label(self, text="Welcome To Instant Clue \n\nInteractive "+
+          				   "Scientific Visualization and Analysis\n\n\n",
                            font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg="white")
 							
                            
@@ -61,7 +63,10 @@ class StartPage(tk.Frame):
           								command=lambda: controller.show_frame(analyze_data.analyze_data))
     
           
-          self.label_cite = tk.Label(self, text = "If you found usage of Instant Clue helpful; please cite :\nNolte, H., MacVicar, D. T. and Krüger, M. Instant Clue - INteractive ScienTific ANalysis: A Software Suite For Scientific Data Visualization and Analysis by Drag & Drop",
+          self.label_cite = tk.Label(self, text = "If you found usage of Instant Clue helpful"+
+          						"; please cite :\nNolte, H., MacVicar, D. T. and Krüger, M. Instant Clue"+
+          						" - INteractive ScienTific ANalysis: A Software Suite For Scientific Data"+
+          						" Visualization and Analysis by Drag & Drop",
                                 bg="white",
                                 fg="#4C626F",
                                 justify=tk.LEFT,

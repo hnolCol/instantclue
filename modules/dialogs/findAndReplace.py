@@ -1,3 +1,23 @@
+"""
+	""FIND AND REPLACE DATA""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import tkinter as tk
 from tkinter import ttk  
 import tkinter.font as tkFont
@@ -45,12 +65,10 @@ class findAndReplaceDialog(object):
 		
 		self.operationType = mode
 		
-		
 		self.searchString = tk.StringVar()
 		self.replaceString = tk.StringVar() 
 		self.exactMatch = tk.BooleanVar() 
 		self.saveLastString  = ''
-		
 		
 		if self.operationType == 'ReplaceRowEntries':
 		
@@ -99,7 +117,7 @@ class findAndReplaceDialog(object):
 		popup.grab_set() 
 		popup.bind('<Escape>',self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=580
+		w=615
 		h=630
 		self.toplevel = popup
 		self.center_popup((w,h))
@@ -210,7 +228,7 @@ class findAndReplaceDialog(object):
 					
 	def display_data(self):
 		'''
-		Displays data in a pandastable. The 
+		Displays data in a pandastable.  
 		'''
 		self.pt = core.Table(self.cont_preview,
 						dataframe = self.uniqueFlatSplitData, 
@@ -279,6 +297,8 @@ class findAndReplaceDialog(object):
 
 		else:
 			valueList = self.transform_string_to_float_list(searchString)
+			if valueList is None:
+				return
 			valuesToReplace = np.asarray(valueList)			
 			
 			## 8 % tolerance to be shown.
@@ -361,11 +381,18 @@ class findAndReplaceDialog(object):
 		'''
 		if string[-1] == ',':
 			string = string[:-1]
-		valueList = [float(x) for x in string.split(',')]
+		try:
+			valueList = [float(x) for x in string.split(',')]
+		except ValueError:
+			tk.messagebox.showinfo('Error ..',
+				'Cannot convert string to float.', 
+				parent=self.toplevel)
+			return
 		return valueList 
 			
 	def perform_replacement_of_rowValues(self):
 		'''
+		Actually replace values.
 		'''	
 		searchString = self.searchString.get()
 		replaceString = self.replaceString.get()
@@ -430,6 +457,7 @@ class findAndReplaceDialog(object):
 				
 	def rename_column_names(self):
 		'''
+		Rename column names.
 		'''		
 		searchString = self.searchString.get()
 		replaceString = self.replaceString.get()
@@ -443,6 +471,13 @@ class findAndReplaceDialog(object):
 		toReplaceList = self.extract_regExList(searchString)
 		valueList = [row for row in csv.reader([replaceString], delimiter=',', quotechar='\"')][0]
 		
+		if len(valueList) == 1 and len(toReplaceList) != len(valueList):
+			valueList = valueList*len(toReplaceList)
+		elif len(valueList) > len(toReplaceList):
+			tk.messagebox.showinfo('Error..',
+				'Number of strings/values that should be replaced must match the number of "replaced with" strings',
+				parent=self.toplevel)
+			return
 		self.uniqueFlatSplitData['Column Names'].replace(toReplaceList,valueList,
 														   regex=True,inplace=True)
 		

@@ -1,3 +1,23 @@
+"""
+	""LINE PLOTTING""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,13 +48,15 @@ class linePlotHelper(object):
 		self.sizeStatsAndColorChanges = dict() 
 		self.meanData = OrderedDict()
 		self.prepare_data()
-		self.replot()
+		self.replot(False)
 		
 	
-	def replot(self):
+	def replot(self,updateData):
 		'''
 		Performs the plotting. Easy access if loaded from a saved session.
 		'''
+		if updateData:
+			self.prepare_data()
 		self.axisDict = dict()
 		self.add_axis()
 		self.fill_axis()
@@ -50,18 +72,22 @@ class linePlotHelper(object):
 		self.dfClass.get_current_data_by_column_list(columnList = self.numericColumns)
 		
 		self.data = rawData.dropna(thresh=2)
-		
 		self.xData = np.arange(len(self.numericColumns))
 		
+		self.determine_y_axis_limits()
+		self.extract_line_data()
+
+
+	def determine_y_axis_limits(self):
+		'''
+		Scales y-axes limits
+		'''		
 		self.yMin = self.data.min().min()
 		self.yMin -= 0.05*self.yMin
 		self.yMax = self.data.max().max()
 		self.yMax += 0.05*self.yMax
 		
-		self.extract_line_data()
-		
-		
-	
+			
 	def extract_line_data(self):
 		'''
 		Extract line coordinates.
@@ -123,7 +149,7 @@ class linePlotHelper(object):
 		ax.set_xticks(range(len(self.numericColumns)))
 		ax.set_xticklabels(self.numericColumns)
 		axisStyler(ax=ax, ylabel = 'Value',nTicksOnYAxis = 4,rotationXTicks = 90,
-			newXLim = (-0.2,len(self.numericColumns)-0.2), newYLim=(self.yMin ,self.yMax))
+			newXLim = (-0.2,len(self.numericColumns)-0.8), newYLim=(self.yMin ,self.yMax))
 
 	def add_annotation_data(self,columnList):
 		'''
@@ -147,7 +173,7 @@ class linePlotHelper(object):
 	def indicate_hover(self,arg):
 		'''
 		Indicate hovering.
-		'''
+		'''			
 		yValues = self.data[self.numericColumns].values[arg,:]
 		self.hoverLine[0].set_data(self.xData,yValues)
 		self.plotter.figure.draw_artist(self.hoverLine[0])
@@ -170,6 +196,7 @@ class linePlotHelper(object):
 					
 	def update_colorMap(self, newColorMap = None):
 		'''
+		Updates color map and chart.
 		'''
 		if newColorMap is not None:
 			self.colorMap = newColorMap

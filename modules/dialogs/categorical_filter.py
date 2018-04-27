@@ -1,3 +1,23 @@
+"""
+	""CATEGORICAL FILTERING""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import tkinter as tk
 from tkinter import ttk  
 import tkinter.font as tkFont
@@ -20,13 +40,15 @@ operationTitle = {'Find category & annotate':'Select unique categories for annot
 				  'Search string & annotate':'Enter string to search in selected column.\nMatching rows are annotated by a "+" or the search string itself.',
 				  'Subset data on unique category':'Select unique categories for subset.\nMatching rows will be kept, other will be dropped from the source file.',
 				  'Annotate scatter points':'Select rows that you would like to annotate in the current plot.',
-				  'Find entry in hierarch. cluster':'Select row that you would like to find in the cluster.'}
+				  'Find entry in hierarch. cluster':'Select row that you would like to find in the cluster.',
+				  'Find entry in line plot':'Select row that you would like to find in the line plot.'}
 				
 operationMessage = {'Find category & annotate':'Annotation done. Column has been added to the tree view.',
 				  'Search string & annotate':'Searching and annotation done. Column has been added to the tree view.',
 				  'Subset data on unique category':'Subset of data has been added.',
 				  'Annotate scatter points':'',
-				  'Find entry in hierarch. cluster':''}
+				  'Find entry in hierarch. cluster':'',
+				  'Find entry in line plot':''}
 				
 
 class categoricalFilter(object):
@@ -51,7 +73,7 @@ class categoricalFilter(object):
 	'''
 	def __init__(self,dfClass, dataTreeview, plotterClass ,
 				operationType = 'Find category & annotate', 
-				dataSubset = None, columnForFilter = None,):
+				dataSubset = None, columnForFilter = None, addToTreeview = True):
 		'''
 		=====
 		Parameter
@@ -73,20 +95,28 @@ class categoricalFilter(object):
 		self.protectEntry = 1
 		self.operationType = operationType
 		self.closed = False
+		self.addToTreeview = addToTreeview
 		
+		self.plotter = plotterClass
 		self.dfClass = dfClass
+		
 		## make sure data of plot is selected
 		if self.operationType in ['Annotate scatter points',
-									  'Find entry in hierarch. cluster']:
+								  'Find entry in hierarch. cluster',
+								  'Find entry in line plot']:
 				self.dataID = plotterClass.get_dataID_used_for_last_chart() 
 				self.dfClass.set_current_data_by_id(self.dataID)
+		
+		
+		if self.operationType == 'Find entry in line plot':
+			ax = self.plotter.axes[0]
+			self.background = self.plotter.figure.canvas.copy_from_bbox(ax.bbox)
 		
 		if dataSubset is None:
 			self.df = self.dfClass.get_current_data() 
 		else:
 			self.df = dataSubset
 		self.dataTreeview = dataTreeview
-		self.plt = plotterClass
 		self.columnForFilter = columnForFilter
 		
 		self.replaceDict = {True : "+",
@@ -169,7 +199,8 @@ class categoricalFilter(object):
  									   values = [';',',',':','-','_','/'])
  			self.separatorString.set(';')
  			
- 			refreshButton = tk.Button(self.cont_widgets, image=self.refreshIcon, command = self.refresh_separator)
+ 			refreshButton = tk.Button(self.cont_widgets, image=self.refreshIcon, 
+ 														 command = self.refresh_separator)
  			
  			labelSeparator.grid(row=1,padx=5, pady=5, sticky=tk.W)  
  			sepComboBox.grid(row=1, column=1, sticky=tk.EW, padx=2)
@@ -195,7 +226,8 @@ class categoricalFilter(object):
  			useRegRexpress.grid(row=3,column=1,columnspan=2,padx=3,sticky=tk.E)
  			caseSensitive.grid(row=2,column=1,columnspan=2,padx=3,sticky=tk.E)
  		
- 		elif self.operationType in ['Annotate scatter points','Find entry in hierarch. cluster']:
+ 		elif self.operationType in ['Annotate scatter points',
+ 				'Find entry in hierarch. cluster','Find entry in line plot']:
  			
  			labelColumn = tk.Label(self.cont_widgets,text= 'Column:', bg=MAC_GREY)
  								 
@@ -232,12 +264,19 @@ class categoricalFilter(object):
 			
  			self.uniqueFlatSplitData = self.df[self.columnForFilter].astype('str')
 		
-		elif self.operationType in ['Annotate scatter points','Find entry in hierarch. cluster']:
+		elif self.operationType in ['Annotate scatter points',
+									'Find entry in hierarch. cluster',
+									'Find entry in line plot']:
  			if self.columnForFilter is None:
  				self.columnForFilter = self.annotationColumn.get()
- 				
- 			self.numericColumns = self.plt.nonCategoricalPlotter.numericColumns
- 			self.df = self.df.dropna(subset=self.numericColumns)
+ 			
+ 			if self.plotter.nonCategoricalPlotter is not None:
+ 				self.numericColumns = self.plotter.nonCategoricalPlotter.numericColumns
+ 			elif self.plotter.categoricalPlotter.scatterWithCategories is not None:
+ 				self.numericColumns = self.plotter.categoricalPlotter.scatterWithCategories.numericalColumns
+ 			
+ 			if self.operationType != 'Find entry in line plot': # allows NaNs 
+ 				self.df = self.df.dropna(subset=self.numericColumns)
  			
  			if self.columnForFilter not in self.df.columns:
  				## add columns if needed. Since the data in plotting classes do not 
@@ -246,7 +285,8 @@ class categoricalFilter(object):
  																		self.dataID, 
  																		[self.columnForFilter])
  					
- 			self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype(str),columns=[self.columnForFilter])
+ 			self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype('str'),
+ 																columns=[self.columnForFilter])
 
 	def update_data(self,columnName = None):
  		'''
@@ -342,9 +382,6 @@ class categoricalFilter(object):
 			self.annotateSearchString.set(True)
 			
 		
-		
-		
-		
 	def refresh_separator(self):
 		'''
 		Data are split on a spearator. Allowing extraction of unique categories.
@@ -428,8 +465,16 @@ class categoricalFilter(object):
 		
 		regExp = self.build_regex(textSelected)
 		
-		boolIndicator = self.df[self.columnForFilter].str.contains(regExp)
+		boolIndicator = self.df[self.columnForFilter].astype(str).str.contains(regExp)
 		annotationColumn = boolIndicator.map(self.replaceDict)
+		
+		if self.addToTreeview == False:
+			self.boolIndicator = boolIndicator
+			self.annotationColumn = annotationColumn
+			self.splitString = self.separatorString.get()
+			self.close()
+			return
+			
 		textString = get_elements_from_list_as_string(textSelected, maxStringLength = 15)
 		columnName = '{}:{}'.format(textString,self.columnForFilter)
 		
@@ -456,7 +501,7 @@ class categoricalFilter(object):
 			parent=self.toplevel) 
 		
 	         
-	def build_regex(self,categoriesList,withSeparator = True):
+	def build_regex(self,categoriesList,withSeparator = True, splitString = None):
 		'''
 		Build regular expression that will search for the selected category. Importantly it will prevent 
 		cross findings with equal substring
@@ -465,8 +510,8 @@ class categoricalFilter(object):
 			List of categories that were selected by the user
 		====
 		'''
-		
-		splitString = self.separatorString.get()
+		if splitString is None:
+			splitString = self.separatorString.get()
 		regExp = r''
 		
 		for category in categoriesList:
@@ -490,6 +535,8 @@ class categoricalFilter(object):
 		'''
 		searchStrings = self.searchString.get() 
 		collectResults = pd.DataFrame()	
+		boolIndicator = None
+		
 		if self.userRedExpression.get():
 			regExp = searchStrings
 		else:
@@ -503,7 +550,7 @@ class categoricalFilter(object):
 				flag = 0
 			else:
 				flag = re.IGNORECASE 
-				
+			self.uniqueFlatSplitData[column] = self.uniqueFlatSplitData[column].astype(str)
 			if len(splitSearchString) > 1:
 				if self.onlyFirstFind.get(): 
 					for column in self.columnForFilter:
@@ -544,6 +591,14 @@ class categoricalFilter(object):
 			boolIndicator = collectResults.sum(axis=1) >= 1
 			annotationColumn = boolIndicator.map(self.replaceDict)
 		
+		if self.addToTreeview == False:
+	
+			self.boolIndicator  = boolIndicator 
+			self.annotationColumn = annotationColumn
+			self.close()
+			return
+			
+			
 		textString = get_elements_from_list_as_string(splitSearchString, maxStringLength = 15)
 		
 		columnName = '{}:{}'.format(textString,self.columnForFilter)
@@ -621,7 +676,7 @@ class categoricalFilter(object):
 			return
 		regExp = self.build_regex(textSelected)	
 		
-		boolIndicator = self.df[self.columnForFilter].str.contains(regExp)
+		boolIndicator = self.df[self.columnForFilter].astype(str).str.contains(regExp)
 		
 		fileName = self.dfClass.get_file_name_of_current_data()
 		textString = get_elements_from_list_as_string(textSelected,maxStringLength = 15)
@@ -657,11 +712,19 @@ class categoricalFilter(object):
 		selection = self.pt.model.df.iloc[rowsSelected]
 		
 		labelColumn = selection.columns.values.tolist()
+		if self.plotter.categoricalPlotter is not None:
+			if self.plotter.categoricalPlotter.scatterWithCategories is not None:
+				labelColumn = labelColumn + self.plotter.categoricalPlotter.categoricalColumns
 		columnsNeededForAnnotation = list(set(self.numericColumns+labelColumn))
 		annotationData = self.df.loc[selection.index.tolist(),columnsNeededForAnnotation]
 		
-		self.plt.nonCategoricalPlotter.bind_label_event(labelColumn)
-		self.plt.nonCategoricalPlotter.annotationClass.addAnnotationFromDf(annotationData)
+		if self.plotter.categoricalPlotter is not None:
+			if self.plotter.categoricalPlotter.scatterWithCategories is not None:
+				self.plotter.categoricalPlotter.scatterWithCategories.bind_label_event(labelColumn)
+				self.plotter.categoricalPlotter.scatterWithCategories.add_annotation_from_df(annotationData)
+		else:
+			self.plotter.nonCategoricalPlotter.bind_label_event(labelColumn)
+			self.plotter.nonCategoricalPlotter.annotationClass.addAnnotationFromDf(annotationData)
 	
 	def search_for_entry_in_hclust(self):
 		'''
@@ -674,9 +737,29 @@ class categoricalFilter(object):
 		index = selection.index.tolist()[0]		
 		
 		## add this column as label 
-		self.plt.nonCategoricalPlotter._hclustPlotter.add_label_column(labelColumn)
-		self.plt.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)
-		self.plt.redraw()
+		self.plotter.nonCategoricalPlotter._hclustPlotter.add_label_column(labelColumn)
+		self.plotter.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)
+		self.plotter.redraw()
+
+	def search_entry_in_line(self):
+		'''
+		Find entry in line plot.
+		'''
+		rowsSelected = self.get_selected_row()
+		selection = self.pt.model.df.iloc[rowsSelected[:1]]
+		labelColumn = selection.columns.values.tolist()
+		
+		idx = selection.index.tolist()[0]	
+		loc = self.df.index.tolist().index(idx)
+		
+		if len(self.plotter.tooltips) != 0:
+			self.plotter.tooltips[0].set_invisible()
+		else:
+			self.plotter.figure.canvas.restore_region(self.background)
+		
+		self.plotter.nonCategoricalPlotter.linePlotHelper.indicate_hover(loc)
+		
+		
 		
 	def copy_from_clipboard(self,event):
 		'''
@@ -722,7 +805,8 @@ class categoricalFilter(object):
 				  'Search string & annotate':self.find_string_and_annotate,
 				  'Subset data on unique category':self.subset_data_on_category,
 				  'Annotate scatter points':self.annotate_scatter_points,
-				  'Find entry in hierarch. cluster': self.search_for_entry_in_hclust}
+				  'Find entry in hierarch. cluster': self.search_for_entry_in_hclust,
+				  'Find entry in line plot': self.search_entry_in_line}
 				
 
 

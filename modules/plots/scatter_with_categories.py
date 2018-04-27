@@ -1,3 +1,23 @@
+"""
+	""SCATTER PLOT VARIANTS""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -9,9 +29,11 @@ import matplotlib.patches as patches
 
 from modules.utils import *
 from modules.plots.axis_styler import axisStyler
-
 class binnedScatter(object):
 	'''
+	Binned scatter is a version of a scatter plot. 
+	Data are histogrammed/binnd into a given number of bins. 
+	Then the points are scaled by the number of counts.
 	'''
 	def __init__(self,plotter,dfClass,numericColumns, categoricalColumns):
 		'''
@@ -142,10 +164,45 @@ class binnedScatter(object):
 
 	
 class scatterWithCategories(object):
-
-
-	def __init__(self,plotter,dfClass,figure,categoricalColumns=[],numericalColumns=[], colorMap = 'Blues'):#data,n_cols,n_categories,colnames,catnames,figure,size,color):
+	'''
+	'''
+	def __init__(self,plotter,dfClass,figure,categoricalColumns=[],
+								numericalColumns=[], colorMap = 'Blues'):#data,n_cols,n_categories,colnames,catnames,figure,size,color):
 	
+
+		self.colorMap = colorMap
+		self.dataID = dfClass.currentDataFile 
+		self.data = dfClass.get_current_data_by_column_list(categoricalColumns+numericalColumns)
+		self.dfClass = dfClass
+		self.data.dropna(inplace=True)
+		self.plotter = plotter
+		
+		self.define_variables()
+		
+		self.numericalColumns = numericalColumns
+		self.categoricalColumns = categoricalColumns
+		self.numbNumericalColumns = len(numericalColumns)
+		self.numbCaetgoricalColumns = len(categoricalColumns)
+		
+		self.size = self.plotter.sizeScatterPoints 
+		self.color = self.plotter.colorScatterPoints
+		self.alpha = self.plotter.alphaScatterPoints
+		
+		self.figure = figure
+		
+		plt.figure(self.figure.number)
+		
+		self.get_size_interval()
+		self.get_unique_values() 
+		self.group_data()
+		
+		n_rows,n_cols = self.calculate_grid_subplot()
+		self.prepare_plotting(n_rows,n_cols) 
+
+
+	def define_variables(self):
+		'''
+		'''
 		self.grouped_data = None
 		self.grouped_keys = None
 		
@@ -154,36 +211,12 @@ class scatterWithCategories(object):
 		self.label_axes = OrderedDict() 
 		self.axes_combs = OrderedDict()
 		self.subsets_and_scatter = OrderedDict() 
-		self.sizeStatsAndColorChanges = OrderedDict() 
+		self.sizeStatsAndColorChanges = OrderedDict()
+		self.annotationClasses = OrderedDict() 
 		
 		self.categoricalColorDefinedByUser = dict()
-		self.colorMapDict = dict()	
-		self.colorMap = colorMap
-		
-		self.dataID = dfClass.currentDataFile 
-		self.data = dfClass.get_current_data_by_column_list(categoricalColumns+numericalColumns)
-		self.dfClass = dfClass
-		self.data.dropna(inplace=True)
-		self.plotter = plotter
-		
-		self.numericalColumns = numericalColumns
-		self.categoricalColumns = categoricalColumns
-		self.numbNumericalColumns = len(numericalColumns)
-		self.numbCaetgoricalColumns = len(categoricalColumns)
-		self.size = self.plotter.sizeScatterPoints 
-		self.color = self.plotter.colorScatterPoints
-		self.alpha = self.plotter.alphaScatterPoints
-		self.figure = figure
-		
-		plt.figure(self.figure.number)
-		
-		self.get_unique_values() 
+		self.colorMapDict = dict()		
 				
-		self.group_data()
-		
-		n_rows,n_cols = self.calculate_grid_subplot()
-		self.prepare_plotting(n_rows,n_cols) 
-			
 	
 	def replot(self):
 		'''
@@ -198,7 +231,6 @@ class scatterWithCategories(object):
 		'''
 		Function to plot different groups ...
 		'''	
-		
 		self.figure.subplots_adjust(wspace=0, hspace=0, right=0.96)
 
 		titles = list(self.unique_values[self.categoricalColumns[0]][0])
@@ -327,7 +359,22 @@ class scatterWithCategories(object):
 					coll.set_sizes([self.size])
 				elif which == 'color' and hasattr(coll,'set_color'):
 					coll.set_facecolor(self.color)
-					
+
+	def get_size_interval(self):
+		'''
+		'''
+		self.minSize, self.maxSize = self.plotter.get_size_interval()
+	
+	def update_size_interval_in_chart(self):
+		'''
+		'''
+		for key, categoricalColumns in self.sizeStatsAndColorChanges.items():
+			if 'size' in key:
+				self.get_size_interval()
+				getattr(self,key)(categoricalColumns)
+				break 
+				
+									
 	def change_size_by_numerical_column(self,numericColumn):
 		'''
 		'''	
@@ -336,8 +383,8 @@ class scatterWithCategories(object):
 																  definedColumnsList=[numericColumn])	
 		
 		scaledData = scale_data_between_0_and_1(self.data[numericColumn])
-		scaledData = (scaledData+0.3)*100
-		self.data['size'] = scaledData
+		sizeData = scaledData*(self.maxSize-self.minSize) + self.minSize
+		self.data.loc[:,'size'] = sizeData
 		self.adjust_size()
 		self.save_color_and_size_changes('change_size_by_numerical_column',numericColumn)			
 	
@@ -356,10 +403,10 @@ class scatterWithCategories(object):
 		sizeMap = dict(zip(uniqueCategories, scaleSizes))
 		
 		sizeMap = replace_key_in_dict('-',sizeMap,0.1)
-		self.data['size'] = self.data[categoricalColumn].map(sizeMap)
-		self.data['size'] = (self.data['size'])*100 
+		self.data.loc[:,'size'] = self.data[categoricalColumn].map(sizeMap)
+		self.data.loc[:,'size'] = (self.data['size'])*(self.maxSize-self.minSize) + self.minSize
 		self.adjust_size()		
-		self.save_color_and_size_changes('change_size_by_categorical_column',categoricalColumn)
+		self.save_color_and_size_changes('change_size_by_categorical_columns',categoricalColumn)
 	
 	
 	def adjust_size(self):
@@ -384,7 +431,51 @@ class scatterWithCategories(object):
 				ax,_ = self.axes_combs[comb]
 				axCollection = ax.collections
 				axCollection[0].set_facecolor(subset['size'])
+
+
+	def bind_label_event(self, labelColumnList):
+		'''
+		'''
+		from modules.plotter import annotateScatterPoints
+
+		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
+																  definedColumnsList=labelColumnList)
+		self.textAnnotationColumns = labelColumnList
+		self.group_data()
 		
+		for comb in self.all_combinations:
+			if comb in self.grouped_keys:
+				subset = self.grouped_data.get_group(comb)
+				ax,_ = self.axes_combs[comb]
+			else:
+				continue
+		
+			if comb in self.annotationClasses: ## useful to keep already added annotations by another column selectable
+				madeAnnotations = self.annotationClasses[comb].madeAnnotations
+				selectionLabels = self.annotationClasses[comb].selectionLabels
+				## avoid wrong labeling
+				try:
+					self.annotationClasses[comb].disconnect_event_bindings()
+				except:
+					pass
+			else:
+				madeAnnotations = OrderedDict()
+				selectionLabels = OrderedDict()
+			self.annotationClasses[comb] = annotateScatterPoints(self.plotter,self.figure,ax,
+													  subset,labelColumnList,self.numericalColumns[:2],
+													  madeAnnotations,selectionLabels) 
+
+	def add_annotation_from_df(self,df):
+		'''
+		'''		
+		df_grouped = df.groupby(self.categoricalColumns,sort=False)
+		grouped_df = df_grouped.groups.keys()
+		for comb in self.all_combinations:
+			if comb in grouped_df:
+				annotationData = df_grouped.get_group(comb)
+				self.annotationClasses[comb].addAnnotationFromDf(annotationData)		
+				
+				
 			
 	def change_color_by_numerical_column(self,numericColumn):
 		'''
@@ -650,7 +741,7 @@ class scatterWithCategories(object):
 		
 	def group_data(self):
 		'''
-		Returns a pandas groupby object with grouped data on selected categories.
+		Defines a pandas groupby object with grouped data on selected categories.
 		'''
 		
 		self.grouped_data = self.data.groupby(self.categoricalColumns, sort = False) 

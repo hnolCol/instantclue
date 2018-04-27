@@ -1,3 +1,23 @@
+"""
+	""CLASSIFICATION TASKS""
+    Instant Clue - Interactive Data Visualization and Analysis.
+    Copyright (C) Hendrik Nolte
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 3
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+"""
+
 import tkinter as tk
 from tkinter import ttk             
 import tkinter.simpledialog as ts
@@ -23,9 +43,12 @@ import sklearn.linear_model as skLinear
 import sklearn.feature_selection as skFeatSel
 import sklearn.metrics as skMetrics
 import sklearn.preprocessing as skPreProc
+
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, confusion_matrix
 from sklearn.decomposition import PCA, NMF
+
+from modules.dialogs.VerticalScrolledFrame import VerticalScrolledFrame
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)	
 warnings.filterwarnings("ignore", category=FutureWarning)	
@@ -33,6 +56,16 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 trueFalseDict = {'True':True,'False':False}
 trueFalse = list(trueFalseDict.keys())
 
+def tp(y_true, y_pred): 
+	return confusion_matrix(y_true, y_pred)[0, 0]
+def tn(y_true, y_pred): return confusion_matrix(y_true, y_pred)[0, 0]
+def fp(y_true, y_pred): return confusion_matrix(y_true, y_pred)[1, 0]
+def fn(y_true, y_pred): return confusion_matrix(y_true, y_pred)[0, 1]
+
+
+
+confusionMatrixScoring = {'tp' : skMetrics.make_scorer(tp), 'tn' : skMetrics.make_scorer(tn),
+           'fp' : skMetrics.make_scorer(fp), 'fn' : skMetrics.make_scorer(fn)}
 
 
 classDict = {'Random forest classifier':skEnsemble.RandomForestClassifier,
@@ -64,6 +97,8 @@ scorerOptions = {'chi2':skFeatSel.chi2,
 				'accuracy':skMetrics.make_scorer(skMetrics.accuracy_score),
 				'average_precision':skMetrics.average_precision_score,
 				'f1':skMetrics.f1_score}
+
+
 
 crossValidation = {'Kfold':{'function':skModel.KFold,'parameters':['n_splits','shuffle']},
 				   'StratifiedKFold':{'function':skModel.StratifiedKFold,'parameters':['n_splits','shuffle']},
@@ -132,12 +167,300 @@ crossValidationMethods = {'k-fold':skModel.KFold,
 						 'Shuffle Split':skModel.ShuffleSplit,
 						 'Time Series Split':skModel.TimeSeriesSplit}
 
+
+
+
 class classifierAnalysisCollection(object):
 	'''
 	'''
 	def __init__(self):
 		'''
 		'''
+		self.id = 0 
+		self.collection = OrderedDict()
+	
+	def save_grid_search_results(self,results):
+		'''
+		'''
+		self.collection[self.id] = results
+		self.id += 1
+		
+	def get_grid_search_results(self, id):
+		'''
+		'''
+		return self.collection[self.id]
+	
+	def get_general_infos(self, type = 'props'):
+		'''
+		'''
+		collect = dict()
+		for id, props in self.collection.items():
+			collect[id] = props[type]
+		return collect
+			
+		
+	
+	
+
+class predictClass(object):
+	
+	
+	def __init__(self, dataTreeview, dfClass, classifierCollection):
+		
+		
+		self.classifierCollection = classifierCollection
+		self.dfClass = dfClass
+		self.dataTreeview = dataTreeview
+		
+		
+		if self.classifier_grid_search_present():
+			pass 
+		else:
+			tk.messagebox.showinfo('Error ...',
+				'No classifer optimized yet. Use the grid search to optimize parameter.')
+			return
+		
+		## prepare data
+		self.df = self.prepare_data()
+		
+		if self.df is not None:
+		
+			self.define_variables()
+			self.get_grid_searches()
+			self.build_toplevel()
+			self.build_widgets()
+			self.define_menu()
+	
+		
+	def define_variables(self):
+		'''
+		Define variables
+		'''
+		self.estimationType = tk.StringVar()
+		
+		self.get_grid_searches()
+		
+	
+	def get_grid_searches(self):
+		'''
+		Get some information of the established classifiers
+		'''
+		self.pipelineDict = self.classifierCollection. get_general_infos(type='pipeline')
+		self.generalInfo = self.classifierCollection.get_general_infos(type='props')
+				
+	def prepare_data(self):
+		'''
+		Get data
+		'''
+		# can only handle numeric columns
+		if self.dataTreeview.onlyNumericColumnsSelected == False:
+			tk.messagebox.showinfo('Error ..','Please select only numeric data.')
+			return 
+		     		
+     	# check if selection is from one file.
+		selectionIsFromSameData, selectionDataFrameId = \
+		self.dataTreeview.check_if_selection_from_one_data_frame()
+		
+		if selectionIsFromSameData:
+			# get data and dropna
+			columns = self.dataTreeview.columnsSelected
+			data = self.dfClass.get_current_data_by_column_list(columns)
+			df = data.dropna(how='any')
+			self.features = data
+			return df
+		
+		else:
+			tk.messagebox.showinfo('Error ..','Please select only data from one file.')
+			return
+			
+			
+	def close(self,event=None):
+		'''
+		Destroys toplevel
+		'''
+		self.toplevel.destroy()
+	
+		
+	def build_toplevel(self):
+		'''
+		Builds the toplevel to put widgets in 
+		'''
+        
+		popup = tk.Toplevel(bg=MAC_GREY) 
+		popup.wm_title('Supervised Learning - Predict Class') 
+		popup.protocol("WM_DELETE_WINDOW", self.close)
+		popup.bind('<Escape>',self.close)
+		if platform == 'LINUX':
+			popup.bind('Button-1', self.destroy_menu)
+		w = 590
+		h= 540
+		self.toplevel = popup
+		self.center_popup((w,h))	
+	
+	
+	def build_widgets(self):
+		'''
+		Builds widgets
+		'''
+		self.cont= tk.Frame(self.toplevel, background = MAC_GREY) 
+		self.cont.pack(expand =True, fill = tk.BOTH)
+		self.cont.grid_columnconfigure(3,weight=1)
+		self.cont.grid_rowconfigure(5,weight=1)
+		
+		self.contClass = tk.Frame(self.cont,background=MAC_GREY)
+		self.contClass.grid(row=5,column=0,columnspan = 4, sticky= tk.NSEW)
+		self.contClass.grid_columnconfigure(1,weight=1)	
+				
+		labelTitle = tk.Label(self.cont, text = 'Predict Class', 
+                                     **titleLabelProperties)
+		
+		labelCombo = tk.Label(self.cont, text = 'Estimator Selection: ',
+							bg = MAC_GREY)
+		comboMethod = ttk.Combobox(self.cont, textvariable = self.estimationType,
+						values = ['Average over outside cv (best settings may vary)',
+						'Use best estimator of all outside cvs',
+						'Refit best parameter settings (rank mean) on all data',
+						'Refit best parameter settings (scorer mean) on all data']) 
+		
+		labEstimator = tk.Label(self.cont, text = 'Available grid search results',bg=MAC_GREY) 
+		
+		
+		
+		labelTitle.grid(row=0)
+		labelCombo.grid(row=1,column=0)
+		comboMethod.grid(row=1,column=1,columnspan=4,sticky=tk.EW)
+		labEstimator.grid(row=2)
+		
+		self.add_collected_grid_searches()
+		
+		applyButton = ttk.Button(self.cont, text = 'Predict', 
+								 command = self.perform_prediction)
+		closeButton = ttk.Button(self.cont, text = 'Close')
+		
+		applyButton.grid(row=6,column=0,pady=10,padx=5)
+		closeButton.grid(row=6,column=3, sticky=tk.E,pady=10,padx=5)
+		
+		
+	def add_collected_grid_searches(self):
+		'''
+		Add collected grid search results
+		'''
+		# imitate frame that is scrollable
+		vertFrame = VerticalScrolledFrame(self.contClass)
+		vertFrame.pack(expand=True,fill=tk.BOTH)
+		
+		for id,pipeline in self.pipelineDict.items():
+			var = tk.BooleanVar(value = False)
+			txt = self.create_tooltip_text(id)
+			cb = ttk.Checkbutton(vertFrame.interior, text = 'Grid search id - ' + str(id), 
+								 variable = var) 
+			CreateToolTip(cb,text = txt)
+			# disabled checkbutton if number of features does not match
+			# selected columns
+			if self.does_input_fit_with_used_data(id) == False:
+				cb.configure(state=tk.DISABLED)
+			cb.grid() 
+			cb.bind(right_click, self.post_menu)
+		
+	
+	def does_input_fit_with_used_data(self, id):
+		'''
+		Check if number of features match, if not return False
+		This leads to disabling the checkbutton
+		'''
+		settings = self.generalInfo[id]
+		if settings['# of features'] != len(self.features):
+			return False
+		else:
+			return True
+		
+			
+	def create_tooltip_text(self,id):
+		'''
+		Assemble text to identify the correct grid search.
+		'''
+		s = ''
+		settings = self.generalInfo[id]
+		for key,value in settings.items():
+			s = s + '{}: {}\n'.format(key,value)
+		pipeSteps = self.pipelineDict[id]
+		for step,options in pipeSteps.items():
+			if len(options) == 0:
+				continue
+			else:
+				elements = '{}: {}\n'.format(step,get_elements_from_list_as_string(options))
+				s = s + elements
+		return s		
+				
+				
+	def classifier_grid_search_present(self):
+		'''
+		Return False if no grid search has been performed yet
+		'''
+		if 	len(self.classifierCollection.collection) == 0:
+			return False
+		else:
+			return True
+
+	def define_menu(self):
+		'''
+		Defines context menu
+		'''
+		self.menu = tk.Menu(self.toplevel,**styleDict)
+		self.menu.add_command(label='Re-plot results')
+		self.menu.add_command(label='Show confusion matrix')
+		self.menu.add_separator()
+		self.menu.add_command(label='Remove')
+			
+		
+	
+	def post_menu(self,event):
+		'''
+		'''
+		w = event.widget
+		text = w.cget('text')
+		print(text)
+		id = int(float(text.split('-')[-1]))
+		print(id)
+		self.gridSearchId = id
+		x = self.toplevel.winfo_pointerx()
+		y = self.toplevel.winfo_pointery()
+		self.menu.post(x,y)		
+     	
+	def destroy_menu(self,event):
+ 		'''
+ 		'''
+ 		if hasattr(self,'menu') and self.menu is not None:
+ 			self.menu.unpost()
+ 			self.menu = None    	
+
+		
+	def perform_prediction(self):
+		'''
+		'''
+		
+		#self.df[]
+		
+		tk.messagebox.showinfo('Under Construction ..',
+				'The output is currently not shown because the method being changed at the moment.',
+				parent=self.toplevel)
+				
+		predictionByBestEstimator = results['rocCurveParams']
+		for nSplit, props in predictionByBestEstimator.items():
+			
+			estimator = props['estimator']
+			estimator.pedict(data)
+			estimator.predict_proba(data)
+			
+	
+	def center_popup(self,size):
+
+         	w_screen = self.toplevel.winfo_screenwidth()
+         	h_screen = self.toplevel.winfo_screenheight()
+         	x = w_screen/2 - size[0]/2
+         	y = h_screen/2 - size[1]/2
+         	self.toplevel.geometry("%dx%d+%d+%d" % (size + (x, y))) 				
+		
 		
 		
 class classifyingDialog(object):
@@ -520,25 +843,28 @@ class gridSearchClassifierOptimization(object):
 		self.classificationCollection = classificationCollection
 		
 		self.get_items_associations()
+		self.define_variables()
 		
+		self.data = dfClass.get_current_data_by_column_list(features+targetColumn)
+		
+		self.targetColumn = targetColumn
+		self.features = features
+		self.plotter = plotter
+		
+		self.build_popup()
+		self.add_widgets_to_toplevel()
+	
+	def define_variables(self):
+		'''
+		'''
 		self.optimizeGrid = dict()
 		self.functionSettings = dict()
 		
 		self._dragProps = {'x':0,'y':0,'item':None,'receiverBox':None}
 		self.gridSearchCV = {'n_splits':3, 'KFold Procedure':'Stratified k-fold'}
 		self.nestedCV = {'n_splits':5, 'KFold Procedure':'StratifiedShuffleSplit'}
-		self.data = dfClass.get_current_data_by_column_list(features+targetColumn)
-		self.targetColumn = targetColumn
-		self.features = features
 		
-		self.plotter = plotter
-		
-		
-		self.build_popup()
-		self.add_widgets_to_toplevel()
-	
-		
-	def close(self):
+	def close(self,event=None):
 		'''
 		Closes the toplevel.
 		'''
@@ -552,6 +878,7 @@ class gridSearchClassifierOptimization(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Classifier Parameter Optimization') 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
+		popup.bind('<Escape>',self.close)
 		w = 1050
 		h= 930
 		self.toplevel = popup
@@ -608,6 +935,7 @@ class gridSearchClassifierOptimization(object):
 		closeButton.grid(row=3, column = 2, sticky = tk.E, pady = 4, padx = 3)
 		
 		
+		
 	def edit_settings(self,event):
 		'''
 		Handles Double-Click events. Allows you to edit settings. 
@@ -621,19 +949,23 @@ class gridSearchClassifierOptimization(object):
 			return
 		else:
 			if firstTag == 'gridSearchCV':
-				boom = defineGridSearchDialog('gridSearchCV', self.features)
-				self.gridSearchCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
+				boom = defineGridSearchDialog('gridSearchCV', self.features,self)
+				if len(boom.collectParamGrid) != 0 or len(boom.settingDict) != 0:
+					self.gridSearchCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
+			
 			elif firstTag == 'nestedCV':
-				boom = defineGridSearchDialog('nestedCV', self.features)
-				self.nestedCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
+				boom = defineGridSearchDialog('nestedCV', self.features,self)
+				if len(boom.collectParamGrid) != 0 or len(boom.settingDict) != 0:
+					self.nestedCV = merge_two_dicts(boom.collectParamGrid,boom.settingDict)
+			
 			else:
-				boom = defineGridSearchDialog(tagsOfSelection[1].split('_')[1], self.features)
+				boom = defineGridSearchDialog(tagsOfSelection[1].split('_')[1], self.features,self)
 				self.optimizeGrid[tagsOfSelection[1]] = boom.collectParamGrid
 				self.functionSettings[tagsOfSelection[1]] = boom.settingDict
 			
 	def remove_item(self,event):
 		'''
-		Handles right click action. Will remove certain items.
+		Handles right click action (Button-2 or Button-3). Will remove certain items.
 		'''
 		tagsOfSelection = self.canvas.gettags(tk.CURRENT)
 		if len(tagsOfSelection) > 0:
@@ -649,7 +981,6 @@ class gridSearchClassifierOptimization(object):
 			return
 		else:
 			self.canvas.delete(firstTag)
-			print(self.optimizeGrid,self.functionSettings)
 			if firstTag in self.optimizeGrid:
 				del self.optimizeGrid[firstTag]
 			if firstTag in self.functionSettings:
@@ -658,13 +989,17 @@ class gridSearchClassifierOptimization(object):
 		receiverBox = tagsOfSelection[0].split('_')[0]	
 		
 		coords = self.canvas.coords(receiverBox)
-		entries  = self.reciverRectangleEntries[receiverBox]
+		entries  = self.recieverRectangleEntries[receiverBox]
 		idx = entries.index(tagsOfSelection[1])
 		# delete entry and re-create items
-		del self.reciverRectangleEntries[receiverBox][idx]
+		del self.recieverRectangleEntries[receiverBox][idx]
 		del self.reciverRectangleImages[receiverBox][idx]
-		self.build_images_in_receiverbox(None,receiverBox,coords)
-	
+		if receiverBox != 'Scorer':
+			self.build_images_in_receiverbox(receiverBox,coords)
+		else:
+			self.build_scorer_images_in_receiverbox(receiverBox,coords)
+			
+			
 	def create_basic_layout(self):	
 		'''
 		'''
@@ -682,12 +1017,18 @@ class gridSearchClassifierOptimization(object):
 			k = 0
 			for procedure, image in subWidgets.items():
 				if image != '':
+					if k == 3 and key == 'Scorer':
+						y += 30 
+						k = 0
 					xPos = 10 + 80*k
 					yPos = y + 60
+					
 					self.canvas.create_image(xPos, yPos, image =  image, anchor = tk.W, tag = procedure)
 					self.imagePositions[procedure] = (xPos,yPos)
 					k+=1
 			n += 1	
+		
+		self.canvas.create_image(10,yPos + 220, image = self.resetIcon, anchor = tk.W, tag = 'reset')
 					
 		
 	def on_item_release(self,event):
@@ -702,14 +1043,17 @@ class gridSearchClassifierOptimization(object):
 			image = self.canvas.itemcget(self._dragProps['item'],'image')
 			
 			if (coords[0] <= event.x <= coords[2]) and (coords[1] <= event.y <= coords[3]):
-				
-				id = len(self.reciverRectangleEntries[self._dragProps['receiverBoxTag']])
-				self.reciverRectangleEntries[self._dragProps['receiverBoxTag']].append('{}_{}'.format(id,self._dragProps['itemTag']))
-				
+				id = len(self.recieverRectangleEntries[self._dragProps['receiverBoxTag']])
+				self.recieverRectangleEntries[self._dragProps['receiverBoxTag']].append('{}_{}'.format(id,self._dragProps['itemTag']))
 				self.reciverRectangleImages[self._dragProps['receiverBoxTag']].append(image)
-				self.build_images_in_receiverbox(self._dragProps['receiverBox'],
-												 self._dragProps['receiverBoxTag'],
-												 coords)
+				if self._dragProps['receiverBoxTag'] != 'Scorer':
+					self.build_images_in_receiverbox(self._dragProps['receiverBoxTag'],
+												 	coords)
+												 
+				elif self._dragProps['receiverBoxTag'] == 'Scorer':
+					self.build_scorer_images_in_receiverbox(self._dragProps['receiverBoxTag'],
+															coords)
+															
 				
 			self.canvas.delete(self._dragProps['item'])	
 			defaultPositionImage = self.imagePositions[self._dragProps['itemTag']]
@@ -721,6 +1065,19 @@ class gridSearchClassifierOptimization(object):
 			self._dragProps['receiverBox'] = None
 			self._dragProps['x'] = 0
 			self._dragProps['y'] = 0
+		
+		else:
+			tagsOfSelection = self.canvas.gettags(tk.CURRENT)
+			if len(tagsOfSelection) == 0:
+				return
+			elif tagsOfSelection[0] == 'current':
+				return
+			elif tagsOfSelection[0] == 'reset':
+				self.reset()
+				
+			elif tagsOfSelection[0] == 'performGridSearch':	
+				self.perform_grid_search()
+			
 		
 	def on_item_move(self,event):
 		'''
@@ -755,20 +1112,95 @@ class gridSearchClassifierOptimization(object):
 					self._dragProps['receiverBoxTag'] = receiverBoxTag
 					self._dragProps['itemTag'] = firstTag
 					self.canvas.itemconfigure(receiverBox,width=2,outline='red')
+	def reset(self):
+ 		'''
+ 		Resets all made actions.
+ 		'''
+ 		#print(self.recieverRectangleEntries)
+ 		for receiverBox in self.recieverRectangleEntries.keys():
+ 			self.reciverRectangleImages[receiverBox] = []
+ 			self.recieverRectangleEntries[receiverBox] = []
+ 			if receiverBox != 'Scorer':
+ 				self.build_images_in_receiverbox(receiverBox,coords = None)
+ 			else:
+ 				self.build_scorer_images_in_receiverbox(receiverBox,coords = None) 
+
+ 		self.define_variables()
+ 		
+ 
+ 
  					
-	
-	def build_images_in_receiverbox(self,receiverBoxToUpdate,receiverBoxTag,coords):
+	def build_scorer_images_in_receiverbox(self, receiverBoxTag, coords):
 		'''
-		'''
+		Displays scorer image in receiver box.
+		'''		
+		tagForItems = '{}_branchItems'.format(receiverBoxTag)
+		imageList = self.reciverRectangleImages[receiverBoxTag]
+		if len(imageList) == 0:
+			self.canvas.delete(tagForItems)
+			return
+		
 		centerWidth = coords[2] - coords[0]
 		yPos = coords[1]
+		branchEndPosition = self.create_branch_split(coords[0]+ centerWidth/2,yPos+25, 
+													portionLeft = 0.8,length = 0.4 * centerWidth,
+													numberBranch = 1, connectionLength = [330],
+													tagList = [tagForItems],
+													addStartLine  = True,
+													yPosStartLine = yPos)
 		
-		branches = len(self.reciverRectangleEntries[receiverBoxTag])
+		self.add_scorer_images(imageList, centerXPosition = coords[2] - centerWidth/2, 
+									portionLeft = 0.8,
+									length = 0.4 * centerWidth,
+									yStart = coords[1] + 30, lineTags = tagForItems)											
+		
+												
+		
+		self.create_branch_bottom(centerXPosition = coords[0]+ centerWidth/2, 
+											yPositionBranch = branchEndPosition[-1][1], 
+											yPositionEnd = coords[3],portionLeft = 0.8, 
+											length = 0.4 * centerWidth, numberBranch = 1, 
+											connectionLength = 20, tagLines = tagForItems)		
+		 
+		
+	def add_scorer_images(self,imageList, centerXPosition, portionLeft, length,
+											yStart, lineTags, distance = 30):
+		'''
+		adding the scorer image
+		'''			
+		startXPos = int(centerXPosition - portionLeft * length)
+		extraTagList = self.recieverRectangleEntries[self._dragProps['receiverBoxTag']]
+		for n,image in enumerate(imageList):
+			distance = 30 + 30 * n
+			self.canvas.create_line(startXPos, yStart + distance, startXPos+10, 
+												yStart + distance, tag = lineTags)	
+			self.canvas.create_image(startXPos+10, yStart + distance, anchor = tk.W, 
+												image = image, tag= lineTags+' '+extraTagList[n])	
+			
+# 
+# 
+# 		    	
+# 			for n,xPosBranch in enumerate(positions):
+# 				self.canvas.create_line(xPosBranch, yPosition, xPosBranch, 
+# 									yPosition + connectionLength[n],tag = tagList[0])
+# 				if len(imageList) == numberBranch:
+# 					if addImageTags:
+# 						tagImg = tagList[n]+' '+extraTagList[n]
+# 					else:	
+# 						tagImg = tagList[n]
+# 					imageId = self.canvas.create_image(xPosBranch, 
+# 	
+	def build_images_in_receiverbox(self,receiverBoxTag,coords):
+		'''
+		'''
+		branches = len(self.recieverRectangleEntries[receiverBoxTag])
 		imageList = self.reciverRectangleImages[receiverBoxTag]
 		tagForItems = '{}_branchItems'.format(receiverBoxTag)
 		if len(imageList) == 0:
 			self.canvas.delete(tagForItems)
-			return		
+			return	
+		centerWidth = coords[2] - coords[0]
+		yPos = coords[1]		
 		self.canvas.delete(tagForItems)
 		branchEndPosition = self.create_branch_split(coords[0]+ centerWidth/2,yPos+25, 
 												portionLeft = 0.5, length = 0.7 * centerWidth, 
@@ -807,7 +1239,7 @@ class gridSearchClassifierOptimization(object):
 		endPoint = self.build_chain_of_images([self.dataIcon,self.crossValIcon])
 		branchEndPosition =  self.create_branch_split(centerXPosition = 600,yPosition = endPoint, portionLeft = 0.7,
 												length = 320, numberBranch = 2,connectionLength = [380,20])
-							
+		## create reciever boxes (remove scorer [:-1])
 		yPosLineEnd, yPosEndRectangle = self.create_receiver_rectangles(list(self.itemsToDrag.keys())[:-1], 
 										xPosCenter = branchEndPosition[-1][0], 
 										yPosStart = branchEndPosition[-1][1])
@@ -851,7 +1283,8 @@ class gridSearchClassifierOptimization(object):
 		self.canvas.create_line(xLeftPosition,bottomYPosition ,xLeftPosition, bottomYPosition+20) 
 				 		
 		self.canvas.create_image(xLeftPosition,bottomYPosition+20,
-								 anchor=tk.N, image = self.finalEstimatorIcon)
+								 anchor=tk.N, image = self.finalEstimatorIcon,
+								 tag = 'performGridSearch')
 		
 		
 		
@@ -919,8 +1352,7 @@ class gridSearchClassifierOptimization(object):
 				tagList = tagList * numberBranch
 			if addImageTags:
 
-				extraTagList = self.reciverRectangleEntries[self._dragProps['receiverBoxTag']]
-		    	
+				extraTagList = self.recieverRectangleEntries[self._dragProps['receiverBoxTag']]
 		    	
 			for n,xPosBranch in enumerate(positions):
 				self.canvas.create_line(xPosBranch, yPosition, xPosBranch, 
@@ -1004,7 +1436,7 @@ class gridSearchClassifierOptimization(object):
 			elif funcName == 'IdentityScaler':
 				settingDict['func'] = None
 			func = preProcessDict[funcName](**settingDict)
-			
+		
 		return func
 			
 	def build_classifier_settings(self):
@@ -1012,8 +1444,8 @@ class gridSearchClassifierOptimization(object):
 		Gets the classifier and its parameter to be optimized. 
 		'''
 		classiDict = dict()
-		if 'Classifier' in self.reciverRectangleEntries:
-			estimatorList = self.reciverRectangleEntries['Classifier']
+		if 'Classifier' in self.recieverRectangleEntries:
+			estimatorList = self.recieverRectangleEntries['Classifier']
 			estimator = estimatorList[0]
 			if estimator in self.functionSettings:
 				settingDict = self.functionSettings[estimator]
@@ -1036,8 +1468,8 @@ class gridSearchClassifierOptimization(object):
 		'''
 		'''
 		collectOptimGrid = []
-		if pipeLineStep in self.reciverRectangleEntries:
-			processes = self.reciverRectangleEntries[pipeLineStep]
+		if pipeLineStep in self.recieverRectangleEntries:
+			processes = self.recieverRectangleEntries[pipeLineStep]
 			
 			
 			for proc in processes:
@@ -1088,12 +1520,40 @@ class gridSearchClassifierOptimization(object):
 			return None, None
 			
 		return paramGrid, pipeLine
+
+	def make_scorer(self):
+		'''
+		'''
+		processes = self.recieverRectangleEntries['Scorer']
+		scorer = {}
+		if len(processes) == 0:
+			scorer, refit  =  {'f1_score':'f1_micro'}, 'f1_score'
+		
+		for n,proc in enumerate(processes):
+			tag = proc.split('_')[-1]
+			if proc in self.functionSettings:
+				settingDict = self.functionSettings[proc]
+				print(settingDict)
+				add = settingDict['average']
+				scorer[tag] = '{}_{}'.format(tag,add)
+			else:
+				if tag == 'auc':
+					scorer[tag] = 'roc_auc'
+				else:
+					scorer[tag] = tag
+			
+			if n == 0:
+				refit = tag
+		
+		return scorer, refit	
+			
+		
 		
 		
 	def perform_grid_search(self):
 		'''
 		'''
-		estimatorList = self.reciverRectangleEntries['Classifier']
+		estimatorList = self.recieverRectangleEntries['Classifier']
 		## only one classifier possible
 		if len(estimatorList) == 0:
 				tk.messagebox.showinfo('No Classifier ..','Select a classifier.',parent=self.toplevel)
@@ -1109,14 +1569,15 @@ class gridSearchClassifierOptimization(object):
 		resultDF = pd.DataFrame() 
 		predictionByBestEstimator = OrderedDict()
 		
+		
 		# get data
 		
 		X,Y = self.data[self.features].values, np.ravel(self.data[self.targetColumn].values)
 			
 		## define k fold validation for nested cv
+		
 		n_split_nested  = self.nestedCV['n_splits']
 		cvName = self.gridSearchCV['KFold Procedure']
-		print(cvName)
 		if cvName not in crossValidation:
 			cvName = 'StratifiedShuffleSplit'
 			
@@ -1144,7 +1605,9 @@ class gridSearchClassifierOptimization(object):
 		
 		progressBar.update_progressbar_and_label(2,'Extract parameter grid ..')
 		classiDict = self.build_classifier_settings()
+		## extract scorer
 		
+		scoring, refit_ = self.make_scorer()
 		if classiDict is None:
 			return 
 			
@@ -1164,13 +1627,16 @@ class gridSearchClassifierOptimization(object):
 		for train_index, test_index in cvNestedIndices:
 		
 			progressBar.update_progressbar_and_label(10+80/n_split_nested*nSplit,'Nested cross validation {}/{}..'.format(nSplit,n_split_nested))
-			grid = skModel.GridSearchCV(pipe, cv=cvInner , n_jobs=1, param_grid=paramGrid, return_train_score=True)
+			grid = skModel.GridSearchCV(pipe, cv=cvInner , n_jobs=1, scoring = scoring,
+										param_grid=paramGrid, return_train_score=True,
+										refit = refit_)
 			try:
 				grid.fit(X[train_index], Y[train_index])
 			except Exception as e:
 				tk.messagebox.showinfo('Error ..','An error occured:\n{}'.format(e))
 				progressBar.close()
 			
+			#print(grid.scorer_)
 			## save results for inspection
 			resultGrid = self.shorten_params(grid.cv_results_)
 			cvResults = pd.DataFrame(resultGrid)
@@ -1197,18 +1663,21 @@ class gridSearchClassifierOptimization(object):
 				else: 
 					probs = probsTest[:,n]
 				fpr, tpr, _ = roc_curve(Y[test_index],probs, pos_label=class_)
-				collectRocCurveParam['fpr_'+class_] = fpr 
-				collectRocCurveParam['tpr_'+class_] = tpr 
-				collectRocCurveParam['AUC_'+class_] = round(auc(fpr,tpr),2)
+				collectRocCurveParam['fpr_{}'.format(class_)] = fpr 
+				collectRocCurveParam['tpr_{}'.format(class_)] = tpr 
+				collectRocCurveParam['AUC_{}'.format(class_)] = round(auc(fpr,tpr),2)
 			
-			print(grid.best_estimator_)
-			print(collectRocCurveParam)
+			#print(grid.best_estimator_)
+			#print(collectRocCurveParam)
+			print(classReport)
 			predictionByBestEstimator[nSplit] = {'Y_test_pred':Y_test_pred,
 											  'best_params':grid.best_params_,
 											  'ClassificationReport':classReport,
 											  'roc_curve':collectRocCurveParam,
 											  'classes':grid.classes_,
-											  'estimator': grid.best_estimator_}
+											  'estimator': grid.best_estimator_,
+											  'scorerPrefix':refit_,
+											  }
 			
 			nSplit += 1
 			
@@ -1217,7 +1686,15 @@ class gridSearchClassifierOptimization(object):
 		results = dict() 
 		results['nestedCVResults'] = resultDF
 		results['rocCurveParams'] = predictionByBestEstimator
+		results['pipeline'] = self.recieverRectangleEntries
+		results['data'] = {'x':X,'y':Y}
+		results['props'] = OrderedDict([('# of features',len(self.features)),
+						    ('# of classes',len(grid.classes_)),('Scorer',refit_),
+						    ('Features',get_elements_from_list_as_string(self.features)),
+						    ('Target(Class) Column',self.targetColumn)])
 		self.plotter.set_current_grid_search_results(results)
+		
+		self.classificationCollection.save_grid_search_results(results)
 		self.plotter.initiate_chart(self.features,self.targetColumn,'grid_search_results',
 			self.plotter.get_active_helper().colorMap)
 		self.plotter.redraw()
@@ -1225,37 +1702,7 @@ class gridSearchClassifierOptimization(object):
 		return
 		
 		
-		
-#	probsTest = classifier.fit(X[train],Y[train]).predict_proba(X[test])
-			
-#			print(probsTest)
-#			print(Y[test])
-#			print(classifier.classes_)
-			#fpr, tpr, thresholds = roc_curve(Y[test],probsTest[:, 0], pos_label='+')
-			#print(auc(fpr,tpr))
-#crossValidation = {'Kfold':{'function':skModel.KFold,'parameters':['n_splits','shuffle']},
-#				   'StratifiedKFold':{'function':skModel.StratifiedKFold,'parameters':['n_splits','shuffle']},
-#				   'ShuffleSplit':{'function':skModel.ShuffleSplit,'parameters':['n_splits','test_size']},
-#				   'StratifiedShuffleSplit':{'function':skModel.StratifiedShuffleSplit,'parameters':['n_splits','test_size']}
-#				   }
-
-#crossValidationMethods = {'k-fold':skModel.KFold,
-#						# 'Reapeated k-Fold':skModel.RepeatedKFold,
-#						 'Stratified k-fold': skModel.StratifiedKFold,
-#						 #'Repeated Stratified k-fold':skModel.RepeatedStratifiedKFold,
-#						 'Stratified Shuffle Split':skModel.StratifiedShuffleSplit,
-#						 'Shuffle Split':skModel.ShuffleSplit,
-##						 'Time Series Split':skModel.TimeSeriesSplit}	
-    		
-    		
-    		
-    		
-#classDict = {'Random forest classifier':skEnsemble.RandomForestClassifier,
-#			'Extra Trees Classifier':skEnsemble.ExtraTreesClassifier,
-#			'Support Vector Machine': skSVM.SVC,
-#			'Stochastic Gradient Descent':skLinear.SGDClassifier,
-#			'Gaussian Naive Bayes':skNaiveBayes.GaussianNB}
-			
+	
 	def shorten_params(self,gridResult): 
 		'''
 		Due to the way we build the pipeline, the params contains unuseful information
@@ -1286,15 +1733,17 @@ class gridSearchClassifierOptimization(object):
 		'''
 		Load icons and the associate with keys - same keys to get the function.
 		'''
-		self.reciverRectangleEntries = OrderedDict()
+		self.recieverRectangleEntries = OrderedDict()
 		self.reciverRectangleImages = OrderedDict()
 		self.imagePositions = dict()
-		self.dataIcon , self.naiveBayesIcon, self.svmIcon, self.crossValIcon, self.treeEnsembleIcon, self.pcaIcon, \
-							self.bestKFeatureIcon , self.uniformScalerIcon, self.gaussianScalerIcon,self.robustScalerIcon, \
-							self.minMaxScalerIcon, self.sgdIcon, \
-							self.gridSearchIcon, self.finalEstimatorIcon,\
-							self.nmfIcon, self.evaluationIcon, \
-							self.identityFunctionIcon = images.get_workflow_builder_images()
+		self.dataIcon , self.naiveBayesIcon, self.svmIcon, self.crossValIcon, \
+					self.treeEnsembleIcon, self.pcaIcon, \
+					self.bestKFeatureIcon , self.uniformScalerIcon, \
+					self.gaussianScalerIcon,self.robustScalerIcon, \
+					self.minMaxScalerIcon, self.sgdIcon, \
+					self.gridSearchIcon, self.finalEstimatorIcon,\
+					self.nmfIcon, self.evaluationIcon, \
+					self.identityFunctionIcon, self.resetIcon = images.get_workflow_builder_images()
 		
 		
 		self.rocAucIcon, self.accuracyIcon, self.precisionIcon,\
@@ -1338,7 +1787,7 @@ class gridSearchClassifierOptimization(object):
 			items = list(canvasItemSettings.keys())
 			self.checkDragAndDropTags.extend(items)
 			self.receiverTags[key] = items
-			self.reciverRectangleEntries[key] = []
+			self.recieverRectangleEntries[key] = []
 			self.reciverRectangleImages[key] = []
 
 
@@ -1360,6 +1809,7 @@ tooltipTextDict = {'KFold Procedure':'StratifiedKFold - This cross-validation ob
 }
 
 
+averageOptions = [('average',['binary','micro','macro','weighted','samples'])]
 
 parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
 								('kernel',['rbf','linear','poly','rbf,linear,poly']),('gamma',['auto']),('coef0',['0'])],
@@ -1378,19 +1828,24 @@ parameterToOptimize = {'SVM': [('C',['1,10,100','1','0.1,1,10,100,1000']),
 					  'nestedCV':[('KFold Procedure',['StratifiedShuffleSplit','StratifiedKFold','Time Series Split']),
 					  ('n_splits',['3','5','10'])],
 					  'gridSearchCV':[('KFold Procedure',list(crossValidation.keys())),
-					  ('n_splits',['3','5','10'])]}
+					  ('n_splits',['3','5','10'])],
+					  'precision':averageOptions,
+					  'recall':averageOptions,
+					  'f1':averageOptions,
+					  }
 					
 
 		
 class defineGridSearchDialog(object):
 	
-	def __init__(self, procedure = 'SVM', features = []):
+	def __init__(self, procedure = 'SVM', features = [], gridClass = None):
 	
 		if procedure not in parameterToOptimize:
 			return
 		self.procedure = procedure
 		self.features = features
 		self.numbFeatures = len(self.features)
+		self.gridClass = gridClass 
 		## dicts to save stuff
 		self.paramWidgets = dict()
 		self.settingDict = dict()
@@ -1434,9 +1889,9 @@ class defineGridSearchDialog(object):
 			infoText = 'Choose number of cross validations performed for parameter optimization by grid search'
 		else:
 			infoText = ('Define parameter for GridSearch with Cross Validation\n'+
-					'Usage: If you want to optimize a parameter you have to'+
-					'provide multiple parameters in the pattern: Value1,Value2,Value3. and check the checkbutton on the left hand side.\n'+
-					'If you give a single parameter: Value1. This parameter will be used as'+
+					'To define a grid search: \n'+
+					'Provide grid parameters: Value1,Value2,Value3  and check the checkbutton.\n'+
+					'If you provide a single parameter: Value1. This parameter will be used as'+
 					' a constant parameter for the selected step in your pipeline.')
 		labelInfo = tk.Label(self.cont, text = infoText, bg = MAC_GREY, wraplength = 400, justify = tk.LEFT)
 		labelInfo.grid(padx=3,pady=5, columnspan=3)
@@ -1450,8 +1905,19 @@ class defineGridSearchDialog(object):
 				defaultValue = widgetCollection[abbrevDictRev[self.procedure]][param[0]][0]
 				CreateToolTip(cb,title_=param[0],text= description)
 				combo.set(defaultValue)
+				
+			elif self.procedure == 'nestedCV':
+				value = self.gridClass.nestedCV[param[0]]
+				combo.set(value)
+			elif self.procedure == 'gridSearchCV':
+				value = self.gridClass.gridSearchCV[param[0]]
+				combo.set(value)
+			elif self.procedure in ['recall','precision','f1']:
+				combo.set('micro')
+				
 			elif param[0] in defaultValues:
 				combo.set(defaultValues[param[0]])
+			
 			if param[0] in tooltipTextDict:
 				CreateToolTip(cb,text= tooltipTextDict[param[0]])
 					
@@ -1470,7 +1936,6 @@ class defineGridSearchDialog(object):
 		'''
 		'''
 		for key, paramDict in self.paramWidgets.items():
-			print(key)
 			if paramDict['CbVar'].get():
 				gridList = paramDict['Entry'].get().split(',')
 				if len(gridList) == 1:
@@ -1481,7 +1946,6 @@ class defineGridSearchDialog(object):
 			
 					self.collectParamGrid[key] = gridList
 					
-					
 			else:
 				entryString = paramDict['Entry'].get()
 				if entryString != '':
@@ -1489,22 +1953,19 @@ class defineGridSearchDialog(object):
 					
 		cleanUp = self.evaluate_and_transform_input()
 
-		
 		if cleanUp:	
 			self.close() 
 		
 	def evaluate_and_transform_input(self):
 		'''
 		Evaluate input for grid search. 
-		'''
-		
+		'''		
 		updatedDictGrid = dict()
 		updatedDictSettings = dict()
 		oldDictList = [self.collectParamGrid,self.settingDict]
 		newDictList = [updatedDictGrid,updatedDictSettings]
 		if self.procedure == 'GNB':
 			return True
-			
 		elif self.procedure in ['nestedCV','gridSearchCV']:
 			
 			for oldDict, updateDict in zip(oldDictList,newDictList):
@@ -1641,9 +2102,19 @@ class defineGridSearchDialog(object):
 			self.collectParamGrid,self.settingDict = newDictList
 			return True					
 			
-			
-			
-				
+		elif self.procedure in ['recall','precision','f1']:
+			for oldDict, updateDict in zip(oldDictList,newDictList):
+				for key, values in oldDict.items():
+						if values not in averageOptions[-1][-1]:
+							tk.messagebox.showinfo('Error ..',
+								'Cannot interpret input', 
+								parent = self.toplevel)
+							return False
+						
+						else:
+							updateDict[key] = values
+			self.collectParamGrid,self.settingDict = newDictList
+			return True										
 		
 	def center_popup(self,size):
 

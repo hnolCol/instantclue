@@ -22,6 +22,25 @@
     
     For License information check https://opensource.org/licenses
    
+   
+******************** IMPORTANT NOTE ********************
+
+To make the treeview work you will have to change 
+the function 
+
+	def selection in the ttk.py file in the tkinter package folder:
+	line 1392
+    
+    def selection(self, selop=None, items=None):
+        """If selop is not specified, returns selected items."""
+        if isinstance(items, (str, bytes)):
+            items = (items,)
+        return self.tk.splitlist(self.tk.call(self._w, "selection", selop, items))
+   
+   
+   
+   
+   
     Dependencies (alphabetic order):
     
     -husl (color palettes)
