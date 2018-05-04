@@ -734,7 +734,8 @@ class Progressbar(object):
  		self.progressBar = ttk.Progressbar(self.cont, orient=tk.HORIZONTAL, variable=self.progressVariable)
 
  		progressLabel = tk.Label(self.cont, textvariable = self.progressText,
- 									bg=MAC_GREY, justify = tk.RIGHT)
+ 									bg=MAC_GREY, justify = tk.RIGHT,
+ 									wraplength = 190)
  		self.progressBar.grid(sticky=tk.EW,padx=10,pady=5)
  		progressLabel.grid(padx=5,sticky=tk.E)
 
@@ -744,7 +745,8 @@ class Progressbar(object):
 	def update_progressbar_and_label(self,newValue,newText, updateText = True):
 		'''
 		'''
-		self.progressVariable.set(newValue)
+		if newValue is not None:
+			self.progressVariable.set(newValue)
 		if updateText:
 			self.progressText.set(newText)
 		self.toplevel.update()

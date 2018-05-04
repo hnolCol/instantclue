@@ -41,7 +41,7 @@ class SGCCA(object):
     
     def __init__(self, X, Y, C = None, n_components = None,
                  c1 = None, scheme = 'horst', scaleData = False,
-                 featureNames = None):
+                 featureNames = None, progressBar = None):
 
         self.params = {}
         
@@ -58,6 +58,9 @@ class SGCCA(object):
         self.params['c1'] = c1
         
         validInput, msg = self.check_input(X,Y)
+        
+        self.progressBar = progressBar
+        
         if validInput:
             self.create_dummy_y(Y)
 
@@ -67,7 +70,8 @@ class SGCCA(object):
             self.params['X'] = X
             
         else:
-            print(msg)
+        	if self.progressBar is not None:
+        		self.progressBar.update_progressbar_and_label(100,msg)
  
 
     def initiate_fit(self,X, params):
@@ -100,8 +104,12 @@ class SGCCA(object):
                 params['C'] = np.append(params['C'],add,axis=0)
                 np.fill_diagonal(params['C'],0)
             else:
-                print('Could not interpret C input array.')
-                return
+            	if self.progressBar is not None:
+            		self.progressBar.update_progressbar_and_label(100,
+            			'Could not interpret C input array.')
+            	return
+                    				
+                
 
 
         ## check l1 constraints (c1) - cannot be > 1 and < 1/pjs (e.g. number of features)
@@ -112,8 +120,12 @@ class SGCCA(object):
                 params['c1'] = np.append(params['c1'],[1])
 
             if any(c1 > 1 or c1 < 1/np.sqrt(pjs) for c1,pjs in zip(params['c1'],params['pjs'])):
-                print('L1 constraints (c1) must be between 1 and 1/ #features')
-                return
+            	if self.progressBar is not None:
+            		self.progressBar.update_progressbar_and_label(100,
+        				'L1 constraints (c1) must be between 1 and 1/ #features') 
+            	return
+               
+                
 
         else:
             if params['c1'].shape[1] == params['n_components'].shape[0]:
@@ -124,14 +136,20 @@ class SGCCA(object):
 
             for n in range(params['c1'].shape[0]):
                 if any(c1 > 1 or c1 < 1/np.sqrt(pjs) for c1,pjs in zip(params['c1'][n,:],params['pjs'])):
-                    print('L1 constraints (c1) must be between 1 and 1/ #features')
-                    return
+                	if self.progressBar is not None:
+                		self.progressBar.update_progressbar_and_label(100,
+                		        					'L1 constraints (c1) must be between 1 and 1/ #features') 
+                	return
+            	
                 else:
                     continue
         ## check number of components - must be smaller than the number of features.                
         if np.where(params['n_components'] - params['pjs'] > 0)[0].size > 0:
-            print('Number of components has to be smaller than the number of features.')
-            return
+        	if self.progressBar is not None:
+        		self.progressBar.update_progressbar_and_label(100,
+        				'Number of components must be smaller than number of features..')                
+               
+        		return
         
         return params
     
@@ -185,8 +203,10 @@ class SGCCA(object):
 
         results, params = self.calculate(params)
         if results is None:
-            print('Fit failed!')
-            return 
+        	if self.progressBar is not None:
+        		self.progressBar.update_progressbar_and_label(100,'Fit failed.')
+        	return
+            	
         if save:
             ## function get_results needs this object
             self.finalResult = results
@@ -201,6 +221,9 @@ class SGCCA(object):
             
             X = params['X'] + [params['Y']]
             # add parameters to
+            if self.progressBar is not None:
+            	self.progressBar.update_progressbar_and_label(15,
+            								'Getting prepared ..')
 
             params = self.initiate_fit(X,params)
             if params is None:
@@ -261,6 +284,9 @@ class SGCCA(object):
                     else:
                         c1 = params['c1'][n-1,:]
                         
+                    if self.progressBar is not None:
+                    	self.progressBar.update_progressbar_and_label(25,
+            								'Calculate canonical correlation ..')
                         
                     #perform sgcca 
                     result = _sgccak(R,params['C'],c1,params['J'],
@@ -271,7 +297,10 @@ class SGCCA(object):
 
                     for b in range(params['J']):
                         Y[b][:,n-1] = result['Y'][:,b]
-                        
+                    
+                    if self.progressBar is not None:
+                    	self.progressBar.update_progressbar_and_label(25,
+            								'Deflation - {} of {} components'.format(n,params['N']+1))                        
                     #deflatation 
                     deflaResult = self.defl_select(result['Y'],R,
                                                    params['ndef1'],n,
@@ -290,8 +319,10 @@ class SGCCA(object):
                             m1 = np.matmul(a[b][:,n-1],P[b][:,0:n-1])
                             m2 = np.matmul(astar[b][:,0:n-1],m1)
                             astar[b][:,n-1] =  result['a'][b] - m2
-
-                print('computing of the SGCCA block components')
+                
+                if self.progressBar is not None:
+                	self.progressBar.update_progressbar_and_label(75,
+            								'Computing of the SGCCA block components')
 
                 if len(params['c1']) == params['J']:
                     cl = params['c1']
@@ -348,27 +379,37 @@ class SGCCA(object):
 
             
 
-    def tune(self, tuneParams, nSplits = 2, repeat = 2, test_size = 0.2):
+    def tune(self, tuneParams, nSplits = 3, repeat = 5, test_size = 0.4, progressbar = None):
 
         if hasattr(self,'params') == False:
             print('Perform fit() first')
             return
         
         if test_size > 0.9 or test_size < 0.1:
-            print('test_size must be between 0.1 and 0.9')
+            if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'test_size must be between 0.1 and 0.9')
             return
         if isinstance(repeat,int) == False:
-            print('Repeat must be an int. ')
+            if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'Repeat must be an int. ')
             return
         if isinstance(nSplits,int) == False:
-            print('nSplits must be an int')
-            retur
+            if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'nSplits must be an int')
+            return
         if isinstance(tuneParams,dict) == False:
-            print('tuneParams must be provided as a dict.')
+            if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'tuneParams must be provided as a dict.')
             return
 
         if nSplits > np.unique(self.params['classes']).size:
-            print('Number of Splits cannot be greater than the number of classes.')
+            if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'Number of Splits cannot be greater than the number of classes.')
             return
 
         # original data
@@ -379,16 +420,18 @@ class SGCCA(object):
             
             print('Unknown parameter(s) given in tuneDict. Will be ignored')
 
+		
         tuneValues = []
         tuneParam = []
         
         for key,values in tuneParams.items():
             ## check if given tune dict can be interpreted
             if isinstance(values,list) == False or key not in self.params:
-                print('Ignoring .. {}. Not found as a parameter ..'.format(key))
+                if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,	
+                							'Ignoring .. {}. Not found as a parameter ..'.format(key))
                 continue
             else:
-
                 tuneParam.append(key)
                 tuneValues.append([np.asarray(value) for value in values])
                 
@@ -396,21 +439,31 @@ class SGCCA(object):
 
         # result collection
         resultColl = {'id':[],'repeat':[],'nSplit':[],
-                      'error':[]}
+                      'error':[], 'param' :[]}
         sgccaColl = {}
         
         id_ = 0
-        for search in tuneGrid:
+        #lenGrid = len(list(tuneGrid))
+        for m, search in enumerate(tuneGrid):
 
             params = self.params.copy()
             ##update parameter for search
             for n,key in enumerate(tuneParam):
                 params[key] = search[n]
+                
+                if progressbar is not None:
+                	progressbar.update_progressbar_and_label(None,
+                		'Testing : {}'.format(search[n]))
+                
             ## start loopf over repeats
             for rep in range(repeat):
                 # initiate cross validation                   
                 rskf = StratifiedShuffleSplit(n_splits=nSplits, test_size = test_size)
                 nSplit = 0
+                
+                if progressbar is not None:
+                	progressbar.update_progressbar_and_label(m/len(tuneValues) *100,
+                		'Repeat {} of {}'.format(rep,repeat))
                 
                 for train_idx, test_idx in rskf.split(X[0],params['classes']):
 
@@ -428,6 +481,8 @@ class SGCCA(object):
                     # -1 excludes the outcome block
                     XtrainProjConc = np.concatenate(sggcaResults['Y'][:-1], axis=1)
                     XtestProjConc = np.concatenate(XtestProj,axis = 1)
+                    
+                    
 
                     err = self.discriminant_analysis(XtrainProjConc,
                                                      XtestProjConc,
@@ -438,17 +493,26 @@ class SGCCA(object):
                     resultColl['id'].append(id_)
                     resultColl['nSplit'].append(nSplit)
                     resultColl['repeat'].append(rep)
-
+                    if hasattr(search,'tolist'): 
+                    	resultColl['param'].append(str(search.tolist()))
+                    else:
+                    	resultColl['param'].append(str(search))
+                    	
                     sgccaColl[id_] = [params.copy(),sggcaResults]
                     print(params['c1'])
-                    self.get_non_zero_features(sggcaResults, index = train_idx) 
+                    #self.get_non_zero_features(sggcaResults, index = train_idx) 
+                    if progressbar is not None:
+                    	progressbar.update_progressbar_and_label(None,
+                    		'Split {} done (Repeat {}).\nRelative error rate {}'.format(nSplit,rep,err))
+                		
+                			
                     
                     id_ += 1
                     nSplit += 1
                    
         cvResult = pd.DataFrame.from_dict(resultColl)
         # reset cl
-        print(cvResult)
+        #print(cvResult)
         return cvResult
 
     def get_non_zero_features(self, sggcaResult = None,
@@ -603,7 +667,7 @@ class SGCCA(object):
     def project_test_data(self,Xtest,sggcaResults):
                           
             XtestTransformed = []
-            for q in range(len(X)):
+            for q in range(len(Xtest)):
                 yy = np.empty((Xtest[q].shape[0],
                                sggcaResults['a'][q].shape[1]))
                 

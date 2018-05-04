@@ -25,6 +25,7 @@ import tkinter as tk
 from sklearn.preprocessing import StandardScaler
 from modules.calculations import sgcca 
 from modules.dialogs import simple_dialog
+from modules.dialogs import display_data
 from modules.utils import *
 
 import modules.images as img
@@ -121,7 +122,7 @@ class sggcaDialog(object):
 		tk.Label(self.cont,text='Tune parameters ..',bg=MAC_GREY).grid(row=8,padx=2,pady=2,sticky=tk.W)
 		
 		ttk.Button(self.cont, text = '# Comps', command = lambda: tk.messagebox.showinfo('Under construction','This method is currently under construction.')).grid(row=9,column=0,padx=3,pady=1,sticky=tk.W)
-		ttk.Button(self.cont, text = 'Sparsity', command = lambda: tk.messagebox.showinfo('Under construction','This method is currently under construction.')).grid(row=9,column=0,padx=3,pady=1,sticky=tk.E)
+		ttk.Button(self.cont, text = 'Sparsity', command = self.tune_sparsity).grid(row=9,column=0,padx=3,pady=1,sticky=tk.E)
 		
 		ttk.Separator(self.cont,orient = tk.HORIZONTAL).grid(row=10,columnspan=1,sticky=tk.EW,pady=3)
 				
@@ -129,6 +130,8 @@ class sggcaDialog(object):
 		runButton = ttk.Button(self.cont, text = 'Run', command = self.run) 
 		runButton.grid(row = 11, column = 0, sticky=tk.W,pady=5)
 		closeButton.grid(row = 11, column = 0, sticky=tk.E,pady=5)
+
+		
 		 
 
 	def add_block_headings(self):
@@ -302,6 +305,28 @@ class sggcaDialog(object):
 		
 		self.blocks[id]['featureButton'].configure(text="\u221A")
 
+
+	def tune_sparsity(self):
+		'''
+		'''
+		if hasattr(self,'SGCCA') == False:
+			tk.messagebox.showinfo('Error ..','Please fit a model first.',parent=self.toplevel)
+			return
+		#
+		progressbar = Progressbar(title  = 'SGCCA Calculation') 
+		progressbar.update_progressbar_and_label(4,'Starting ..')
+		
+
+		spars = [[0.05,0.2],[0.1,0.3],[0.2,0.1]]
+		params = {'c1':spars}
+		results = self.SGCCA.tune(params, progressbar = progressbar)
+			
+		#progressbar.close()
+		
+		dataDialog = display_data.dataDisplayDialog(results,showOptionsToAddDf=True)
+			
+
+
 	def run(self):
 	
 		if hasattr(self,'C') == False:
@@ -313,12 +338,17 @@ class sggcaDialog(object):
 		if sgccaSettings is None:
 			return
 		sgccaSettings['C'] = self.C		
-				
 		
-		SGCCA = sgcca.SGCCA(**sgccaSettings)
-		SGCCA.fit()
 		
-		results = SGCCA.get_result()
+		progressbar = Progressbar(title  = 'SGCCA Calculation') 
+		progressbar.update_progressbar_and_label(1,'Startig ..')
+		sgccaSettings['progressBar'] = progressbar
+		
+		
+		self.SGCCA = sgcca.SGCCA(**sgccaSettings)
+		self.SGCCA.fit()
+		
+		results = self.SGCCA.get_result()
 		
 		n = 0
 		dataY = pd.DataFrame()
@@ -335,12 +365,16 @@ class sggcaDialog(object):
 			
 			n += 1
 			
+		progressbar.update_progressbar_and_label(80,'Extracting results ..')
+	
+	
+	
 		id = self.dfClass.get_next_available_id()
 		self.dfClass.add_data_frame(dataY,id=id,fileName = 'SGGCA_Y')
 		colDataTypeRel = self.dfClass.get_columns_data_type_relationship_by_id(id)
 		self.sourceTreeView.add_new_data_frame(id,'SGGCA_Y',colDataTypeRel)
 		
-		dataA, dataC = SGCCA.get_non_zero_features(blockNames = blockNames)		
+		dataA, dataC = self.SGCCA.get_non_zero_features(blockNames = blockNames)		
 		
 		
 		mergedDf, corrDfs, corrNames = self.subset_original_data(dataA,sgccaSettings)
@@ -352,6 +386,7 @@ class sggcaDialog(object):
 			colDataTypeRel = self.dfClass.get_columns_data_type_relationship_by_id(id)
 			self.sourceTreeView.add_new_data_frame(id,corrName,colDataTypeRel)	
 			
+		## ugly for testing 
 					
 		id = self.dfClass.get_next_available_id()
 		self.dfClass.add_data_frame(mergedDf,id=id,fileName = 'selFeatures')
@@ -366,7 +401,14 @@ class sggcaDialog(object):
 		id = self.dfClass.get_next_available_id()
 		self.dfClass.add_data_frame(dataC,id=id,fileName = 'SGGCA_corr')
 		colDataTypeRel = self.dfClass.get_columns_data_type_relationship_by_id(id)
-		self.sourceTreeView.add_new_data_frame(id,'SGGCA_corr',colDataTypeRel)			
+		self.sourceTreeView.add_new_data_frame(id,'SGGCA_corr',colDataTypeRel)
+		
+		progressbar.update_progressbar_and_label(99,'All data added ..')
+		progressbar.close()
+		
+		tk.messagebox.showinfo('Done ..',
+			'SGCCA calculations done. Result data frames added.',
+			parent=self.toplevel)			
 		
 		
 	def subset_original_data(self,dataA,sgccaSettings):
@@ -443,7 +485,10 @@ class sggcaDialog(object):
 			
 			dfCollect['Feature'] = dfCollect.index
 			dfCollect.index = range(len(dfCollect.index))
-			corrDfs.append(dfCollect)
+			
+			boolIndic = dfCollect[columns].abs().apply(lambda row: any(item > 0.9 for item in row), axis = 1) 
+			print(boolIndic)
+			corrDfs.append(dfCollect.loc[boolIndic,:])
 			dfCollect = pd.DataFrame()
 		
 		return corrDfs, corrNames
@@ -458,11 +503,7 @@ class sggcaDialog(object):
 		sums = np.multiply.outer(v2.sum(0), v1.sum(0))
 		stds = np.multiply.outer(v2.std(0), v1.std(0))
 		return pd.DataFrame((v2.T.dot(v1) - sums / n) / stds / n,
-                        df2.columns, df1.columns)			
-   		
-   	    
-    	
-    	
+                        df2.columns, df1.columns)			    	
     	
     	
 		

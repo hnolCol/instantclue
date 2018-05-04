@@ -83,8 +83,9 @@ class _Plotter(object):
 		self.tooltips = dict() 
 		self.onMotionEvents = dict()
 		
-		self.logAxes = {'y':False,'x':False}
-		self.centerAxes = {'y':False,'x':False}
+		
+		self.set_axis_props()
+		
 		self.errorBar = 95
 		self.numbBins = 10
 		self.scaleBinsInScatter = True
@@ -163,7 +164,9 @@ class _Plotter(object):
 		'''
 		intiating a chart
 		'''
+		
 		self.save_axis_limits()
+		self.set_axis_props()
 		self.clean_up_figure()
 		self.immutableAxes = []
 		self.nonCategoricalPlotter  = None
@@ -268,6 +271,12 @@ class _Plotter(object):
 			return dataID
 		else:
 			return None
+
+	def set_axis_props(self):
+		'''
+		'''
+		self.logAxes = {'y':False,'x':False}
+		self.centerAxes = {'y':False,'x':False}
 	
 	def set_data_frame_of_last_chart(self):
 		'''
@@ -1653,7 +1662,20 @@ class nonCategoricalPlotter(object):
 		'''
 		'''
 		self.logAxes, self.centerAxes = dicts
-			
+	
+	
+	def adjust_axis_scale(self, axes = None):
+		'''
+		'''
+		if axes is None:
+			axes = list(self.axisDict.values)
+		for which,bool in self.logAxes.items():
+				if bool:
+					for ax in axes:
+						if which == 'y':
+							ax.set_yscale('symlog')
+						else:
+							ax.set_xscale('symlog')			
 			 	
 	def add_axis_to_figure(self):
 			
@@ -2265,7 +2287,8 @@ class nonCategoricalPlotter(object):
 				self.plotter.reset_limits(subplotIdNumber,axisExport)
 			else:
 				self.plotter.set_limits_in_replot(axisExport,limits)
-				
+			
+			self.adjust_axis_scale(axes = [axisExport])
 			self.style_axis(axisExport,subplotIdNumber)
 			
 	

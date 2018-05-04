@@ -46,7 +46,8 @@ class customSortDialog(object):
 	=================
 	'''
 
-	def __init__(self, inputValues, dfClass = None, dataTreeview = None, parentOpen = []):		
+	def __init__(self, inputValues, dfClass = None, infoText = '', enableDeleting = False,
+							dataTreeview = None, parentOpen = []):		
 		'''
 		input Values  - dict like.
 		'''
@@ -54,6 +55,9 @@ class customSortDialog(object):
 		self.inputValues = inputValues
 		self.resortedValues = None
 		self.parentOpen = parentOpen
+		self.infoText = str(infoText)
+		self.enableDeleting = enableDeleting
+		
 		self.build_toplevel()
 		self.build_widgets()
 		
@@ -93,13 +97,16 @@ class customSortDialog(object):
  		labelTitle = tk.Label(self.cont, text= 'Move items in list to reorder', 
                                      **titleLabelProperties)        
  		labelTitle.grid(padx=30, pady=15, sticky=tk.W,columnspan=2)
+ 		
+ 		labelInfo = tk.Label(self.cont, text = self.infoText, bg = MAC_GREY)
+ 		labelInfo.grid(padx=5, pady=15, sticky=tk.W,columnspan=3)
  		self.create_listbox()
  		
  		sortButton = ttk.Button(self.cont,text='Sort',width=6,command = self.extract_sorted_values)
  		closeButton = ttk.Button(self.cont,text='Close',width=6, command = self.discard_changes)
  		
- 		sortButton.grid(row=4,column=0,sticky=tk.W,padx=3,pady=8)
- 		closeButton.grid(row=4,column=1,columnspan=3,sticky=tk.E,padx=3,pady=8)
+ 		sortButton.grid(row=5,column=0,sticky=tk.W,padx=3,pady=8)
+ 		closeButton.grid(row=5,column=1,columnspan=3,sticky=tk.E,padx=3,pady=8)
         
         
 	def discard_changes(self):
@@ -114,24 +121,35 @@ class customSortDialog(object):
 		Grids listbox and scrollbars.
 		'''
 		self.cont.grid_columnconfigure(2,weight=1)
-		self.cont.grid_rowconfigure(1,weight=1)
+		self.cont.grid_rowconfigure(2,weight=1)
 		scrVert = ttk.Scrollbar(self.cont,orient=tk.VERTICAL)
 		scrHor  = ttk.Scrollbar(self.cont,orient=tk.HORIZONTAL)
 		self.treeView = ttk.Treeview(self.cont, xscrollcommand = scrHor.set,
 							yscrollcommand = scrVert.set,
 							show='tree')
+		
 		scrVert.configure(command = self.treeView.yview)
 		scrHor.configure(command = self.treeView.xview)
 		
+		if self.enableDeleting:
+			self.treeView.bind('<BackSpace>', self.delete_selection)
+			self.treeView.bind('<Delete>', self.delete_selection)
 		
-		scrVert.grid(row=1,column=3,sticky=tk.NS)
-		self.treeView.grid(row=1,column=0,columnspan=3,sticky=tk.NSEW,padx=(10,0))
-		scrHor.grid(row=2,column=0,columnspan=3,sticky=tk.EW)
+		scrVert.grid(row=2,column=3,sticky=tk.NS)
+		self.treeView.grid(row=2,column=0,columnspan=3,sticky=tk.NSEW,padx=(10,0))
+		scrHor.grid(row=3,column=0,columnspan=3,sticky=tk.EW)
 		
 		self.treeView.bind('<B1-Motion>',self.on_motion)
 		self.enter_values()
 		
+
+	def delete_selection(self,event):
+		'''
+		'''
+		selection = list(self.treeView.selection())	
+		self.treeView.delete(selection[0])
 		
+				
 	def enter_values(self):
 		'''
 		Fill listbox.

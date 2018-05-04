@@ -107,7 +107,8 @@ class DataCollection(object):
 		countThrough = np.arange(0,nRow) 
 		columnName = self.evaluate_column_name(columnName=columnName)
 		
-		self.insert_column_at_index(0,columnName,countThrough)
+		self.df[columnName] = countThrough
+		self.df[columnName].astype(np.int64)
 		self.update_columns_of_current_data()
 		return columnName
 	

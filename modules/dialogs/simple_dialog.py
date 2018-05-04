@@ -237,11 +237,7 @@ class simpleListboxSelection(object):
 			
 			self.listbox.selection_clear(0,tk.END)
 			self.checkAllCb.configure(text = 'Select all')
-			
-
-			
-			
-		
+					
 			
 	@property
 	def selection(self):
@@ -252,6 +248,9 @@ class simpleListboxSelection(object):
 		Defines selection to accessed using property (selection)
 		'''
 		self.selected = [self.data[idx] for idx in self.listbox.curselection()]
+		if len(self.selected) == 0:
+			tk.messagebox.showinfo('Error ..','No items selected..',parent=self.toplevel)
+			return
 		self.close(discard=False)
 			
 	

@@ -631,13 +631,16 @@ class hierarchichalClustermapPlotter(object):
 	def update_tick_labels_of_rows(self):
 		'''
 		'''
-		combinedLabels = self.labelColumnList + self.colorColumnList
+		combinedLabels = list(set(self.labelColumnList + self.colorColumnList))
 		if len(combinedLabels) == 1:
 			self.labelColumn = self.df[combinedLabels[0]].values.tolist()
+		
 		elif len(combinedLabels) == 0:
 			self.labelColumn = []
+		
 		else:	
 			tickLabelDf = pd.DataFrame()
+			
 			tickLabelDf[combinedLabels] = self.df[combinedLabels].astype(str)
 			combinedRowEntries = []
 			tickLabelDf[combinedLabels] = tickLabelDf[combinedLabels].applymap(lambda x: x[:15])

@@ -79,6 +79,9 @@ class mergeDataFrames(object):
 		self.joinOptions = dict()
 		self.dataTreeView = dataTreeView 
 		self.dataFrameList = dataTreeView .dataFramesSelected
+		if len(self.dataFrameList) < 2:
+			tk.messagebox.showinfo('Error ..','You need to select at least two data frames.')
+			return
 		self.dfClass = dfClass
 		self.fileNames = dfClass.fileNameByID	
 		self.tw = None	
@@ -124,8 +127,11 @@ class mergeDataFrames(object):
 		self.cont = tk.Frame(self.toplevel, bg = MAC_GREY)
 		self.cont.pack(expand=True, fill=tk.BOTH)
 		
-		labTitle = tk.Label(self.cont, text = 'Control of dataframe merging/concatenation',
-							**titleLabelProperties)
+		labTitle = tk.Label(self.cont, text = 'Control of dataframe merging/concatenation\nIf'+
+											   ' you select multiple columns to merge on, make'+
+											   ' sure they are in the correct order.',
+											   **titleLabelProperties)
+							
 							
 		labTitle.grid(columnspan=2, sticky=tk.W, padx=10,pady=3)
 		

@@ -217,9 +217,13 @@ class categoricalFilter(object):
  				variable = self.onlyFirstFind , text = 'Annotate combinations (String1,String2)',
  				command = self.check_cbs)
  			caseSensitive = ttk.Checkbutton(self.cont_widgets, 
- 				variable = self.caseSensitive, text = 'Case sensitive')
+ 					variable = self.caseSensitive, text = 'Case sensitive',
+ 					command = lambda: self.update_data_upon_search(forceUpdate = True))
  				
- 			useRegRexpress = ttk.Checkbutton(self.cont_widgets, variable = self.userRedExpression, text = 'Input is a regular expression')
+ 			useRegRexpress = ttk.Checkbutton(self.cont_widgets, 
+ 										variable = self.userRedExpression, 
+ 										text = 'Input is a regular expression')
+ 										
  			labelInfo.grid(row=1,column=0,columnspan=3,padx=3,sticky = tk.W,pady=4)
  			annotateStringCb.grid(row=2,column=0,columnspan=2,padx=3,sticky=tk.W) 
  			onlyFirstFind.grid(row=3,column=0,columnspan=2,padx=3,sticky=tk.W) 
@@ -234,7 +238,10 @@ class categoricalFilter(object):
  			optionMenuColumn = ttk.OptionMenu(self.cont_widgets, self.annotationColumn, 
  											  self.dfClass.df_columns[0], *self.dfClass.df_columns,
  											  command = self.update_data) 
- 			caseSensitive = ttk.Checkbutton(self.cont_widgets, variable = self.caseSensitive, text = 'Case sensitive search')
+ 			caseSensitive = ttk.Checkbutton(self.cont_widgets,
+ 										variable = self.caseSensitive, 
+ 										text = 'Case sensitive',
+ 										command = lambda : self.update_data_upon_search(forceUpdate = True))
  			
  			caseSensitive.grid(row=2,column=1,columnspan=2,padx=3,sticky=tk.E)
  			optionMenuColumn.grid(row=3,column=1,columnspan=1,sticky=tk.EW)
@@ -300,7 +307,7 @@ class categoricalFilter(object):
 	def update_data_upon_search(self,varname = None, elementname = None, 
 										mode=None, forceUpdate = False):
 		'''
-		Updates data upon change of the StringVar self.searchString. Will return if
+		Updates data upon change of the StringVar self.searchString. Will return None if
 		the search string is short. 
 		'''
 		if self.protectEntry < 1:
@@ -362,7 +369,8 @@ class categoricalFilter(object):
  			#self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype('str'),columns=[self.columnForFilter])
 		
 		else: 	
-			boolIndicator = dataToSearch[self.columnForFilter].str.contains(searchString).values
+			boolIndicator = dataToSearch[self.columnForFilter].str.contains(searchString,
+																	case = self.caseSensitive.get()).values
 			subsetData = dataToSearch[boolIndicator]
 		
 		self.pt.model.df = subsetData
@@ -544,13 +552,15 @@ class categoricalFilter(object):
 											delimiter=',', quotechar='\"')][0]
 								
 			regExp = self.build_regex(splitSearchString,withSeparator=False)
+		
+		
 		if self.annotateSearchString.get():
 		
 			if self.caseSensitive.get():
 				flag = 0
 			else:
 				flag = re.IGNORECASE 
-			self.uniqueFlatSplitData[column] = self.uniqueFlatSplitData[column].astype(str)
+			#self.uniqueFlatSplitData[column] = self.uniqueFlatSplitData[column].astype(str)
 			if len(splitSearchString) > 1:
 				if self.onlyFirstFind.get(): 
 					for column in self.columnForFilter:
@@ -696,7 +706,7 @@ class categoricalFilter(object):
 			operationMessage[self.operationType],
 			parent=self.toplevel) 
 	
-	def annotate_scatter_points(self):
+	def annotate_scatter_points(self, event = None):
 		'''
 		Annotates selected rows in the current plot (scatter)
 		Procedure: get_selected_rows - get_index since it the same in pandastable.model.df
@@ -726,7 +736,7 @@ class categoricalFilter(object):
 			self.plotter.nonCategoricalPlotter.bind_label_event(labelColumn)
 			self.plotter.nonCategoricalPlotter.annotationClass.addAnnotationFromDf(annotationData)
 	
-	def search_for_entry_in_hclust(self):
+	def search_for_entry_in_hclust(self, event = None):
 		'''
 		Find entry in hierarcichal clustering and center.
 		'''
@@ -741,7 +751,7 @@ class categoricalFilter(object):
 		self.plotter.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)
 		self.plotter.redraw()
 
-	def search_entry_in_line(self):
+	def search_entry_in_line(self, event = None):
 		'''
 		Find entry in line plot.
 		'''

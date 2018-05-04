@@ -1791,45 +1791,57 @@ class analyze_data(tk.Frame):
      	else:
      		parentOpen = ['Categorical Columns']     	
      				
-     	dialog = custom_sort.customSortDialog(inputValues,parentOpen = parentOpen)
+     	dialog = custom_sort.customSortDialog(inputValues,parentOpen = parentOpen, enableDeleting = True,
+     											infoText = 'You may remove columns by DEL or BACKSPACE.')
      	
      	if dialog.resortedValues is not None:
-     	     		
+     	    
      		for key,value in dialog.resortedValues.items():
+     			storeButton = []
      			if key == 'Numeric Columns':
-     				storeButton = []
+     				selectedItems = self.selectedNumericalColumns
+     				cols_ = True
      				# replace text on buttons 
-     				for text_,button in zip(value,self.selectedNumericalColumns.values()):
+     			else:
+     				selectedItems = self.selectedCategories
+     				cols_ = 'Categories'
+     				     					
+     			for text_,button in zip(value,selectedItems.values()):
      					button.configure(text = text_)
      					button.bind(right_click, lambda event, column = text_:\
-     					self.delete_dragged_buttons(event,column,columns=True))	
-     					
+     					self.delete_dragged_buttons(event,column,columns=cols_))	
      					storeButton.append(button)
+     				
+     			if len(storeButton) < len(selectedItems):
+     				delButton = [but for but in selectedItems.values() if but not in storeButton]
+     				for button in delButton:
+     						button.destroy() 		
+     			
+     			if key == 'Numeric Columns':
      					 
      				self.selectedNumericalColumns = OrderedDict(zip(value,storeButton))
-     				
+     			
      			else:
-     				storeButton = []
-     				# replace text on buttons 
-     				for text_,button in zip(value,self.selectedCategories.values()):
-     					button.configure(text = text_)
-     					button.bind(right_click, lambda event, column = text_:\
-     					self.delete_dragged_buttons(event,column))	
-     					
-     					storeButton.append(button)
-     					
+     			
      				self.selectedCategories = OrderedDict(zip(value,storeButton))
-     				     			     						 
+    				     			     						 
      			if replot:
+     				if len(storeButton) < len(selectedItems):
+     					plotType  = self.estimate_plot_type_for_default()	
+     				else:
+     					plotType = self.plt.currentPlotType
      				self.interactiveWidgetHelper.clean_frame_up()
      				self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
                                              catnames = list(self.selectedCategories.keys()),
-                                             plot_type = self.plt.currentPlotType)	
+                                             plot_type = plotType)	
             	
      		self.update_tooltip_in_receiverBox('reset')
 
 		
      def clean_up_dropped_buttons(self, mode = 'all', replot = True):
+                  # set correct df
+         #dataID = self.plt.get_dataID_used_for_last_chart()
+         #self.sourceData.set_current_data_by_id(dataID)
          
          if mode == 'all':
              for button in self.selectedNumericalColumns.values():
@@ -1851,24 +1863,18 @@ class analyze_data(tk.Frame):
              self.but_stored[10].configure(image= self.add_swarm_icon)
              self.update_tooltip_in_receiverBox('numeric')
 
-             if replot:
-             	plot_type = self.estimate_plot_type_for_default()
-             	self.interactiveWidgetHelper.clean_frame_up()
-             	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
-                                             catnames = list(self.selectedCategories.keys() ),
-                                                            plot_type = plot_type)
          elif mode == 'cat':
                 for button in self.selectedCategories.values():
                       button.destroy()
                 self.selectedCategories.clear()
                 self.update_tooltip_in_receiverBox('categories')
-                if replot:
-                	plot_type = self.estimate_plot_type_for_default()
-                	self.interactiveWidgetHelper.clean_frame_up()
-                	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
-                                             catnames = list(self.selectedCategories.keys() ),
-                                                            plot_type = plot_type)
-
+         
+         if replot:
+            	plot_type = self.estimate_plot_type_for_default()
+            	self.interactiveWidgetHelper.clean_frame_up()
+            	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),                
+                                  catnames = list(self.selectedCategories.keys() ),
+                                  plot_type = plot_type)
 
 
      def save_current_session(self):
@@ -2864,7 +2870,10 @@ class analyze_data(tk.Frame):
          '''
          Remove dragged buttons from receiver boxes.
          '''
-
+         # set correct df
+         dataID = self.plt.get_dataID_used_for_last_chart()
+         self.sourceData.set_current_data_by_id(dataID)
+		
          if columns:
              self.selectedNumericalColumns[but_name].destroy()
              del self.selectedNumericalColumns[but_name]
@@ -2879,10 +2888,7 @@ class analyze_data(tk.Frame):
              self.interactiveWidgetHelper.clean_frame_up()
              self.plt.redraw()
              return
-             
-         dataID = self.plt.get_dataID_used_for_last_chart()
-         self.sourceData.set_current_data_by_id(dataID)
-            
+                         
          _,_, plot_type, cmap = self.plt.current_plot_settings
          if plot_type in ['hclust','corrmatrix'] and len(list(self.selectedNumericalColumns.keys())) == 1:
              plot_type = 'boxplot'
@@ -2903,7 +2909,6 @@ class analyze_data(tk.Frame):
          	
          self.plt.initiate_chart(numericColumns,categoricalColumns,
          							plot_type, cmap)
-
 
 
      def remove_mpl_connection(self, plot_type = ''):
@@ -3025,7 +3030,7 @@ class analyze_data(tk.Frame):
          used_plot_style = self.plt.currentPlotType
          n_col = len(colnames)
          n_categories = len(catnames)
-         if used_plot_style == 'hclust' and n_categories > 0:
+         if used_plot_style in ['hclust','corrmatrix'] and n_categories > 0:
              return 'boxplot'
          if used_plot_style in ['hclust','corrmatrix'] and n_col == 1:
              return 'boxplot'
@@ -3799,8 +3804,13 @@ class analyze_data(tk.Frame):
 		==========
 		None - But new data frames are entered automatically from within the dialog
      	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	
+     	if selectedColumns is None:
+     		return
+     	
      	self.annot_label_scatter = False
-     	if mode == 'Annotate scatter points' and len(self.DataTreeview.columnsSelected) == 0:
+     	if mode == 'Annotate scatter points' and len(selectedColumns) == 0:
      		filterColumn  = None
      		dataSubset = None
      	elif mode == 'Find entry in hierarch. cluster':
@@ -3820,12 +3830,12 @@ class analyze_data(tk.Frame):
 
      	elif mode == 'Search string & annotate':
 
-     		filterColumn = self.DataTreeview.columnsSelected
+     		filterColumn = selectedColumns
      		dataSubset = None
 
      	else:
 
-     		filterColumn = self.DataTreeview.columnsSelected[0]
+     		filterColumn = selectedColumns[0]
      		dataSubset = None
 
      	categorical_filter.categoricalFilter(self.sourceData,self.DataTreeview,
