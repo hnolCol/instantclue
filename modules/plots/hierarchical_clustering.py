@@ -20,7 +20,6 @@
 import pandas as pd
 import numpy as np
 
-
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -28,6 +27,8 @@ import matplotlib.ticker as mtick
 
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Rectangle
+
+import math
 
 import seaborn as sns 
   
@@ -37,16 +38,21 @@ import scipy.spatial.distance as scd
 import fastcluster
 
 from modules.utils import * 
-
+line_kwargs = dict(linewidths=.45, colors='k')
 
 class hierarchichalClustermapPlotter(object):
 
-	def __init__(self,progressClass, dfClass, Plotter,figure,numericColumns = [], plotCorrMatrix = True):
+	def __init__(self,progressClass, dfClass, Plotter,figure,
+				numericColumns = [], plotCorrMatrix = True):
 		
 		self.exportId = 0
 		self.exportAxes = {}
 		self.exportYLim = {}
 		self.savedLabels = {}
+		
+		self.polarXTicks = []
+		self.clusterLabelsCirc = []
+		
 		self.fromSavedSession = False
 		
 		self.progressClass = progressClass
@@ -64,9 +70,11 @@ class hierarchichalClustermapPlotter(object):
 		##retrieve hclust cmap and dendrogram settings from the Plotter helper.
 		## updaten
 		self.plotter = Plotter
+		
 		cmapClusterMap, self.cmapRowDendrogram, \
 		self.cmapColorColumn, self.metricRow, self.metricColumn, \
-		self.methodRow, self.methodColumn = self.plotter.get_hClust_settings()
+		self.methodRow, self.methodColumn, self.circulizeDendrogram ,\
+		self.showCluster = self.plotter.get_hClust_settings()
 		
 		self.cmapClusterMap = get_max_colors_from_pallete(cmapClusterMap) ## to avoid same color over and over again
 		
@@ -77,15 +85,17 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.labelColumnList = []
 		self.colorColumnList = []
+		self.scatterIds = []
 
-		self.get_data()
-			
-
-			
-		
+		self.get_data()		
 		
 		self.lenDf = len(self.df.index)
 		self.axClusterMapXLimits = (0,len(numericColumns))
+		
+		
+		if self.circulizeDendrogram :
+			self.metricColumn = 'None'
+			
 		
 		self.create_cluster_map()
 		
@@ -102,17 +112,24 @@ class hierarchichalClustermapPlotter(object):
 						'Aborting! NaN Filtering resulted\nin an empty data frame ...')	
 			return
 								
-		self.df_copy = self.df.copy()
 		
 		if self.plotCorrMatrix:
 			self.corrMethod = self.plotter.corrMatrixCoeff
 			self.df = self.df.corr(method = self.corrMethod).dropna()
+		
+		self.df_copy = self.df.copy()
 				
 	def add_axes_to_figure(self,specificAxis,fig = None, returnAxes = False):
 		'''
 		'''		
 		if fig is None:
 			fig = self.figure
+		
+		if self.circulizeDendrogram :
+			if specificAxis is None:
+				self.circDAxis = fig.add_subplot(111,polar=True)
+			
+			return 
 		
 		if specificAxis is not None:
 			##
@@ -191,8 +208,198 @@ class hierarchichalClustermapPlotter(object):
 									self.axLabelColor,self.axColormap = axRowDendro,axColumnDendro,axClusterMap,axLabelColor,axColormap 
 			self.plotter.redraw()
 
-		
+	def x_to_theta(self,x, minX, maxX):
+		'''
+		'''
+		theta = (x-minX)/(maxX-minX) * 1.90 * np.pi
+		return theta 
 	
+	def scale_r_to_1(self,y,maxY):
+		'''
+		'''
+		return abs(y-maxY)/maxY
+		
+		
+	def get_straight_lines(self,points,maxY, minX, maxX):
+		'''
+		'''
+		y1, y2 = self.scale_r_to_1(points[0][1],maxY), self.scale_r_to_1(points[1][1],maxY)
+		y3, y4 = self.scale_r_to_1(points[2][1],maxY), self.scale_r_to_1(points[3][1],maxY)
+		theta1, theta2 = self.x_to_theta(points[0][0],minX,maxX), self.x_to_theta(points[-1][0],minX,maxX)
+		
+		return [theta1,theta1],[y1,y2],[theta2,theta2],[y3,y4]
+
+	def find_max_min_in_dn(self,dn):
+		'''
+		'''
+		flattened_listX = [y for x in  dn['icoord'] for y in x]
+		flattened_listY = [y for x in  dn['dcoord'] for y in x]
+		
+		maxX, minX = max(flattened_listX),  min(flattened_listX)
+		maxY, minY = max(flattened_listY),  min(flattened_listY)
+		
+		return maxX,minX,maxY,minY
+
+	def get_connecting_lines(self,points,theta1,theta2,maxY):
+		'''
+		'''
+		y = [self.scale_r_to_1(points[1][1],maxY)] * 50
+		x = np.linspace(theta1,theta2,num=50)
+		
+		return x,y 
+   		 
+   		
+	def circulate_dendrogram(self, ax, dn, create_background = True):
+		'''
+		'''
+		lines = []
+		self.endPoints = np.linspace(0,1.90 * np.pi,num = len(dn['leaves']))
+		data = [list(zip(x,y)) for x,y in zip(dn['icoord'],dn['dcoord'])]
+		maxX,minX,self.maxY,minY = self.find_max_min_in_dn(dn)
+		
+		for points in data:
+		
+			x1,y1,x2,y2 = self.get_straight_lines(points,self.maxY,minX,maxX)
+			
+			xx,yy = self.get_connecting_lines(points,x1[0],x2[0],self.maxY)
+			
+			lines.append(list(zip(x1,y1)))
+			lines.append(list(zip(x2,y2)))
+			lines.append(list(zip(xx,yy)))
+		
+		lines = LineCollection(lines,**line_kwargs)
+		ax.add_collection(lines )
+		self.progressClass.update_progressbar_and_label(85,'Circulized..')
+
+		ax.grid('off')
+		
+		ax.set_yticks([])
+		if self.plotCorrMatrix:
+			ax.set_xticks(self.endPoints)
+			ax.set_xticklabels(self.df.columns.values.tolist())
+			self.rescale_labels_polar_axis(ax, create = True, 
+										   yLimit=1.01)
+			self.circDAxis.set_xticks([])
+		else:
+			ax.set_xticks([])
+		ax.set_ylim(0,1)
+		
+		if self.showCluster:
+		
+			if create_background:
+				self.plotter.redraw()
+				self.backgroundRow = self.figure.canvas.copy_from_bbox(self.circDAxis.bbox)		
+				
+				
+		if self.showCluster:
+		
+			self.progressClass.update_progressbar_and_label(92,'Getting Clusters and plotting..')
+			xLimit, maxD = self.draw_cluster_in_circ(self.maxY)
+			self.rowMaxDLine = ax.plot(np.linspace(0,xLimit,num=70),[maxD]*70, c = "k", linewidth = 1)[0]
+
+
+
+	def draw_cluster_in_circ(self, maxY):
+	
+			self.remove_clust_labels()
+			uniqeClustlabel, countsClust = np.unique(self.rowClusterLabel, return_counts=True)
+			colors = sns.color_palette(self.cmapRowDendrogram,uniqeClustlabel.size)
+			for n,xLimit in enumerate(countsClust):
+			
+				if n != 0:
+					xLow = sum(countsClust[:n])*10
+				else:
+					xLow = n - 0.1
+				xLimit = self.x_to_theta(xLow+xLimit*10,0,sum(countsClust)*10)
+				xLow =  self.x_to_theta(xLow,0,sum(countsClust)*10)
+				maxD = self.scale_r_to_1(self.rowMaxD,maxY)
+
+				xx = np.linspace(xLow,xLimit,num=70)
+					
+				polyClust = self.circDAxis.fill_between(xx, 1, maxD,facecolor=colors[n],alpha=0.75)
+				self.clusterLabelsCirc.append(polyClust)
+			return xLimit, maxD
+
+	def remove_clust_labels(self):
+		'''
+		'''
+		for polyClust in self.clusterLabelsCirc:
+			try:
+				polyClust.remove()
+			except:
+				pass
+		self.clusterLabelsCirc = []
+
+	def rescale_labels_polar_axis(self, ax, create = False, yLimit = None, 
+								  updateText = False):
+		'''
+		'''		
+		if yLimit is None:
+			yLimit = ax.get_ylim()[1] + 0.08
+		if create:
+			if len(self.polarXTicks) != 0:
+				for txt in self.polarXTicks:
+						try:
+							txt.remove()  
+						except: 
+							pass
+						
+			self.polarXTicks = []
+			#labels = ax.get_xticklabels()
+			for n,theta in enumerate(self.endPoints):
+				
+				rotation = math.degrees(theta)
+				if rotation > 90 and rotation < 270:
+					ha_ = 'right'
+				else:
+					ha_ = 'left'
+					
+				if rotation > 90 and rotation < 270:
+					rotation += 180			
+					
+				txt = ax.text(theta,yLimit, s= self.labelColumn[n],
+					ha=ha_,va="center",
+					rotation = rotation,
+					rotation_mode = 'anchor')
+									
+				self.polarXTicks.append(txt)
+				
+			ax.set_xticklabels([])
+		else:
+			
+			for n,txt in enumerate(self.polarXTicks):
+				
+				theta = self.endPoints[n]
+				txt.set_position((theta,yLimit))			
+				
+					
+	def add_outer_grid(self,n,endPoints,ax):
+		'''
+		Add an outer grid.
+		'''
+		xx = np.linspace(0,2*np.pi,num=100)
+		
+		for level in range(n):
+			
+			ax.plot(xx,[1+0.05*level]*100, color = 'lightgrey', linewidth = 0.2, zorder = 1)
+			
+			#randInt = np.random.randint(low=0,high = self.endPoints.size, size=70)
+			if level == 0:
+			
+				lines = []
+				for p in self.endPoints:
+				
+					lines.append([(p,1+0.05*level),(p,1+0.05*n)])
+			
+				lines = LineCollection(lines, colors = 'lightgrey', linewidth = 0.3, zorder = 1)
+				ax.add_collection(lines)
+			
+			#ax.scatter(self.endPoints[randInt],[1+ 0.05*level + 0.025]* 70, sizes = [10])
+		
+		ax.set_ylim(0,1+0.05*n)
+			
+	
+			
 	def replot(self, updateData = False):
 		'''
 		'''
@@ -204,12 +411,23 @@ class hierarchichalClustermapPlotter(object):
 	def create_cluster_map(self,specificAxis=None,figure=None):
 		'''
 		'''
+		if len(self.df.index) < 2:
+			self.progressClass.close()
+			tk.messagebox.showinfo('Erro ..','Filtered data frame has less than 2 rows.')
+			return
+		
 		self.progressClass.update_progressbar_and_label(2,'Starting ...')
 		
 		self.add_axes_to_figure(specificAxis,figure)
 		
-		if self.plotCorrMatrix == False: ##if correlation Matrix is used. We dont allow movement of maxD Limits becaause clusters cannot be associated with rows
-			self.add_some_bindings()
+		if self.plotCorrMatrix == False: 
+		##if correlation Matrix is used. We dont allow movement of maxD Limits 
+		# becaause clusters cannot be associated with rows
+			if self.circulizeDendrogram:
+				self.add_some_bindings(self.circDAxis)
+			
+			else:
+				self.add_some_bindings(self.axRowDendro)
 		
 		# get data as numpy arrays
 		
@@ -218,7 +436,7 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.progressClass.update_progressbar_and_label(5,'Data collected ...')
 		
-		if self.metricRow != 'None':
+		if self.metricRow != 'None' and self.circulizeDendrogram  == False:
 		
 			self.rowLinkage, self.rowMaxD = self.cluster_data(dataRowCluster, 
 														  self.metricRow, self.methodRow)
@@ -231,8 +449,9 @@ class hierarchichalClustermapPlotter(object):
 		
 			self.progressClass.update_progressbar_and_label(10,'Clustering rows done ...')
 		
-		else:
-			self.axRowDendro.axis('off')
+		elif self.circulizeDendrogram  == False:
+				
+				self.axRowDendro.axis('off')
 			
 		if self.metricColumn != 'None':
 			
@@ -247,25 +466,54 @@ class hierarchichalClustermapPlotter(object):
 			self.add_dendrogram(self.Z_col,False,self.axColumnDendro)
 		
 			self.progressClass.update_progressbar_and_label(43,'Clustering columns done ...')
-		else:
+			
+		elif self.circulizeDendrogram  == False:
 			
 			self.axColumnDendro.axis('off')
+		
+		
+		
+		if self.circulizeDendrogram :	
 			
-		self.resort_data_frame(self.Z_row,self.Z_col)
+			self.rowLinkage, self.rowMaxD = self.cluster_data(dataRowCluster, 
+														  self.metricRow, self.methodRow)
+			self.Z_row = sch.dendrogram(self.rowLinkage, orientation='left', 
+								color_threshold= self.rowMaxD, 
+								no_plot=True)
+						
+			self.progressClass.update_progressbar_and_label(34,'Dendrogram calculated ..')
+			
+			self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
+			
+			self.resort_data_frame(self.Z_row,self.Z_col)
+			
+			self.progressClass.update_progressbar_and_label(44,'Resorted data frame..')
+			self.progressClass.update_progressbar_and_label(65,'Circulize dendrogram..')
+			self.circulate_dendrogram(self.circDAxis,self.Z_row)
 		
-		self.progressClass.update_progressbar_and_label(64,'Plotting color map ...')
-	
-		self.colorMesh = self.axClusterMap.pcolormesh(self.df[self.numericColumns].values, cmap = self.cmapClusterMap)
-		plt.colorbar(self.colorMesh, cax=self.axColormap)
 		
-		self.add_maxD_lines()
+		else:
 		
-		self.progressClass.update_progressbar_and_label(72,'Adjusting xlimits ...')
+			self.resort_data_frame(self.Z_row,self.Z_col)
+					
+			self.progressClass.update_progressbar_and_label(64,'Plotting color map ...')
+			
+			self.colorMesh = self.axClusterMap.pcolormesh(self.df[self.numericColumns].values, 
+													  cmap = self.cmapClusterMap)
+			plt.colorbar(self.colorMesh, cax=self.axColormap)
+			if self.plotCorrMatrix == False:
+				self.axColormap.set_title('n={}'.format(dataRowCluster.shape[0]))
 		
-		self.adjust_axis_limits_and_labels(self.axClusterMap,self.axLabelColor,self.axRowDendro,self.axColumnDendro,self.axColormap)
-
+			self.add_maxD_lines()
 		
-		self.progressClass.update_progressbar_and_label(85,'Draw heatmap ...')
+			self.progressClass.update_progressbar_and_label(72,'Adjusting xlimits ...')
+		
+			self.adjust_axis_limits_and_labels(self.axClusterMap,self.axLabelColor,self.axRowDendro,self.axColumnDendro,self.axColormap)
+			
+			
+		
+			self.progressClass.update_progressbar_and_label(85,'Draw heatmap ...')
+		
 		
 		self.plotter.redraw()
 		
@@ -275,8 +523,8 @@ class hierarchichalClustermapPlotter(object):
 	def get_cluster_number(self,linkage,maxD):
 		'''
 		'''
-		return sch.fcluster(linkage,maxD,'distance')		
 		
+		return sch.fcluster(linkage,maxD,'distance')		
 	
 		
 	def cluster_data(self, dataFrame, metric, method):
@@ -288,7 +536,7 @@ class hierarchichalClustermapPlotter(object):
 			distanceMatrix = scd.pdist(dataFrame, metric = metric)
 			linkage = sch.linkage(distanceMatrix,method = method)
 			del distanceMatrix
-			
+		
 		maxD = 0.7*max(linkage[:,2])
 		return linkage, maxD 
 		
@@ -301,8 +549,11 @@ class hierarchichalClustermapPlotter(object):
 		independent_coord = dendrogram['icoord']
 		max_dependent_coord = max(map(max, dependent_coord))
 		
+		#print(dependent_coord)
+		#print(independent_coord)
+		
 
-		line_kwargs = dict(linewidths=.45, colors='k')
+		
 		if rotate:
 			lines = LineCollection([list(zip(x, y))
                                     		for x, y in zip(dependent_coord,
@@ -323,10 +574,9 @@ class hierarchichalClustermapPlotter(object):
 			self.yLimitCol =  max_dependent_coord * 1.05  
 			ax.set_xlim(0, self.xLimitCol)
 			ax.set_ylim(0, self.yLimitCol)
-			
-
 
 		ax.add_collection(lines)
+		
 		if ax == self.axRowDendro and create_background:
 			self.plotter.redraw()
 			self.backgroundRow = self.figure.canvas.copy_from_bbox(self.axRowDendro.bbox)
@@ -373,7 +623,8 @@ class hierarchichalClustermapPlotter(object):
 	
 	
 				
-	def adjust_axis_limits_and_labels(self,axClusterMap,axLabelColor,axRowDendro,axColumnDendro,axColormap,export=False):
+	def adjust_axis_limits_and_labels(self,axClusterMap,axLabelColor,axRowDendro,
+										axColumnDendro,axColormap,export=False):
 		'''
 		'''
 		numbNumericColumns = len(self.numericColumns)
@@ -381,10 +632,17 @@ class hierarchichalClustermapPlotter(object):
 		# column names
 		axClusterMap.set_xticks(np.linspace(0.5,numbNumericColumns-0.5,num=numbNumericColumns))
 		axClusterMap.set_xticklabels(self.numericColumns, rotation=90)
+
+		
+		
 		axClusterMap.xaxis.set_label_position('bottom')
 		axClusterMap.yaxis.set_label_position('right')
 		axClusterMap.yaxis.tick_right()
-		axClusterMap.set_yticklabels([], minor=False)   
+		if self.plotCorrMatrix:
+			axClusterMap.set_yticks([n+0.5 for n in range(len(self.numericColumns))])
+			axClusterMap.set_yticklabels(self.numericColumns)
+		else:
+			axClusterMap.set_yticklabels([], minor=False)   
 		
 
 		#axis to display label/color column, hide axis
@@ -399,6 +657,21 @@ class hierarchichalClustermapPlotter(object):
 		axColumnDendro.set_xticklabels([])
 		
 		## format colormap 
+		self.format_colorMap_ticks(axColormap)
+
+		
+		
+		
+		#axColormap.yaxis.set_major_locator(mtick.MaxNLocator(5)) 
+		
+		## adds cluster numbers to dendrogram
+		if self.showCluster and self.plotCorrMatrix == False:
+			self.add_cluster_label(axRowDendro, export = export)
+		else:
+			axRowDendro.set_yticklabels([])
+	
+	def format_colorMap_ticks(self,axColormap):
+		
 		axColormap.tick_params(axis=u'y', which=u'both',length=2.3,direction='out')
 		ticks = axColormap.get_yticklabels()
 		nTicks = len(ticks)
@@ -409,36 +682,23 @@ class hierarchichalClustermapPlotter(object):
 			newTicks[idx] = ticks[idx].get_text() 
 					
 		axColormap.set_yticklabels(newTicks)
-		
-		
-		
-		#axColormap.yaxis.set_major_locator(mtick.MaxNLocator(5)) 
-		
-		## adds cluster numbers to dendrogram
-		if self.plotCorrMatrix == False:
-			self.add_cluster_label(axRowDendro, export = export)
-		else:
-			axRowDendro.set_yticklabels([])
-
-	
-			
-			
-			
-		
-
-	def add_some_bindings(self):
+						
+	def add_some_bindings(self,ax):
 		'''
 		'''
 		## all available bindings
 		
+		if self.circulizeDendrogram == False:
+			self.y_padding_clust = \
+			self.axClusterMap.callbacks.connect('ylim_changed', 
+							lambda event:self.on_ylim_change(event))
 		
-		self.y_padding_clust = \
-		self.axClusterMap.callbacks.connect('ylim_changed', lambda event:self.on_ylim_change(event))
 		self.adjustRowMaxD = \
-		self.figure.canvas.mpl_connect('button_press_event', lambda event:self.move_rowMaxD_levels_and_relim(event))
+		self.figure.canvas.mpl_connect('button_press_event', 
+							lambda event:self.move_rowMaxD_levels_and_relim(event,ax))
 		
 
-	def move_rowMaxD_levels_and_relim(self,event):
+	def move_rowMaxD_levels_and_relim(self,event,ax):
 		'''
 		
 		'''
@@ -450,40 +710,65 @@ class hierarchichalClustermapPlotter(object):
 			return
 		elif hasattr(self,'rowMaxDLine') == False:
 			return	
+			
+		elif event.xdata is None:
+			return 
+		elif event.ydata is None and self.circulizeDendrogram:
+			return
 		elif self.rowMaxDLine.contains(event)[0]:
 			
 			self.motion_dendrogram = self.figure.canvas.mpl_connect('motion_notify_event' , 
-													lambda event: self.moveRowMaxDLine(event))
+													lambda event: self.moveRowMaxDLine(event,ax))
 			self.release_event = self.figure.canvas.mpl_connect('button_release_event', 
-													lambda event: self.redraw_row_dendrogram(event))
+													lambda event: self.redraw_row_dendrogram(event,ax))
                  
                
-	def redraw_row_dendrogram(self,event):
+	def redraw_row_dendrogram(self,event,ax):
 		'''
 		'''
 		self.figure.canvas.mpl_disconnect(self.motion_dendrogram)
 		self.figure.canvas.mpl_disconnect(self.release_event) 
-		
-		self.rowMaxD = event.xdata
-		self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
-		self.add_cluster_label(self.axRowDendro)
+		if self.circulizeDendrogram:
+			if event.ydata is not None:
+				self.rowMaxD = (1 - event.ydata) * self.maxY
+				self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
+			else:
+				maxD = self.scale_r_to_1(self.rowMaxD,self.maxY)
+				self.rowMaxDLine.set_ydata([maxD]*70)
+			self.draw_cluster_in_circ(self.maxY)
+		else:
+			
+			if event.xdata is not None:
+				self.rowMaxD = event.xdata
+				self.rowClusterLabel = self.get_cluster_number(self.rowLinkage,self.rowMaxD)
+			else:
+				self.rowMaxDLine.set_xdata(self.rowMaxD)
+			
+			self.add_cluster_label(ax)
 		
 		self.plotter.redraw()
+		if self.circulizeDendrogram:
+			self.backgroundRow = self.figure.canvas.copy_from_bbox(self.circDAxis.bbox)	 
 		
 
 				
-	def moveRowMaxDLine(self,event):
+	def moveRowMaxDLine(self,event = None,ax = None):
 		'''
 		'''
-		if event.inaxes != self.axRowDendro or event.button != 1:
+		if event.inaxes != ax or event.button != 1:
 			self.figure.canvas.mpl_disconnect(self.motion_dendrogram)
 			return
 			
 		self.figure.canvas.restore_region(self.backgroundRow)
-		x = event.xdata
-		self.rowMaxDLine.set_xdata(x)
-		self.axRowDendro.draw_artist(self.rowMaxDLine)
-		self.figure.canvas.blit(self.axRowDendro.bbox)
+		if self.circulizeDendrogram:
+		
+			self.rowMaxDLine.set_ydata([event.ydata]*70)
+			
+		else:
+			x = event.xdata
+			self.rowMaxDLine.set_xdata(x)
+		ax.draw_artist(self.rowMaxDLine)
+		self.figure.canvas.blit(ax.bbox)
 		
    
 	def reset_ylimits(self,redraw=True):
@@ -620,14 +905,23 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.df = self.dfClass.join_missing_columns_to_other_df(self.df,id=self.dataID,
 																  definedColumnsList=labelColumnList)
-		if len(labelColumnList) == 1 and self.colorData.empty:														  													  
+		if self.circulizeDendrogram or (len(labelColumnList) == 1 and self.colorData.empty):														  													  
 			self.labelColumn = self.df[labelColumnList[0]].values.tolist()
 		else:
 			self.update_tick_labels_of_rows()
-		self.on_ylim_change()
+		if self.circulizeDendrogram:
+			self.circDAxis.set_xticks(self.endPoints)
+			self.circDAxis.set_xticklabels(self.labelColumn)
+			
+			self.rescale_labels_polar_axis(self.circDAxis, create = True, 
+										   )
+			self.circDAxis.set_xticks([])
+		else:
+			self.on_ylim_change()
+			
 		self.plotter.redraw()
-
 		
+				
 	def update_tick_labels_of_rows(self):
 		'''
 		'''
@@ -658,39 +952,102 @@ class hierarchichalClustermapPlotter(object):
 	def add_color_column(self,colorColumnList):
 		'''
 		'''
-		self.reset_ylimits(redraw=False)
+		if self.circulizeDendrogram  == False:
+		
+			self.reset_ylimits(redraw=False)
+		
 		self.colorData = pd.DataFrame()
 		self.colorColumnList = colorColumnList
 		numbInput = len(colorColumnList)
 		self.df = self.dfClass.join_missing_columns_to_other_df(self.df,id=self.dataID,
-																  definedColumnsList=colorColumnList)
-		# adjust color column axis
-		self.adjust_colorLabel_axis(numbInput)
-				
-		self.axLabelColor.axis('on')	
-															  
-		self.axLabelColor.set_xlim([0,numbInput])			
+																  definedColumnsList=colorColumnList)		
 		
-		dataTypes = self.dfClass.get_data_types_for_list_of_columns(colorColumnList)
-		
-		# get all unique values
-		uniqueValuesPerColumn = self.dfClass.get_unique_values(colorColumnList, forceListOutput=True)
-		uniqueValuesTotal = np.unique(np.concatenate(uniqueValuesPerColumn))
-		
-		factorDict = dict(zip(uniqueValuesTotal.tolist(),np.arange(0,uniqueValuesTotal.size)))
-		factorDict['-'] = factorDict['nan'] = -1
-		#self.colorData[colorColumnList] = self.df.replace(factorDict)
-		
-		for n,column in enumerate(colorColumnList):
-			self.colorData[column] = self.df[column].map(factorDict)
+		if self.circulizeDendrogram :
+			self.legendParams = OrderedDict()
 			
+			dataTypes = self.dfClass.get_data_types_for_list_of_columns(colorColumnList)
+			# get numericColumns 
+			#uniqueValuesPerColumn = self.dfClass.get_unique_values(colorColumnList, forceListOutput=True)
+			#nTotal = sum([x.size for x in uniqueValuesPerColumn])
+			
+			self.df['row_idx_InstantClue'] = range(len(self.df.index))
+			
+			for id in self.scatterIds:
+				m = id
+				m.remove()
+			scatterIds = []
+			if len(self.figure.legends) != 0:
+				self.figure.legends[0].remove()
+					
+			n = 0
+			
+			for n,column in enumerate(self.colorColumnList):
+				
+				if dataTypes[n] == 'object':
+					
 
-		self.draw_color_data(self.axLabelColor,numbInput)
+					uniqueValues = self.dfClass.get_unique_values(column)
+					for uniqueVal in uniqueValues:
+			
+						subset = self.df[self.df[column] == uniqueVal]
+						rowIdx = subset['row_idx_InstantClue']
+						yValue = 1.025 + 0.05 * n 				
+						scat = self.circDAxis.scatter(self.endPoints[rowIdx],
+								[yValue] * len(rowIdx.index), 
+								sizes = [10], zorder=4, label = uniqueVal)
+						scatterIds.append(scat)
+						self.legendParams[uniqueVal] = n
+						n+=1
+					self.figure.legend(scatterIds,uniqueValues,'upper right')
+						
+				else:
+					
+					cmap = get_max_colors_from_pallete(self.cmapColorColumn)
+					scaledData = scale_data_between_0_and_1(self.df[column]) 
+					colors = cmap(scaledData)
+					yValue = 1.025 + 0.05 * n 	
+					
+					self.circDAxis.scatter(self.endPoints,[yValue] * self.endPoints.size, 
+						facecolors = colors, sizes = (scaledData) * 10 + 2, zorder=4)
+					self.legendParams[column] = n
+					n += 1
+				
+			#else:
+			
+			self.add_outer_grid(n,self.endPoints,self.circDAxis)
+			self.circDAxis.set_ylim(0,yValue+0.025)
+			self.rescale_labels_polar_axis(self.circDAxis,False,yValue+0.08)
+			
+			
+			
+						
 		
-		self.update_tick_labels_of_rows()
-		## hides the labels or shows them if appropiate (e.g no overlap) 
-		self.on_ylim_change()
+		else:
+		
+			# get all unique values
+			uniqueValuesPerColumn = self.dfClass.get_unique_values(colorColumnList, forceListOutput=True)
+			uniqueValuesTotal = np.unique(np.concatenate(uniqueValuesPerColumn))
+			factorDict = dict(zip(uniqueValuesTotal.tolist(),np.arange(0,uniqueValuesTotal.size)))
+			factorDict['-'] = factorDict['nan'] = -1
+			#self.colorData[colorColumnList] = self.df.replace(factorDict)	
+				
+			for n,column in enumerate(colorColumnList):
+				self.colorData[column] = self.df[column].map(factorDict)
+			# adjust color column axis		
+						
+			self.adjust_colorLabel_axis(numbInput)
+			self.axLabelColor.axis('on')	
+			self.axLabelColor.set_xlim([0,numbInput])			
+		
+			self.draw_color_data(self.axLabelColor,numbInput)
+		
+			self.update_tick_labels_of_rows()
+			## hides the labels or shows them if appropiate (e.g no overlap) 
+			self.on_ylim_change()
+			
 		self.plotter.redraw()
+		if self.circulizeDendrogram:
+			self.backgroundRow = self.figure.canvas.copy_from_bbox(self.circDAxis.bbox)			
 
 	def find_index_and_zoom(self,idx):
 		'''
@@ -722,7 +1079,8 @@ class hierarchichalClustermapPlotter(object):
 		self.colorColumnList  = []
 		self.update_tick_labels_of_rows()
 		self.plotter.redraw()
-		label.destroy()
+		if label is not None:
+			label.destroy()
 
 	def remove_labels(self, event = '', label = None):
 		'''
@@ -732,17 +1090,24 @@ class hierarchichalClustermapPlotter(object):
 		self.update_tick_labels_of_rows()
 		self.on_ylim_change(event)
 		self.plotter.redraw()
-		label.destroy()
+		if label is not None:
+			label.destroy()
 		
 	def change_cmap_of_cluster_map(self,newCmap):
 		'''
 		Changes colormap of the pcolormesh
 		'''
+		if hasattr('colorMesh',self) == False:
+			return
+		#yticks = self.axColormap.get_yticks() 
+		#print(yticks)
 		self.plotter.cmapClusterMap = newCmap
 		newCmap = get_max_colors_from_pallete(newCmap)  
 		self.colorMesh.set_cmap(newCmap)
-		self.axColormap.yaxis.set_major_locator(mtick.MaxNLocator(3))	
+		
+		#self.axColormap.yaxis.set_major_locator(mtick.MaxNLocator(3))	
 		self.cmapClusterMap = newCmap	
+		self.format_colorMap_ticks(self.axColormap)
 		
 		
 	def export_cluster_number_to_source(self):
@@ -755,6 +1120,7 @@ class hierarchichalClustermapPlotter(object):
 		# we need to get the original Data again to get the correct index self.df_copy
 
 		newName = self.dfClass.evaluate_column_name('hclust_#')
+		
 		annotationDf = pd.DataFrame(clusterAnnotation,columns=[newName],index = self.df_copy.index)
 		
 		self.dfClass.join_df_to_currently_selected_df(annotationDf)
@@ -801,6 +1167,8 @@ class hierarchichalClustermapPlotter(object):
 		
 		im = axClusterMap.pcolormesh(self.df[self.numericColumns].values, cmap = self.cmapClusterMap)
 		plt.colorbar(im, cax=axColormap)
+		if self.plotCorrMatrix == False:
+				axColormap.set_title('n={}'.format(self.df.shape[0]))
 				
 		self.adjust_axis_limits_and_labels(axClusterMap,axLabelColor,axRowDendro,axColumnDendro,axColormap,export=True)
 		

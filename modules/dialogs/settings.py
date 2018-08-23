@@ -39,7 +39,8 @@ binnedScatter = OrderedDict([('Number of bins',list(range(3,20))),
 
 generalSettings = OrderedDict([
 							   ('Error bar',['Confidence Interval (95%)','Standard deviation']),
-							   ('Aggegrate num. encoding colors',['mean','sum'])])
+							   ('Aggegrate num. encoding colors',['mean','sum']),
+							   ('Arrow Style',arrowOptions)])
 
 abbrError = {'Confidence Interval (95%)':95,
 			'Standard deviation':'sd'}
@@ -206,6 +207,7 @@ class settingsDialog(object):
 	def set_default_value(self, option):
 		'''
 		'''
+		print(self.type.get())
 		if self.type.get() == 'Hierarchical Clustering':
 			return getattr(self.plotter,attrNames[option])
 		
@@ -215,6 +217,8 @@ class settingsDialog(object):
 		elif self.type.get() == 'General Settings':
 			if option == 'Error bar':
 				return self.plotter.errorBar
+			elif option == 'Arrow Style':
+				return arrow_args['connectionstyle']
 			elif option == 'Aggegrate num. encoding colors':
 				return self.plotter.aggMethod
 		elif self.type.get() == 'Binned Scatter':
@@ -222,6 +226,8 @@ class settingsDialog(object):
 				return self.plotter.numbBins
 			elif option == 'Scale counts (1-0)':
 				return str(self.plotter.scaleBinsInScatter)
+		
+			
 			
 
 	def change_settings(self):
@@ -237,6 +243,7 @@ class settingsDialog(object):
 		
 			self.error_bar_adjustment()
 			self.adjust_agg_method()
+			self.adjust_arrow_style()
 		
 		elif type == 'Dimensional Reduction':
 		
@@ -288,6 +295,15 @@ class settingsDialog(object):
 			return
 		else:
 			setattr(self.plotter,'aggMethod',input)
+
+	def adjust_arrow_style(self):
+		global arrow_args
+		input = self.settingsVar['Arrow Style'].get()
+		if input not in arrowOptions:
+			tk.messagebox.showinfo('Error.','Unknwon arrow option',parent=self.toplevel)
+			return
+		else:
+			arrow_args['connectionstyle'] = input
 			
 	def error_bar_adjustment(self):
 		'''

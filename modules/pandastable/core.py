@@ -222,8 +222,8 @@ class Table(Canvas):
         self.bind('<Button-5>', self.mouse_wheel)
         self.focus_set()
         return
-
-    def show(self, callback=None,noRowIndex = True):
+	# ADDED COLORS FOR ROW = > make row headers colorful. 
+    def show(self, callback=None,noRowIndex = True, colorsForRow = None):
         """Adds column header and scrollbars and combines them with
            the current table adding all to the master frame provided in constructor.
            Table is then redrawn."""
@@ -231,6 +231,9 @@ class Table(Canvas):
         #Add the table and header to the frame
         if noRowIndex:
         	self.rowheader = RowHeader(self.parentframe, self, width=self.rowheaderwidth)
+        	if colorsForRow is not None:
+        		## CHNAGED
+        		self.rowheader.color = colorsForRow
         self.tablecolheader = ColumnHeader(self.parentframe, self)
         self.rowindexheader = IndexHeader(self.parentframe, self)
         self.Yscrollbar = AutoScrollbar(self.parentframe,orient=VERTICAL,command=self.set_yviews)

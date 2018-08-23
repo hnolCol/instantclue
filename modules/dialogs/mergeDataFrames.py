@@ -75,10 +75,11 @@ class mergeDataFrames(object):
 		'''
 		self.treeviews = OrderedDict()
 		self.dfColumns = dict()
-		self.dfSelection = dict()
+		self.dfNames = dict()
+		self.dfSelection = OrderedDict()
 		self.joinOptions = dict()
 		self.dataTreeView = dataTreeView 
-		self.dataFrameList = dataTreeView .dataFramesSelected
+		self.dataFrameList = dataTreeView.dataFramesSelected
 		if len(self.dataFrameList) < 2:
 			tk.messagebox.showinfo('Error ..','You need to select at least two data frames.')
 			return
@@ -114,7 +115,7 @@ class mergeDataFrames(object):
 		popup.wm_title('Combine data frames') 
 		popup.bind('<Escape>', self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=620
+		w=850
 		h=430
 		self.toplevel = popup
 		self.center_popup((w,h))
@@ -215,9 +216,11 @@ class mergeDataFrames(object):
 			if n == 0:
 				self.dfColumns['left data frame'] = dfColumnDict
 				self.dfSelection['left data frame'] = []
+				self.dfNames['left data frame'] = self.fileNames[dfID]
 			elif n == 1:	
 				self.dfColumns['right data frame'] = dfColumnDict
 				self.dfSelection['right data frame'] = []
+				self.dfNames['right data frame'] = self.fileNames[dfID]
 		
 		
 	def extract_merge_props(self,columnsForMerge = None):
@@ -259,14 +262,21 @@ class mergeDataFrames(object):
 			# get the column names for merge
 			props['left_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['left data frame']] #cutoff the data frame id from the iid = columnName
 			props['right_on'] = [column[len(self.dataFrameList[1])+1:] for column in columnsForMerge['right data frame']]
-			if self.evaluate_input(props) is None:
+			eval = self.evaluate_input(props)
+			if eval is None:
 				return	
 		return props	
 
 	def extract_columns(self,props):
-		
+		'''
+		Get columns that were selected by the user.
+		Output
+		=============
+		collect			-list. List of selected columns. 
+		'''
 		collect = []
 		for key,selection in self.dfSelection.items():
+			
 			allColumns = list(self.dfColumns[key].values())
 			
 			if len(selection) == 0:
@@ -329,6 +339,18 @@ class mergeDataFrames(object):
 		
 	def subset_dfs(self,which):
 		'''
+		Subsets dfs if certain columns should not be included within
+		the new merged data frame. 
+		
+		Parameters 
+		=============
+		which - data frame id. 
+		
+		
+		Output
+		=============
+		None
+		
 		'''
 		columnKey = '{} data frame'.format(which)
 		if columnKey not in self.dfColumns:
@@ -340,10 +362,7 @@ class mergeDataFrames(object):
 		dialog = simpleListboxSelection('Selected columns will be \nused for merging.',
 										columns)
 		selection = dialog.selection
-		print(selection)
 		self.dfSelection[columnKey] = selection
-		print(self.dfSelection)
-		
 		
 		
 			
@@ -373,7 +392,7 @@ class mergeDataFrames(object):
 		Output	- None 
 		'''
 		
-		labelTree = tk.Label(self.treeviewFrame, text = caption, bg=MAC_GREY)
+		labelTree = tk.Label(self.treeviewFrame, text = caption + '({})'.format(self.dfNames[caption]), bg=MAC_GREY)
 		labelTree.grid(row=row, sticky=tk.W, column = column)
 		treeview = ttk.Treeview(self.treeviewFrame,show='tree', 
 							style='source.Treeview')
@@ -436,10 +455,13 @@ class mergeDataFrames(object):
 		else:
 			propsMerge = self.extract_merge_props(columnsForMerge)
 			## check if user has selected columns to use	
+			print(propsMerge)
 			if propsMerge is None:
 				return		
 			leftCol, rightCol = self.extract_columns(propsMerge)			
 			
+			#print(leftCol) 
+			#print(self.dfClass.dfs[self.dataFrameList[0]])
 			leftDf = self.dfClass.dfs[self.dataFrameList[0]][leftCol]
 			rightDf = self.dfClass.dfs[self.dataFrameList[1]][rightCol]
 			

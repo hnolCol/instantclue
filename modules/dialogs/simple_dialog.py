@@ -27,8 +27,8 @@ class simpleUserInputDialog(object):
 		self.title = title
 		self.infoText = infoText
 		
-		self.output = {}
-		self.selectionOutput = {}
+		self.output = OrderedDict()
+		self.selectionOutput = OrderedDict()
 		self.build_toplevel() 
 		self.build_widgets()
 		
@@ -53,7 +53,7 @@ class simpleUserInputDialog(object):
 		popup.bind('<Escape>', self.close) 
 		popup.bind('<Return>',self.save_selection)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=390
+		w=420
 		if self.h is None:
 			self.h = 60
 		h=self.h + 55*len(self.descriptionValues)
@@ -167,7 +167,7 @@ class simpleListboxSelection(object):
 		popup.bind('<Return>',self.define_selection)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		
-		w = 390
+		w = 485
 		h = 450
 		self.toplevel = popup
 		self.center_popup((w,h))

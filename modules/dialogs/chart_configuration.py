@@ -56,6 +56,14 @@ class ChartConfigurationPopup(object):
 		'''
 		Closes the toplevel and saves changes made to pyplot global parameters. 
 		'''
+		self.save_settings()
+		self.toplevel.destroy()
+		
+
+	def save_settings(self):
+		'''
+		Store Settings. Settings are stored globally.
+		'''
 		xy_font = self.global_chart_parameter[0]
 		tick_font = self.global_chart_parameter[1]
 		legend_font = self.global_chart_parameter[2]
@@ -67,7 +75,7 @@ class ChartConfigurationPopup(object):
 		plt.rc('axes', labelsize=xy_font)
 		plt.rc('xtick', labelsize = tick_font)
 		plt.rc('ytick', labelsize= tick_font)
-		self.toplevel.destroy()
+
                
 			
 	def build_popup(self):
@@ -97,7 +105,7 @@ class ChartConfigurationPopup(object):
 		cont = tk.Frame(self.toplevel, background =MAC_GREY)
 		cont.pack(fill='both', expand=True)
 		cont.grid_columnconfigure(1,weight=1)
-		lab1 = tk.Label(cont, text = 'Change chart settings', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
+		lab1 = tk.Label(cont, text = 'Change chart settings', **titleLabelProperties)
 		lab1.grid(padx=5,pady=15, columnspan=6 ,sticky=tk.W)
 		
 		settings = ['y-axes [min]:','y-axes [max]:','x-axes [min]:','x-axes [max]:','xy-label font size:',

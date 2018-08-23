@@ -105,7 +105,9 @@ class customFilterDialog(object):
 		
 	def build_widgets(self):
 	
-		lab1 = tk.Label(self.cont, text = 'Custom categorical filter\n\nDrag and Drop unique categories to trash or cart.', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)		
+		lab1 = tk.Label(self.cont, 
+			text = 'Custom categorical filter\n\nDrag and Drop unique categories to trash or cart.', 
+			**titleLabelProperties)		
 		
 		lab1.grid(padx=5,pady=15, columnspan=6 ,sticky=tk.W)
 		
@@ -189,8 +191,6 @@ class customFilterDialog(object):
 		filt_button2.grid(row=3, column = 2 ,padx=2,pady=3,in_ = cont_buttons,sticky=tk.EW)
 		filt_button3.grid(row=3, column = 4 ,padx=2,pady=3,in_ = cont_buttons,sticky=tk.EW)
 		close_button.grid(row=3, column = 6 ,padx=(5,2),pady=3,in_ = cont_buttons,sticky=tk.EW) 
-
-
 
 		
 	def update_separator(self,event):
@@ -316,12 +316,13 @@ class customFilterDialog(object):
 		row_ = row_.str.cat(sep=";") 
 		return row_
 		
-	def custom_search_annotate(self,row,keep):
+	def custom_search_annotate(self,row,keep,sep = ';'):
 		
 		matches_ = []
 		cat_ = np.nan
+		rowSplit = row.split(sep)
 		for cat in keep:
-			if cat in row:
+			if cat in rowSplit:
 				matches_.append(cat)
 		number_of_matches =len(matches_)
 		if number_of_matches == 0:
@@ -359,14 +360,18 @@ class customFilterDialog(object):
 			remove_ = [tree.item(item)['text'] for item in tree.get_children() if tree.item(item)['image'][0] == str(self.trash_icon)]
 			keep_ = [tree.item(item)['text'] for item in tree.get_children() if tree.item(item)['image'][0] == str(self.keep_icon)]
 			regEx = self.build_regex(keep_, separator)
+			
 			if len(keep_) == 0 and operator == 'AND':
-				tk.messagebox.showinfo('Error..','Your filter selection leads to an empty data frame. Aborting...', parent=self.toplevel)
+				tk.messagebox.showinfo('Error..',
+					'Your filter selection leads to an empty data frame. Aborting...', 
+					parent=self.toplevel)
 				return	
+				
 			if operator == 'AND':
 					data_ = data_[data_[column].astype(str).str.contains(regEx)]
 			else:
 				if self.annotate_category.get():
-					collect_subframes[column] = self.data[column].astype(str).apply(lambda row: self.custom_search_annotate(row,keep_))
+					collect_subframes[column] = self.data[column].astype(str).apply(lambda row, sep = separator: self.custom_search_annotate(row,keep_,sep))
 				else:
 					collect_subframes[column] = self.data[column].astype(str).str.contains(regEx)
 				
@@ -431,6 +436,7 @@ class customFilterDialog(object):
 		
 	def get_images(self):
 		'''
+		Get images from base64 code
 		'''
 		self.dustbin_icon,self.car_icon,self.keep_icon,self.trash_icon = images.get_custom_filter_images()
 		
@@ -438,6 +444,9 @@ class customFilterDialog(object):
 		
 		
 	def get_data(self):
+		'''
+		Returns data
+		'''
 		return self.output_data_frame, self.mode, self.annotate_category.get()
 
 				 

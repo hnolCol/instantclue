@@ -293,7 +293,7 @@ class chartToolTip(object):
 		artistProp - dict. Must have keys : 'artists','colors','texts'. Keys must be all
 					the same.
 		'''
-		
+		self.circDendro = False
 		self.plotter = plotter
 		self.r = self.plotter.figure.canvas.get_renderer()
 		self.ax = ax
@@ -426,11 +426,33 @@ class chartToolTip(object):
 		'''
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
-	
+
+	def check_polar_position(self,x):
+		'''
+		Position handling on polar axis
+		'''
+		self.textProps['x'] = x
+		self.textProps['y'] = 0.85
+			
+		if x > 0 and x < np.pi:
+				self.textProps['va'] = 'top'
+		else:
+				self.textProps['va'] = 'bottom'	
+		
+		if x < np.pi/2 or x > np.pi*1.5:
+			
+			self.textProps['ha'] = 'right'
+		else:
+			self.textProps['ha'] = 'left'
+		
 	def determine_position(self,x,y):
 		'''
 		Check how to align the tooltip.
 		'''
+		if self.circDendro:
+			self.check_polar_position(x)				
+			return
+			
 		if self.update:
 			self.extract_text_dim()
 			
@@ -595,25 +617,53 @@ class chartToolTip(object):
 			self.plotter.get_active_helper().linePlotHelper.indicate_hover(arg[0])
 			
 
-	def annotate_cluster_map(self,dfClass,annotationColumnList):
+	def annotate_cluster_map(self,dfClass,annotationColumnList,plotType = 'hclust'):
 		'''
 		Initiate Tooltip in hierarchical clustering.
 		'''
+		
 		helper = self.plotter.get_active_helper()
+		self.circDendro = helper._hclustPlotter.circulizeDendrogram
+		self.corrMatrix = helper._hclustPlotter.plotCorrMatrix
+		
 		dataID = self.plotter.get_dataID_used_for_last_chart()
 		self.df = helper._hclustPlotter.df
-		data = dfClass.join_missing_columns_to_other_df(self.df,id=dataID,
+		if plotType != 'corrmatrix':
+			data = dfClass.join_missing_columns_to_other_df(self.df,id=dataID,
 												 definedColumnsList = annotationColumnList)	
-		self.annotationData = data[annotationColumnList].values
-	
+			self.annotationData = data[annotationColumnList].values
+		else:
+			
+			self.annotationData = self.df.values
+												
+		
+		if self.circDendro:
+			self.endPoints = helper._hclustPlotter.endPoints
 					
 	def evaluate_event_in_cluster(self,event):
 		'''
 		Evaluate event over a hierarchical clustering. 
 		'''
-		idx = int(event.ydata)
-		textData = self.annotationData[idx]
-		text = get_elements_from_list_as_string(textData).replace(', ','\n')
+		if self.circDendro:
+			if event.ydata < 0.9:
+				self.set_invisible()
+				self.plotter.redraw()
+			
+			idx = find_nearest_index(self.endPoints,event.xdata)						
+		elif self.corrMatrix:
+			idxX = int(event.xdata)
+			idxY = int(event.ydata)
+			
+		else:
+		
+			idx = int(event.ydata)
+		
+		if self.corrMatrix == False:		
+			textData = self.annotationData[idx]
+			text = get_elements_from_list_as_string(textData).replace(', ','\n')
+		else:
+			textData = self.annotationData[idxX,idxY]
+			text = "{:.2f}".format(textData)
 		self.update_position(event,text)	
 		
 		

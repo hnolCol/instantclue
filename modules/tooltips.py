@@ -2,7 +2,6 @@
 
 
 
-
 sliceMarksTooltip = {'selection':'Allows for freehand selection of data points in a scatter plot. Right click opens a menu to a) create a annotation column b) subset data or c) to delete selected data.',
 					 'filter':'Can receive columns from the source data treeview via drag & drop. Depending on the datatype different a dialog windows opens that allows for filtering. You can also try the new "liver filter" feature by simply clicking on the icon.',
 					 'color':'This button has two functionalities: a) Changing the default color palette. b) In several plot types (line, hierarchical clustering, scatter, scatter matrix,PCA ..), column names can be dragged & dropped onto this icon to color code graph items.',

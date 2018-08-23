@@ -30,11 +30,12 @@ from modules.utils import *
 class ColumnNameConfigurationPopup(object):
 	
 	
-	def __init__(self,columns,dfClass,sourceTreeView):
+	def __init__(self,columns,dfClass,sourceTreeView,analyzeClass):
 						
-		
+		self.entryDict = OrderedDict()
 		self.columns = columns 
 		self.dfClass = dfClass
+		self.analyzeClass = analyzeClass
 		self.renamed = True
 		
 		self.dataTreeview = sourceTreeView
@@ -61,7 +62,8 @@ class ColumnNameConfigurationPopup(object):
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Change column name') 
-		popup.bind('<Escape>', self.discard_changes) 
+		popup.bind('<Escape>', lambda event: self.discard_changes()) 
+		popup.bind('<Return>', lambda _,entryDict = self.entryDict : self.rename_columns_in_df(entryDict))
 		popup.protocol("WM_DELETE_WINDOW", self.discard_changes)
 		w=450
 		h=100+int(len(self.columns))*33 ##emperically
@@ -80,23 +82,24 @@ class ColumnNameConfigurationPopup(object):
              cont.grid_columnconfigure(1,weight=1,minsize=200)
              cont.grid_columnconfigure(0,weight=1,minsize=200)
 			
-             labelTitle = tk.Label(cont, text = 'Change column name', font = LARGE_FONT, fg="#4C626F", justify=tk.LEFT, bg = MAC_GREY)
+             labelTitle = tk.Label(cont, text = 'Change column name', **titleLabelProperties)
              labelTitle.grid(pady=5,padx=5,sticky=tk.W,columnspan=2)
              
-             entryDict = OrderedDict()
+             self.entryDict.clear()
              for n,columnName in enumerate(self.columns): 
              	columnLabel = tk.Label(cont, text = columnName+': ', bg=MAC_GREY)
              	newColumnEntry = ttk.Entry(cont)
-             	
              	newColumnEntry.insert('end',columnName)
+             	if n == 0:
+             		newColumnEntry.focus()
              	
-             	entryDict[columnName] = newColumnEntry
+             	self.entryDict[columnName] = newColumnEntry
              	columnLabel.grid(row=n+2,column=0,sticky=tk.E,padx=5, pady=3)
              	CreateToolTip(columnLabel,text=columnName,waittime=800)
              	newColumnEntry.grid(row=n+2, column=1, padx=5, pady=3, columnspan=5, sticky=tk.EW)
              
              renameButton = ttk.Button(cont, text = 'Rename',
-             						   command = lambda: self.rename_columns_in_df(entryDict),
+             						   command = lambda: self.rename_columns_in_df(self.entryDict),
              						   width = 7)  
              closeButton = ttk.Button(cont, text = 'Close', 
              						   command = self.discard_changes, 
@@ -125,19 +128,64 @@ class ColumnNameConfigurationPopup(object):
 				columnNamesToChange.append(oldName)
 				renameDict[oldName] = entryText
 				iidList.append(self.iidList[n])
-				n+=1
+			n+=1
 		if len(renameDict) == 0:
 			self.discard_changes()
 			return
+			
 		columnNotToChange = [col for col in self.dfClass.df_columns if col not in columnNamesToChange]
+		
 		for oldName,newName in renameDict.items():
 			newNameEval = self.dfClass.evaluate_column_name(newName,columnNotToChange,useExact=True)
 			columnNotToChange.append(newNameEval)
 			renameDict[oldName] = newNameEval
-			
+		
+		newIIDList = self.dataTreeview.rename_itemText_by_iidList(iidList, list(renameDict.values()))
 		self.dfClass.rename_columnNames_in_current_data(renameDict)
-		self.dataTreeview.rename_itemText_by_iidList(iidList, list(renameDict.values()))
+		
+		self.adjust_columns_in_receiverbox(renameDict)
+		
+		self.reverseFuncs = {'funcDataR':'rename_columnNames_in_current_data',
+							 'argsDataR':{'replaceDict':reverse_dict(renameDict)},
+							 'funcTreeR':'rename_itemText_by_iidList',
+							 'argsTreeR':{'iidList':newIIDList,'newNameList':list(renameDict.keys())},
+							 'description': OrderedDict([('Activity:','Column renaming'),
+     						 ('Description:','Column(s) has/have been renamed.'),
+     						 ('Column name(s):',get_elements_from_list_as_string(list(entryDict.keys()), maxStringLength = None)),
+     						 ('Renamed columns:',get_elements_from_list_as_string(list(renameDict.values()), maxStringLength = None)),
+     						 ('Data ID:',self.dfClass.currentDataFile)])}
 		self.close()
+		
+		
+
+	def adjust_columns_in_receiverbox(self,renameDict):
+		'''
+		If the renamed columns were dragged and dropped in one of receiver boxes
+		we need to change the name and deleting/adjustin functions. 
+		numerical and cateogrical columns are saved in a dict. values represent the buttons.
+		'''
+		if self.dfClass.currentDataFile != self.analyzeClass.plt.get_dataID_used_for_last_chart():
+			return
+		
+		numericColumns = list(self.analyzeClass.selectedNumericalColumns.keys())
+		categoricalColumns = list(self.analyzeClass.selectedCategories.keys())
+		for oldName,newName in renameDict.items():
+		
+			if oldName in numericColumns:
+				button = self.analyzeClass.selectedNumericalColumns[oldName]
+				self.analyzeClass.bind_events_to_button_in_receiverbox(newName,button,True)
+				del self.analyzeClass.selectedNumericalColumns[oldName]
+				self.analyzeClass.selectedNumericalColumns[newName] = button
+			
+			elif oldName in categoricalColumns:
+				
+				button = self.analyzeClass.categoricalColumns[oldName]
+				self.analyzeClass.bind_events_to_button_in_receiverbox(newName,button,False)
+				#delete entry
+				del self.analyzeClass.categoricalColumns[oldName]
+				#replace with new name
+				self.analyzeClass.categoricalColumns[newName] = button
+			     				     
 		
 	def center_popup(self,size):
          	'''

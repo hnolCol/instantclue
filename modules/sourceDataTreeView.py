@@ -142,16 +142,18 @@ class sourceDataTreeview(object):
 		Changes the data type by iid. Extracts the dataframe id and name from the iid s
 		that are given by iidList.
 		'''
-		
-		for iid in iidList:
+		for n,iid in enumerate(iidList):
 			columnName = self.sourceDataTree.item(iid)['text']
-			
+			if isinstance(newDataType,str) == False and len(newDataType) == len(iidList):
+				newDataType = newDataType[n]
+				
 			id = iid.split('_'+columnName)[0]
 			parent = '{}_{}'.format(id,newDataType) 
 			
 			self.delete_entry_by_iid(iid)	
 			
 			self.insert_entry_to_treeview(parent,'end',iid,columnName)
+			
 					
 		
 	def check_if_selection_from_one_data_frame(self):
@@ -201,7 +203,12 @@ class sourceDataTreeview(object):
 		text = fileName
 		self.insert_entry_to_treeview(parent,'end',iid,text,'mainFile',open=True)
 	
-	
+	def clicked_item(self,event):
+		'''
+		'''
+		
+		return self.sourceDataTree.identify('item',event.x,event.y)	
+		
 	def define_tags_for_navigation(self):
 		'''
 		'''
@@ -221,8 +228,12 @@ class sourceDataTreeview(object):
 	def delete_entry_by_iid(self,iid):
 		'''
 		'''
-		self.sourceDataTree.delete(iid)
-		
+		if isinstance(iid,str):
+			self.sourceDataTree.delete(iid)
+		elif isinstance(iid,list):
+			for iid_ in iid:
+				self.sourceDataTree.delete(iid_)
+				
 	def delete_selected_entries(self):
 		'''
 		'''
@@ -390,6 +401,7 @@ class sourceDataTreeview(object):
 	def rename_itemText_by_iidList(self,iidList,newNameList):
 		'''
 		'''
+		newIids = []
 		for n,iid in enumerate(iidList):	
 			
 			newIID = '{}_{}'.format(iid.split('_')[0],newNameList[n])
@@ -398,6 +410,8 @@ class sourceDataTreeview(object):
 			self.sourceDataTree.delete(iid)
 			#self.sourceDataTree.item(iid,iid=newIID,text=newNameList[n])
 			self.insert_entry_to_treeview(parent=parent,index=idx,iid=newIID,text=newNameList[n])
+			newIids.append(newIID)
+		return newIids
 					
 			
 			

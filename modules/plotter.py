@@ -73,10 +73,10 @@ nonScatterPlotTypes = ['boxplot','barplot','violinplot','pointplot','swarm']
 
 class _Plotter(object):
 	
-	def __init__(self,sourceDataClass,figure):
+	def __init__(self,sourceDataClass,figure, workflow):
 	
 		self.dfClass = sourceDataClass
-		
+		self.workflow = workflow
 		self.plotHistory = OrderedDict() 
 		self.plotProperties = OrderedDict()
 		
@@ -120,7 +120,7 @@ class _Plotter(object):
 		self.setup_basic_design()
 		self.set_hClust_settings()
 		
-		self.set_dist_settings()
+		#self.set_dist_settings()
 		self.set_style_collection_settings()
 		self.addSwarm = False
 		
@@ -133,6 +133,7 @@ class _Plotter(object):
 		'''
 		Removes everything from figure
 		'''
+		self.addSwarm =  False
 		self.disconnect_event_bindings()
 		self.figure.clf()
 	
@@ -201,8 +202,52 @@ class _Plotter(object):
 											   categoricalColumns,
 											   selectedPlotType,
 											   colorMap]
+
+		lastNumColumns = []
+		lastCatColumns = []
+		prevCountPlot = self.plotCount-1
+		if prevCountPlot in self.plotProperties:
+			lastNumColumns = self.plotProperties[prevCountPlot][0]
+			lastCatColumns = self.plotProperties[prevCountPlot][1]
+		self.workflow.add(selectedPlotType,
+						  self.dfClass.currentDataFile,
+						  addInfo = {
+						  'funcPlotterR':'reverse_plotting',
+						  'argsPlotterR':{'plotCount':self.plotCount},
+						  'funcAnalyzeR':'update_receiver_box',
+						  'argsAnalyzeR':{'numericColumns':lastNumColumns,'categoricalColumns':lastCatColumns},
+						  'description':
+						  OrderedDict([('Activity:','Plotting - {} plot'.format(selectedPlotType)),
+						  ('Description:','Data were plotted using the selected chart type.'),
+						  ('Numeric Columns:',numericColumns),
+						  ('Categorical Columns:',categoricalColumns),
+						  ('Color Map:',colorMap),
+						  ('Data ID:',self.dfClass.currentDataFile)])}, 
+						  isChart = True)
+		if selectedPlotType == 'corrmatrix':
+				self.add_tooltip_info([])     
+		
+	def reverse_plotting(self,plotCount):
+		
+		if plotCount not in self.plotHistory:
+			return
+		
+		del self.plotHistory[plotCount]
+		del self.plotProperties[plotCount]
+		self.plotCount -= 1 
 		
 		
+		if plotCount == 1:
+			
+			self.clean_up_figure()
+			self.redraw()
+			
+		
+		else:
+			
+			self.reinitiate_chart()
+				
+	
 	def reinitiate_chart(self, id = None, updateData = False):
 		'''
 		Reinitiate chart replots the last displayed chart when a saved session
@@ -482,7 +527,8 @@ class _Plotter(object):
 		''' 
 		if boolUpdate != self.splitCategories:
 			self.splitCategories = boolUpdate
-			self.initiate_chart(*self.plotProperties[self.plotCount])
+			if self.plotCount in self.plotProperties:
+				self.initiate_chart(*self.plotProperties[self.plotCount])
 		else:
 			return
 		
@@ -578,6 +624,8 @@ class _Plotter(object):
 		self.metric = self.metricRow = self.metricColumn = 'euclidean'
 		self.method = self.methodRow = self.methodColumn = 'complete'
 		
+		self.circulizeDendrogram = False
+		self.showCluster = True
 		self.corrMatrixCoeff = 'pearson'
 		
 	def set_curveFitDisplay_settings(self,gridLayout,curveFitCollectionDict,
@@ -629,7 +677,8 @@ class _Plotter(object):
 		Returns als needed hclust settings
 		'''
 		return 	self.cmapClusterMap, self.cmapRowDendrogram, self.cmapColorColumn,\
-		self.metricRow, self.metricColumn, self.methodRow, self.methodColumn
+		self.metricRow, self.metricColumn, self.methodRow, self.methodColumn, self.circulizeDendrogram,\
+		self.showCluster
 
 	def remove_color_level(self):
 		
@@ -747,12 +796,12 @@ class _Plotter(object):
 		axes = self.get_axes_of_figure()		
 		
 		for n,ax in enumerate(axes):
-				
 			if (self.currentPlotType in ['scatter','scatter_matrix','line_plot']) or \
 			(self.currentPlotType in ['cluster_analysis','PCA'] and n == 0) or \
-			(self.currentPlotType  == 'hclust' and n == 2):
-			
+			(self.currentPlotType  in ['hclust','corrmatrix'] and n == 2) or \
+			(self.currentPlotType  == 'hclust' and n == 0 and self.circulizeDendrogram):
 				if self.currentPlotType == 'PCA':
+					
 					numericColumns = ['Comp_1','Comp_2']
 					
 				elif self.currentPlotType == 'scatter' and \
@@ -775,13 +824,13 @@ class _Plotter(object):
 						continue
 				else:
 					numericColumns = None
+					
 				self.tooltips[n] = chartToolTip(self,ax,'')
 				self.tooltips[n].update_background(redraw)
 				
 				self.onMotionEvents[n] = self.figure.canvas.mpl_connect('motion_notify_event', self.on_tooltip_hover)			
 				
-				
-				if self.currentPlotType != 'hclust':
+				if self.currentPlotType not in ['hclust','corrmatrix']:
 					self.tooltips[n].annotate_data_in_collections(self.dfClass,
 															annotationColumnList,
 															numericColumns,axisId = n,
@@ -790,7 +839,8 @@ class _Plotter(object):
 					lambda event:self.update_tooltip_background(redraw_ = True,updateProps=True))
 					
 				else:
-					self.tooltips[n].annotate_cluster_map(self.dfClass,annotationColumnList)	
+						
+					self.tooltips[n].annotate_cluster_map(self.dfClass,annotationColumnList,self.currentPlotType)	
 						
 							
 	def on_tooltip_hover(self,event):
@@ -801,7 +851,7 @@ class _Plotter(object):
   			n = self.get_number_of_axis(event.inaxes)
   			if n in self.tooltips:
   			
-  				if self.currentPlotType == 'hclust':
+  				if self.currentPlotType in ['hclust','corrmatrix']:
   					self.tooltips[n].evaluate_event_in_cluster(event)
   				elif self.currentPlotType == 'line_plot':
   					self.tooltips[n].evaluate_event_in_lineCollection(event)
@@ -835,7 +885,8 @@ class _Plotter(object):
 
 		matplotlib.rcParams['savefig.directory'] = os.path.dirname(sys.argv[0])
 		matplotlib.rcParams['savefig.dpi'] = 600      
-		
+		#matplotlib.rcParams['figure.facecolor'] = '#FDF6E3'
+		#matplotlib.rcParams['axes.labelcolor'] = '#657b83'
 	def __getstate__(self):
 		'''
 		Promotes sterilizing of this class (pickle)
@@ -1121,25 +1172,12 @@ class categoricalPlotter(object):
 							ax = axisExport
 					else:
 						ax = self.axisDict[n]
-				
-					data = pd.melt(self.data[[numColumn]+self.categoricalColumns], 
-									self.categoricalColumns, var_name = 'Columns', 
-									value_name = 'Value')
-									
-					dataCombined = pd.DataFrame()
-					complColumns = ['Complete']+self.categoricalColumns
-					for category in complColumns:
-						if category == 'Complete':
-							dataCombined.loc[:,category] = data['Value']
-						else:
-							subset = data[data[category] == '+']['Value']
-							dataCombined = pd.concat([dataCombined,subset],axis=1)
-							
-					dataCombined.columns = complColumns
-					dataCombined.loc[:,'intIdxInstant'] = self.data.index
+					dataCombined, complColumns = self.dfClass.get_positive_subsets([numColumn], self.categoricalColumns, self.data)
+
 					dataForPlotting = pd.melt(dataCombined, id_vars = 'intIdxInstant', 
 												value_name = 'Value', var_name = 'Column')
 					dataForPlotting.dropna(subset=['Value'],inplace=True)					
+					
 					fill_axes_with_plot(ax=ax, x='Column',y='Value',hue = None,
 									plot_type = plotType,cmap=self.colorMap,data=dataForPlotting,
 									order = complColumns, dodge = 0, error = self.error)
@@ -1989,11 +2027,9 @@ class nonCategoricalPlotter(object):
 		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,categoricalColumn,
 												self.colorMap, self.categoricalColorDefinedByUser,
 												self.colorScatterPoints)
-
 		## update data if missing columns 
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
 																  definedColumnsList=categoricalColumn)	
-																  
 		if specificAxis is None:
 			ax = self.axisDict[0]
 			## clean up changes
@@ -2007,10 +2043,11 @@ class nonCategoricalPlotter(object):
 			self.data.loc[:,'color'] = self.data[categoricalColumn[0]].map(self.colorMapDict)
 		else:
 			self.data.loc[:,'color'] = self.data[categoricalColumn].apply(tuple,axis=1).map(self.colorMapDict)
-			
+		
 		axCollection = ax.collections
 		
 		if updateColor == False and adjustLayer:
+			
 			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)		
 			self.data.loc[:,'size'] =  axCollection[0].get_sizes()	
 			self.data.sort_values('layer', ascending = True, inplace=True)		
@@ -2027,29 +2064,31 @@ class nonCategoricalPlotter(object):
 				self.annotationClass.update_data(self.data)								
 		
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			if len(self.colorMapDict) < 20:
+			if len(self.colorMapDict) < 21:
 			
 				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
+		
 			
 		elif adjustLayer == False:
-		
 			axCollection[0].set_facecolor(self.data['color'].values)
+			
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			if len(self.colorMapDict) < 20:
+			if len(self.colorMapDict) < 21:
 				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
 
 		else:
-		
 			axCollection[0].set_facecolor(self.data['color'].values)
 			if specificAxis is None: ##indicating that graph is not exported but only modified
 				self.update_legend(ax,self.colorMapDict)
 				
 			else:
-				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
+				if len(self.colorMapDict) < 21:
+					self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
 														  categoricalColumn, export = True)
 			#print(specificAxis)	
 			## check if we plot a cluster representation, and if then check if there are any line segments to plot
 			if self.currentPlotType == 'cluster_analysis':
+				
 				if len(self.LineSegments) > 0:
 					for n, lineSegment in enumerate(self.LineSegments):
 						if specificAxis is not None:

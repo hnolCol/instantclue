@@ -73,7 +73,8 @@ class categoricalFilter(object):
 	'''
 	def __init__(self,dfClass, dataTreeview, plotterClass ,
 				operationType = 'Find category & annotate', 
-				dataSubset = None, columnForFilter = None, addToTreeview = True):
+				dataSubset = None, columnForFilter = None, addToTreeview = True,
+				workflow = None):
 		'''
 		=====
 		Parameter
@@ -99,6 +100,7 @@ class categoricalFilter(object):
 		
 		self.plotter = plotterClass
 		self.dfClass = dfClass
+		self.workflow = workflow
 		
 		## make sure data of plot is selected
 		if self.operationType in ['Annotate scatter points',
@@ -365,9 +367,7 @@ class categoricalFilter(object):
 					return
 			boolIndicator = collectDf.sum(axis=1) >= 1			
 			subsetData = dataToSearch[boolIndicator]
-		
- 			#self.uniqueFlatSplitData = pd.DataFrame(self.df[self.columnForFilter].astype('str'),columns=[self.columnForFilter])
-		
+				
 		else: 	
 			boolIndicator = dataToSearch[self.columnForFilter].str.contains(searchString,
 																	case = self.caseSensitive.get()).values
@@ -451,7 +451,9 @@ class categoricalFilter(object):
 		Checks the pandastable object for selected rows
 		'''
 		rowsSelected = self.get_selected_row()
-		
+		if len(rowsSelected) == 0:
+			rowsSelected = [0,]
+			pass#rowsSelected = 0
 		textSelected = [self.pt.model.getValueAt(row, 0) for row in rowsSelected]
 		return textSelected
 		
@@ -463,8 +465,10 @@ class categoricalFilter(object):
 		Input:
 			None
 		'''
-
-		textSelected = self.get_selected_category()
+		try:
+			textSelected = self.get_selected_category()
+		except:
+			textSelected = []
 		if len(textSelected) == 0:
 			tk.messagebox.showinfo('Select category ..',
 				'Please select a category for annotation.',
@@ -486,10 +490,10 @@ class categoricalFilter(object):
 		textString = get_elements_from_list_as_string(textSelected, maxStringLength = 15)
 		columnName = '{}:{}'.format(textString,self.columnForFilter)
 		
-		self.add_column_to_df_and_tree(columnName,annotationColumn)
+		self.add_column_to_df_and_tree(columnName,annotationColumn, textSelected, regExp)
 		
 		
-	def add_column_to_df_and_tree(self,columnName, annotationColumn):
+	def add_column_to_df_and_tree(self,columnName, annotationColumn, textString = None, regExp = None):
 		'''
 		=====
 		Input:
@@ -499,14 +503,45 @@ class categoricalFilter(object):
 							   to a pandas data frame.
 		====
 		'''
-		columnName = self.dfClass.evaluate_column_name(columnName)
-		self.dfClass.add_column_to_current_data(columnName,annotationColumn,evaluateName=False)
-		self.dataTreeview.add_list_of_columns_to_treeview(self.dfClass.currentDataFile, 
+		if True:
+			columnName = self.dfClass.evaluate_column_name(columnName)
+			self.dfClass.add_column_to_current_data(columnName,annotationColumn,evaluateName=False)
+			self.dataTreeview.add_list_of_columns_to_treeview(self.dfClass.currentDataFile, 
 														'object', [columnName])
 														 
-		tk.messagebox.showinfo('Done ..',
-			operationMessage[self.operationType],
-			parent=self.toplevel) 
+			tk.messagebox.showinfo('Done ..',
+				operationMessage[self.operationType],
+				parent=self.toplevel) 
+			if isinstance(self.columnForFilter,str):
+				selColumns = [self.columnForFilter]
+			else:
+				selColumns = self.columnForFilter
+				
+			infoDict = {'funcDataR':'delete_columns_by_label_list',
+     				'argsDataR':{'columnLabelList':[columnName]},
+     				'funcTreeR':'delete_entry_by_iid',
+     				'argsTreeR':{'iid':'{}_{}'.format(self.dfClass.currentDataFile,columnName)},
+     				'description':OrderedDict([('Activity:','Categorical Filter {}.'.format(self.operationType)),
+     				('Description:','Column has been added indicating by a "+" if the entered search string is present.'+
+     				' Depending on the settings, matches might also be indicated by the search string itself.'),
+     				('Search string', textString),
+     				('Reg. express:',regExp),
+     				('Column name:',columnName),
+     				('Selected Columns:',get_elements_from_list_as_string(selColumns, maxStringLength = None)),
+     				('Data ID:',self.dfClass.currentDataFile)])}   		
+
+			if self.operationType == 'Search string & annotate':
+				
+				settingInfo = {'Find combinations:':self.onlyFirstFind.get(),
+							   'Annotate search string:':self.annotateSearchString.get()}
+				infoDict['description'] = merge_two_dicts(infoDict['description'],settingInfo)
+			self.workflow.add('filter',
+     				self.dfClass.currentDataFile,
+     				infoDict)
+			
+		else:
+			tk.messagebox.showinfo('Error ..','There was an error adding the column.'+ 
+											' Probably due to the similiar column naming.', parent = self.toplevel)
 		
 	         
 	def build_regex(self,categoriesList,withSeparator = True, splitString = None):
@@ -613,7 +648,7 @@ class categoricalFilter(object):
 		
 		columnName = '{}:{}'.format(textString,self.columnForFilter)
 		
-		self.add_column_to_df_and_tree(columnName,annotationColumn)
+		self.add_column_to_df_and_tree(columnName,annotationColumn,splitSearchString, regExp)
 		
 		
 	def combine_string(self,row):
@@ -677,8 +712,10 @@ class categoricalFilter(object):
 			None
 		====
 		'''
-		textSelected = self.get_selected_category()
-		
+		try:
+			textSelected = self.get_selected_category()
+		except:
+			textSelected = []
 		if len(textSelected) == 0:
 			tk.messagebox.showinfo('Select category ..',
 				'Please select a category for annotation.',
@@ -688,8 +725,14 @@ class categoricalFilter(object):
 		
 		boolIndicator = self.df[self.columnForFilter].astype(str).str.contains(regExp)
 		
+		if np.sum(boolIndicator) == 0:
+			tk.messagebox.showinfo('Empty data frame',
+						'Selection leads to an empty data frame. Aborting ..',
+						parent = self.toplevel)
+			return
+		
 		fileName = self.dfClass.get_file_name_of_current_data()
-		textString = get_elements_from_list_as_string(textSelected,maxStringLength = 15)
+		textString = get_elements_from_list_as_string(textSelected,maxStringLength = 10)
 		
 		nameOfNewSubset = '{}: {} in {}'.format(textString,self.columnForFilter,fileName)
 		
@@ -697,7 +740,16 @@ class categoricalFilter(object):
 		
 		## adds data to dfClass and to the treeview 
 		subsetId = self.dfClass.get_next_available_id()
-		self.dfClass.add_data_frame(subsetDf, id = subsetId, fileName = nameOfNewSubset)
+		
+		self.dfClass.add_data_frame(subsetDf, id = subsetId, 
+									fileName = nameOfNewSubset, 
+									sourceBranch = self.dfClass.currentDataFile,
+									addInfo = {'description': OrderedDict([('Activity:','Subsetting based on a category.'),
+												('Description:','Rows that match the used regular expression are retained.'),
+												('Categorical Column:',get_elements_from_list_as_string(self.columnForFilter, maxStringLength = None)),
+												('Reg. Expression:',regExp),
+												('Name of Subset:',nameOfNewSubset)])})
+									
 		columnDataTypeRelation = self.dfClass.get_columns_data_type_relationship_by_id(subsetId)
 		
 		self.dataTreeview.add_new_data_frame(subsetId,nameOfNewSubset,columnDataTypeRelation)

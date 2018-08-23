@@ -55,14 +55,14 @@ def save_session(classDict):
 			sessionPath = os.path.join(path_file,'Data','stored_sessions',sessionName)
 	
 	if sessionPath is None:
-		return
+		return 
 	
 	if not os.path.exists(sessionPath):
 		try:
 			os.makedirs(sessionPath)	
 		except:
 			tk.messagebox.showinfo('Make dir failed ..','Creation of dir failed. Permission?')
-			return	
+			return False
 		
 	
 	with open(os.path.join(sessionPath,'{}.pkl'.format(sessionName)),'wb') as file:

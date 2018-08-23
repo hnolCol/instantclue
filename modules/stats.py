@@ -585,7 +585,7 @@ class interactiveStatistics(object):
 			
 		return testGroups	
 
-	def get_data_if_no_split(self,idx,numericColumn,allPossiblePositions):
+	def get_data_if_no_split(self,idx,numericColumn):
 		'''
 		This works only if "+" is found in data. 
 		'''
@@ -593,9 +593,7 @@ class interactiveStatistics(object):
 			categoricalColumn = self.categoricalColumns[idx-1]
 		else:
 			categoricalColumn = 'Whole population'
-		
-				   
-			
+					
 		idString = '{}_{}_{}'.format(idx,numericColumn,categoricalColumn)
 		# check if dict to save data exists, if not create
 		if hasattr(self,'savedData') == False:

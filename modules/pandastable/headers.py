@@ -516,6 +516,9 @@ class RowHeader(Canvas):
             i+=1
             for row in col:
                 text = row
+                #print(isinstance(self.color,list))
+               
+                #print(color)
                 x1,y1,x2,y2 = self.table.getCellCoords(r,0)
                 self.create_rectangle(x,y1,w-1,y2, fill=self.color,
                                         outline='white', width=1,

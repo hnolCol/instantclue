@@ -98,7 +98,7 @@ class _timeSeriesHelper(object):
 		self.plotter.figure.canvas.mpl_disconnect(self.onClick)
 
 	def activate_baselineCorr_or_aucCalc(self, mode = 'baselineCorrection', columns = None,
-											DataTreeview = None):
+											DataTreeview = None, workflow = None):
 		'''
 		'''
 		## used currently on in base line correction
@@ -107,7 +107,7 @@ class _timeSeriesHelper(object):
 		## whereas AUC is dropped onto the graph 
 		self.extraColumns = columns
 		self.DataTreeview = DataTreeview
-		
+		self.workflow = workflow
 		self.onClick = self.plotter.figure.canvas.mpl_connect('button_press_event',
 										lambda event: self.get_clickCoords(event,mode))
 		self.reset_settings()
@@ -211,12 +211,25 @@ class _timeSeriesHelper(object):
 			self.dataId = self.plotter.get_dataID_used_for_last_chart()
 			self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataId,
 									definedColumnsList=self.extraColumns)
-									
-			for column in self.numericColumns + self.extraColumns:
+			selectedColumns = self.numericColumns + self.extraColumns
+			for column in selectedColumns:
 				if column != self.timeColumn:
 					self.baseLineCorrection[column] = data[column].median()
-			self.correct_baseline()
+			baseCorrColumns = self.correct_baseline()
 			self.disconnect_event_bindings()
+			self.workflow.add('calc_add_column',     	 	 
+     					self.dataId,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':baseCorrColumns},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':['{}_{}'.format(self.dataId,col) for col in baseCorrColumns]},
+     					'description':OrderedDict([('Activity:','Base line correction'),
+     					('Time Interval','TimeInt: ({}-{})'.format(x1,x2)),
+     					('Description:','A column has been added containing the base line corrected data. The median of your selection is used to normalize the data by division to one.'),
+     					('Column name(s):',get_elements_from_list_as_string(baseCorrColumns, maxStringLength = None)),
+     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     					('Data ID:',self.dataId)])})  
+     					
 							
 			
 		elif mode == 'aucCalculation':
@@ -462,5 +475,6 @@ class _timeSeriesHelper(object):
      	 												   dataType = 'float64',
      	 												   columnList = baseCorrColumns)
      	 		tk.messagebox.showinfo('Done ..','Calculations performed.')		
+     	 		return baseCorrColumns
 				
 

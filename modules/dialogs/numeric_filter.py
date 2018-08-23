@@ -34,7 +34,10 @@ operator_options = ['> greater than','>= greater equal than','== equal','!= uneq
 class numericalFilterDialog(object):
 
 	def __init__(self,dfClass,numericalColumns):
-	
+		
+		if len(numericalColumns) == 0:
+			return
+			
 		self.numericalColumns = numericalColumns
 		self.numbNumericalColumns = len(numericalColumns)
 		self.mainOperator = tk.StringVar()
@@ -98,15 +101,15 @@ class numericalFilterDialog(object):
  			command = self.close, width = 6)
  		
  		buttonRow = self.numbNumericalColumns + 5
- 		addButton.grid(row=buttonRow, column=4,padx=3,pady=8,sticky=tk.E)
- 		closeButton.grid(row=buttonRow, column=5,padx=3,pady=8,sticky=tk.E)
+ 		addButton.grid(row=buttonRow, column=3,padx=3,pady=8,sticky=tk.E)
+ 		closeButton.grid(row=buttonRow, column=4,padx=3,pady=8,sticky=tk.E)
              
             
 
 	def add_filter_widgets_for_columns(self):
 		'''
 		'''
-		self.filterSettings = dict()
+		self.filterSettings = OrderedDict()
 		
 		for n,numColumn in enumerate(self.numericalColumns):
 			## row to grid widgets 
@@ -127,7 +130,7 @@ class numericalFilterDialog(object):
 			opCombo.insert('end','> greater than')
 			
 			## entry for user to provide criteria 
-			filterEntry = ttk.Entry(self.cont)
+			filterEntry = ttk.Entry(self.cont, width = 5)
 			
 			## grid widgets
 			absoluteValuesCB.grid(row=row, column = 1, sticky=tk.W, pady=8, padx=3)
@@ -167,13 +170,23 @@ class numericalFilterDialog(object):
  				try:
  					filterValue = float(filterEntry.get())
  				except:
- 					tk.messagebox.showinfo('Error ..','Could not convert input to float. Empty?',parent=self)
+ 					tk.messagebox.showinfo('Error ..',
+ 						'Could not convert input to float. Empty?',
+ 						parent=self.toplevel)
  					return
  			else:
  				filterValue = filterEntry.get()
  			
- 			self.collectDataFrame[numColumn]  = self.check_if_condition_is_true(filterValue,operator,
+ 			
+ 			try:
+ 				self.collectDataFrame[numColumn]  = self.check_if_condition_is_true(filterValue,operator,
  																				numColumn,absoluteValues)
+ 			except:
+ 				tk.messagebox.showinfo('Error ..',
+ 					'Could not interpret interval. Examples: (4.0,4.2),[5,14],(2,100].',
+ 					parent = self.toplevel)
+ 				return
+ 					
  		if self.mainOperator.get() == 'and':
  			selectionColumn = self.collectDataFrame.sum(axis=1) == self.numbNumericalColumns
  		
@@ -227,11 +240,11 @@ class numericalFilterDialog(object):
 			if min[0] == '[' and max[-1] == ']':
 				boolIndicator = (data >= minValue) & (data <= maxValue)
 			elif max[-1] == ')' and min[0] == '(':
-				boolIndicator = (data > min) & (data < max)
+				boolIndicator = (data > minValue) & (data < maxValue)
 			elif max[-1] == ')' and min[0] == '[':
-				boolIndicator = (data >= min) & (data < max)
+				boolIndicator = (data >= minValue) & (data < maxValue)
 			elif max[-1] == ']' and min[0] == '(': 
-				boolIndicator = (data > min) & (data <= max)
+				boolIndicator = (data > minValue) & (data <= maxValue)
 
 		return boolIndicator
 		

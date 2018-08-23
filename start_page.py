@@ -12,7 +12,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.4.8' #Date 04.05.2018
+__VERSION__ = '0.4.9' #Date 04.05.2018
 
 
 class StartPage(tk.Frame):
@@ -64,13 +64,17 @@ class StartPage(tk.Frame):
     
           
           self.label_cite = tk.Label(self, text = "If you found usage of Instant Clue helpful"+
-          						"; please cite :\nNolte, H., MacVicar, D. T. and Krüger, M. Instant Clue"+
-          						" - INteractive ScienTific ANalysis: A Software Suite For Scientific Data"+
-          						" Visualization and Analysis by Drag & Drop",
+          						"; please cite :\nNolte, H., MacVicar D. T., Frederik T., and Krüger, M."+
+          						" - Instant Clue: A Software Suite for Interactive Data Visualization and Analysis",
                                 bg="white",
                                 fg="#4C626F",
                                 justify=tk.LEFT,
                                 font = NORM_FONT)
+                                
+          make_label_button_like(self.label_cite)
+          self.label_cite.bind('<Button-1>', lambda event: webbrowser.open(paperUrl)) 
+                                
+        
 
   
           ## grid widgets

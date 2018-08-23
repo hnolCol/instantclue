@@ -253,7 +253,7 @@ class mainFigureTemplateDialog(object):
 	Class that manages main figures.
 	We have decided to split this from the actual creation to achieve easier opening from saved session.
 	'''
-	def __init__(self, mainFigureCollection, figureId = None):
+	def __init__(self, mainFigureCollection, figureId = None, figsize=(8.27,11.7)):
 		## defining StringVars for grid layout and positioning of axis
 
 		self.define_variables()
@@ -263,7 +263,7 @@ class mainFigureTemplateDialog(object):
 
 		self.axisId = 0
 		self.figureProps = OrderedDict()
-
+		self.figSize = figsize
 		self.load_images()
 		self.build_toplevel()
 		self.create_frame()
@@ -280,7 +280,7 @@ class mainFigureTemplateDialog(object):
 		self.motionAxis = None
 		self.textsAdded = {}
 		self.axisLabels = {}
-		self.axisItems = {}
+		self.axisItems = OrderedDict()
 		self.associatedAxes = {}
 
 		self.positionColumn = tk.StringVar(value='1')
@@ -407,7 +407,7 @@ class mainFigureTemplateDialog(object):
 
 	def display_figure(self, frameFigure,toolbarFrame):
 
-		self.figure = plt.figure(figsize=(8.27,11.7))
+		self.figure = plt.figure(figsize=self.figSize)
 		self.figure.subplots_adjust(top=0.94, bottom=0.05,left=0.1,
 									right=0.95, wspace = 0.32, hspace=0.32)
 		canvas  = FigureCanvasTkAgg(self.figure,frameFigure)
@@ -500,12 +500,11 @@ class mainFigureTemplateDialog(object):
 					return
 				if self.motionAxis is not None:
 					self.disconnect_on_axis_move_events()
+				## security for disconnecting move events.
 				try:
 					self.disconnect_on_axis_move_events()
 				except:
 					pass
-
-
 
 				self.onMotionWithAxis = self.figure.canvas.mpl_connect('motion_notify_event',\
 				self.on_motion_with_axis)
@@ -626,6 +625,8 @@ class mainFigureTemplateDialog(object):
 		'''
 		'''
 		self.menu = tk.Menu(self.toplevel, **styleDict)
+		self.legendMenu = tk.Menu(self.toplevel, **styleDict)
+		self.limitMenu = tk.Menu(self.toplevel, **styleDict)
 
 		self.menu.add_command(label='Transfer to ..',
 			state=tk.DISABLED, foreground='darkgrey')
@@ -638,14 +639,26 @@ class mainFigureTemplateDialog(object):
 					figureMenu.add_command(label='Subplot {}'.format(axisLabel),
 						command = lambda axisId = axisId,figureId = figureId:
 						self.initiate_transfer(axisId,figureId))
-
-
 		self.menu.add_separator()
+		
+		self.legendMenu.add_command(label='Delete', command = self.remove_legend)
+		self.legendMenu.add_command(label='Modify text', command = self.modify_legend)
+		self.legendMenu.add_command(label='Modify title', command = lambda : self.modify_legend(None,True))
+		self.menu.add_cascade(label='Legend', menu = self.legendMenu)
+		
+		self.menu.add_cascade(label='Axis Limits',menu = self.limitMenu)
+		self.limitMenu.add_command(label='Restore', command = self.restore_limits)
+		self.limitMenu.add_command(label='Change', command = self.change_limits)
+		self.limitMenu.add_command(label='From other axis - click on', command = self.adapt_limits)
+		self.menu.add_separator()
+		
+		
 		self.menu.add_command(label = 'Clear',
 			command = self.clear_axis_from_menu,foreground='#A95C4C')
 		self.menu.add_command(label = 'Delete',
 			command = self.delete_axis_by_event,
 			foreground='#A95C4C')
+		
 
 	def modify_variant(self,edit,axisId):
 		'''
@@ -667,6 +680,57 @@ class mainFigureTemplateDialog(object):
 
 		if n != 0:
 			self.get_next_subplot_label(newLabel)
+	
+	def check_for_legend(self,ax):
+		
+		
+		legend = ax.get_legend()
+		if legend is None:
+			tk.messagebox.showinfo('Error..','Did not find a legend..', parent = self.toplevel)
+			return 
+		else:
+			return legend		
+	
+	def remove_legend(self,event = None):
+		'''
+		Removes legend from axis.
+		'''
+		if event is None:
+			event = self.event
+		ax = event.inaxes
+		legend = self.check_for_legend(ax)
+		if legend is not None:
+			legend.remove()
+			self.redraw()
+
+	def modify_legend(self,event = None, legendTitle = False):
+		'''
+		Let's the user modify the legend.
+		'''
+		
+		if event is None:
+			event = self.event
+		ax = event.inaxes 
+		legend = self.check_for_legend(ax)
+		
+		if legend is not None:
+			if legendTitle:
+				textItems = [legend.get_title()]
+			else:
+				textItems = legend.get_texts()
+			textStrings = [txt.get_text() for txt in textItems]
+			optionList = [['None',textStrings[n]] for n in range(len(textStrings))]
+			dialogWindow = simple_dialog.simpleUserInputDialog(textStrings,textStrings,
+								optionList,'Change Legend Text','Modify legend text.')
+			
+			
+			for txt in textItems:
+				oldText = txt.get_text()
+				if oldText in dialogWindow.selectionOutput:
+					newText = dialogWindow.selectionOutput[oldText]
+					txt.set_text(newText)
+		
+			self.redraw()
 
 
 	def apply_style_to_all_figures(self,styleDict,edit,type):
@@ -1156,7 +1220,7 @@ class mainFigureTemplateDialog(object):
 			parent=self.toplevel)
 		if quest == 'yes':
 
-			self.mainFigureCollection.update_params(self.figureId,axisId = axisId,how='clear')
+			self.mainFigureCollection.update_params(self.figureId,axisId = axisId, how='clear')
 			self.clear_axis(self.figureProps[axisId]['ax'])
 			self.add_axis_label(ax = self.figureProps[axisId]['ax'],
 								axisId = axisId,
@@ -1295,14 +1359,93 @@ class mainFigureTemplateDialog(object):
 		self.axisItems[id]['collections'] = ax.collections
 		self.axisItems[id]['patches'] = ax.patches
 		self.axisItems[id]['artists'] = ax.artists
+		self.axisItems[id]['xLimit'] = ax.get_xlim()
+		self.axisItems[id]['yLimit'] = ax.get_ylim()
 
 		leg =  ax.get_legend()
-
-		legendTexts = []
+		
 		if leg is not None:
 			self.axisItems[id]['legend texts'] = [leg.get_texts()]
 			self.axisItems[id]['legend caption'] = [leg.get_title()]
 
+	def adapt_limits(self,event=None):
+		'''
+		Get axis limits and adjust the selected limits
+		'''
+		if event is None:
+			event = self.event
+		
+		if event.inaxes is None:
+			return
+			
+		ax = event.inaxes
+		axisId = self.identify_id_of_axis(ax)
+		self.infolabel.set('Click on axis of which you want to copy the axis limits.')
+		self.adaptAxisEvent = self.figure.canvas.mpl_connect('button_press_event', lambda event, ax = ax :self.check_axis_and_get_limits(event,ax))
+		
+	def check_axis_and_get_limits(self,event,ax=None):
+		'''
+		Find axis and adust limits in response to a click by user.
+		'''
+		if event.inaxes is None or event is None or ax is None:
+			
+			self.figure.canvas.mpl_disconnect(self.adaptAxisEvent)
+			return
+		
+		else:
+			
+			id = self.identify_id_of_axis(event.inaxes)
+			ax.set_xlim(self.axisItems[id]['xLimit'])
+			ax.set_ylim(self.axisItems[id]['yLimit'])
+		
+		self.figure.canvas.mpl_disconnect(self.adaptAxisEvent)
+		self.redraw()
+			
+				
+
+	def change_limits(self, event = None):
+		'''
+		Allows the user to change axis limits.
+		'''
+		if event is None:
+			event = self.event
+		ax = event.inaxes
+		axisId = self.identify_id_of_axis(ax)
+		settingList = ['x min', 'x max', 'y min', 'y max']
+		textStrings = [self.axisItems[axisId]['xLimit'][0],
+					   self.axisItems[axisId]['xLimit'][1],
+					   self.axisItems[axisId]['yLimit'][0],
+					   self.axisItems[axisId]['yLimit'][1]]
+		
+		optionList = [[],[],[],[]]
+		dialogWindow = simple_dialog.simpleUserInputDialog(settingList,textStrings,
+								optionList,'Change axis limits','Change axis limits.')
+		if len(dialogWindow.selectionOutput) == 4:
+			try:
+				ax.set_xlim((float(dialogWindow.selectionOutput['x min']),
+					float(dialogWindow.selectionOutput['x max'])))	
+				ax.set_ylim((float(dialogWindow.selectionOutput['y min']),
+					float(dialogWindow.selectionOutput['y max'])))	
+			except:
+				tk.messagebox.showinfo('Error ..',
+								   'Could not interpret input (examples: 2.3, 100, 34.0). Axis limits not changed.',
+								   parent = self.toplevel)
+
+	
+	def restore_limits(self, event = None):
+		'''
+		Restores limits that were saved upon export.
+		'''
+		if event is None:
+			event = self.event
+		ax = event.inaxes
+		axisId = self.identify_id_of_axis(ax)
+		ax.set_xlim(self.axisItems[axisId]['xLimit'])
+		ax.set_ylim(self.axisItems[axisId]['yLimit'])
+		
+		self.redraw()
+		
+		
 
 	def redraw(self):
 		'''

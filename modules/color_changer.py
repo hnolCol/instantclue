@@ -111,7 +111,12 @@ class colorChanger(object):
 			lineIdx = i * linesPerGroup
 			lineIdxEnd = lineIdx + linesPerGroup ## line + errors
 			for lines in ax.lines[lineIdx:lineIdxEnd]:
-				lines.set_color(colorPalette[i])
+				if hasattr(lines,'set_facecolor'):
+					lines.set_facecolor(colorPalette[i])
+					lines.set_edgecolor(colorPalette[i])
+				else:
+					lines.set_color(colorPalette[i])
+					
 					
                              	 
 	def change_color(self):
@@ -153,7 +158,11 @@ class colorChanger(object):
 				self.adjust_legend_color(ax,nTotal,newColorPalette, which = 'color')
 			
 			return
-			
+		
+		if self.selectedPlotType == 'pointplot':
+				legendColor = 'color'
+		else:
+				legendColor = 'facecolor'
 		
 		if self.numbCategoricalColumns == 0:
 				ax = self.axes[0]
@@ -168,7 +177,7 @@ class colorChanger(object):
 					else:
 						artist.set_facecolor(newColorPalette[m])
 		
-		elif self.selectedPlotType in ['boxplot','violinplot','barplot','swarm'] \
+		elif self.selectedPlotType in ['boxplot','violinplot','barplot','swarm','pointplot'] \
 		and self.plotter.splitCategories == False:
 			
 			nTotal = self.numbCategoricalColumns + 1 # +1 for one Whole population
@@ -178,14 +187,25 @@ class colorChanger(object):
 				ax = self.axes[n]
 				axArtists = self.get_items_to_color(ax)
 				
-				if len(axArtists) % nTotal == 0:
+				if self.selectedPlotType != 'pointplot' and len(axArtists) % nTotal == 0:
 					for m in range(nTotal):
 						axArtists[m].set_facecolor(newColorPalette[m])
 					self.adjust_legend_color(ax,nTotal,newColorPalette)
-				
+				elif len(axArtists) == 1 and self.selectedPlotType == 'pointplot':
+					for p in axArtists:
+						p.set_facecolor(newColorPalette)
+					colIdx = 0
+					for n,l in enumerate(ax.lines):
+						if n != 0 and n % 3 == 0:
+							colIdx+=1
+						col = newColorPalette[colIdx]
+						l.set_color(col)
+						
+					self.adjust_legend_color(ax,nTotal,newColorPalette)
 		
 					
-		elif self.numbCategoricalColumns == 1:	
+		elif self.numbCategoricalColumns == 1:
+			
 			ax = self.axes[0]
 			uniqueLevels = self.dfClass.get_unique_values(self.categoricalColumns[0])
 			numbUniqueLevels = uniqueLevels.size
@@ -196,16 +216,39 @@ class colorChanger(object):
 				newColorPalette = newColorPalette * len(self.numericColumns) * 2 #2 is a bit of security as sstripplot (swarm) adds more collections than levels	
 							
 			axArtists = self.get_items_to_color(ax)
-			if len(axArtists) % numbUniqueLevels == 0:
+			
+			if len(axArtists) % numbUniqueLevels == 0 or (self.selectedPlotType == 'pointplot' and\
+			len(self.numericColumns) == 1):
 				for m,artist in enumerate(axArtists):
 					if self.selectedPlotType == 'pointplot':
-						artist.set_facecolor(newColorPalette[m])
+						if len(self.numericColumns) == 1:
+							
+							artist.set_facecolor(newColorPalette)
+							colIdx = 0
+							for n,l in enumerate(ax.lines):
+								if n != 0 and n % 3 == 0:
+									colIdx += 1 								
+								l.set_color(newColorPalette[colIdx])
+							
+						else:
+							artist.set_facecolor(newColorPalette[m])
 						
+							linesPerGroup = self.numbNumericColumns * 3 + 1
+							self.change_lines_in_pointplots(ax,numbUniqueLevels,
+														newColorPalette, linesPerGroup = linesPerGroup)
+					else:
+						artist.set_facecolor(newColorPalette[m])
+					
+					
+					if self.selectedPlotType == 'pointplot':
+						artist.set_facecolor(newColorPalette)
 						linesPerGroup = self.numbNumericColumns * 3 + 1
 						self.change_lines_in_pointplots(ax,numbUniqueLevels,
 														newColorPalette, linesPerGroup = linesPerGroup)
 					else:
 						artist.set_facecolor(newColorPalette[m])
+					
+					
 					
 			else:
 				colorDictNew = match_color_to_uniqe_value(uniqueLevels,self.newColorMap)
@@ -213,10 +256,19 @@ class colorChanger(object):
 				for numColumn in self.numericColumns:
 					data = self.dfClass.df[[numColumn]+self.categoricalColumns].dropna(subset=[numColumn])
 					collectUnique = collectUnique + data[self.categoricalColumns[0]].unique().tolist()
-				for n,uniqueVal in enumerate(collectUnique):
-					axArtists[n].set_facecolor(colorDictNew[uniqueVal])
+			#	if self.selectedPlotType == 'pointplot':
+			#		print(axArtists[0].get_facecolor().size)
+			#		
+			#		if axArtists[0].get_facecolor().size == len(collectUnique) * 3 + 1:
+			##			axArtists[0].set_facecolor(list(colorDictNew.values()))
 					
-			self.adjust_legend_color(ax,numbUniqueLevels,newColorPalette)
+				else:
+					for n,uniqueVal in enumerate(collectUnique):
+						if n < len(axArtists):
+							axArtists[n].set_facecolor(colorDictNew[uniqueVal])
+
+				
+			self.adjust_legend_color(ax,numbUniqueLevels,newColorPalette,legendColor)
 					
 		elif self.numbCategoricalColumns > 1:
 			uniqueLevels = self.dfClass.get_unique_values(self.categoricalColumns[1])
@@ -258,13 +310,13 @@ class colorChanger(object):
 														newColorPalette, linesPerGroup = linesPerGroup)
 						
 				
-				self.adjust_legend_color(ax,numbUniqueLevels,newColorPalette)
+				self.adjust_legend_color(ax,numbUniqueLevels,newColorPalette,legendColor)
 			
 
 		
 	def adjust_legend_color(self,ax,n,colorPalette,which = 'facecolor'):
-		leg = ax.get_legend() 
 		
+		leg = ax.get_legend() 
 		if leg is not None:
 			for n in range(n):
 				if which == 'facecolor':

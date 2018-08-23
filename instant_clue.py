@@ -79,6 +79,7 @@ class instantClueApp(tk.Tk):
                         frame.grid_columnconfigure(3, weight=1, minsize=200)
                         frame.grid_rowconfigure(5, weight=1, minsize=345)
                         frame.grid_rowconfigure(11, weight=1, minsize=70)
+                        frame.grid_columnconfigure(0,weight=3,minsize=355)
 
 
         self.show_frame(start_page.StartPage)
@@ -97,6 +98,7 @@ class instantClueApp(tk.Tk):
         filemenu.add_command(label="Exit", command=self.close_up)
         helpmenu = tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="Tutorial", command=lambda:webbrowser.open(webisteUrlTutorial))
+        helpmenu.add_command(label="You Tube Videos", command=lambda:webbrowser.open(websiteUrlVideos))
         menubar.add_cascade(label="Help", menu=helpmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)

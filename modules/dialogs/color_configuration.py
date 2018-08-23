@@ -42,6 +42,8 @@ Set4 = ['#D1D3D4','#6D6E71','#EE3124','#FCB74A','#2E5FAC','#9BD5F4',
 Set5 = ['#7F3F98','#2E5FAC','#27AAE1','#9BD5F4','#017789','#00A14B',
           '#91CA65','#ACD9B2','#FFDE17','#FCB74A','#F26942',
            '#EE3124','#BE1E2D']
+Set6 = ["#444444", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
+            "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a"]
 
 ## standard repartoire of seabrn/matplotlib color palettes in Instant Clue                                 
 
@@ -85,6 +87,7 @@ class colorMapHelper(object):
 		'''
 		self.customColors['Set4'] = Set4
 		self.customColors['Set5'] = Set5
+		self.customColors['Set6'] = Set6
 		self.save_custom_colors()
 	
 	def add_palette(self,palette):
@@ -134,6 +137,7 @@ class colorMapHelper(object):
 		Opens the file in which the custom colors are stored. 
 		If we cannot find the file. Create a new one.
 		'''
+		
 		if os.path.exists(self.path) == False:
 			self.reset_default()
 			self.save_custom_colors()
@@ -468,7 +472,7 @@ class createColorMapsDialog(object):
  			values = ['Gradient (sequential)','Gradient (diverging)','Qualitative'])
  		comboBoxType.bind('<<ComboboxSelected>>',self.comboBoxClear)
  		comboBoxCenter = ttk.Combobox(self.cont, textvariable = self.center, 
- 			values = ['light','dark'])
+ 			values = ['light','light_reverse','dark','dark_reverse'])
  		comboBoxCenter.bind('<<ComboboxSelected>>',self.comboBoxCenterChange)
  			
  		satLightFrame = tk.Frame(self.cont, bg=MAC_GREY)
@@ -588,12 +592,15 @@ class createColorMapsDialog(object):
 					
 	def get_cmap_by_color(self,color,reverse=False):
 		'''
+		
 		'''
-		if self.center.get() == 'light':
+		if 'reverse' in self.center.get():
+			reverse = True
+		if 'light' in self.center.get():
 					cmapOutput = sns.light_palette(color, as_cmap = True, reverse=reverse)
 					self.cmap = matplotlib.cm.get_cmap(cmapOutput)	
 							
-		elif self.center.get() == 'dark':
+		elif 'dark' in self.center.get():
 			
 					cmapOutput = sns.dark_palette(color, as_cmap = True,reverse=reverse)
 					self.cmap = matplotlib.cm.get_cmap(cmapOutput)			

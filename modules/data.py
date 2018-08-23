@@ -58,7 +58,7 @@ def z_score(x):
    
        
 calculations = {'log2':np.log2,
-					'-log2':lambda x:np.log2(x)*(-1),
+					'-log2':lambda x: np.log2(x)*(-1),
 					'log10':np.log10,
 					'-log10':lambda x: np.log10(x)*(-1),
 					'ln':np.log,
@@ -71,9 +71,10 @@ class DataCollection(object):
 	'''
 	'''
 
-	def __init__(self, dataFrame = None):
+	def __init__(self, workflow = None):
 	
 		self.currentDataFile = None
+		self.workflow = workflow
 		self.df = pd.DataFrame()
 		self.df_columns = []
 		self.dataFrameId = 0
@@ -82,10 +83,12 @@ class DataCollection(object):
 		self.fileNameByID = OrderedDict() 
 		self.rememberSorting = dict()
 		self.replaceObjectNan = '-'
-		self.clippings = dict() 
+		self.clippings = dict()
+		self.droppedRows = dict() 
 	
 	
-	def add_data_frame(self,dataFrame, id = None, fileName = ''):
+	def add_data_frame(self,dataFrame, id = None, fileName = '', 
+							sourceBranch = None, addInfo = {}):
 		'''
 		Adds new dataFrame to Dict.
 		'''
@@ -94,7 +97,14 @@ class DataCollection(object):
 				
 		self.extract_data_type_of_columns(dataFrame,id)
 		self.dfs[id] = dataFrame
-		self.fileNameByID[id] = fileName
+		self.rename_data_frame(id,fileName)
+		rows,columns = self.dfs[id].shape
+		branchInfo = OrderedDict([('Name: ',fileName),
+								  ('ID: ',id),
+								  ('Columns: ',str(columns)),
+								  ('Rows: ',str(rows))])
+		
+		self.workflow.add_branch(id, fileName, branchInfo,sourceBranch,addInfo)
 	
 	
 	def add_count_through_column(self, columnName = None):
@@ -104,14 +114,14 @@ class DataCollection(object):
 		if columnName is None:
 			columnName = 'CountThrough'
 		nRow = self.get_row_number() 
-		countThrough = np.arange(0,nRow) 
+		countThrough = np.arange(0,nRow)
 		columnName = self.evaluate_column_name(columnName=columnName)
 		
 		self.df[columnName] = countThrough
-		self.df[columnName].astype(np.int64)
+		self.df[columnName] = self.df[columnName].astype('int64')
 		self.update_columns_of_current_data()
 		return columnName
-	
+
 	
 	def add_column_to_current_data(self,columnName,columnData,evaluateName = True):
 		'''
@@ -139,7 +149,8 @@ class DataCollection(object):
 		kde.fit(data) 
 		kde_exp = pd.DataFrame(np.exp(kde.score_samples(data)),columns = [newColumnName], index=indexSubset)
 		self.df = self.df.join(kde_exp)
-		
+		self.update_columns_of_current_data() 
+		self.save_current_data()
 		return newColumnName
 	
          
@@ -167,6 +178,7 @@ class DataCollection(object):
 			self.df[newColumnNames] = rollingWindow.std()
 		elif metric == 'quantile':
 			self.df[newColumnNames] = rollingWindow.quantile(quantile=quantile)
+		
 		self.update_columns_of_current_data()
 		
 		return newColumnNames
@@ -224,6 +236,8 @@ class DataCollection(object):
 		'''
 		Changes the DataType of a List of column Names
 		'''
+		if isinstance(newDataType, list) and len(newDataType) == len(columnList):
+			newDataType = dict([(k,v) for k,v in zip(columnList,newDataType)])
 		try:		
 			self.df[columnList] = self.df[columnList].astype(newDataType)
 		except ValueError:
@@ -359,6 +373,7 @@ class DataCollection(object):
 		columnNameEval = self.evaluate_column_name(columnName)
 		validValues = self.df[numericColumnList].count(axis='columns')
 		self.df[columnNameEval] = validValues
+		self.update_columns_of_current_data()
 		return columnNameEval
 		
 	def delete_rows_by_index(self, index):
@@ -390,6 +405,8 @@ class DataCollection(object):
 		'''
 		Deletes DataFile by id
 		'''	
+		if id not in self.dfs:
+			return
 		
 		del self.dfs[id]
 		del self.fileNameByID[id]
@@ -433,9 +450,44 @@ class DataCollection(object):
 			pass
 		elif isinstance(columnLabelList,str):
 			columnLabelList = [columnLabelList]
-		self.df.dropna(how = how,subset=columnLabelList,inplace=True, thresh=thresh)
+		dfnoNaN = self.df.dropna(how = how,subset=columnLabelList, thresh=thresh)
+		idxNaN = [i for i in self.df.index.tolist() if i not in dfnoNaN.index.tolist()]
+		self.save_dropped_rows(self.currentDataFile,idxNaN)
+		self.df = self.dfs[id] = dfnoNaN
+		self.update_columns_of_current_data()
+		
+		return len(idxNaN)
+				
+			
+	def save_dropped_rows(self,id=None,rowIdx=None,reverse=False):
+		'''
+		Saves rows that were removed from the data set.
+		'''
+		if id != self.currentDataFile:
+			self.set_current_data_by_id(id)
+		
+		if reverse and id in self.droppedRows:
+			
+			dfToAdd = self.droppedRows[id][-1]
+			del self.droppedRows[id][-1]
+			if len(self.droppedRows[id]) == 0:
+				del self.droppedRows[id]
+				
+			self.df = self.df.append(dfToAdd)
+			self.dfs[id] = self.df			
 			
 			
+		else:
+		
+			if id not in self.droppedRows:
+		
+				self.droppedRows[id] = [self.df.loc[rowIdx,:]]
+			else:
+				self.droppedRows[id].append(self.df.loc[rowIdx,:])
+		
+		
+		
+					
 		
 	def duplicate_columns(self,columnLabelList):
 		'''
@@ -459,36 +511,66 @@ class DataCollection(object):
 		'''
 		
 		'''
-		if divColumn in self.df.columns:
-			columnNames = []
-			for column in columnLabelList:
-				columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
-				self.df[columnName] = self.df[column] - self.df[divColumn]
-				columnNames.append(columnName)
-			self.update_columns_of_current_data()
-			return columnNames	
+		columnNames = []
+		if isinstance(divColumn,str):
+		
+				for column in columnLabelList:
+					
+					if divColumn in self.df.columns:
+						columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
+						self.df[columnName] = self.df[column] - self.df[divColumn]
+						columnNames.append(columnName)
+						
+		elif isinstance(divColumn,list):
+			
+				if len(divColumn) != len(columnLabelList):
+					return
+				
+				for column, divColumn in zip(columnLabelList,divColumn):
+					columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
+					self.df[columnName] = self.df[column] - self.df[divColumn]
+					columnNames.append(columnName)
+				
+		self.update_columns_of_current_data()
+		return columnNames
 
 	def divide_columns_by_column(self,columnLabelList, divColumn):
 		'''
 		
 		'''
-		if divColumn in self.df.columns:
-			columnNames = []
-			for column in columnLabelList:
-				columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
-				self.df[columnName] = self.df[column] / self.df[divColumn]
-				columnNames.append(columnName)
-			self.update_columns_of_current_data()
-			return columnNames
+		
+		columnNames = []
+		if isinstance(divColumn,str):
+		
+				for column in columnLabelList:
+					
+					if divColumn in self.df.columns:
+						columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
+						self.df[columnName] = self.df[column] / self.df[divColumn]
+						columnNames.append(columnName)
+						
+		elif isinstance(divColumn,list):
+			
+				if len(divColumn) != len(columnLabelList):
+					return
+				
+				for column, divColumn in zip(columnLabelList,divColumn):
+					#print(column,divColumn)
+					columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
+					self.df[columnName] = self.df[column] / self.df[divColumn]
+					columnNames.append(columnName)
+				
+		self.update_columns_of_current_data()
+		return columnNames
 			
 			
 		
-	def evaluate_columnNames_of_df(self, df):
+	def evaluate_columnNames_of_df(self, df, useExact = True):
 		'''
 		Checks each column name individually to avoid same naming and overriding.
 		'''
 		columns = df.columns.values.tolist() 
-		evalColumns = [self.evaluate_column_name(column) for column in columns]
+		evalColumns = [self.evaluate_column_name(column,useExact=useExact) for column in columns]
 		df.columns = evalColumns
 		return df
 		
@@ -499,6 +581,10 @@ class DataCollection(object):
 		'''
 		if columnList is None:
 			columnList = self.df_columns 
+		
+		if len(columnName) > maxLength-10:
+			columnName = columnName[:maxLength-30]+'___'+columnName[-30:]
+			
 		if useExact:
 			columnNameExists = [col for col in columnList if columnName == col]
 		else:
@@ -508,9 +594,8 @@ class DataCollection(object):
 		if numberColumnNameExists > 0:
 			newColumnName = columnName+'_'+str(numberColumnNameExists)
 		else:
-			newColumnName = columnName
-		if len(newColumnName) > maxLength-10:
-			newColumnName = newColumnName[:maxLength-30]+'___'+newColumnName[-30:]
+			newColumnName = columnName		
+		
 		return newColumnName
 	
 	def extract_data_type_of_columns(self,dataFrame,id):
@@ -530,6 +615,7 @@ class DataCollection(object):
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
 			dataTypeColumnRelationship[dataType] = columnHeaders
 		self.dfsDataTypesAndColumnNames[id] = dataTypeColumnRelationship
+		
 	
 		
 	def export_current_data(self,format='txt',path = ''):
@@ -583,9 +669,11 @@ class DataCollection(object):
 	def fit_transform(self,obj,columns,namePrefix = 'Scaled'):
 		'''
 		'''
+		
 		for column in columns:
 			X = self.df[column].dropna().values.reshape(-1, 1)
 			normX = getattr(obj,'fit_transform')(X)
+			
 		
 		print(normX)
 	
@@ -631,6 +719,7 @@ class DataCollection(object):
 		'''
 		Returns columns datatypes relationship
 		'''
+		
 		return self.dfsDataTypesAndColumnNames[self.currentDataFile]
 		
 	def get_columns_data_type_relationship_by_id(self, id):
@@ -682,15 +771,8 @@ class DataCollection(object):
 		Returns sliced self.df
 		row idx - boolean list/array like to slice data further.
 		'''	
-		if rowIdx is None or ignore_clipping:
-			if self.currentDataFile in self.clippings:
-				rowIdx = self.clippings[self.currentDataFile]
-			else:
-			
-				return self.df[columnList]
+		return self.get_data_by_id(self.currentDataFile,False,rowIdx,ignore_clipping)[columnList]
 		
-		df = self.df[columnList]
-		return df.loc[rowIdx,:]
 		
 	def get_current_data(self, rowIdx = None, ignoreClipping = False):
 		'''
@@ -755,7 +837,6 @@ class DataCollection(object):
 		'''
 		To provide consistent labeling, use this function to get the id the new df should be added
 		'''
-		#addedDataFrames = len(self.dfs)
 		self.dataFrameId += 1
 		idForNextDataFrame = 'DataFrame: {}'.format(self.dataFrameId)
 		
@@ -788,7 +869,31 @@ class DataCollection(object):
 			return [uniqueCategories]
 		else:
 			return uniqueCategories
-		
+
+
+
+	def get_positive_subsets(self,numericColumn,categoricalColumns,inputData):
+		'''
+		'''
+		data = pd.melt(inputData[numericColumn+categoricalColumns], 
+									categoricalColumns, var_name = 'Columns', 
+									value_name = 'Value')
+		dataCombined = pd.DataFrame()
+		complColumns = ['Complete']+categoricalColumns
+		for category in complColumns:
+			if category == 'Complete':
+				dataCombined.loc[:,category] = data['Value']
+			else:
+				subset = data[data[category] == '+']['Value']
+				dataCombined = pd.concat([dataCombined,subset],axis=1)
+		dataCombined.columns = complColumns
+		dataCombined.loc[:,'intIdxInstant'] = inputData.index	
+		return dataCombined, complColumns	
+							
+							
+							
+					
+						
 	
 	def iir_filter(self,columnNameList,n):
 		'''
@@ -856,9 +961,11 @@ class DataCollection(object):
 		saveId = self.currentDataFile
 		# we need to change to have a suitable evaluation
 		self.set_current_data_by_id(id)
-		df = self.dfs[id]
+		#df = self.dfs[id]
 		dfToAdd = self.evaluate_columnNames_of_df(dfToAdd)
-		self.dfs[id] = df.join(dfToAdd,rsuffix='_', lsuffix = ''  ) 
+		self.df = self.df.join(dfToAdd,rsuffix='_', lsuffix = ''  ) 
+		self.save_current_data()
+		self.update_columns_of_current_data()
 		self.set_current_data_by_id(saveId)
 				
 		
@@ -911,6 +1018,45 @@ class DataCollection(object):
 		
 		return id,fileName,self.dfsDataTypesAndColumnNames[id]
 		
+	def unstack_column(self,columnName, separator = ';', verbose = False):
+		'''
+		Unstacks column. 
+		'''
+		if verbose:
+			progressBar = Progressbar('Unstacking ..')
+			progressBar.update_progressbar_and_label(4,'Staring')
+		
+		row_accumulator = []
+		
+		def splitListToRows(row, separator):
+			split_row = row[columnName].split(separator)
+			n = self.df.index.get_loc(row.name)
+			if verbose and n % 50 == 0:
+				progressBar.update_progressbar_and_label(n/nRows*100,'Working .. {}/{}'.format(n,nRows))
+			for s in split_row:
+				new_row = row.to_dict()
+				new_row[columnName] = s
+				row_accumulator.append(new_row)    
+		
+        
+		nRows = len(self.df.index)
+        
+		self.df.apply(splitListToRows, axis=1, args = (separator, ))
+		unstackedDf = pd.DataFrame(row_accumulator)
+		
+		#acquire name and source file
+		
+		baseFile = self.get_file_name_of_current_data()	
+		fileName = 'Unstack_{}[{}]'.format(columnName,baseFile)
+		id = self.get_next_available_id()	
+		self.add_data_frame(unstackedDf,id = id, fileName = fileName)				
+		if verbose:
+		
+			progressBar.update_progressbar_and_label(100,'Done ..')
+			progressBar.close()
+			
+		return id,fileName,self.dfsDataTypesAndColumnNames[id]	
+		
 	
 	def transform_data(self,columnNameList,transformation):
 		'''
@@ -927,7 +1073,7 @@ class DataCollection(object):
 			axis_ = 0 
 		else:
 			axis_ = 0 
-		#surprisingly this is afater than simply np.log2(self.df[columnNameList])
+		#surprisingly this is faster than simply np.log2(self.df[columnNameList])
 		transformedDataFrame = self.df[columnNameList].apply(calculations[transformation], axis=axis_)
 		transformedDataFrame.columns = newColumnNames
 		if transformation != 'Z-Score':
@@ -1130,7 +1276,11 @@ class DataCollection(object):
 		return newColumnNames, indexInTreeview 
 
 			
-			
+	def rename_data_frame(self,id,fileName):
+		'''
+		'''
+		self.fileNameByID[id] = fileName
+						
 			
 	def rename_columnNames_in_current_data(self,replaceDict):
 		'''
@@ -1139,8 +1289,85 @@ class DataCollection(object):
 		self.df.rename(str,columns=replaceDict,inplace=True)
 		
 		self.update_columns_of_current_data()		
+
+
+	def metric_over_n_rows(self,columns,n,id = None, metric='mean'):
+		
+		if id is None:
+			
+			df = self.df[columns]
+		groupedData = df.groupby(df.index // n * n)
+		if hasattr(groupedData,metric):
+			df = getattr(groupedData,metric)()
+			return df 
 		
 		
+		
+			
+	def shift_data_by_row_matches(self,id = None, matchColumn = '', 
+								  adjustColumns = [], sort = False,
+								  intervalData = {}, removeOtherData = False):
+		'''
+		Shift data
+		'''
+		if id is None:
+			id = self.currentDataFile
+		
+		df = self.get_data_by_id(id, ignoreClipping = True)
+		
+		if matchColumn not in df.columns:
+			return
+			
+		if any(col not in df.columns for col in adjustColumns):
+			return
+		
+		if len(intervalData) == 0:
+			return
+			
+		if sort:
+			df.sort_values(matchColumn, inplace=True)
+		
+		if removeOtherData:
+			columns = adjustColumns + [matchColumn]
+			df = df[columns]
+		
+		collectDf = pd.DataFrame()
+		timeCols = []
+		columnsAdded = []
+		intSteps = (df[matchColumn].max() - df[matchColumn].min())/len(df.index)
+		
+		for n,column in enumerate(adjustColumns):
+			try:
+				dfSub = pd.DataFrame()
+				start, newZero = intervalData[column]
+				endIdx = df.index[-1]
+				startIdx = (df[matchColumn]-start).abs().argsort()[0]
+				zeroIdx = (df[matchColumn]-newZero).abs().argsort()[0]
+			
+				timeCol = '{}{}'.format(matchColumn,n)
+				dfSub[timeCol] = df[matchColumn].iloc[startIdx:endIdx,]
+			
+				timeCols.append(timeCol) 
+			
+				dfSub[column] = df[column].iloc[startIdx:endIdx,]
+				dfSub.index = range(startIdx-zeroIdx,endIdx-zeroIdx)			
+			
+
+				collectDf = pd.concat([collectDf,dfSub],ignore_index=False, axis=1)
+			except:
+				pass
+		indices = collectDf.index.tolist()
+		minValue = indices[0] * intSteps
+		
+		maxValue = indices[-1] * intSteps
+		
+		collectDf['adj_interval'] = np.linspace(minValue,maxValue,num = len(collectDf.index))
+		
+		return collectDf			
+
+		
+		
+			
 		
 				
 		

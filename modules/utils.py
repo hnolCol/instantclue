@@ -80,7 +80,7 @@ websiteUrl = 'http://www.instantclue.uni-koeln.de'
 websiteUrlVideos = 'http://www.instantclue.uni-koeln.de/videos.html'
 webisteUrlTutorial = 'http://www.instantclue.uni-koeln.de/tutorials.html'
 gitHubUrl = 'http://github.com/hnolCol/InstantClue'
-
+paperUrl = 'www.nature.com/articles/s41598-018-31154-6'
 videoURLDict = dict()
 videoURLDict['main_figure'] = r'https://www.youtube.com/watch?v=5kSy53gpV5Y'
 
@@ -143,13 +143,31 @@ def merge_two_dicts(x,y):
 	z = x.copy()
 	z.update(y)
 	return z
+
+def reverse_dict(dict):
+	dictReverse = {y:x for x,y in dict.items()}
+	return dictReverse
+	
 namedColors = dict()
 ## get colors
 for colorDict in [TABLEAU_COLORS,CSS4_COLORS]:
 	namedColors = merge_two_dicts(namedColors,colorDict)
 
 
-arrow_args = dict(arrowstyle="-", color = "0.5")
+arrow_args = dict(arrowstyle="-", color = "0.5", connectionstyle = "arc3")#"angle3,angleA=90,angleB=0")
+
+arrowOptions = ["arc3","arc3,rad=0.","arc3,rad=0.3","arc3,rad=-0.3",
+"angle,angleA=-90,angleB=180,rad=0",
+"angle,angleA=-90,angleB=180,rad=5",
+"angle,angleA=-90,angleB=10,rad=5",
+"arc,angleA=-90,angleB=0,armA=30,armB=30,rad=0",
+"arc,angleA=-90,angleB=0,armA=30,armB=30,rad=5",
+"arc,angleA=-90,angleB=0,armA=0,armB=40,rad=0",
+"bar,fraction=0.3",
+"bar,fraction=-0.3",
+"bar,angle=180,fraction=-0.2"]
+
+
 bbox_args = None
 signLineProps = dict(lw=0.5,color='k')
 standardTextProps = dict(ha='center', va='bottom')
@@ -169,8 +187,6 @@ multCorrAbbr = {'bonferroni':'bonferroni',
 
 
 namedColors = matplotlib.colors.get_named_colors_mapping()
-
-
 
 def evaluate_screen(screen_width,screen_height,w,h):
      '''
@@ -795,7 +811,8 @@ class CreateToolTip(object):
                  showcolors = False,cm = None,
                  display_widget = False,
                  widgetProps = None,
-                 master = None):
+                 master = None,
+                 tag_id = None):
 
         self.waittime = waittime  # in miliseconds, originally 500
         self.wraplength = wraplength  # in pixels, originally 180
@@ -804,9 +821,16 @@ class CreateToolTip(object):
         self.widgetProps = widgetProps
         self.text = text
         self.title = title_
-        self.widget.bind("<Enter>", self.onEnter)
-        self.widget.bind("<Leave>", self.onLeave)
-        self.widget.bind("<ButtonPress>", self.onLeave)
+        if isinstance(widget,tk.Canvas):
+        	self.widget.tag_bind(tag_id,"<Enter>", self.onEnter)
+        	self.widget.tag_bind(tag_id,"<Leave>", self.onLeave)
+        	self.widget.tag_bind(tag_id,"<ButtonPress>", self.onLeave)        
+        else: 
+        	self.widget.bind("<Enter>", self.onEnter)
+        	self.widget.bind("<Leave>", self.onLeave)
+        	self.widget.bind("<ButtonPress>", self.onLeave)
+    
+        	
         self.bg = bg
         self.pad = pad
         self.id = None
@@ -875,6 +899,7 @@ class CreateToolTip(object):
         widget = self.widget
         n = 6
         self.tw = tk.Toplevel(widget)
+        
 
         if self.display_widget == False:
 
@@ -890,11 +915,14 @@ class CreateToolTip(object):
         else:
         	self.tw.grab_set()
         	self.tw.wm_title('')
-
+        self.tw.attributes('-topmost',1)
+		
         win = tk.Frame(self.tw,
                        background=bg,
                        relief=tk.GROOVE,
-                       )
+                       highlightbackground="black", 
+                       highlightcolor="black", 
+                       highlightthickness=1)
 
         if self.display_widget:
 
@@ -909,21 +937,56 @@ class CreateToolTip(object):
 
 
         if self.text is not None:
-        	if self.title is not None:
-        		title_label = tk.Label(win, text = self.title,background=bg,
-                               justify =tk.LEFT,wraplength=self.wraplength,
-                               font = (defaultFont, font_size,'bold'))
-        		title_label.grid(sticky = tk.W,columnspan=2)
-
-        	label = tk.Label(win,
-                          text=self.text,
+        	styleDict = dict(
                           justify=tk.LEFT,
                           background=bg,
                           relief=tk.SOLID,
                           borderwidth=0.0,
                           wraplength=self.wraplength,
                           font = (defaultFont, font_size))
+                          
+        	if self.title is not None:
+        		title_label = tk.Label(win, text = self.title,background=bg,
+                               justify =tk.LEFT,wraplength=self.wraplength,
+                               font = (defaultFont, font_size,'bold'))
+        		title_label.grid(sticky = tk.W,columnspan=2)
 
+        		#title_label.grid(sticky = tk.W,columnspan=2)
+        	if isinstance(self.text,str):
+
+				
+        			label = tk.Label(win,
+                          text=self.text,
+                          **styleDict)
+        			label.grid(padx=(pad[0], pad[2]),
+                          
+                   		pady=(pad[1], pad[3]),
+                   		sticky=tk.W,
+                   		columnspan=n+1)
+                
+                   
+        	elif isinstance(self.text,dict):
+        			nRow = 0
+        			
+        			for key,value in self.text.items():
+        				nRow += 1	
+        				labKey = tk.Label(win,										
+                          		text=key,
+                          		**styleDict)
+        				labKey.grid(row=nRow,sticky=tk.W)
+        													
+        				label = tk.Label(win,										
+                          		text=value,
+                          		**styleDict) 
+        				label.grid(row=nRow,column=1,padx=2,sticky=tk.W)
+        				ttk.Separator(win,orient = tk.HORIZONTAL).grid(row=nRow,columnspan=2,
+        																sticky=tk.EW+tk.S,pady=(5,0))
+        			
+        			ttk.Separator(win,orient=tk.VERTICAL).grid(row=1,rowspan=nRow, column=0, 
+        																sticky = tk.NS+tk.E)														
+					
+					
+					
 
         if self.showcolors == True:
 
@@ -964,12 +1027,8 @@ class CreateToolTip(object):
         	if self.plat == 'WINDOWS':
                         self.tw.attributes('-topmost',True)
 
-        if self.text is not None:
 
-        	label.grid(padx=(pad[0], pad[2]),
-                   pady=(pad[1], pad[3]),
-                   sticky=tk.W,
-                   columnspan=n+1)
+
         win.grid()
         x, y = tip_pos_calculator(widget, label)
         self.tw.wm_geometry("+%d+%d" % (x, y))
