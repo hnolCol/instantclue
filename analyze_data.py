@@ -1160,7 +1160,7 @@ class analyze_data(tk.Frame):
      					calcDict = OrderedDict([(column,value) for column in selectedColumns])
      					baseString = 'by_{}:'.format(value)
      			elif byMedian:
-     				values = self.sourceData.df.median()
+     				values = self.sourceData.df[selectedColumns].median()
      				calcDict = OrderedDict([(column,value) for column,value in zip(selectedColumns,values.tolist())])
      				baseString = 'by_median:'  
      			
