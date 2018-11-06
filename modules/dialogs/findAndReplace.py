@@ -91,12 +91,15 @@ class findAndReplaceDialog(object):
 			self.dataTreeview = dataTreeview 
 			
 		self.dfClass = dfClass	
+		
 		self.define_commands()
 		self.build_toplevel()
 		self.build_widgets()
-		
 		self.prepare_data()
 		self.display_data()
+		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		
 	def close(self, event = None):
 		'''
@@ -114,7 +117,6 @@ class findAndReplaceDialog(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Find & replace - '+self.operationType) 
-		popup.grab_set() 
 		popup.bind('<Escape>',self.close)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=615

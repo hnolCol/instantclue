@@ -393,11 +393,11 @@ class chartToolTip(object):
 	def update_background(self, redraw=True):
 		'''
 		'''
+		redraw = False
 		if redraw:
 			if hasattr(self,'background'):
 				self.set_invisible()
 			self.plotter.redraw()
-		
 		self.background =  self.plotter.figure.canvas.copy_from_bbox(self.ax.bbox)
 		#self.set_invisible(visble = True)
 		
@@ -408,6 +408,7 @@ class chartToolTip(object):
 			self.plotter.figure.canvas.restore_region(self.background)
 			self.tooltip.draw(self.r)
 			self.plotter.figure.canvas.blit(self.ax.bbox)
+			
 		
 	
 	def extract_ax_props(self):
@@ -515,9 +516,9 @@ class chartToolTip(object):
 	def evaluate_event_for_collection(self,event):
 		'''
 		'''
+		
 		xValue = np.asarray(event.xdata)
 		yValue = np.asarray(event.ydata)	
-		
 		boolXData = np.isclose(self.xData,xValue,atol = 0.01*self.axProps['xDiff'])
 		boolYData = np.isclose(self.yData,yValue,atol = 0.01*self.axProps['yDiff'])
 		add = np.sum([boolXData,boolYData], axis=0)
@@ -612,9 +613,12 @@ class chartToolTip(object):
 			self.set_invisible()
 		else:
 			textData = self.annotationData[arg[0]]
+			if hasattr(self,'lastArg') and self.lastArg  == arg[0]:
+				return
 			text = get_elements_from_list_as_string(textData).replace(', ','\n')
 			self.update_position(event,text)
 			self.plotter.get_active_helper().linePlotHelper.indicate_hover(arg[0])
+			self.lastArg = arg[0]
 			
 
 	def annotate_cluster_map(self,dfClass,annotationColumnList,plotType = 'hclust'):

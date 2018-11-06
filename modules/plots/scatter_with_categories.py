@@ -29,6 +29,8 @@ import matplotlib.patches as patches
 
 from modules.utils import *
 from modules.plots.axis_styler import axisStyler
+from modules.plots.scatter_plotter import scatterPlot    			
+
 class binnedScatter(object):
 	'''
 	Binned scatter is a version of a scatter plot. 
@@ -208,6 +210,7 @@ class scatterWithCategories(object):
 		
 		self.unique_values = OrderedDict() 	
 		self.axes = OrderedDict() 
+		self.scatterPlots = OrderedDict()
 		self.label_axes = OrderedDict() 
 		self.axes_combs = OrderedDict()
 		self.subsets_and_scatter = OrderedDict() 
@@ -292,9 +295,25 @@ class scatterWithCategories(object):
 			else:
 				n = levels_3.index(comb[2])
 				ax_ = self.create_ax_from_grid_spec(comb,pos,n, gs_saved)	
-				
-			scat = self.plotter.add_scatter_collection(ax_,x_,y_, color = self.color, 
-								size=self.size, alpha=self.alpha,picker=True)
+			
+			
+			self.scatterPlots[i] = scatterPlot(
+									group,
+									self.numericalColumns,
+									self.plotter,
+									self.colorMap,
+									self.dfClass,									
+									ax_,
+									self.dataID,								
+									{'s':self.size,'alpha':self.alpha,
+									'picker':True,'label':None,'color':self.color,
+									'edgecolor':'black','linewidth':0.3},
+									showLegend = True if i == 0 else False,
+									ignoreYlimChange = True)
+			
+			
+			#scat = self.plotter.add_scatter_collection(ax_,x_,y_, color = self.color, 
+			#					size=self.size, alpha=self.alpha,picker=True)
 			self.annotate_axes(ax_)
 														
 			#ax_.plot(x_,y_,'o',color = self.color,ms = np.sqrt(self.size),
@@ -319,8 +338,11 @@ class scatterWithCategories(object):
 			if self.numbNumericalColumns == 2:
 				ax_.set_xlim(xlim)
 			self.axes[i] = ax_
-			self.axes_combs[comb] = [ax_,scat]
+			#self.axes_combs[comb] = [ax_,scat]
 		self.add_labels_to_figure()	
+		
+		for scatPlot in self.scatterPlots.values():
+			setattr(scatPlot,'ignoreYlimChange',False)
 
 	def annotate_axes(self,ax_):
 		'''
@@ -377,16 +399,14 @@ class scatterWithCategories(object):
 									
 	def change_size_by_numerical_column(self,numericColumn):
 		'''
+		Change size of scatter points by numerical values.
+		We need to calculate the limits before otherwise all
+		scatter plots will have the same range of data.
 		'''	
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=[numericColumn])	
-		
-		scaledData = scale_data_between_0_and_1(self.data[numericColumn])
-		sizeData = scaledData*(self.maxSize-self.minSize) + self.minSize
-		self.data.loc[:,'size'] = sizeData
-		self.adjust_size()
-		self.save_color_and_size_changes('change_size_by_numerical_column',numericColumn)			
+		values = self.dfClass.get_data_by_id(self.dataID)[numericColumn].values.flatten()
+		limits = [np.min(values),np.max(values)]
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.change_size_by_numerical_column(numericColumn,limits = limits)			
 	
 	
 	def change_size_by_categorical_columns(self,categoricalColumn):
@@ -395,14 +415,17 @@ class scatterWithCategories(object):
 		'''
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
 																  definedColumnsList=[categoricalColumn])
-		
 		uniqueCategories = self.data[categoricalColumn].unique()
 		numberOfUuniqueCategories = uniqueCategories.size
-
 		scaleSizes = np.linspace(0.3,1,num=numberOfUuniqueCategories,endpoint=True)
 		sizeMap = dict(zip(uniqueCategories, scaleSizes))
-		
 		sizeMap = replace_key_in_dict('-',sizeMap,0.1)
+				
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.change_size_by_categorical_columns(categoricalColumn, sizeMap = sizeMap)
+		return		
+		
+		
 		self.data.loc[:,'size'] = self.data[categoricalColumn].map(sizeMap)
 		self.data.loc[:,'size'] = (self.data['size'])*(self.maxSize-self.minSize) + self.minSize
 		self.adjust_size()		
@@ -436,34 +459,8 @@ class scatterWithCategories(object):
 	def bind_label_event(self, labelColumnList):
 		'''
 		'''
-		from modules.plotter import annotateScatterPoints
-
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=labelColumnList)
-		self.textAnnotationColumns = labelColumnList
-		self.group_data()
-		
-		for comb in self.all_combinations:
-			if comb in self.grouped_keys:
-				subset = self.grouped_data.get_group(comb)
-				ax,_ = self.axes_combs[comb]
-			else:
-				continue
-		
-			if comb in self.annotationClasses: ## useful to keep already added annotations by another column selectable
-				madeAnnotations = self.annotationClasses[comb].madeAnnotations
-				selectionLabels = self.annotationClasses[comb].selectionLabels
-				## avoid wrong labeling
-				try:
-					self.annotationClasses[comb].disconnect_event_bindings()
-				except:
-					pass
-			else:
-				madeAnnotations = OrderedDict()
-				selectionLabels = OrderedDict()
-			self.annotationClasses[comb] = annotateScatterPoints(self.plotter,self.figure,ax,
-													  subset,labelColumnList,self.numericalColumns[:2],
-													  madeAnnotations,selectionLabels) 
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.bind_label_event(labelColumnList)
 
 	def add_annotation_from_df(self,df):
 		'''
@@ -482,12 +479,16 @@ class scatterWithCategories(object):
 		accepts a numeric column from the dataCollection class. numeric is added using 
 		the index ensuring that correct dots get the right color. 
 		'''
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.change_color_by_numerical_column(numericColumn)
+		return
+		
 		cmap = get_max_colors_from_pallete(self.colorMap)
 			
 		## update data if missing columns 
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=[numericColumn])	
-		scaledData = scale_data_between_0_and_1(self.data[numericColumn]) 
+																  definedColumnsList=numericColumn)	
+		scaledData = scale_data_between_0_and_1(self.data[numericColumn[0]].values) 
 		self.data['color']= [col_c(cmap(value)) for value in scaledData]
 		self.group_data()
 		for comb in self.all_combinations:
@@ -502,6 +503,11 @@ class scatterWithCategories(object):
 	def change_color_by_categorical_columns(self,categoricalColumn, updateColor = True):
 		'''
 		'''
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.change_color_by_categorical_columns(categoricalColumn,updateColor)
+		return
+		
+		
 		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,categoricalColumn,
 												self.colorMap, self.categoricalColorDefinedByUser,
 												self.color)

@@ -57,23 +57,21 @@ class fileImporter(object):
 		self.headerRow = tk.StringVar()
 		self.headerRow.set('1')
 		
-		
 		self.data_to_export = None
 		self.replaceObjectNan = None
 		self.pt = None
+		
 		self.pathUpload = pathUpload
 		self.comboboxVariables = OrderedDict()
 		
-		
-
 		self.build_toplevel() 
 		self.build_widgets()
 		
 		self.preview_df = self.load_n_rows_of_file(self.pathUpload, N = 50)
-		
 		self.initiate_preview(self.preview_df)
 		
-		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window() 	
 	
 	def close(self,event=None):

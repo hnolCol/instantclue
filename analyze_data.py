@@ -40,6 +40,7 @@ from modules import stats
 from modules import save_and_load_sessions
 from modules import interactive_widget_helper
 from modules import workflow
+from modules import find_cat_overlap
 # internal dialog window imports
 from modules.dialogs import chart_configuration
 from modules.dialogs import size_configuration
@@ -69,13 +70,14 @@ from modules.dialogs import mask_filtering
 from modules.dialogs import multi_block
 from modules.dialogs import import_TDT
 from modules.dialogs import shift_data
+from modules.dialogs import compare_groups
 
 from modules.plots.time_series_helper import aucResultCollection
 from modules.dialogs.simple_dialog import simpleUserInputDialog, simpleListboxSelection
 from modules.utils import *
 
 from modules.calculations.normalize import dataNormalizer
-
+from modules.calculations.feature_selection import selectFeaturesFromModel
 import os
 import time
 import string
@@ -86,7 +88,7 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 import numpy.polynomial.polynomial as poly
-
+from urllib.request import urlopen
 
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
@@ -104,7 +106,14 @@ from matplotlib.widgets import Lasso
 from matplotlib import colors
 from matplotlib import path
 from matplotlib.ticker import MultipleLocator
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+try:
+	#matplotlib 2
+	from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg
+except:
+	#matplotlib 3
+	from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
+	
 import matplotlib.ticker as mtick
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as mpatches
@@ -197,6 +206,7 @@ class analyze_data(tk.Frame):
            self.currentMenu  = None
            
            self.pathUpload = path_file
+           self.tooltipFirstTime = True
 
 			
            ## dicts to save dropped column names
@@ -221,9 +231,6 @@ class analyze_data(tk.Frame):
            self.selection_press_event = None
            self.pick_label = None
            self.pick_freehand  = None
-           self._3d_update = None
-           self.mot_adjust = None
-           self.mot_adjust_ver = None
            self.label_button_droped = None
            self.tooltip_button_droped = None
            self.size_button_droped = None
@@ -358,14 +365,13 @@ class analyze_data(tk.Frame):
            menus = ['main','column','dfformat','sort','split','replace','dataType','logCalc',\
            'rolling','smoothing','rowColCalc','multTest','curvefit','categories',\
            'predict','transform','correlation','nanReplace','basicCalc','normalization',\
-           'featureSelection','columnBasicDiv','columnBasicSub','aggRows','time_series']
+           'featureSelection','columnBasicDiv','columnBasicSub','aggRows','time_series',
+           'compareGroups','featureSelection']
            
           # _, self.filterIcon,self.calcAddColumn,_ = images.get_workflow_images()
 
            for menu in menus:
            	menuDict[menu] = tk.Menu(self, **styleDict)
-
-
 
            rowColumnCalculations = ['Mean [row]','Median [row]','Stdev [row]','Sem [row]',
            									'Mean & Stdev [row]','Mean & Sem [row]',
@@ -373,12 +379,12 @@ class analyze_data(tk.Frame):
            									'N ^ x [row]']
 
            splitOptions = ["Space [ ]","Semicolon [;]","Comma [,]","U-Score [_]",
-           					"Minus [-]","Slash [/]","B-Slash [\]"]
+           					"Minus [-]","Slash [/]","B-Slash [\]","Custom String"]
 
            replace_options = ['0 -> NaN','NaN -> 0','NaN -> Constant','NaN -> Mean[col]','NaN -> Mean[row]',
            					  'NaN -> Median[col]','NaN -> Gauss Distribution']
            
-           normOptions = ['Standardize','Quantile']
+           normOptions = ['Standardize','Quantile','0->1']
 
            rollingOptions = ['mean','median','quantile','sum','max','min','std']
 
@@ -404,10 +410,11 @@ class analyze_data(tk.Frame):
            menuDict['column'].add_cascade(label="Replace", menu = menuDict['replace'])
            menuDict['column'].add_command(label='Count through', command = self.create_count_through_column)
            menuDict['column'].add_command(label='Count valid values', command = self.count_valid_values)
+           menuDict['column'].add_command(label='Factorize', command = self.factorize_column)
+            
            menuDict['column'].add_cascade(label='Drop rows with NaN ..', menu = menuDict['nanReplace'])
-           menuDict['column'].add_cascade(label='Feature selection', menu = menuDict['featureSelection'])
+           #menuDict['column'].add_cascade(label='Feature selection', menu = menuDict['featureSelection'])
            
-           menuDict['featureSelection'].add_command(label='Drop cols with low variance ..', command = self.drop_cols_with_low_variance)
           
            for opt in nanDroppingOptions:
            	menuDict['nanReplace'].add_command(label=opt, command = lambda how = opt: self.remove_rows_with_nan(how))
@@ -419,10 +426,11 @@ class analyze_data(tk.Frame):
            menuDict['sort'].add_command(label="Value", command = lambda s = "Value":  self.sort_source_data(s))
            menuDict['sort'].add_command(label="String length", command = lambda s = "String length":  self.sort_source_data(s))
            menuDict['sort'].add_command(label="Custom order", command = self.custom_sort_values)#lambda : tk.messagebox.showinfo('Under revision','Currently under revision. Will be available in the next minor update.'))#)self.design_popup(mode='Custom sorting'))
-
            for splitString in splitOptions:
-               menuDict['split'].add_command(label=splitString,
-               							   command = lambda splitString = splitString:  self.split_column_content_by_string(splitString))
+     
+           	menuDict['split'].add_command(label=splitString,
+               	command = lambda splitString = splitString:  self.split_column_content_by_string(splitString))
+               	
            menuDict['replace'].add_command(label='Find & Replace', accelerator  = "{}+R".format(ctrlString), command = lambda: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))
            for i,replaceOption in enumerate(replace_options):
                menuDict['replace'].add_command(label=replaceOption, command = lambda replaceOption = replaceOption:  self.replace_data_in_df(replaceOption))
@@ -461,11 +469,12 @@ class analyze_data(tk.Frame):
            menuDict['smoothing'].add_cascade(label='Aggregate n rows by ..', menu = menuDict['aggRows'])
            menuDict['smoothing'].add_command(label='IIR filter', command = self.iir_filter)
 
+           menuDict['main'].add_cascade(label='Module Intersection', command = self.create_module_intersection)
 
            menuDict['main'].add_cascade(label='Row & column calculations', menu = menuDict['rowColCalc'])
            menuDict['rowColCalc'].add_command(label='Summary Statistics', command = self.summarize)
            menuDict['rowColCalc'].add_cascade(label="Basic", menu = menuDict['basicCalc'])
-           #menuDict['rowColCalc'].add_cascade(label="Normalization", menu = menuDict['normalization'])
+           menuDict['rowColCalc'].add_cascade(label="Normalization", menu = menuDict['normalization'])
            menuDict['rowColCalc'].add_cascade(label="Logarithmic", menu = menuDict['logCalc'])
            
            for logType in ['log2','-log2','ln','log10','-log10']:
@@ -483,23 +492,24 @@ class analyze_data(tk.Frame):
                     menuDict['basicCalc'].add_command(label=metric,
                     	command = lambda metric = metric: self.calculate_row_wise_metric(metric))
            menuDict['basicCalc'].add_cascade(label='Divide by ..', menu = menuDict['columnBasicDiv'])
-           menuDict['basicCalc'].add_cascade(label='Substract by ..', menu = menuDict['columnBasicSub'])
+           menuDict['basicCalc'].add_cascade(label='Subtract by ..', menu = menuDict['columnBasicSub'])
            n = 0 
            for subMenu in [menuDict['columnBasicDiv'],menuDict['columnBasicSub']]:
            		if n == 0:
            			operation = 'divide'
            		elif n == 1:
-           			operation = 'substract'
+           			operation = 'subtract'
            		n += 1        		
-           		subMenu.add_command(label='Column [row-wise]',command = lambda operation = operation:self.divide_or_substract_columns(operation = operation))
-           		subMenu.add_command(label='Column Median',command = lambda operation = operation: self.divide_or_substract_columns(byMedian=True,operation = operation))
-           		subMenu.add_command(label='Value',command = lambda operation = operation: self.divide_or_substract_columns(byValue=True,operation = operation))        
+           		subMenu.add_command(label='Column [row-wise]',command = lambda operation = operation:self.divide_or_subtract_columns(operation = operation))
+           		subMenu.add_command(label='Column Median',command = lambda operation = operation: self.divide_or_subtract_columns(byMedian=True,operation = operation))
+           		subMenu.add_command(label='Value',command = lambda operation = operation: self.divide_or_subtract_columns(byValue=True,operation = operation))        
         
            menuDict['rowColCalc'].add_command(label='Kernel Density Estimation [col]',
-           												command = self.calculate_density)
+           										command = self.calculate_density)										
+           menuDict['rowColCalc'].add_command(label='Compare groups (t-test,ANOVA ..)',
+           									command = lambda : compare_groups.compareGroupsDialog(selectedColumns = self.DataTreeview.columnsSelected, dfClass = self.sourceData,
+           										treeView = self.DataTreeview))					
            menuDict['rowColCalc'].add_cascade(label='Multiple Testing Correction', menu = menuDict['multTest'])
-           
-           
            menuDict['main'].add_command(label ="Filters ..",state=tk.DISABLED,foreground='darkgrey')
            					#image = self.filterIcon,compound="left")
            menuDict['main'].add_separator()
@@ -518,21 +528,26 @@ class analyze_data(tk.Frame):
         
            menuDict['main'].add_separator()
            menuDict['main'].add_cascade(label ="Time series ..",menu = menuDict['time_series'])
-           
-
            menuDict['time_series'].add_command(label = 'Base line correction', command = self.correct_baseline)
            menuDict['time_series'].add_command(label='Add as error' ,command = self.add_error)
            menuDict['time_series'].add_command(label='Adjust starting point', command = self.shift_data)
 
-
-
            #menuDict['main'].add_command(label ="Fit, Correlate and Predict..",state=tk.DISABLED,foreground='darkgrey')
            menuDict['main'].add_separator()
-           menuDict['main'].add_cascade(label='Correlation',menu = menuDict['correlation'])
+           #menuDict['main'].add_cascade(label='Correlation',menu = menuDict['correlation'])
            menuDict['correlation'].add_command(label="Correlate rows to ..." , command = self.calculate_correlations)
            #menuDict['correlation'].add_command(label="Display correlation analysis .." ,
            #	command = lambda: tk.messagebox.showinfo('Under construction','Under construction ..',parent=self))
 
+           for featureSel in ['Model','Variance','Recursive elimination']:
+           	menuDict['featureSelection'].add_command(label=featureSel, command = lambda: self.select_features(featureSel))
+           
+           menuDict['main'].add_cascade(label='Feature selection by..', menu= menuDict['featureSelection'])
+           menuDict['main'].add_separator()
+           
+       #    menuDict['featureSelection'].add_command(label='Drop cols with low variance ..', command = self.drop_cols_with_low_variance)           
+           menuDict['main'].add_separator()
+           menuDict['main'].add_cascade(label='Correlation',menu = menuDict['correlation'])
            menuDict['main'].add_cascade(label='Curve fit', menu= menuDict['curvefit'] )
            menuDict['curvefit'].add_command(label="Curve fit of rows to...", command = self.curve_fit)
            menuDict['curvefit'].add_command(label="Display curve fit(s)", command = self.display_curve_fits)
@@ -544,10 +559,9 @@ class analyze_data(tk.Frame):
            menuDict['main'].add_cascade(label='Transform by ..', menu= menuDict['transform'] )
            menuDict['transform'].add_command(label = 'Dimensional Reduction Model', command = self.apply_dimRed)
            menuDict['main'].add_separator()
-           menuDict['main'].add_command(label='Columns to Clipboard', accelerator = "{}+C".format(ctrlString),
+           menuDict['main'].add_command(label='To clipboard', accelerator = "{}+C".format(ctrlString),
            		command = lambda: self.copy_file_to_clipboard(self.sourceData.get_current_data()))	
            self.menuCollection['main'] = menuDict['main']
-
 
      def build_pca_export_menu(self):
      	'''
@@ -557,13 +571,12 @@ class analyze_data(tk.Frame):
      				command = self.define_groups_in_dimRed)
      	self.menuCollection['PCA'].add_command(label='Remove/show feature names',
      				command = lambda : self.plt.nonCategoricalPlotter.hide_show_feature_names())
-     	self.menuCollection['PCA'].add_command(label='Export Components',
-     				command = lambda :  self.export_dimRed_results('Export Components'))
-     	self.menuCollection['PCA'].add_command(label='Export Loadings',
+     	self.menuCollection['PCA'].add_command(label='Export Scores',
+     				command = lambda :  self.export_dimRed_results('Export PCA Scores'))
+     	self.menuCollection['PCA'].add_command(label='Export Loadings / Embedding',
      				command = lambda: self.export_dimRed_results('Export Loadings'))
      	self.menuCollection['PCA'].add_command(label='Add Loadings To Source Data',
      				command = lambda: self.export_dimRed_results('Add Loadings To Source Data'))
-
 
      def build_addit_file_menu(self):
      	''''''
@@ -572,90 +585,9 @@ class analyze_data(tk.Frame):
      	self.menuCollection['addFiles'].add_command(label='Load Multiple Files', 
      		command = lambda: self.source_file_upload('',resetTreeEntries = len(self.sourceData.dfs) == 0, 	
      												   mergeMultipleFiles = True))
-     	
-     	#self.menuCollection['addFiles'].add_command(label='Load TDT tanks', command = self.import_TDT)
-     
-     
-     def aggregate_data(self, metric = 'mean'):
-     	'''
-     	Aggregates n row using a user specific mean. 
-     	'''
-     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
-     	if selectedColumns is not None:
-     		
-     		n = ts.askinteger('Defin n',
-     			prompt = 'Please provide the number of rows to be used for aggregation.')
-     		
-     		if n is not None:
-     	    	
-     			df = self.sourceData.metric_over_n_rows(selectedColumns,n)
-     			
-     			if df is None:
-     			
-     				tk.messagebox.showinfo('Error ..',
-     					'An error occured. No data frame added.',
-     					parent=self)
-     				return
-     				
-     			# add data frame
-     			fileName = '(n{}_{})_{}'.format(n,metric,
-     				self.sourceData.get_file_name_of_current_data())
-     				
-     			self.add_new_dataframe(df,fileName)
-     			
-     			tk.messagebox.showinfo('Done ..',
-     				'Aggregation applied. Data frame has been added.', 
-     				parent = self)
-     
-     
-     def load_and_append_files(self):
-     	'''
-     	Load multiple files and append them to each other. 
-     	'''
-     	txt_file_importer.multipleTxtFileLoader()
-     	return
-     	# dir = tf.askdirectory()
-#      	if dir is None:
-#      		return
-#      	
-#      	files = os.listdir(dir)
-# 
-# 
-#      	
-#      	pb = Progressbar('Multiple Files')
-#      	tables, columnNames = [], []
-#      	for n,file in enumerate(txtFiles):
-#      		df = pd.read_table(os.path.join(dir,file))
-#      		pb.update_progressbar_and_label(n/len(txtFiles) * 100, 'File {} of {} loaded.'.format(n,len(txtFiles)))
-#      		if n != 0:
-#      			#print(df.iloc[:,2])
-#      			tables.append(pd.DataFrame(df.iloc[:,2].values))
-#      			columnNames.append(file)
-#      		else:
-#      			tables.append(df)
-#      			columnNames.extend(df.columns.values.tolist())
-#      		del df
-#      	pb.close()
-#      
-#      	
-#      	appended = pd.concat(tables, ignore_index=True, axis=1)
-#      	appended.columns = columnNames
-#      	
-#      	return appended, 'MergedDfs', '-'
-     	#del appended
-     	#print(appended)
-     	
-     		
-     		
-     def shift_data (self):
-     	'''
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     	
-     		shift_data.shiftTimeData(selectedColumns,self.sourceData,self.DataTreeview,self)
-     		
-     
+     	self.menuCollection['addFiles'].add_command(label='Load TDT tanks',
+     		command = lambda: self.source_file_upload('',resetTreeEntries = len(self.sourceData.dfs) == 0, 	
+     												   loadTDTTanks = True))	
 
      def build_hclust_menu(self):
 
@@ -673,32 +605,14 @@ class analyze_data(tk.Frame):
          		command = self.add_cluster_to_source)
          self.menuCollection['hclust'].add_command(label='Find entry in hierarch. cluster', 
          		command = lambda: self.categorical_column_handler('Find entry in hierarch. cluster'))
- 
-     
-     def plot_circulized_dendrogram(self, plot_type = 'hclust'):
-     	
-     	if self.circulizeDendrogram.get():
-     	
-     		self.plt.circulizeDendrogram = True 
-     	
-     	else:
-     		self.plt.circulizeDendrogram = False
-     		
-     	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
-                          catnames = list(self.selectedCategories.keys()),
-                          plot_type = plot_type)
-     	
-     	
-     		
+         self.menuCollection['hclust'].add_command(label='Export Cluster to Excel', command = self.save_hclust_to_excel)	     		
     
      def build_lineplot_menu(self):
-
 
      	self.menuCollection['line_plot'] = tk.Menu(self,**styleDict)
      	self.menuCollection['line_plot'].add_command(label='Find entry', command = lambda: self.categorical_column_handler('Find entry in line plot'))
 
      def build_receiverBox_menu(self):
-
 
      	self.menuCollection['receiverBox'] = tk.Menu(self,**styleDict)
      	self.menuCollection['receiverBox'].add_command( label= '               ', state = tk.DISABLED)
@@ -712,24 +626,11 @@ class analyze_data(tk.Frame):
      	self.menuCollection['receiverBox'].add_command(label='Tooltip', 
      		command = lambda: self.add_tooltip_information(self.columnInReceiverBox))
 
-
-
-     def def_split_sub_menu(self):
-
-         self.menuCollection['split_sub']  =  tk.Menu(self, **styleDict)
-         self.plotCumulativeDist = tk.BooleanVar()
-
-         self.menuCollection['split_sub'] .add_checkbutton(label='Split Categories',
-         								variable = self.split_on_cats_for_plot ,
-         								command = lambda: self.plt.set_split_settings(self.split_on_cats_for_plot.get()))
-
-         self.menuCollection['split_sub'] .add_separator()
-         self.menuCollection['split_sub'] .add_checkbutton(label='Use Cumulative Density Function', variable = self.plotCumulativeDist , command = lambda: self.plt.set_dist_settings(self.plotCumulativeDist.get()))
-
      def build_merge_menu(self):
 
          self.menuCollection['data_frame'] = tk.Menu(self, **styleDict)
          exportCascade = tk.Menu(self, **styleDict)
+         splitCascade = tk.Menu(self, **styleDict)
          self.menuCollection['data_frame'].add_command(label='Data frame menu', state = tk.DISABLED,foreground="darkgrey")
          self.menuCollection['data_frame'].add_separator()
          self.menuCollection['data_frame'].add_command(label = 'Collapse Tree', command = self.update_all_dfs_in_treeview)
@@ -738,11 +639,18 @@ class analyze_data(tk.Frame):
          self.menuCollection['data_frame'].add_command(label='Concatenate', command = lambda: self.join_data_frames('Concatenate'))
          self.menuCollection['data_frame'].add_command(label='Merge', command = lambda: self.join_data_frames('Merge'))
          self.menuCollection['data_frame'].add_command(label='Rename', command = self.rename_data_frame)
-
+         self.menuCollection['data_frame'].add_separator()
+         self.menuCollection['data_frame'].add_cascade(label='Split..', menu = splitCascade)  
+         splitCascade.add_command(label = 'Shuffle Split') 
+         splitCascade.add_command(label = 'Stratified Shuffle Split') 
+         splitCascade.add_command(label = 'Stratified k-fold')
+         splitCascade.add_command(label = 'Time Series Split')      
          self.menuCollection['data_frame'].add_separator()
          self.menuCollection['data_frame'].add_command(label = "Delete", command = self.delete_data_frame_from_source)
          self.menuCollection['data_frame'].add_cascade(label='Export', menu= exportCascade)
          exportCascade.add_command(label='To .txt', command = lambda: self.export_data_to_file(data = None, format_type = 'txt', checkSelection = True))
+         exportCascade.add_command(label='To .csv', command = lambda: self.export_data_to_file(data = None, format_type = 'csv', checkSelection = True))
+   
          exportCascade.add_command(label='To Excel', command = lambda: self.export_data_to_file(data = None, checkSelection = True))
          exportCascade.add_command(label='To Clipboard', command = lambda: self.copy_file_to_clipboard(data = None))
          
@@ -795,6 +703,7 @@ class analyze_data(tk.Frame):
          									command = lambda: self.export_data_to_file(self.data_selection,
          																			initial_file='Selection',  format_type = 'Excel',sheet_name = 'SelectionExport'))
          self.menuCollection['selection_menu'] .add_command(label='Stop Selection', foreground = "red", command = self.stop_selection)
+     
      def build_main_figure_menu(self):
 
          self.menuCollection['main_figure_menu']  = tk.Menu(self, **styleDict)
@@ -827,6 +736,81 @@ class analyze_data(tk.Frame):
      	self.menuCollection['corrmatrix'].add_command(label='Results', 
      											command = self.display_corrmatrix_results)
 
+     def build_analysis_tree(self):
+        '''
+        Builds treeview in analysis label frame (statistical toolbox)
+        '''
+        seps_tests =   ['Model fitting',
+                        'Compare two groups',
+                        'Compare multiple groups',
+                        'Two-W-ANOVA',
+                        'Three-W-ANOVA',
+                        'Cluster Analysis',
+                        'Classification',
+                        'Feature Selection',
+                        'Dimensional Reduction',
+                        'Multi-Block Analysis',
+                        'Correlation',
+                        'Curve fitting',
+                        'Miscellaneous',]
+
+        self.options_for_test = dict({'Model fitting':['linear',
+                                         # 'logarithmic',
+                                          'lowess',
+                                          #'expontential',
+                                          ],
+                        'Compare two groups':['t-test','Welch-test',
+                                              'Wilcoxon [paired non-para]',
+                                              'Whitney-Mann U [unpaired non-para]'
+                                              ],
+                        'Compare multiple groups':['1W-ANOVA','1W-ANOVA-RepMeas','Kruskal-Wallis'],
+                        'Miscellaneous':['Pairwise Comparision','AUC'],#,'Density'],
+                        'Classification':['CV based Grid Search','PLSA-DA'],#classification.availableMethods,
+                        'Feature Selection':['Predicitve Model','Recursive Elimination'],
+                        'Cluster Analysis':clustering.availableMethods,
+                        'Two-W-ANOVA':['2W-ANOVA','2W-ANOVA-RepMeas(1fac)','2W-ANOVA-RepMeas(2fac)'],
+                        'Three-W-ANOVA':['3W-ANOVA','3W-ANOVA-RepMeas(1fac)','3W-ANOVA-RepMeas(2fac)','3W-ANOVA-RepMeas(3fac)'],
+                        'Dimensional Reduction':list(stats.dimensionalReductionMethods.keys()),
+                        'Multi-Block Analysis': ['SGCCA'],#'PLS Canonical', 'PLS Regression','PLS-DA',
+                        'Correlation': ['Correlate rows to ..'],#'Display correlations'
+                        'Curve fitting':['Curve fit ..','Display curve fit(s)']})
+                        
+        opt_two_groups = ['paired',
+                          'unpaired']
+        direct_test = ['less','two-sided [default]',
+                       'greater']
+        self.stats_tree = ttk.Treeview(self.analysis_sideframe, height=8, show='tree',style='source.Treeview')
+        self.stats_tree.bind('<<TreeviewSelect>>',
+                             lambda event, stats_tree=self.stats_tree: self.retrieve_test_from_tree(event,stats_tree))
+        self.stats_tree.bind("<B1-Motion>", lambda event,analysis = True: self.on_motion(event, analysis))
+        self.stats_tree.bind("<ButtonRelease-1>", lambda event, analysis =True: self.release(event,analysis))
+        self.stats_tree.bind(right_click, self.post_analysis_menu)
+        self.stats_tree.column("#0",minwidth=800)
+
+        for heads in seps_tests:
+            main = self.stats_tree.insert('','end',str(heads), text=heads)
+            for opt_test in self.options_for_test[heads]:
+
+                    sub1 = self.stats_tree.insert(main, 'end', str(opt_test), text = opt_test)
+                    if heads == 'Compare two groups':
+                        if opt_test in  ['t-test','Welch-test']:
+                            for sub_opt in opt_two_groups:
+                                 sub2 = self.stats_tree.insert(sub1, 'end','%s_%s' % (opt_test,sub_opt), text=sub_opt)
+                                 for direction in direct_test:
+                                    self.stats_tree.insert(sub2, 'end', '%s_%s_%s' %  (opt_test,sub_opt,direction), text=direction)
+                        else:
+                                for direction in direct_test:
+                                    self.stats_tree.insert(sub1, 'end', '%s_%s' % (str(opt_test),str(direction)), text=direction)
+        #grid items
+        sourceScroll = ttk.Scrollbar(self, orient = tk.HORIZONTAL, command = self.stats_tree.xview)
+        sourceScroll2 = ttk.Scrollbar(self,orient = tk.VERTICAL, command = self.stats_tree.yview)
+        self.stats_tree.configure(xscrollcommand = sourceScroll.set,
+                                          yscrollcommand = sourceScroll2.set)
+        sourceScroll2.pack(in_=self.analysis_sideframe, side = tk.LEFT, fill=tk.Y, anchor=tk.N)
+        self.stats_tree.pack(in_=self.analysis_sideframe, padx=0, expand=True, fill=tk.BOTH)
+        sourceScroll.pack(in_=self.analysis_sideframe, padx=0,anchor=tk.N, fill=tk.X)
+
+
      def post_menu(self, event = None, menu = None):
      	'''
      	Posts any given menu at the mouse x y coordinates
@@ -838,437 +822,243 @@ class analyze_data(tk.Frame):
      	menu.post(x,y)
      	self.currentMenu = menu
 
-     def app_has_focus(self,event):
-     	if self.currentMenu is not None:
-     		self.currentMenu.unpost()
-     		self.currentMenu = None
+     def def_split_sub_menu(self):
+
+         self.menuCollection['split_sub']  =  tk.Menu(self, **styleDict)
+         self.plotCumulativeDist = tk.BooleanVar()
+
+         self.menuCollection['split_sub'] .add_checkbutton(label='Split Categories',
+         								variable = self.split_on_cats_for_plot ,
+         								command = lambda: self.plt.set_split_settings(self.split_on_cats_for_plot.get()))
+
+         self.menuCollection['split_sub'] .add_separator()
+         self.menuCollection['split_sub'] .add_checkbutton(label='Use Cumulative Density Function', variable = self.plotCumulativeDist , command = lambda: self.plt.set_dist_settings(self.plotCumulativeDist.get()))
+
+################# Functions to build menus done #################
 
      def activate_binning_in_scatter(self,value = None):
      	'''
+     	Change from normal to binned scatter
      	'''
      	if self.plt.binnedScatter:
      		self.plt.binnedScatter = False
      	else:
      		self.plt.binnedScatter = True
 
-     def display_corrmatrix_results(self):
+     def add_annotation_column_from_selection(self):
      	'''
-     	Show the correlation matrix results to user.
+     	When User uses the selection tool.
+     	This can be used to
+     	annotate these in the source
+     	data for further analysis.
      	'''
-     	if len(self.plt.plotProperties) == 0:
-     		tk.messagebox.showinfo('Error ..',
-     							   'Please plot a correlation matrix first.',
-     							   parent=self)
+     	# check if data Id has been changed before
+     	colnames = list(self.selectedNumericalColumns.keys())
+     	dataID = self.plt.get_dataID_used_for_last_chart()
+     	self.sourceData.set_current_data_by_id(dataID)
+     	selectionIndex = self.data_selection.index
+
+     	columnName = 'Select_{}_{}'.format(len(selectionIndex),
+     								get_elements_from_list_as_string(colnames))
+     	columnName = self.sourceData.evaluate_column_name(columnName)
+     	true_false_map = dict(zip([False,True], [self.sourceData.replaceObjectNan,'+']))
+
+     	boolIndicator = pd.Series(self.sourceData.df.index.isin(selectionIndex), index = self.sourceData.df.index,
+     							name = columnName)
+     	annotationColumn = boolIndicator.apply(lambda x: true_false_map[x])
+     	self.sourceData.join_series_to_currently_selected_df(annotationColumn)
+     	self.DataTreeview.add_list_of_columns_to_treeview(dataID,'object',[columnName])
+     	tk.messagebox.showinfo('Done ..', \
+     	'Categorical column ({}) has been added. Indicating if data of that row were in selection.'.format(columnName),\
+     	parent = self)
+
+     def add_error(self):
+     	'''
+     	Adds an error represented by a grey area around a time series signal.
+     	'''
+     	if self.plt.currentPlotType != 'time_series':
+     		tk.messagebox.showinfo('Error..','Only useful for chart type time series.')
      		return
-     	
-     	numColumns,_,plot_type,_ = self.plt.current_plot_settings
 
-     	if self.plt.nonCategoricalPlotter._hclustPlotter is not None or \
-     	plot_type != 'corrmatrix':
+     	if self.DataTreeview.onlyNumericColumnsSelected:
+     		currentDataFrameId = self.sourceData.currentDataFile
+     		selectionIsFromSameData,selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     		if selectionIsFromSameData:
 
-     		data = self.plt.nonCategoricalPlotter._hclustPlotter.export_data_of_corrmatrix()
-     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
-
-     		if dataDialog.addDf:
-     			nameOfDf = 'Corrmatrix Results {}'.format(get_elements_from_list_as_string(numColumns))
-     			self.add_new_dataframe(dataDialog.data,nameOfDf)
+     			dataId = self.plt.get_dataID_used_for_last_chart()
+     			if dataId != selectionDataFrameId:
+     				tk.messagebox.showinfo('Error..','Error data must be from the same data used for plotting')
+     				return
+     			self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     			numericColumnsPlotted = self.plt.nonCategoricalPlotter.numericColumns[1:]
+     			selectedColumns = self.DataTreeview.columnsSelected
+     			numColumns = self.sourceData.get_numeric_columns()
+     			options = [] #options * len(selectedColumns)
+     			for label in numericColumnsPlotted:
+     				options.append(numColumns)
+     			dialog = simpleUserInputDialog(numericColumnsPlotted,selectedColumns,options,
+     								 title = 'Select Error Columns',
+     								 infoText = 'Select columns that hold the error. For'+
+     								 ' example the standard deviation of several signals over'
+     								 ' time.\nIf you do not want to plot the error for one of'+
+     								 ' the plotted columns simply enter "None".', h = 100,
+     								 )
+     			selection = dialog.selectionOutput
+     			if len(selection) != 0:
+     				self.plt.nonCategoricalPlotter.timeSeriesHelper.add_error_to_lines(selection)
+     				self.plt.redraw()
 
      	else:
-     		tk.messagebox.showinfo('Error ..','No clustering performed yet.',parent=self)
+     		tk.messagebox.showinfo('Error ..','Please select only numerical columns (floats, and integers)')
 
-     def normalize_data(self,metric):
-     	'''
-     	
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     	
+ 
+     def add_linear_regression(self):
+         '''
+         Adds linear regression to scatter plot.
+         '''
+         plotHelper = self.plt.get_active_helper()
+         plotHelper.add_regression_line(list(self.selectedNumericalColumns.keys()))
+         self.plt.redraw()
 
-     		columnsSelected = self.DataTreeview.columnsSelected
-     		scaler = dataNormalizer(metric)
-     		columnNames = self.sourceData.fit_transform(scaler,columnsSelected)
-     	
-     def rename_data_frame(self):
+     def add_lowess(self):
      	'''
-     	Reanames data frames
+     	Adds lowess line to current plot.
      	'''
-     	dataFrames = self.DataTreeview.dataFramesSelected
-     	fileNames = [self.sourceData.fileNameByID[fileIid] for fileIid in dataFrames]
-     	optionList = [[fileNames[n]] for n in range(len(dataFrames))]
-     	renameDialog = simpleUserInputDialog(fileNames,fileNames,
-     										optionList,'Rename Data Frame',
-     										'Enter a new name for selected data frames')
-     	
-     	newDataFrameNames = list(renameDialog.selectionOutput.values())
-     	if len(newDataFrameNames) != len(dataFrames):
-     		return
-     	for n,dfIID in enumerate(dataFrames):
-     	
-     		dfName = newDataFrameNames[n]
-     		self.sourceData.rename_data_frame(dfIID,dfName)
-     	
-     	self.update_all_dfs_in_treeview()
+     	plotHelper = self.plt.get_active_helper()
+     	plotHelper.add_lowess_line(list(self.selectedNumericalColumns.keys()))
+     	self.plt.redraw()
 
-     def rename_columns(self, selectedColumns = None, event = None):
+
+     def add_cluster_to_source(self):
      	'''
-     	Opens a dialog window that allows the user to change the column names.
-     	Can also be triggered by double click.
+     	Cluster being identified in a hclust plot can be added to the source file.
      	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is None or len(selectedColumns) == 0:
-     		return
+     	if self.plt.currentPlotType in ['hclust','corrmatrix']:
+     		plotterInUse = self.plt.nonCategoricalPlotter
+     		idData = plotterInUse._hclustPlotter.dataID
+     		self.sourceData.set_current_data_by_id(idData)
+     		columnName = plotterInUse._hclustPlotter.export_cluster_number_to_source()
+     		if columnName is None:
+     			tk.messagebox.showinfo('Error ..','No row clustering was performed ..',parent=self)
+     			return
+
+     		self.DataTreeview.add_list_of_columns_to_treeview(idData,
+     													dataType = 'object',
+     													columnList = [columnName])
+     		tk.messagebox.showinfo('Done ..','Cluster numbers were added.', parent=self)
      		
-     	if event is not None:
-     		itemClicked = [self.DataTreeview.clicked_item(event)]
-     		if itemClicked[0] == '': 
-     			return	
-     		     		
-     	if selectedColumns is not None:
-     		renameDialog = change_columnName.ColumnNameConfigurationPopup(self.DataTreeview.columnsSelected,
-     														self.sourceData, self.DataTreeview, self)
-     		
-     		if renameDialog.renamed: #indicates if any renaming was done (or closed)
-     			
-     			tk.messagebox.showinfo('Done..','Column names replaced.',parent=self)
-     			
-     			self.workflow.add('renameColumn', 
-     							  self.sourceData.currentDataFile,
-     							  renameDialog.reverseFuncs)
-     	
-     	
-     def update_corr_matrix_method(self,method):
-     	'''
-     	Correlation matrix can be constructed from different correlation coefficients.
-     	To ensure the selected one is used. We update the corrMatrixCoeff in the PlotterClass
-     	'''
-     	for corrMethod, variable in self.variableDict.items():
-     		if method == corrMethod:
-     			pass
-     		else:
-     			variable.set(False)
-     	self.plt.corrMatrixCoeff = method
+     		self.workflow.add('calcColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':[columnName]},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
+     					'description':OrderedDict([('Activity:','Cluster # num added.'),
+     					('Description:','A column has been added indicating the identified cluster (hclust chart).'),
+     					('Column name:',columnName),
+     					('Selected Columns (hclust):',get_elements_from_list_as_string(plotterInUse.numericColumns, maxStringLength = None)),
+     					('Data ID:',self.sourceData.currentDataFile)])})
 
+
+     def add_new_dataframe(self,newDataFrame,fileName):
+     	'''
+     	Add new subset to source data collection and treeview
+     	'''
+     	id = self.sourceData.get_next_available_id()
+     	self.sourceData.add_data_frame(newDataFrame, id=id, fileName=fileName)
+     	dict_ = self.sourceData.dfsDataTypesAndColumnNames
+     	file_names = self.sourceData.fileNameByID
+
+     	self.DataTreeview.add_all_data_frame_columns_from_dict(dict_,file_names)
+     	
+
+     def add_swarm_to_figure(self):
+     	'''
+     	Helper function to trigger the addition of
+     	swarm plot onto the underlying graph.
+     	Please note that if the data get bigger stripplot instead of swarm
+     	will be used (less computing time) the difference is that in
+     	swarm plots you can estimate the distribution much better.
+     	'''
+     	help = self.plt.get_active_helper()
+     	help.add_swarm_to_plot()
+     	self.plt.redraw() 
+
+     def add_tooltip_information(self, columnNames = None):
+     	'''
+     	Add tooltip information to plot. 
+     	It will determine the free hand selection if active.
+     	Input 
+     	=======
+     	
+     	columnNames - list. Column names in the selected data frame used for tooltip text.
+     	'''
+     	self.stop_selection(replot = False)           
+     	if columnNames is None:
+     		columnNames = self.selection_is_from_one_df()
+     		if columnNames is None:
+     			return  
+     		
+     	self.plt.add_tooltip_info(columnNames)		
+     	
+     	if platform == 'LINUX' and self.tooltipFirstTime:
+     		self.tooltipFirstTime =  False
+     		tk.messagebox.showinfo('Note..',
+     			'There is currently an error in Linux for the very first added Tooltip. '+
+     			'Please just drag & drop the desired column again on the tooltip icon.',
+     			parent=self)
+ 
+    
+     def aggregate_data(self, metric = 'mean'):
+     	'''
+     	Aggregates n row using a user specific mean. 
+     	'''
+     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
+     	if selectedColumns is not None:
+     		
+     		n = ts.askinteger('Defin n',
+     			prompt = 'Please provide the number of rows to be used for aggregation.')
+     		
+     		if n is not None:
+     	    	
+     			df = self.sourceData.metric_over_n_rows(selectedColumns,n)
+     			
+     			if df is None:
+     			
+     				tk.messagebox.showinfo('Error ..',
+     					'An error occured. No data frame added.',
+     					parent=self)
+     				return
+     				
+     			# add data frame
+     			fileName = '(n{}_{})_{}'.format(n,metric,
+     				self.sourceData.get_file_name_of_current_data())
+     				
+     			self.add_new_dataframe(df,fileName)
+     			
+     			tk.messagebox.showinfo('Done ..',
+     				'Aggregation applied. Data frame has been added.', 
+     				parent = self)
 
      def apply_dimRed(self):
      	'''
      	Dimensional reduction applied to "unseen" data.
      	'''
-     	currentDataFrameId = self.sourceData.currentDataFile
-     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     	if selectionIsFromSameData:
-     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:       	
      		dimRedDialog = dimRed_transform.transformDimRedDialog(self.dimensionReductionCollection,
      															self.sourceData, self.DataTreeview)
      	else:
      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)
 
-
-     def export_dimRed_results(self, which):
+     def app_has_focus(self,event):
      	'''
-     	Can be used to export results of a dimensional reduction either to file
-     	or to be added to source treeview and data collection
+     	Check if the app has focus unless destroy menu (essential for linux)
      	'''
-     	if 'Export Components' in which:
-
-     		_,components,columns, dataID = \
-     		self.dimensionReductionCollection.get_drivers_and_components(which='Components')
-     		mainString = 'Components'
-     		data = components.T
-     		data['Feature'] = data.index
-
-     	elif 'Export Loadings' in which or 'Source Data' in which:
-
-     		data,_,columns, dataID = \
-     		self.dimensionReductionCollection.get_drivers_and_components(which='Drivers')
-     		mainString = 'Loadings'
-     		data.columns = ['Comp_{}'.format(n+1) for n in range(len(data.columns.values.tolist()))]
-
-     	if 'Source Data' in which:
-
-     		self.sourceData.set_current_data_by_id(dataID)
-     		columnsAdded = \
-     		self.sourceData.join_df_to_currently_selected_df(data, exportColumns = True)
-     		self.DataTreeview.add_list_of_columns_to_treeview(dataID, 'float64', columnsAdded)
-
-     	else:
-     		self.add_new_dataframe(data,
-     						'{}: [{}]'.format(mainString,
-     						get_elements_from_list_as_string(columns,
-     						maxStringLength = 10)))
-
-     def define_groups_in_dimRed(self):
-     	'''
-     	Dialog to define grouping in dimensional reduction procedure
-     	'''
-     	define_groups_dim_reduction.defineGroupsDialog(self.dimensionReductionCollection,
-     												   self.plt,
-     												   self.colorHelper)
-    
-     def selection_is_from_one_df(self,itemSelection = 'columnsSelected', onlyNumeric = False):
-     	'''
-     	'''
-     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     	if selectionIsFromSameData:
-     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
-     		if onlyNumeric and self.DataTreeview.onlyNumericColumnsSelected == False:
-     			tk.messagebox.showinfo('Error ..','Please select only numeric data.',parent=self)
-     			return
-     		else:
-     			return getattr(self.DataTreeview,itemSelection)
-     		
-     	else:
-     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)     		
-     	
-    
-     def custom_sort_values(self):
-     	'''
-     	Opens a dialog window that enables the user to sort values in a specific
-     	column by custom order.
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-
-     		inputValues = OrderedDict()
-
-     		uniqueValueList = self.sourceData.get_unique_values(selectedColumns,forceListOutput=True)
-
-     		for n,column in enumerate(selectedColumns):
-     			inputValues[column] = uniqueValueList[n]
-     		dialog = custom_sort.customSortDialog(inputValues)
-
-     		if dialog.resortedValues is not None:
-     			idxColNames = []
-     			for key,values in dialog.resortedValues.items():
-     				factors = range(len(values))
-     				#kind of factorize for sorting
-     				orderMapDict = dict(zip(values,factors))
-     				idxColName = self.sourceData.evaluate_column_name('instantClueSort{}'.format(key))
-     				idxColNames.append(idxColName)
-     				self.sourceData.df[idxColName] = self.sourceData.df[key].astype(str).map(orderMapDict)
-     				del orderMapDict
-
-     			self.sourceData.df.sort_values(idxColNames,kind='mergesort',inplace=True)
-     			self.sourceData.delete_columns_by_label_list(idxColNames)
-     			tk.messagebox.showinfo('Done ..','Custom sorting done.',parent=self)
-
-     		else:
-     			pass
-
-     		del dialog
-
-     def custom_column_order(self):
-     	'''
-     	Custom sorting of columns.
-     	'''
-     	
-     	selectedDataTypes  = self.selection_is_from_one_df('allItemsSelected')
-     	#print(self.sourceData.currentDataFile)
-     	selectionDataFrameId = self.sourceData.currentDataFile
-     	if selectedDataTypes  is not None:
-
-     		inputValues = OrderedDict()
-     		dataTypeRels = self.sourceData.get_columns_data_type_relationship()
-     		for item in selectedDataTypes:
-     			dataType = item.split('{}_'.format(selectionDataFrameId))[-1]
-     			if dataType not in dataTypeRels:
-     				inputValues = dataTypeRels
-     				break
-     			else:
-     				inputValues[dataType] = [dataType]
-
-     		dialog = custom_sort.customSortDialog(inputValues)
-
-     		if dialog.resortedValues is not None:
-     			columnOrder = []
-     			for key,values in dialog.resortedValues.items():
-     				columnOrder.extend(values)
-     			df1 = self.sourceData.df[columnOrder]
-     			dfOut = self.sourceData.join_missing_columns_to_other_df(df1,id=selectionDataFrameId)
-     			self.sourceData.update_data_frame(selectionDataFrameId,dfOut)
-     			self.update_all_dfs_in_treeview()
-     			tk.messagebox.showinfo('Done ..','Custom sorting done.',parent=self)
-     		else:
-     			pass
-
-     def summarize(self):
-     	'''
-     	Summarize Table
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     	
-     		summarizedData = self.sourceData.get_current_data()[selectedColumns].describe(
-     													percentiles = [.25, .5, .75],
-     													include = 'all')
-     		countNanValues = self.sourceData.get_current_data()[selectedColumns].isnull().sum()
-     		summarizedData.loc['nan count',:] = countNanValues
-     		summarizedData.insert(0,'Measure',summarizedData.index)
-     		dataDialog = display_data.dataDisplayDialog(summarizedData,showOptionsToAddDf=True)
-
-     		if dataDialog.addDf:
-     			nameOfDf = 'Summary of {}'.format(get_elements_from_list_as_string(selectedColumns))
-     			self.add_new_dataframe(dataDialog.data,nameOfDf)
-
-     def drop_cols_with_low_variance(self):
-     	'''
-     	Drops rows with a low variance threshold. 
-     	'''
-     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
-     	if selectedColumns is not None:
-    
-     	#	value = ts.askfloat('Variance threshold','Provide variance cutoff.\nColumns that show less variance are going to be removed.')
-     		dialog = simpleUserInputDialog(['Threshold','Copy'],
-     							   ['0','True'],
-     							   [np.linspace(0,4,20).tolist(),['True','False']],
-     							   title = 'Remove columns with low variance - Settings',
-     							   infoText='If copy == True. Columns with higher variance will be copied'+
-     							   '.\nIf False columns that have lower variance will be removed from the data.')
-     		if dialog.selectionOutput is not None:
-     			try:
-     				thres = float(dialog.selectionOutput['Threshold'])
-     				copy = dialog.selectionOutput['Copy'] == 'True'
-     			except:
-     				tk.messagebox.showinfo('Error ..',
-     					'Converting your input raised an error. (Threshold must be a '+
-     					'float, Copy must be True or False')
-     					
-     			newFeatureNames = self.sourceData.remove_columns_with_low_variance(selectedColumns,
-     																			thres,copy) 
-     			if newFeatureNames is None:
-     				tk.messagebox.showinfo('Error..','No feature meets the given threshold.')
-     				return	
-     			elif newFeatureNames == 'Same':
-     				tk.messagebox.showinfo('Error ..','Variance is equal over all columns.')
-     				return													
+     	if self.currentMenu is not None:
+     		self.currentMenu.unpost()
+     		self.currentMenu = None      
      			
-     			if copy:
-     				self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
-     																	'float64',newFeatureNames)		
-     			else:
-     				self.update_all_dfs_in_treeview()
-					
-     	
-     def divide_or_substract_columns(self, byValue = False, byMedian = False, operation = 'divide'):
-     	'''
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     		if byValue or byMedian:
-     			if byValue:
-     				value = ts.askfloat('Provide Value','Enter value for division:')
-     				if value is not None:
-     					calcDict = OrderedDict([(column,value) for column in selectedColumns])
-     					baseString = 'by_{}:'.format(value)
-     			elif byMedian:
-     				values = self.sourceData.df.median()
-     				calcDict = OrderedDict([(column,value) for column,value in zip(selectedColumns,values.tolist())])
-     				baseString = 'by_median:'  
-     			
-     			if operation == 'divide':
-     				baseString = 'div_' + baseString
-     				newColumns = self.sourceData.divide_columns_by_value(calcDict,baseString)
-     				
-     			elif operation == 'substract':
-     				baseString = 'sub_' + baseString
-     				newColumns = self.sourceData.substract_columns_by_value(calcDict,baseString)
-     		
-     		else:
-     			columns = self.sourceData.get_numeric_columns()
-     			
-     			dialog = simpleListboxSelection('Select columns to perform calculation',
-     								   self.sourceData.get_columns_of_current_data())
-    
-				
-     			selection = dialog.selection
-     			if len(selection) != 0:
-     				if len(selection) != 1 and len(selection) != len(selectedColumns):
-     					tk.messagebox.showinfo('Error..',
-     						'Please select either one column or the exact same number of columns that were selected in the treeview.', 
-     						parent = self)
-     					return
-     					
-     				elif len(selection) == 1 and len(selectedColumns) != 1:
-     					
-     					selection = selection * len(selectedColumns)
-     				
-     				
-     				if operation == 'divide':
-     					newColumns = self.sourceData.divide_columns_by_column(selectedColumns,selection)
-     				elif operation == 'substract':
-     					newColumns = self.sourceData.substract_columns_by_column(selectedColumns,selection)
-     			else:
-     				return
-     		
-     		self.DataTreeview.add_list_of_columns_to_treeview(id = self.sourceData.currentDataFile,
-        													dataType = 'float64',
-        													columnList = newColumns)
-     		tk.messagebox.showinfo('Done..','Calculations performed. Columns added.')
-
-     def transpose_data(self):
-     	'''
-     	Transpose Data
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-
-     		selectColumnDialog = \
-     		pivot_table.transformColumnDialog(selectedColumns[0],self.sourceData.df_columns)
-
-     		columnForColumns = selectColumnDialog.columnForColumns
-     		if columnForColumns  is None:
-     			del selectColumnDialog
-     			return
-     		if columnForColumns not in self.sourceData.df_columns:
-     			newColumns = [str(x) for x in self.sourceData.df.index.tolist()]
-     		else:
-     			uniqueValues = self.sourceData.get_unique_values(columnForColumns)
-
-     			if uniqueValues.size != len(self.sourceData.df.index):
-     				quest = tk.messagebox.askquestion('Error ..','Number of unique values in selected column does not'+
-     									' match the number of rows.\nWould you like to make them unique '+
-     									'by adding the value index?')
-     				if quest == 'yes':
-     					columnValues = self.sourceData.df[columnForColumns].values
-     					newColumns = ['{}_{}'.format(column,n) for n,column in enumerate(columnValues)]
-     				else:
-     					return
-     			else:
-     				newColumns = self.sourceData.df[columnForColumns].astype(str)
-     		# transpose data
-     		data = self.sourceData.df.transpose()
-     		# add new column names (selected by user)
-     		data.columns = newColumns
-     		# add index as pure numbers
-     		data.index = np.arange(0,len(data.index))
-     		# inser a column with index holding old columns
-
-     		indexName = self.sourceData.evaluate_column_name('Index',newColumns)
-     		data.insert(0,indexName,self.sourceData.df_columns)
-
-     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
-
-     		if dataDialog.addDf:
-     			nameOfDf = 'Transpose - {}'.format(self.sourceData.get_file_name_of_current_data())
-     			self.add_new_dataframe(data,nameOfDf)
-
-     def pivot_data(self):
-     	'''
-     	Perform pivot Table
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     		pivotDialog = pivot_table.pivotDialog(self.sourceData,self.sourceData.currentDataFile)
-     		data = pivotDialog.pivotedDf
-     		if data.empty:
-     			return
-     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
-
-     		if dataDialog.addDf:
-     			nameOfDf = 'Pivot - {}'.format(self.sourceData.get_file_name_of_current_data())
-     			self.add_new_dataframe(data,nameOfDf)
-     			
-
-
      def calculate_correlations(self):
      	'''
      	Calculates correlation of rows against given values
@@ -1290,9 +1080,148 @@ class analyze_data(tk.Frame):
      		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,'float64',columnsAddedToDf)
      		tk.messagebox.showinfo('Done..','Calculations were performed and data were added to the source data treeview.',parent=self)
 
+     def calculate_row_wise_metric(self,metric,columns= None,promptN = 0):
+     	'''
+     	calculates row-wise data transformations/metrices
+     	'''
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.')
+     		return
+
+     	if columns is None:
+     		columns = self.DataTreeview.columnsSelected
+
+     	askFloatTitlePrompt = dict(
+     					[('x ^ N [row]',['Power ..','Pleaser enter N to calculate: x^N: ']),
+						('x * N [row]',['Multiply ..','Please enter N to calcuate: x *(N): ']),
+						('N ^ x [row]',['N^x','Please enter N to calcuate: N^x: '])]
+						)
+     	
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+
+     		if metric in askFloatTitlePrompt:
+     			title, prompt =  askFloatTitlePrompt[metric]
+     			## changed to use askstring instread of asfloat because
+     			## the function float() can also interprete entered strings
+     			## such as 1/400
+     			promptValue = ts.askstring(title,prompt,initialvalue='2')
+     			try:
+     				promptN = float(promptValue)
+     			except:
+     				promptNumbers = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", promptValue)
+     				try:
+     					promptN = float(promptNumbers[0])
+     				except:
+     					tk.messagebox.showinfo('Error ..',
+     						'Could not convert input to number.',
+     						parent=self)
+     			if promptN is None:
+     				return
+
+     		newColumnNames = self.sourceData.calculate_row_wise_metric(metric,columns,promptN)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													dataType = 'float64',
+     													columnList = newColumnNames)
+     		tk.messagebox.showinfo('Done ..','Calculations performed. Columns added.')
+     		
+     		self.workflow.add('calcColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':newColumnNames},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':['{}_{}'.format(self.sourceData.currentDataFile,col) for col in newColumnNames]},
+     					'description':OrderedDict([('Activity:','Calculation of {}.'.format(metric)),
+     					('Description:','A column has been added containing the results.'),
+     					('Column name(s):',get_elements_from_list_as_string(newColumnNames, maxStringLength = None)),
+     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     					('Data ID:',self.sourceData.currentDataFile)])})    		
+
+
+
+
+     def calculate_density(self):
+     	'''
+     	Calculates kernel density estimate and adds new column to the datatreeview
+     	'''
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.',
+     								parent=self)
+     		return
+
+     	numericColumns = self.selection_is_from_one_df()
+     	if numericColumns is not None:
+
+     		densityColumnName = self.sourceData.calculate_kernel_density_estimate(numericColumns)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,dataType = 'float64',
+     														columnList = [densityColumnName])
+     		self.workflow.add('calcColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':[densityColumnName]},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,densityColumnName)},
+     					'description':OrderedDict([('Activity:','Cluster # num added.'),
+     					('Description:','A column has been added containing kernel density values.'),
+     					('Column name:',densityColumnName),
+     					('Selected Columns (hclust):',get_elements_from_list_as_string(numericColumns, maxStringLength = None)),
+     					('Data ID:',self.sourceData.currentDataFile)])})     		
+
+     		tk.messagebox.showinfo('Done ..','Representation of a kernel-density estimated using '+
+     								'Gaussian kernels done. Column has been added.', parent = self)
+
+
+     def copy_file_to_clipboard(self, data= None, fromSelection = False):
+         '''
+         Copies data to clipboard
+         '''
+         if fromSelection:
+         	columns = self.DataTreeview.columnsSelected
+         	data = self.sourceData.get_current_data_by_column_list(columns)
+         
+         if data is None:
+         	data = self.get_selected_data()
+         	if data is None:
+         			return
+         try:
+         	data.to_clipboard(excel=True, na_rep = "NaN",index=False, encoding='utf-8', sep='\t')
+         except:
+         	tk.messagebox.showinfo('Error ..','No copy/paste mechanism found for your system. Please export via txt files.')
+
+     def count_valid_values(self):
+     	'''
+     	Count valid values
+     	'''
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only numerical columns for this type of calculation.')
+     		return
+
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     		columnName = self.sourceData.count_valid_values(selectedColumns)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													dataType = 'int64',
+     													columnList = [columnName],
+     													)
+     		tk.messagebox.showinfo('Done ..','Counting done. New column added (integers).')
+     		
+     		self.workflow.add('calcColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':[columnName]},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
+     					'description':OrderedDict([('Activity:','Count valid values.'),
+     					('Description:','A column has been added indicating the number of valid values (non NaN) in selected columns.'),
+     					('Column name:',columnName),
+     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     					('Data ID:',self.sourceData.currentDataFile)])})
+
 
      def create_categorical_module(self):
      	'''
+     	Creates a cateogrial module.
      	'''
      	selectedColumns = self.selection_is_from_one_df()
      	if selectedColumns is not None:
@@ -1311,22 +1240,248 @@ class analyze_data(tk.Frame):
      			return
      	
      		splitString = dialog.selectionOutput['Split String']
-     		aggMethod = dialog.selectionOutput['Aggregate Method']
-     		
-     		
-     	
+     		aggMethod = dialog.selectionOutput['Aggregate Method']     	
      		progressBar = Progressbar(title= 'Categorical modules')
      		dataID, fileName = self.sourceData.create_categorical_modules(aggregate = aggMethod, sepString = splitString,
      								categoricalColumn = selectedColumns, progressBar = progressBar)
-     	
      		if dataID is None: # aggreagation did not work
      			return
-     		
      		self.DataTreeview.add_new_data_frame(dataID,
      								fileName,
      								self.sourceData.dfsDataTypesAndColumnNames[dataID])
 
+     def create_module_intersection(self):
+      	'''
+      	Intersection modules Create a new data frame.
+      	'''
+      	selectedColumns = self.selection_is_from_one_df()
+      	if selectedColumns is not None: 
+      	
+      		unique = self.sourceData.get_current_data()['UniqueCats']
+      		model = find_cat_overlap.findCategoricalIntersection(self.sourceData.get_current_data()[selectedColumns[0]],
+      			unique,data=self.sourceData.get_current_data(),
+      			numericColumns = self.sourceData.get_numeric_columns())
+      			
+      		df = model.fit()
+      		self.add_new_dataframe(df,'ModuleSelection')
 
+     def create_sub_data_frame_from_selection(self):
+         '''
+         When user has defined data selection by Lasso, a new data frame is created
+         and added to the treeview
+         '''
+         sub_data = self.sourceData.df[self.sourceData.df.index.isin(self.data_selection.index)]
+         currentFileName = self.sourceData.fileNameByID[self.plt.get_dataID_used_for_last_chart()]
+         nameOfSubset = 'selection_{}'.format(currentFileName)
+         self.add_new_dataframe(sub_data,nameOfSubset)
+
+     def create_count_through_column(self):
+     	'''
+     	Counts through the data in current order.
+     	'''
+     	selectedColumns  = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     		columnName = self.sourceData.add_count_through_column()
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													dataType = 'int64',
+     													columnList = [columnName],
+     													startIndex = -1)
+     		tk.messagebox.showinfo('Done ..','Index column was added to the treeview.')
+     		self.workflow.add('calcColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'delete_columns_by_label_list',
+     					'argsDataR':{'columnLabelList':[columnName]},
+     					'funcTreeR':'delete_entry_by_iid',
+     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
+     					'description':OrderedDict([('Activity:','Count through.'),
+     					('Description:','A column has been added that enumerates over the data.'),
+     					('Column name:',columnName),
+     					('Data ID:',self.sourceData.currentDataFile)])})
+
+     def check_input(self):
+     	'''
+     	Check if the data frame that was used for the last chart is the same
+     	as the one that is newly dropped onto the receiver boxes. If not
+     	the receiver boxed will be cleaned up.
+     	'''
+     	dataFrames = self.DataTreeview.dataFramesSelected
+     	lastUsedDf = self.plt.get_dataID_used_for_last_chart()
+     	if lastUsedDf is not None and len(dataFrames) != 0:
+            	if lastUsedDf == dataFrames[0]:
+            		pass
+            	else:
+            		self.clean_up_dropped_buttons()
+     
+     
+     
+     def change_plot_style(self, plot_type = ''):
+         '''
+         Function that handles the event triggered by plot options.
+         Very important step is to set the data selection back to the one
+         that was used to generate the last chart. Otherwise you might
+         experience difficulties that column headers are not present.
+         '''
+         
+         if len(self.sourceData.dfs) == 0:
+         	tk.messagebox.showinfo('No data ..','Please upload a file first.',parent = self)
+         	return
+	
+         if len(self.plt.plotHistory) == 0:
+             return
+
+         dataID = self.plt.get_dataID_used_for_last_chart()
+         self.sourceData.set_current_data_by_id(dataID)
+
+         numericColumns = list(self.selectedNumericalColumns.keys())
+         categoricalColumns = list(self.selectedCategories)
+
+         underlying_plot = self.plt.currentPlotType
+
+         if plot_type  not in ['boxplot','violinplot','barplot','add_swarm']:
+
+             self.but_stored[10].configure(image = self.add_swarm_icon)
+             self.swarm_but = 0
+             self.plt.addSwarm = False
+
+         if plot_type == 'add_swarm':
+             if underlying_plot not in ['boxplot','violinplot','barplot']:
+
+                 tk.messagebox.showinfo('Error..','Not useful to add swarm plot to this '+
+                 						'type of chart. Possible chart types: Boxplot, '+
+                 						'Violinplot and Barplot')
+                 return
+
+             if self.swarm_but == 0:
+                 self.but_stored[10].configure(image= self.remove_swarm_icon)
+                 self.add_swarm_to_figure()
+                 self.swarm_but = 1
+
+             else:
+                 self.but_stored[10].configure(image = self.add_swarm_icon)
+                 self.swarm_but = 0
+                 self.plt.get_active_helper().remove_swarm()
+                 self.plt.redraw()
+
+         else:
+         	if plot_type in ['hclust','corrmatrix'] and len(numericColumns) > 1\
+         	and len(categoricalColumns) > 0:
+         	## forces removable of categories upon selection
+         		self.clean_up_dropped_buttons('cat',replot=False)
+         		categoricalColumns = []
+         	
+         	if len(numericColumns) == 0 and len(categoricalColumns) != 0 \
+         	and plot_type != 'countplot':
+         		tk.messagebox.showinfo('Error ..',
+         								'Need at least one numeric columns. Drag & Drop them from the source data '+
+         								'treeview into the numerical receiver box.',
+         								parent=self)
+         		return	
+         	
+         	if len(numericColumns) % 2 != 0 and len(categoricalColumns) == 0\
+         	and plot_type == 'scatter':
+         		tk.messagebox.showinfo('Error ..',
+         							'Need even number of numeric columns for a scatter plot.',
+         							parent = self)
+         		return
+
+         	self.prepare_plot(colnames = numericColumns,
+             				   catnames = categoricalColumns,
+             				   plot_type = plot_type )
+
+
+     def change_column_type(self, selectedColumns  = None, id = None, changeColumnTo = 'float64'):
+     	'''
+     	Changes the column type of the selected one.
+     	'''
+     	
+     	if selectedColumns is None:
+		
+     		selectedColumns = self.selection_is_from_one_df()
+     		
+     	elif id is not None:
+     		self.sourceData.set_current_data_by_id(id)
+     	else:
+     		return
+			
+     	if selectedColumns is not None:
+     		oldDataTypes = self.sourceData.get_data_types_for_list_of_columns(selectedColumns)
+     		status = self.sourceData.change_data_type_in_current_data(selectedColumns,changeColumnTo)
+     		if status == 'worked':
+     			if changeColumnTo == 'str':
+     				changeColumnTo = 'object'
+     			self.DataTreeview.change_data_type_by_iid(self.DataTreeview.columnsIidSelected,changeColumnTo)
+     			tk.messagebox.showinfo('Done..','Column type changed.')
+     		
+     			
+     			self.workflow.add('deleteRows',
+     				self.sourceData.currentDataFile,
+     				
+     				{'funcDataR':'change_data_type_in_current_data',
+     				'argsDataR':{'columnList':selectedColumns, 'newDataType': oldDataTypes},
+     				'funcTreeR':'change_data_type_by_iid',
+     				'argsTreeR': {'iidList':self.DataTreeview.columnsIidSelected, 'newDataType' : oldDataTypes},
+     				'description':OrderedDict([('Activity:','Change column type to - ({})'.format(changeColumnTo)),
+     				('Description:','Column type has been changed.'),
+     				('Selected Columns',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     				('Data ID:',self.sourceData.currentDataFile)])})
+     				     			
+     		else:
+     			if changeColumnTo == 'int64':
+     				addToMsg = ' If the column contains NaN you cannot change it type to integer.Please remove NaN and try again.'
+     			else:
+     				addToMsg = ''
+     			tk.messagebox.showinfo('Error..','An error occured trying to change the column type.' + addToMsg)
+
+
+     def combine_selected_columns(self):
+     	'''
+     	Combines the content of selected columns.
+     	'''
+     	if len(self.DataTreeview.columnsSelected  ) < 2:
+     		tk.messagebox.showinfo('Error..','Please select at least two columns')
+     		return
+     		
+     	selectedColumns  = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     		combinedColumnName = self.sourceData.combine_columns_by_label(self.DataTreeview.columnsSelected  )
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													dataType = 'object',
+     													columnList = [combinedColumnName])
+
+     		tk.messagebox.showinfo('Done ..','Selected columns were combined in a newly added column.')
+     		self.workflow.add('add_column',
+     				self.sourceData.currentDataFile,
+     				{'funcDataR':'delete_columns_by_label_list',
+     				'argsDataR':{'columnLabelList':[combinedColumnName]},
+     				'funcTreeR':'delete_entry_by_iid',
+     				'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,combinedColumnName)}})
+     	else:
+
+      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+      		return
+
+
+     def correct_baseline(self):
+     	'''
+     	Baseline Correction for time series data
+     	'''
+     	if self.plt.currentPlotType != 'time_series':
+     		tk.messagebox.showinfo('Error..','Only useful for time series.')
+     		return
+     	if self.DataTreeview.onlyNumericColumnsSelected	== False:
+     		tk.messagebox.showinfo('Error ..','Only numeric columns allowed.')
+     		return
+     	selectedColumns = self.selection_is_from_one_df()
+     	selectionDataFrameId = self.sourceData.currentDataFile 
+     	if selectedColumns is not None:
+     	 	dataId = self.plt.get_dataID_used_for_last_chart()
+     	 	if dataId != selectionDataFrameId:
+     	 		tk.messagebox.showinfo('Error ..','Data frame of selected columns and the one used for plotting do not match!')
+     	 		return     	 	
+     	 	self.plt.nonCategoricalPlotter.timeSeriesHelper.activate_baselineCorr_or_aucCalc(columns = selectedColumns,
+     	 																					DataTreeview = self.DataTreeview,
+     	 																					workflow = self.workflow)
+      		
      def custom_filter(self):
      	'''
      	Custom filter dialog.
@@ -1336,12 +1491,9 @@ class analyze_data(tk.Frame):
 
      		customFilter = custom_filter.customFilterDialog(self.sourceData, self.DataTreeview.columnsSelected)
 
-
      		data, mode, match_annotation = customFilter.get_data()
      		del customFilter
      		currentFileName = self.sourceData.get_file_name_of_current_data()
-     		
-
      		if mode == 'remove':
      			#self.sourceData.update_data_frame(self.sourceData.currentDataFile, data)
      			dfIndex = self.sourceData.get_current_data().index.tolist()		
@@ -1420,6 +1572,1026 @@ class analyze_data(tk.Frame):
         		'Custom filter was applied successfully. Well done.',
         		parent=self)
 
+    
+     def custom_sort_values(self):
+     	'''
+     	Opens a dialog window that enables the user to sort values in a specific
+     	column by custom order.
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+
+     		inputValues = OrderedDict()
+
+     		uniqueValueList = self.sourceData.get_unique_values(selectedColumns,forceListOutput=True)
+
+     		for n,column in enumerate(selectedColumns):
+     			inputValues[column] = uniqueValueList[n]
+     		dialog = custom_sort.customSortDialog(inputValues)
+
+     		if dialog.resortedValues is not None:
+     			idxColNames = []
+     			for key,values in dialog.resortedValues.items():
+     				factors = range(len(values))
+     				#kind of factorize for sorting
+     				orderMapDict = dict(zip(values,factors))
+     				idxColName = self.sourceData.evaluate_column_name('instantClueSort{}'.format(key))
+     				idxColNames.append(idxColName)
+     				self.sourceData.df[idxColName] = self.sourceData.df[key].astype(str).map(orderMapDict)
+     				del orderMapDict
+
+     			self.sourceData.df.sort_values(idxColNames,kind='mergesort',inplace=True)
+     			self.sourceData.delete_columns_by_label_list(idxColNames)
+     			tk.messagebox.showinfo('Done ..','Custom sorting done.',parent=self)
+
+     		else:
+     			pass
+
+     		del dialog
+
+     def custom_column_order(self):
+     	'''
+     	Custom sorting of columns.
+     	'''
+     	
+     	selectedDataTypes  = self.selection_is_from_one_df('allItemsSelected')
+     	selectionDataFrameId = self.sourceData.currentDataFile
+     	if selectedDataTypes  is not None:
+
+     		inputValues = OrderedDict()
+     		dataTypeRels = self.sourceData.get_columns_data_type_relationship()
+     		for item in selectedDataTypes:
+     			dataType = item.split('{}_'.format(selectionDataFrameId))[-1]
+     			if dataType not in dataTypeRels:
+     				inputValues = dataTypeRels
+     				break
+     			else:
+     				inputValues[dataType] = dataTypeRels[dataType]     		
+
+     		dialog = custom_sort.customSortDialog(inputValues)
+
+     		if dialog.resortedValues is not None:
+     			columnOrder = []
+     			for key,values in dialog.resortedValues.items():
+     				columnOrder.extend(values)
+     			df1 = self.sourceData.df[columnOrder]
+     			dfOut = self.sourceData.join_missing_columns_to_other_df(df1,id=selectionDataFrameId)
+     			self.sourceData.update_data_frame(selectionDataFrameId,dfOut)
+     			self.update_all_dfs_in_treeview()
+     			tk.messagebox.showinfo('Done ..','Custom sorting done.',parent=self)
+     		else:
+     			pass		
+     
+     def curve_fit(self,from_drop_down = True):
+     	'''
+     	Dialogue window to calculate curve fit.
+     	'''
+     	if  from_drop_down:
+     		selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     		if selectionIsFromSameData:
+     			self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		else:
+     			tk.messagebox.showinfo('Error ..','Please select only columns from one data frame',parent=self)
+     			return
+     		columns = self.DataTreeview.columnsSelected
+     	else:
+     		id = self.plt.get_dataID_used_for_last_chart()
+     		self.sourceData.set_current_data_by_id(id)
+     		columns = list(self.selectedNumericalColumns.keys())
+
+     	curve_fitting.curveFitter(columns,self.sourceData,self.DataTreeview,self.curveFitCollection)
+
+		
+     def clean_up_dropped_buttons(self, mode = 'all', replot = True, clearFigure = True):
+         
+         if mode == 'all':
+             for button in self.selectedNumericalColumns.values():
+                      button.destroy()
+             for button in self.selectedCategories.values():
+                      button.destroy()
+
+             
+             self.interactiveWidgetHelper.clean_frame_up()
+             self.selectedNumericalColumns.clear()
+             self.selectedCategories.clear()
+             self.update_tooltip_in_receiverBox('reset')
+             if clearFigure:
+             	self.plt.clean_up_figure()
+
+         elif mode == 'num':
+             for button in self.selectedNumericalColumns.values():
+                      button.destroy()
+
+             self.selectedNumericalColumns.clear()
+             self.but_stored[10].configure(image= self.add_swarm_icon)
+             self.plt.addSwarm =  False
+             self.update_tooltip_in_receiverBox('numeric')
+
+         elif mode == 'cat':
+                for button in self.selectedCategories.values():
+                      button.destroy()
+                self.selectedCategories.clear()
+                self.update_tooltip_in_receiverBox('categories')
+         
+         if replot:
+            	plot_type = self.estimate_plot_type_for_default()
+            	self.interactiveWidgetHelper.clean_frame_up()
+            	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),                
+                                  catnames = list(self.selectedCategories.keys() ),
+                                  plot_type = plot_type)
+ 
+ 
+
+     def calculated_droped_stats_for_all_combs(self):
+     	'''
+     	Calculates the droped statitic.
+     	'''
+     	if hasattr(self,'groupedStatsData') == False:
+     		tk.messagebox.showinfo('Error ..',
+     								'You have to reopen the window by a drag & drop event onto the figure to apply another test. Aborting..',
+     								parent=self)
+     		return
+     		
+     	dataDict = OrderedDict([('id',[]),('Group 1',[]), ('Group 2',[])])
+     	numericColumns = list(self.selectedNumericalColumns.keys())
+
+     	if len(numericColumns) != 0:
+
+     		columnsToAdd = []
+     		columnsForTest = numericColumns + columnsToAdd
+
+     		for column in columnsForTest:
+     			dataDict['{} p-value'.format(column)] = []
+     			dataDict['{} test statistic'.format(column)] = []
+
+     		testSettings = {'paired':self.paired,
+     						'test':self.test,
+     						'mode':self.mode}     		
+     		iterationObject = itertools.combinations(self.groupedStatsKeys,2)	     			
+     		
+     		for n,combination in enumerate(iterationObject):
+     			if self.split_on_cats_for_plot.get():
+     				valuesGroup1 = self.groupedStatsData.get_group(combination[0])
+     				valuesGroup2 = self.groupedStatsData.get_group(combination[1])
+     			## we do this again, because user could change the df and resort
+     			## to redo seems easier than matching and the df is usually not that long
+     			dataDict['id'].append(str(n+1))
+     			dataDict['Group 1'].append(get_elements_from_list_as_string(combination[0]))
+     			dataDict['Group 2'].append(get_elements_from_list_as_string(combination[1]))
+
+     			for column in columnsForTest:
+     				
+     				
+     				if self.split_on_cats_for_plot.get():
+     					data1 = valuesGroup1[column].dropna().values
+     					data2 = valuesGroup2[column].dropna().values
+     				else:
+     					data1 = self.groupedStatsData[column][combination[0]].dropna().values
+     					data2 = self.groupedStatsData[column][combination[1]].dropna().values
+     				try:
+     					testResult = stats.compare_two_groups(testSettings,[data1,
+     											data2])
+     					t , p = round(testResult[0],4), testResult[1]
+     				except:
+     					t, p = np.nan, 1
+
+     				dataDict['{} p-value'.format(column)].append(p)
+     				dataDict['{} test statistic'.format(column)].append(t)
+
+     		for column in columnsForTest:
+     			pValColumn = '{} p-value'.format(column)
+     			data = np.array(dataDict[pValColumn])
+     			reject, corr_pvals,_,_ = multipletests(data, alpha = 0.05,
+     	 									 method = 'fdr_bh', is_sorted= False, returnsorted=False)
+     			dataDict['{} adj. p-values'.format(column)] = corr_pvals
+
+     		resultDf = pd.DataFrame.from_dict(dataDict)
+     		self.statsDataDialog.pt.model.df = resultDf
+     		self.statsDataDialog.pt.redraw()
+     	else:
+     		tk.messagebox.showinfo('No data ..','Please load numerical columns into the receiver box.')
+
+     	if hasattr(self,'groupedStatsData'):
+     		del self.groupedStatsData
+
+     def check_button_handling(self, colormap):
+         '''
+         Change color map.
+         '''
+         self.cmap_in_use.set(colormap)
+
+         if self.plt.plotCount != 0:
+         	color_changer.colorChanger(self.plt,self.sourceData,
+         		colormap, self.interactiveWidgetHelper)
+     
+     def categorical_column_handler(self,mode):
+     	'''
+     	Open categorical filter dialog. Please note that this is also used
+     	to annotate scatter plot points which looks strange. But since the annotation
+     	can also only be considered as a categorical value, the dialog window is used as well.
+
+     	Parameter
+     	==========
+     	mode - Can only be one of :
+
+     			- Find category & annotate
+				- Search string & annotate
+				- Subset data on unique category
+				- Annotate scatter points
+				- Find entries in hierarch clustering
+				- Find entry in line plot
+		Output
+		==========
+		None - But new data frames are entered automatically from within the dialog
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	
+     	if selectedColumns is None:
+     		return
+     	
+     	self.annot_label_scatter = False
+     	if mode == 'Annotate scatter points' and len(selectedColumns) == 0:
+     		filterColumn  = None
+     		dataSubset = None
+     	elif mode == 'Find entry in hierarch. cluster':
+     		if self.plt.currentPlotType != 'hclust':
+     			tk.messagebox.showinfo('Error ..','Please plot a hierarchical clustermap.')
+     			return
+     		else:
+     			filterColumn  = None
+     			dataSubset = self.plt.nonCategoricalPlotter._hclustPlotter.df
+     	elif mode == 'Find entry in line plot':
+      		if self.plt.currentPlotType != 'line_plot':
+      			tk.messagebox.showinfo('Error ..','Please plot a profile plot first.')
+      			return
+      		else:
+      			dataSubset = self.plt.nonCategoricalPlotter.linePlotHelper.get_data()
+      			filterColumn = None
+
+     	elif mode == 'Search string & annotate':
+
+     		filterColumn = selectedColumns
+     		dataSubset = None
+
+     	else:
+
+     		filterColumn = selectedColumns[0]
+     		dataSubset = None
+
+     	categorical_filter.categoricalFilter(self.sourceData,self.DataTreeview,
+             										self.plt,operationType = mode,
+             										columnForFilter = filterColumn,
+             										dataSubset = dataSubset,
+             										workflow = self.workflow)
+     def clip_data(self):
+      	'''
+      	Let user define specific clipping mask to pot specific subsets.
+      	'''
+      	dialog = mask_filtering.clippingMaskFilter(self.plt,self.sourceData,self)
+    	
+     	
+     
+     def configure_chart(self):
+        '''
+        Helper function to open Chart Configuration Dialog that allows
+        easy adjustment of several chart properties. It also then
+        upgrades import things in the plotter class to maintain changes like
+        box around subplots or grid lines
+        Output 
+        ========
+        None
+        '''
+        plot_type = self.plt.currentPlotType
+        if plot_type in ['PCA','corrmatrix','hclust','cluster_analysis']:
+            tk.messagebox.showinfo('Not supported..','Configuration of this plot type is currently not supported.')
+            return
+        chart_configurator = chart_configuration.ChartConfigurationPopup(self.plt,
+        													self.global_chart_parameter)
+
+        self.global_chart_parameter = chart_configurator.global_chart_parameter
+        self.plt.showSubplotBox = chart_configurator.show_box
+        self.plt.showGrid = chart_configurator.show_grid
+    
+     def change_default_color(self, button, event = None):
+         '''
+         Changing the default color means that this color is used if the
+         hue is not reserved by a categorical data separation/grouping   
+               
+         Output 
+         ========
+         None
+         '''
+         col_get = button.cget('background')
+         if len(self.colormaps) > 0:
+             for key, cb in self.colormaps.items():
+                 cb[0].remove()
+             self.colormaps.clear()
+         if len(self.plt.plotHistory) == 0:
+         	return
+         plotHelper = self.plt.get_active_helper()
+         plotHelper.change_nan_color(col_get)
+         self.plt.set_scatter_point_properties(color=col_get)
+         self.plt.redraw()
+
+ 
+     def define_groups_in_dimRed(self):
+     	'''
+     	Dialog to define grouping in dimensional reduction procedure
+     	'''
+     	define_groups_dim_reduction.defineGroupsDialog(self.dimensionReductionCollection,
+     												   self.plt,
+     												   self.colorHelper)
+     def display_corrmatrix_results(self):
+     	'''
+     	Show the correlation matrix results to user.
+     	'''
+     	if len(self.plt.plotProperties) == 0:
+     		tk.messagebox.showinfo('Error ..',
+     							   'Please plot a correlation matrix first.',
+     							   parent=self)
+     		return
+     	
+     	numColumns,_,plot_type,_ = self.plt.current_plot_settings
+     	if self.plt.nonCategoricalPlotter._hclustPlotter is not None or \
+     	plot_type != 'corrmatrix':
+
+     		data = self.plt.nonCategoricalPlotter._hclustPlotter.export_data_of_corrmatrix()
+     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
+
+     		if dataDialog.addDf:
+     			nameOfDf = 'Corrmatrix Results {}'.format(get_elements_from_list_as_string(numColumns))
+     			self.add_new_dataframe(dataDialog.data,nameOfDf)
+
+     	else:
+     		tk.messagebox.showinfo('Error ..',
+     			'No data found. Perform clustering.',
+     			parent=self)
+
+     def display_curve_fits(self):
+      	'''
+      	Display curve fits that were made. The user can define a name for each curve
+      	fit.
+      	'''
+      	selectFitAndGrid = curve_fitting.displayCurveFitting(self.sourceData,self.plt,self.curveFitCollection)
+      	fitsToPlot = selectFitAndGrid.curve_fits_to_plot
+      	categoricalColumns = self.curveFitCollection.get_columns_of_fitIds(fitsToPlot)
+      	if len(categoricalColumns) > 0:
+      		self.plt.set_selectedCurveFits(selectFitAndGrid.curve_fits_to_plot)
+      		self.plt.initiate_chart(numericColumns = [], categoricalColumns = categoricalColumns ,
+      								 selectedPlotType = 'curve_fit', colorMap = self.cmap_in_use.get())
+      	else:
+      		pass
+
+
+     def drop_cols_with_low_variance(self):
+     	'''
+     	Drops rows with a low variance threshold. 
+     	'''
+     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
+     	if selectedColumns is not None:
+    
+     	#	value = ts.askfloat('Variance threshold','Provide variance cutoff.\nColumns that show less variance are going to be removed.')
+     		dialog = simpleUserInputDialog(['Threshold','Copy'],
+     							   ['0','True'],
+     							   [np.linspace(0,4,20).tolist(),['True','False']],
+     							   title = 'Remove columns with low variance - Settings',
+     							   infoText='If copy == True. Columns with higher variance will be copied'+
+     							   '.\nIf False columns that have lower variance will be removed from the data.')
+     		if dialog.selectionOutput is not None:
+     			try:
+     				thres = float(dialog.selectionOutput['Threshold'])
+     				copy = dialog.selectionOutput['Copy'] == 'True'
+     			except:
+     				tk.messagebox.showinfo('Error ..',
+     					'Converting your input raised an error. (Threshold must be a '+
+     					'float, Copy must be True or False')
+     					
+     			newFeatureNames = self.sourceData.remove_columns_with_low_variance(selectedColumns,
+     																			thres,copy) 
+     			if newFeatureNames is None:
+     				tk.messagebox.showinfo('Error..','No feature meets the given threshold.')
+     				return	
+     			elif newFeatureNames == 'Same':
+     				tk.messagebox.showinfo('Error ..','Variance is equal over all columns.')
+     				return													
+     			
+     			if copy:
+     			
+     				self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     																	'float64',newFeatureNames)		
+     			else:
+     				self.update_all_dfs_in_treeview()
+					
+     	
+     def divide_or_subtract_columns(self, byValue = False, byMedian = False, operation = 'divide'):
+     	'''
+     	Divide / Substract row wise data.
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     		if byValue or byMedian:
+     			if byValue:
+     				value = ts.askfloat('Provide Value','Enter value for division:')
+     				if value is not None:
+     					calcDict = OrderedDict([(column,value) for column in selectedColumns])
+     					baseString = 'by_{}:'.format(value)
+     			elif byMedian:
+     				values = self.sourceData[selectedColumns].df.median()
+     				calcDict = OrderedDict([(column,value) for column,value in zip(selectedColumns,values.tolist())])
+     				baseString = 'by_median:'  
+     			
+     			if operation == 'divide':
+     				baseString = 'div_' + baseString
+     				newColumns = self.sourceData.divide_columns_by_value(calcDict,baseString)
+     				
+     			elif operation == 'substract':
+     				baseString = 'sub_' + baseString
+     				newColumns = self.sourceData.substract_columns_by_value(calcDict,baseString)
+     		
+     		else:
+     			columns = self.sourceData.get_numeric_columns()
+     			
+     			dialog = simpleListboxSelection('Select columns to perform calculation',
+     								   self.sourceData.get_columns_of_current_data())				
+     			selection = dialog.selection
+     			if len(selection) != 0:
+     				if len(selection) != 1 and len(selection) != len(selectedColumns):
+     					tk.messagebox.showinfo('Error..',
+     						'Please select either one column or the exact same number of columns that were selected in the treeview.', 
+     						parent = self)
+     					return
+     				elif len(selection) == 1 and len(selectedColumns) != 1:
+     					
+     					selection = selection * len(selectedColumns)
+     				
+     				if operation == 'divide':
+     					newColumns = self.sourceData.divide_columns_by_column(selectedColumns,selection)
+     				elif operation == 'substract':
+     					newColumns = self.sourceData.substract_columns_by_column(selectedColumns,selection)
+     			else:
+     				return
+     		
+     		self.DataTreeview.add_list_of_columns_to_treeview(id = self.sourceData.currentDataFile,
+        													dataType = 'float64',
+        													columnList = newColumns)
+     		tk.messagebox.showinfo('Done..','Calculations performed. Columns added.')
+     
+     def drop_selection_from_df(self):
+         '''
+         Drops rows from data frame and reinitiates chart.
+         '''
+         self.sourceData.delete_rows_by_index(self.data_selection.index)
+         self.plt.figure.canvas.mpl_disconnect(self.selection_press_event)
+         self.plt.initiate_chart(*self.plt.current_plot_settings)
+         self.select_data()
+     
+     def define_size_range(self):
+     	'''
+     	Defining range of size interval to change to edges of a scatter plot
+     	where size is encoded. 
+     	'''
+     	if self.plt.plotCount == 0:
+     		return
+     	sizeDialog = size_configuration.sizeIntervalDialog(self.plt)
+
+     def duplicate_column(self):
+     	'''
+     	Duplicates selected columns. Changes dataframe selection if needed. Eventually
+     	it will change back to the previous selected dataframe.
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:  
+     		columnLabelListDuplicate  = self.sourceData.duplicate_columns(self.DataTreeview.columnsSelected  )
+     		dataTypes = self.sourceData.get_data_types_for_list_of_columns(columnLabelListDuplicate)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													dataTypes,
+     													columnLabelListDuplicate)
+     		tk.messagebox.showinfo('Done ..','Selected column(s) were duplicated and added to the source data treeview.')
+     		self.workflow.add('addColumn',
+     				self.sourceData.currentDataFile,
+     				{'funcDataR':'delete_columns_by_label_list',
+     				'argsDataR':{'columnLabelList':columnLabelListDuplicate},
+     				'funcTreeR':'delete_entry_by_iid',
+     				'argsTreeR':{'iid':['{}_{}'.format(self.sourceData.currentDataFile,col) for col in columnLabelListDuplicate]},
+     				'description':OrderedDict([('Activity:','Duplicate column.'),
+     				('Description:','One or multiple columns were duplicated.'),
+     				('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     				('Data ID:',self.sourceData.currentDataFile)])})
+
+	
+     def delete_column(self,event=None):
+     	'''
+     	Removes selected columns. Changes dataframe selection if needed. Eventually
+     	it will change back to the previous selected dataframe.
+     	'''
+     	if event is not None:
+     		if len(self.DataTreeview.columnsSelected) == 0:
+     			return
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:    
+     		dfForUndo =  self.sourceData.get_current_data_by_column_list(selectedColumns, ignore_clipping = True)
+     		self.sourceData.delete_columns_by_label_list(self.DataTreeview.columnsSelected)
+     		self.DataTreeview.delete_selected_entries()
+     		tk.messagebox.showinfo('Done ..','Selected columns were removed.')
+     		self.workflow.add('deleteColumn', 
+     					self.sourceData.currentDataFile,
+     					{'funcDataR':'join_df_to_df_by_id',
+     					'argsDataR':{'dfToAdd':dfForUndo,'id':self.sourceData.currentDataFile},
+     					'funcAnalyzeR':'update_all_dfs_in_treeview',
+     					'argsAnalyzeR':{},
+     					'description':OrderedDict([('Activity:','Delete column.'),
+     					('Description:','One or multiple columns were deleted.'),
+     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
+     					('Data ID:',self.sourceData.currentDataFile)])})
+     
+     def delete_data_frame_from_source(self, fileIid = None):
+     	'''
+     	Removes data frames from sourceDataCollection and from DataTreeview.
+     	The data cannot be restored.
+     	'''
+     	if fileIid is None:
+		
+     		for fileIid in self.DataTreeview.dataFramesSelected:
+
+     			fileName = self.sourceData.fileNameByID[fileIid]
+     			dataFrameIid = '{}_{}'.format(fileIid,fileName)
+     			self.DataTreeview.delete_entry_by_iid(dataFrameIid)
+     			self.sourceData.delete_data_file_by_id(fileIid)
+     			self.remove_savedCalculations(fileIid)
+     			self.workflow.delete_branch(fileIid)
+
+     			if len(self.sourceData.fileNameByID) == 0:
+     				self.clean_up_dropped_buttons(mode = 'num')
+     				self.clean_up_dropped_buttons(mode = 'cat')
+     			if len(self.sourceData.dfs) == 0 or \
+     				fileIid == self.plt.get_dataID_used_for_last_chart():
+     			
+     				self.clean_up_dropped_buttons(mode = 'num')
+     				self.clean_up_dropped_buttons(mode = 'cat')
+					
+     		tk.messagebox.showinfo('Done..','Selected data frame(s) deleted.')
+		
+     	else:
+		
+     			fileName = self.sourceData.fileNameByID[fileIid]
+     			dataFrameIid = '{}_{}'.format(fileIid,fileName)
+     			self.DataTreeview.delete_entry_by_iid(dataFrameIid)
+     			self.sourceData.delete_data_file_by_id(fileIid)
+     			self.remove_savedCalculations(fileIid)
+     			self.workflow.delete_branch(fileIid)
+     			
+     			if len(self.sourceData.dfs) == 0  or fileIid == self.plt.get_dataID_used_for_last_chart():
+					
+     				self.clean_up_dropped_buttons(mode = 'num')
+     				self.clean_up_dropped_buttons(mode = 'cat')
+    
+     def delete_dragged_buttons(self, event, but_name, columns=False):
+         '''
+         Remove dragged buttons from receiver boxes.
+         '''
+         # set correct df
+         dataID = self.plt.get_dataID_used_for_last_chart()
+         self.sourceData.set_current_data_by_id(dataID)
+		
+         if columns:
+             self.selectedNumericalColumns[but_name].destroy()
+             del self.selectedNumericalColumns[but_name]
+             self.update_tooltip_in_receiverBox('numeric')
+             self.plt.addSwarm = False
+             self.but_stored[10].configure(image = self.add_swarm_icon)
+             self.swarm_but = 0
+             	             	              	
+         else:
+             self.selectedCategories[but_name].destroy()
+             del self.selectedCategories[but_name]
+             self.update_tooltip_in_receiverBox('categories')		 
+
+         if len(self.selectedCategories) == 0 and len(self.selectedNumericalColumns) == 0:
+             self.plt.clean_up_figure()
+             self.interactiveWidgetHelper.clean_frame_up()
+             self.plt.redraw()
+             return
+         numericColumns = list(self.selectedNumericalColumns.keys())
+         categoricalColumns = list(self.selectedCategories.keys())
+                                 
+         _,_, plot_type, cmap = self.plt.current_plot_settings
+         if plot_type in ['hclust','corrmatrix'] and len(numericColumns) == 1:
+             plot_type = 'boxplot'
+         if columns == False and plot_type in ['scatter_matrix','hclust','corrmatrix']:
+             return
+         if plot_type == 'PCA':
+             plot_type = 'boxplot'
+		
+         self.interactiveWidgetHelper.clean_frame_up()
+         
+         if len(numericColumns) == 0:
+         	plot_type = 'countplot'
+         elif len(numericColumns) == 1:
+         	plot_type = 'boxplot' 
+         	
+         self.plt.initiate_chart(numericColumns,categoricalColumns,
+         							plot_type, cmap)
+     	     
+     def export_selected_figure(self,event):
+         '''
+         Cast a menu to export subplots from the main window into a
+         main figure template.
+         '''
+         if (event.dblclick or event.button > 1) and event.inaxes is None:
+         	self.is_just_outside(event)
+         if event.inaxes is None:
+             return
+         if event.button == 1:
+             return
+         if event.button in [2,3]:
+             if self.selection_press_event is not None:
+             	return
+             numb = self.plt.get_number_of_axis(event.inaxes)
+             if numb is None:
+                 return
+
+             self.axNum = numb
+             self.ax_export_ax = event.inaxes
+
+             if self.plt.castMenu == False:
+             	return
+             self.post_menu(menu = self.menuCollection['main_figure_menu'] )
+     		   
+
+     def export_dimRed_results(self, which):
+     	'''
+     	Can be used to export results of a dimensional reduction either to file
+     	or to be added to source treeview and data collection
+     	'''
+     	if 'Export PCA Scores' in which:
+
+     		_,components,columns, dataID = \
+     		self.dimensionReductionCollection.get_drivers_and_components(which='Components')
+     		mainString = 'Scores'
+     		data = components.T
+     		data['Feature'] = data.index
+     		if hasattr(self.plt.nonCategoricalPlotter,'dimRedGroups'):
+     			data['Groups'] = self.plt.nonCategoricalPlotter.dimRedGroups
+
+     	elif 'Export Loadings' in which or 'Source Data' in which:
+
+     		data,_,columns, dataID = \
+     		self.dimensionReductionCollection.get_drivers_and_components(which='Drivers')
+     		mainString = 'Loadings'
+     		data.columns = ['Comp_{}'.format(n+1) for n in range(len(data.columns.values.tolist()))]
+
+     	if 'Source Data' in which:
+
+     		self.sourceData.set_current_data_by_id(dataID)
+     		columnsAdded = \
+     		self.sourceData.join_df_to_currently_selected_df(data, exportColumns = True)
+     		self.DataTreeview.add_list_of_columns_to_treeview(dataID, 'float64', columnsAdded)
+
+     	else:
+     		self.add_new_dataframe(data,
+     						'{}: [{}]'.format(mainString,
+     						get_elements_from_list_as_string(columns,
+     						maxStringLength = 10)))
+
+     def estimate_plot_type_for_default(self):
+         '''
+         Estimate default plot type.
+         '''
+         colnames = list(self.selectedNumericalColumns.keys())
+         catnames = list(self.selectedCategories.keys())
+         used_plot_style = self.plt.currentPlotType
+         n_col = len(colnames)
+         n_categories = len(catnames)
+         if used_plot_style in ['hclust','corrmatrix'] and n_categories > 0:
+             return 'boxplot'
+         if used_plot_style in ['hclust','corrmatrix'] and n_col == 1:
+             return 'boxplot'
+         if used_plot_style == 'PCA':
+             return 'boxplot'
+         if n_col == 1 and n_categories == 0:
+             plot_type = 'density'
+         elif n_categories != 0 and n_col == 0:
+             plot_type = 'countplot'
+         elif used_plot_style == 'density_from_scatter':
+             if n_col == 1:
+                 return 'boxplot'
+             else:
+                 return 'density_from_scatter'
+         elif n_col == 2 and n_categories == 0 and used_plot_style != 'time_series':
+             plot_type = 'scatter'
+         else:
+             if self.plt.plotCount > 0:
+                 if used_plot_style not in ['density','countplot','scatter','PCA']:
+                     plot_type = used_plot_style
+                 else:
+                     plot_type = 'boxplot'
+             else:
+                 plot_type = 'boxplot'
+         return plot_type
+     
+     def export_data_to_file(self, data = None, format_type = 'Excel',
+     			sheet_name = 'ExportInstantClue', initial_file = 'Untitled',
+     			checkSelection = False):
+         '''
+         Export data frame to txt or excel.
+         Parameters
+         ==========
+         
+         data			- pandas data frame. Data to be saved
+         format_type	- string. Can be 'Excel' or 'txt'. 
+         sheet_name		- string. For Excel export.
+         initial_file	- string. File name.	
+         
+         Output 
+         ==========
+         None
+         
+         '''
+         if data is None:
+         	if checkSelection:
+         		data = self.get_selected_data()
+         		if data is None:
+         			return			
+         	else:
+         		data = self.sourceData.get_current_data()
+         if isinstance(data, pd.DataFrame) == False:
+         	#print('Data must be a pandas data frame.')
+         	return
+         if format_type not in ['Excel','txt','csv']:
+         	#print('format_type must be "Excel" or "txt".')
+         	return
+         progressBar  = Progressbar(title = 'Saving')
+         if format_type in ['txt','csv']:
+
+             file_name_saving = tf.asksaveasfilename(title='Select name for saving file',
+             		defaultextension = '.{}'.format(format_type) ,
+             		initialfile=initial_file,
+             		)
+             if file_name_saving == '' or file_name_saving is None:
+             	progressBar.close()
+             	return
+             try:
+             	if format_type == 'txt':
+             		data.to_csv(file_name_saving, index=None, na_rep ='NaN', sep='\t')
+             	else:
+             		data.to_csv(file_name_saving, index=None, na_rep ='NaN')
+            		
+             except PermissionError:
+             	tk.messagebox.showinfo('Error ..','Permission denied.')
+             	progressBar.close()
+             	return
+             except:
+             	tk.messagebox.showinfo('Error ..','Unknown Error. Could not save file.')
+             	return
+        
+         else:
+              file_name_saving = tf.asksaveasfilename(title='Select name for saving file',
+              		defaultextension='.xlsx',
+              		initialfile=initial_file,
+              		filetypes = [('Excel files', '.xlsx')])
+              try:
+              	data.to_excel(file_name_saving, index=None, sheet_name = sheet_name, na_rep = 'NaN')
+              except:
+              	tk.messagebox.showinfo('Error ..',
+              						   'File could not be saved. Might be due to denied permission.')
+              	progressBar.close()
+              	return
+         progressBar.update_progressbar_and_label(100,'Done..')
+         progressBar.close()
+         tk.messagebox.showinfo('Done..',
+         	'File has been saved!\nLocation - {}'.format(file_name_saving))
+    
+     def load_and_append_files(self):
+     	'''
+     	Load multiple files and append them to each other. 
+     	'''
+     	txt_file_importer.multipleTxtFileLoader()
+     	return	
+     		
+     		
+     def shift_data (self):
+     	'''
+     	Shifts data by given time points. 
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     	
+     		shift_data.shiftTimeData(selectedColumns,self.sourceData,self.DataTreeview,self)
+
+ 
+     def save_hclust_to_excel(self):
+     	'''
+     	'''
+     	if hasattr(self.plt.nonCategoricalPlotter,'_hclustPlotter'):
+     		if self.plt.nonCategoricalPlotter._hclustPlotter is not None:
+     			self.plt.nonCategoricalPlotter._hclustPlotter.save_data_to_excel()
+     			return
+     	tk.messagebox.showinfo('No Cluster ..','Plot a hierarchical cluster first.')
+     
+     def plot_circulized_dendrogram(self, plot_type = 'hclust'):
+     	'''
+     	Plot a circulized dendrogram
+     	'''
+     	if self.circulizeDendrogram.get():
+     	
+     		self.plt.circulizeDendrogram = True 
+     	
+     	else:
+     		self.plt.circulizeDendrogram = False
+     		
+     	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),
+                          catnames = list(self.selectedCategories.keys()),
+                          plot_type = plot_type)
+
+     def normalize_data(self,metric):
+     	'''
+     	
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     	
+
+     		columnsSelected = self.DataTreeview.columnsSelected
+     		
+     		scaler = dataNormalizer(metric,**{'feature_range':(0.01, 1)})
+     		columnNames = self.sourceData.fit_transform(scaler,columnsSelected)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													'float64',columnNames)
+     def numeric_filter_dialog(self):
+         	'''
+         	Numeric Filter.
+         	Checks if all columns are from one data type.
+         	If yes  - Opens dialog to set up parameter for filtering
+         	Adds a new column indicating matches by a "+" sign.
+         	'''
+
+         	currentDataFrameId = self.sourceData.currentDataFile
+         	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+         	if selectionIsFromSameData:
+         		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+         		if self.DataTreeview.onlyNumericColumnsSelected:
+         			numFilter = numeric_filter.numericalFilterDialog(self.sourceData,self.DataTreeview.columnsSelected )
+         			filterColumnName = numFilter.columnName
+         			if filterColumnName is None:
+         				return
+         		else:
+         			tk.messagebox.showinfo('Error..','Please select only columns with floats or integeres.')
+         			return
+         		self.DataTreeview.add_list_of_columns_to_treeview(selectionDataFrameId,
+     													dataType = 'object',
+     													columnList = [filterColumnName],
+     													)
+
+         		self.sourceData.set_current_data_by_id(currentDataFrameId)
+         		tk.messagebox.showinfo('Done ..','Filtering performed. Column was added.')
+
+
+         	else:
+         		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
+         		return
+
+     	
+     def rename_data_frame(self):
+     	'''
+     	Reanames data frames
+     	'''
+     	dataFrames = self.DataTreeview.dataFramesSelected
+     	fileNames = [self.sourceData.fileNameByID[fileIid] for fileIid in dataFrames]
+     	optionList = [[fileNames[n]] for n in range(len(dataFrames))]
+     	renameDialog = simpleUserInputDialog(fileNames,fileNames,
+     										optionList,'Rename Data Frame',
+     										'Enter a new name for selected data frames')
+     	
+     	newDataFrameNames = list(renameDialog.selectionOutput.values())
+     	if len(newDataFrameNames) != len(dataFrames):
+     		return
+     	for n,dfIID in enumerate(dataFrames):
+     	
+     		dfName = newDataFrameNames[n]
+     		self.sourceData.rename_data_frame(dfIID,dfName)
+     	
+     	self.update_all_dfs_in_treeview()
+	
+
+     def rename_columns(self, selectedColumns = None, event = None):
+     	'''
+     	Opens a dialog window that allows the user to change the column names.
+     	Can also be triggered by double click.
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is None or len(selectedColumns) == 0:
+     		return
+     		
+     	if event is not None:
+     		itemClicked = [self.DataTreeview.clicked_item(event)]
+     		if itemClicked[0] == '': 
+     			return	
+     		     		
+     	if selectedColumns is not None:
+     		renameDialog = change_columnName.ColumnNameConfigurationPopup(self.DataTreeview.columnsSelected,
+     														self.sourceData, self.DataTreeview, self)
+     		
+     		if renameDialog.renamed: #indicates if any renaming was done (or closed)
+     			
+     			tk.messagebox.showinfo('Done..','Column names replaced.',parent=self)
+     			
+     			self.workflow.add('renameColumn', 
+     							  self.sourceData.currentDataFile,
+     							  renameDialog.reverseFuncs)
+     	
+     	
+     def update_corr_matrix_method(self,method):
+     	'''
+     	Correlation matrix can be constructed from different correlation coefficients.
+     	To ensure the selected one is used. We update the corrMatrixCoeff in the PlotterClass
+     	'''
+     	for corrMethod, variable in self.variableDict.items():
+     		if method == corrMethod:
+     			pass
+     		else:
+     			variable.set(False)
+     	self.plt.corrMatrixCoeff = method
+
+     def selection_is_from_one_df(self,itemSelection = 'columnsSelected', onlyNumeric = False):
+     	'''
+     	Check if user's selection is from one data set
+     	'''
+     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData:
+     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     		if onlyNumeric and self.DataTreeview.onlyNumericColumnsSelected == False:
+     			tk.messagebox.showinfo('Error ..','Please select only numeric data.',parent=self)
+     			return
+     		else:
+     			return getattr(self.DataTreeview,itemSelection)
+     		
+     	else:
+     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.',parent=self)     		
+     	
+
+     def transpose_data(self):
+     	'''
+     	Transpose Data
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+
+     		selectColumnDialog = \
+     		pivot_table.transformColumnDialog(selectedColumns[0],self.sourceData.df_columns)
+
+     		columnForColumns = selectColumnDialog.columnForColumns
+     		if columnForColumns  is None:
+     			del selectColumnDialog
+     			return
+     		if columnForColumns not in self.sourceData.df_columns:
+     			newColumns = [str(x) for x in self.sourceData.df.index.tolist()]
+     		else:
+     			uniqueValues = self.sourceData.get_unique_values(columnForColumns)
+
+     			if uniqueValues.size != len(self.sourceData.df.index):
+     				quest = tk.messagebox.askquestion('Error ..','Number of unique values in selected column does not'+
+     									' match the number of rows.\nWould you like to make them unique '+
+     									'by adding the value index?')
+     				if quest == 'yes':
+     					columnValues = self.sourceData.df[columnForColumns].values
+     					newColumns = ['{}_{}'.format(column,n) for n,column in enumerate(columnValues)]
+     				else:
+     					return
+     			else:
+     				newColumns = self.sourceData.df[columnForColumns].astype(str)
+     		# transpose data
+     		data = self.sourceData.df.transpose()
+     		# add new column names (selected by user)
+     		data.columns = newColumns
+     		# add index as pure numbers
+     		data.index = np.arange(0,len(data.index))
+     		# inser a column with index holding old columns
+
+     		indexName = self.sourceData.evaluate_column_name('Index',newColumns)
+     		data.insert(0,indexName,self.sourceData.df_columns)
+
+     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
+
+     		if dataDialog.addDf:
+     			nameOfDf = 'Transpose - {}'.format(self.sourceData.get_file_name_of_current_data())
+     			self.add_new_dataframe(data,nameOfDf)
+
+     def pivot_data(self):
+     	'''
+     	Perform pivot Table
+     	'''
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
+     		pivotDialog = pivot_table.pivotDialog(self.sourceData,self.sourceData.currentDataFile)
+     		data = pivotDialog.pivotedDf
+     		if data.empty:
+     			return
+     		dataDialog = display_data.dataDisplayDialog(data,showOptionsToAddDf=True)
+
+     		if dataDialog.addDf:
+     			nameOfDf = 'Pivot - {}'.format(self.sourceData.get_file_name_of_current_data())
+     			self.add_new_dataframe(data,nameOfDf)
+
 
      def perform_export(self, axExport,axisId,figureTemplate, exportId = None):
          '''
@@ -1436,7 +2608,7 @@ class analyze_data(tk.Frame):
          plotExporter = self.plt.get_active_helper()
          
          if hasattr(plotExporter,'_hclustPlotter') and plotExporter._hclustPlotter is not None \
-         and plot and self.circulizeDendrogram.get():
+         and self.circulizeDendrogram.get():#plot and 
          
          	tk.messagebox.showinfo('Error ..','Sorry, this plot type cannot be exported to main figures yet.')
          	return
@@ -1470,85 +2642,6 @@ class analyze_data(tk.Frame):
          										bool(self.plt.showSubplotBox),
          										bool(self.plt.showGrid))
 
-     def display_curve_fits(self):
-      	'''
-      	Display curve fits that were made. The user can define a name for each curve
-      	fit.
-      	'''
-      	selectFitAndGrid = curve_fitting.displayCurveFitting(self.sourceData,self.plt,self.curveFitCollection)
-      	fitsToPlot = selectFitAndGrid.curve_fits_to_plot
-      	categoricalColumns = self.curveFitCollection.get_columns_of_fitIds(fitsToPlot)
-      	if len(categoricalColumns) > 0:
-      		self.plt.set_selectedCurveFits(selectFitAndGrid.curve_fits_to_plot)
-      		self.plt.initiate_chart(numericColumns = [], categoricalColumns = categoricalColumns ,
-      								 selectedPlotType = 'curve_fit', colorMap = self.cmap_in_use.get())
-      	else:
-      		pass
-
-
-     def export_selected_figure(self,event):
-         '''
-         Cast a menu to export subplots from the main window into a
-         main figure template.
-         '''
-         if (event.dblclick or event.button > 1) and event.inaxes is None:
-         	self.is_just_outside(event)
-
-         if event.inaxes is None:
-             return
-         if event.button == 1:
-             return
-
-         if event.button in [2,3]:
-
-             if self.selection_press_event is not None:
-             	return
-             numb = self.plt.get_number_of_axis(event.inaxes)
-             if numb is None:
-                 return
-
-             self.axNum = numb
-             self.ax_export_ax = event.inaxes
-
-             if self.plt.castMenu == False:
-             	return
-             self.post_menu(menu = self.menuCollection['main_figure_menu'] )
-
-
-
-     def calculate_density(self):
-     	'''
-     	Calculates kernel density estimate and adds new column to the datatreeview
-     	'''
-     	if self.DataTreeview.onlyNumericColumnsSelected == False:
-     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.',
-     								parent=self)
-     		return
-
-     	numericColumns = self.selection_is_from_one_df()
-     	if numericColumns is not None:
-
-     		densityColumnName = self.sourceData.calculate_kernel_density_estimate(numericColumns)
-
-     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,dataType = 'float64',
-     														columnList = [densityColumnName])
-     		
-     		self.workflow.add('calcColumn', 
-     					self.sourceData.currentDataFile,
-     					{'funcDataR':'delete_columns_by_label_list',
-     					'argsDataR':{'columnLabelList':[densityColumnName]},
-     					'funcTreeR':'delete_entry_by_iid',
-     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,densityColumnName)},
-     					'description':OrderedDict([('Activity:','Cluster # num added.'),
-     					('Description:','A column has been added containing kernel density values.'),
-     					('Column name:',densityColumnName),
-     					('Selected Columns (hclust):',get_elements_from_list_as_string(numericColumns, maxStringLength = None)),
-     					('Data ID:',self.sourceData.currentDataFile)])})     		
-
-     		tk.messagebox.showinfo('Done ..','Representation of a kernel-density estimated using '+
-     								'Gaussian kernels done. Column has been added.', parent = self)
-
-
 
      def select_data(self):
      	'''
@@ -1559,7 +2652,6 @@ class analyze_data(tk.Frame):
      		return
      	dataId = self.plt.get_dataID_used_for_last_chart()
      	self.sourceData.set_current_data_by_id(dataId)
-
      	numericColumns = list(self.selectedNumericalColumns.keys())
      	# important to take data from the plot because it might resort the data
      	# to display categorical columns
@@ -1570,7 +2662,7 @@ class analyze_data(tk.Frame):
      	self.on_selection(event))
      
      
-     def stop_selection(self, replot = True):
+     def stop_selection(self, replot = True, event = None):
      	'''
      	Stop selection of data.
      	'''
@@ -1583,21 +2675,7 @@ class analyze_data(tk.Frame):
              self.selection_press_event = None
      	except:
              pass
-     	
-     	
 
-     def drop_selection_from_df(self):
-         '''
-         Drops rows from data frame and reinitiates chart.
-         '''
-         self.sourceData.delete_rows_by_index(self.data_selection.index)
-         self.plt.figure.canvas.mpl_disconnect(self.selection_press_event)
-         self.plt.initiate_chart(*self.plt.current_plot_settings)
-         ## update data if more selection should be performed
-         self.select_data()
-         #self.slectionDataAsTuple =  self.sourceData.get_data_as_list_of_tuples(numericColumns,
-     									#		data = self.plt.nonCategoricalPlotter.data)
-      #   print(self.slectionDataAsTuple)
 
      def on_selection(self,event):
              '''
@@ -1645,165 +2723,52 @@ class analyze_data(tk.Frame):
              self.plt.redraw()
 
 
-     def add_cluster_to_source(self):
-     	'''
-     	Cluster being identified in a hclust plot can be added to the source file.
-     	'''
-     	if self.plt.currentPlotType in ['hclust','corrmatrix']:
-     		plotterInUse = self.plt.nonCategoricalPlotter
-     		idData = plotterInUse._hclustPlotter.dataID
-     		self.sourceData.set_current_data_by_id(idData)
-     		columnName = plotterInUse._hclustPlotter.export_cluster_number_to_source()
-     		if columnName is None:
-     			tk.messagebox.showinfo('Error ..','No row clustering was performed ..',parent=self)
-     			return
-
-     		self.DataTreeview.add_list_of_columns_to_treeview(idData,
-     													dataType = 'object',
-     													columnList = [columnName])
-
-     		tk.messagebox.showinfo('Done ..','Cluster numbers were added.', parent=self)
-     		
-     		self.workflow.add('calcColumn', 
-     					self.sourceData.currentDataFile,
-     					{'funcDataR':'delete_columns_by_label_list',
-     					'argsDataR':{'columnLabelList':[columnName]},
-     					'funcTreeR':'delete_entry_by_iid',
-     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
-     					'description':OrderedDict([('Activity:','Cluster # num added.'),
-     					('Description:','A column has been added indicating the identified cluster (hclust chart).'),
-     					('Column name:',columnName),
-     					('Selected Columns (hclust):',get_elements_from_list_as_string(plotterInUse.numericColumns, maxStringLength = None)),
-     					('Data ID:',self.sourceData.currentDataFile)])})
-     		
-
-     def copy_file_to_clipboard(self, data= None, fromSelection = False):
-         '''
-         Copies data to clipboard
-         '''
-         if fromSelection:
-         	columns = self.DataTreeview.columnsSelected
-         	data = self.sourceData.get_current_data_by_column_list(columns)
-         
-         if data is None:
-         	data = self.get_selected_data()
-         	if data is None:
-         			return
-         	
-         data.to_clipboard(excel=True, na_rep = "NaN",index=False, encoding='utf-8', sep='\t')
-
-
-     def create_sub_data_frame_from_selection(self):
-         '''
-         When user has defined data selection by Lasso, a new data frame is created
-         and added to the treeview
-         '''
-         sub_data = self.sourceData.df[self.sourceData.df.index.isin(self.data_selection.index)]
-         currentFileName = self.sourceData.fileNameByID[self.plt.get_dataID_used_for_last_chart()]
-         nameOfSubset = 'selection_{}'.format(currentFileName)
-         self.add_new_dataframe(sub_data,nameOfSubset)
-
-
-     def add_annotation_column_from_selection(self):
-     	'''
-     	When User uses the selection tool.
-     	This can be used to
-     	annotate these in the source
-     	data for further analysis.
-     	'''
-     	# check if data Id has been changed before
-     	colnames = list(self.selectedNumericalColumns.keys())
-     	dataID = self.plt.get_dataID_used_for_last_chart()
-     	self.sourceData.set_current_data_by_id(dataID)
-     	selectionIndex = self.data_selection.index
-
-     	columnName = 'Select_{}_{}'.format(len(selectionIndex),
-     								get_elements_from_list_as_string(colnames))
-     	columnName = self.sourceData.evaluate_column_name(columnName)
-     	true_false_map = dict(zip([False,True], [self.sourceData.replaceObjectNan,'+']))
-
-     	boolIndicator = pd.Series(self.sourceData.df.index.isin(selectionIndex), index = self.sourceData.df.index,
-     							name = columnName)
-     	annotationColumn = boolIndicator.apply(lambda x: true_false_map[x])
-     	self.sourceData.join_series_to_currently_selected_df(annotationColumn)
-     	self.DataTreeview.add_list_of_columns_to_treeview(dataID,'object',[columnName])
-     	tk.messagebox.showinfo('Done ..', \
-     	'Categorical column ({}) has been added. Indicating if data of that row were in selection.'.format(columnName),\
-     	parent = self)
-
-
-     def count_valid_values(self):
-     	'''
-     	Count valid values
-     	'''
-     	if self.DataTreeview.onlyNumericColumnsSelected == False:
-     		tk.messagebox.showinfo('Error ..',
-     			'Please select only numerical columns for this type of calculation.')
-     		return
-
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-     		columnName = self.sourceData.count_valid_values(selectedColumns)
-     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
-     													dataType = 'int64',
-     													columnList = [columnName],
-     													)
-     		tk.messagebox.showinfo('Done ..','Counting done. New column added (integers).')
-     		
-     		self.workflow.add('calcColumn', 
-     					self.sourceData.currentDataFile,
-     					{'funcDataR':'delete_columns_by_label_list',
-     					'argsDataR':{'columnLabelList':[columnName]},
-     					'funcTreeR':'delete_entry_by_iid',
-     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
-     					'description':OrderedDict([('Activity:','Count valid values.'),
-     					('Description:','A column has been added indicating the number of valid values (non NaN) in selected columns.'),
-     					('Column name:',columnName),
-     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
-     					('Data ID:',self.sourceData.currentDataFile)])})
-     		
-
-
-     def create_count_through_column(self):
+     def factorize_column(self):
      	'''
      	Counts through the data in current order.
      	'''
      	selectedColumns  = self.selection_is_from_one_df()
      	if selectedColumns is not None:
-     		columnName = self.sourceData.add_count_through_column()
+     		columnNames, dfLabels = self.sourceData.factorize_column(selectedColumns)
      		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
      													dataType = 'int64',
-     													columnList = [columnName],
-     													startIndex = -1)
-
-
-     		tk.messagebox.showinfo('Done ..','Index column was added to the treeview.')
+     													columnList = columnNames,
+     													)
+     		tk.messagebox.showinfo('Done ..','Index column was added to the treeview (integer).')
+     		display_data.dataDisplayDialog(dfLabels,			
+     										showOptionsToAddDf=True,
+     										analyzeClass = self,
+     										dfOutputName = 'FactorizedCategories',
+     										topmost=True)
      		self.workflow.add('calcColumn', 
      					self.sourceData.currentDataFile,
      					{'funcDataR':'delete_columns_by_label_list',
-     					'argsDataR':{'columnLabelList':[columnName]},
+     					'argsDataR':{'columnLabelList':columnNames},
      					'funcTreeR':'delete_entry_by_iid',
-     					'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,columnName)},
+     					'argsTreeR':{'iid':['{}_{}'.format(self.sourceData.currentDataFile,columnName) for columnName in columnNames]},
      					'description':OrderedDict([('Activity:','Count through.'),
-     					('Description:','A column has been added that enumerates over the data.'),
-     					('Column name:',columnName),
+     					('Description:','Values in the selected columns has been factorized.'),
+     					('Column names:',columnNames),
      					('Data ID:',self.sourceData.currentDataFile)])})
-
 
 
      def multiple_comparision_correction(self,method,alpha = 0.05):
      	 '''
      	 Checks if column is numerical. And then computes the selected method.
      	 '''
-     	 numericalColumns = self.DataTreeview.columnsSelected
+
+     	
+     	
+
+     	 selectedColumns  = self.selection_is_from_one_df()
+     	 
+     	 
      	 if self.DataTreeview.onlyNumericColumnsSelected == False:
      	 	tk.messagebox.showinfo('Select float ..',
      	 						   'Please select a numerical column or change the data type.')
      	 	return
-     	 currentDataFrameId = self.sourceData.currentDataFile
-     	 selectionIsFromSameData,selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     	 if selectionIsFromSameData:
-     	 	self.sourceData.set_current_data_by_id(selectionDataFrameId)
+     	 	     	 
+     	 if selectedColumns is not None:
      	 	method = multCorrAbbr[method]
      	 	if method == 'fdr_tsbky':
      	 		alpha = ts.askfloat(title = 'Set alpha..',
@@ -1815,24 +2780,21 @@ class analyze_data(tk.Frame):
      	 		if alpha is None:
      	 			return
      	 	corrColumns = []
-     	 	for col in numericalColumns:
+     	 	for col in selectedColumns:
      	 		if self.sourceData.df[col].min() < 0 or self.sourceData.df[col].max() > 1:
      	 			tk.messagebox.showinfo('Error..',
      	 			'You need to select an untransformed p-value column with data in [0,1].'+
      	 			'If you have -log10 transformed p-values please transform them first using 10^p.')
-     	 			if col == numericalColumns[-1]:
+     	 			if col == selectedColumns[-1]:
      	 				return
      	 			else:
      	 				continue
      	 		data_ = self.sourceData.df.dropna(subset=[col])
      	 		if 'storey' not in method:
-     	 		
      	 			reject, corr_pvals,_,_ = multipletests(data_[col], alpha = alpha,
      	 									 method = method, is_sorted= False, returnsorted=False)
-     	 		
      	 		else:
      	 			corr_pvals, pi0 = stats.estimateQValue(data_[col].values)
-     	 		
      	 		if method =='fdr_tsbky':
      	 			newCol = 'alpha_'+str(alpha)+'_corr_pVal_'+col
      	 		elif 'storey' in method:
@@ -1843,136 +2805,27 @@ class analyze_data(tk.Frame):
      	 		toBeJoined = pd.DataFrame(corr_pvals,
      	 							  columns=[newCol],
      	 							  index= data_.index)
-
      	 		evaluatedColNames = self.sourceData.join_df_to_currently_selected_df(toBeJoined, 
      	 														exportColumns = True)
-
-     	 		
      	 		corrColumns.append(evaluatedColNames)
-
      	 	self.DataTreeview.add_list_of_columns_to_treeview(id = self.sourceData.currentDataFile,
      	 												   dataType = ['float64'],
      	 												   columnList = corrColumns)
      	 	tk.messagebox.showinfo('Done ..','Calculations performed. Corrected p'
      	 									 '-values were added.')
 
-     	 else:
-     	 	tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-     	 	return
-
-     def calculate_row_wise_metric(self,metric,columns= None,promptN = 0):
-     	'''
-     	calculates row-wise data transformations/metrices
-     	'''
-     	if self.DataTreeview.onlyNumericColumnsSelected == False:
-     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.')
-     		return
-
-     	if columns is None:
-     		columns = self.DataTreeview.columnsSelected
-
-     	askFloatTitlePrompt = dict(
-     					[('x ^ N [row]',['Power ..','Pleaser enter N to calculate: x^N: ']),
-						('x * N [row]',['Multiply ..','Please enter N to calcuate: x *(N): ']),
-						('N ^ x [row]',['N^x','Please enter N to calcuate: N^x: '])]
-						)
-     	
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:
-
-     		if metric in askFloatTitlePrompt:
-     			title, prompt =  askFloatTitlePrompt[metric]
-     			## changed to use askstring instread of asfloat because
-     			## the function float() can also interprete entered strings
-     			## such as 1/400
-     			promptValue = ts.askstring(title,prompt,initialvalue='2')
-     			try:
-
-     				promptN = float(promptValue)
-
-     			except:
-
-     				promptNumbers = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", promptValue)
-     				try:
-     					promptN = float(promptNumbers[0])
-     				except:
-     					tk.messagebox.showinfo('Error ..',
-     						'Could not convert input to number.',
-     						parent=self)
-
-
-     			if promptN is None:
-     				return
-
-     		newColumnNames = self.sourceData.calculate_row_wise_metric(metric,columns,promptN)
-     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
-     													dataType = 'float64',
-     													columnList = newColumnNames)
-     		tk.messagebox.showinfo('Done ..','Calculations performed. Columns added.')
-     		
-     		self.workflow.add('calcColumn', 
-     					self.sourceData.currentDataFile,
-     					{'funcDataR':'delete_columns_by_label_list',
-     					'argsDataR':{'columnLabelList':newColumnNames},
-     					'funcTreeR':'delete_entry_by_iid',
-     					'argsTreeR':{'iid':['{}_{}'.format(self.sourceData.currentDataFile,col) for col in newColumnNames]},
-     					'description':OrderedDict([('Activity:','Calculation of {}.'.format(metric)),
-     					('Description:','A column has been added containing the results.'),
-     					('Column name(s):',get_elements_from_list_as_string(newColumnNames, maxStringLength = None)),
-     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
-     					('Data ID:',self.sourceData.currentDataFile)])})    		
-
-
-     def add_error(self):
-     	'''
-     	Adds an error represented by a grey area around a time series signal.
-     	'''
-     	if self.plt.currentPlotType != 'time_series':
-     		tk.messagebox.showinfo('Error..','Only useful for chart type time series.')
-     		return
-
-     	if self.DataTreeview.onlyNumericColumnsSelected:
-     		currentDataFrameId = self.sourceData.currentDataFile
-     		selectionIsFromSameData,selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     		if selectionIsFromSameData:
-
-     			dataId = self.plt.get_dataID_used_for_last_chart()
-     			if dataId != selectionDataFrameId:
-     				tk.messagebox.showinfo('Error..','Error data must be from the same data used for plotting')
-     				return
-     			self.sourceData.set_current_data_by_id(selectionDataFrameId)
-     			numericColumnsPlotted = self.plt.nonCategoricalPlotter.numericColumns[1:]
-     			selectedColumns = self.DataTreeview.columnsSelected
-     			numColumns = self.sourceData.get_numeric_columns()
-     			options = [] #options * len(selectedColumns)
-     			for label in numericColumnsPlotted:
-     				options.append(numColumns)
-     			dialog = simpleUserInputDialog(numericColumnsPlotted,selectedColumns,options,
-     								 title = 'Select Error Columns',
-     								 infoText = 'Select columns that hold the error. For'+
-     								 ' example the standard deviation of several signals over'
-     								 ' time.\nIf you do not want to plot the error for one of'+
-     								 ' the plotted columns simply enter "None".', h = 100,
-     								 )
-     			selection = dialog.selectionOutput
-     			if len(selection) != 0:
-     				self.plt.nonCategoricalPlotter.timeSeriesHelper.add_error_to_lines(selection)
-     				self.plt.redraw()
-
-     	else:
-     		tk.messagebox.showinfo('Error ..','Please select only numerical columns (floats, and integers)')
-
-
-
      def iir_filter(self):
      	'''
      	Smoothing data by iir filter.
      	'''
      	if self.DataTreeview.onlyNumericColumnsSelected == False:
-     		tk.messagebox.showinfo('Error ..','Please select only numerical columns for this type of calculation.')
+     		tk.messagebox.showinfo('Error ..',
+     			'Please select only numerical columns for this type of calculation.',
+     			parent = self.toplevel)
      		return
 
-     	n = ts.askinteger('IIR Filter - N',prompt='Provide number n for filtering.\nThe higher the number the smoother the outcome.',
+     	n = ts.askinteger('IIR Filter - N',
+     		prompt='Provide number n for filtering.\nThe higher the number the smoother the outcome.',
      		initialvalue = 20, minvalue = 1, maxvalue = len(self.sourceData.df.index),
      		parent = self)
      	if n is None:
@@ -1999,27 +2852,6 @@ class analyze_data(tk.Frame):
      					('Data ID:',self.sourceData.currentDataFile)])})    		
 
 
-
-     def correct_baseline(self):
-     	'''
-     	Baseline Correction for time series data
-     	'''
-     	if self.plt.currentPlotType != 'time_series':
-     		tk.messagebox.showinfo('Error..','Only useful for time series.')
-     		return
-     	if self.DataTreeview.onlyNumericColumnsSelected	== False:
-     		tk.messagebox.showinfo('Error ..','Only numeric columns allowed.')
-     		return
-     	selectedColumns = self.selection_is_from_one_df()
-     	selectionDataFrameId = self.sourceData.currentDataFile 
-     	if selectedColumns is not None:
-     	 	dataId = self.plt.get_dataID_used_for_last_chart()
-     	 	if dataId != selectionDataFrameId:
-     	 		tk.messagebox.showinfo('Error ..','Data frame of selected columns and the one used for plotting do not match!')
-     	 		return     	 	
-     	 	self.plt.nonCategoricalPlotter.timeSeriesHelper.activate_baselineCorr_or_aucCalc(columns = selectedColumns,
-     	 																					DataTreeview = self.DataTreeview,
-     	 																					workflow = self.workflow)
 
 
      def rolling_mod_data(self, rollingMetric, columns = None, quantile=0.5):
@@ -2059,16 +2891,11 @@ class analyze_data(tk.Frame):
      					('Selected Column(s):',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
      					('Data ID:',self.sourceData.currentDataFile)])})    
 
-
-
-
-
      def resort_columns_in_receiver_box(self, mode  = None, 
      										  replot = True):
      	'''
      	User defined order of items that have been placed in a receiver box
      	'''
-     	
      	if len(self.selectedNumericalColumns) + len(self.selectedCategories) == 0:
      		return
      	elif len(self.selectedNumericalColumns) <= 1  and len(self.selectedCategories) == 0:
@@ -2134,47 +2961,8 @@ class analyze_data(tk.Frame):
             	
      		self.update_tooltip_in_receiverBox('reset')
 
-		
-     def clean_up_dropped_buttons(self, mode = 'all', replot = True, clearFigure = True):
-                  # set correct df
-         #dataID = self.plt.get_dataID_used_for_last_chart()
-         #self.sourceData.set_current_data_by_id(dataID)
-         
-         if mode == 'all':
-             for button in self.selectedNumericalColumns.values():
-                      button.destroy()
-             for button in self.selectedCategories.values():
-                      button.destroy()
+   		 
 
-             
-             self.interactiveWidgetHelper.clean_frame_up()
-             self.selectedNumericalColumns.clear()
-             self.selectedCategories.clear()
-             self.update_tooltip_in_receiverBox('reset')
-             if clearFigure:
-             	self.plt.clean_up_figure()
-
-         elif mode == 'num':
-             for button in self.selectedNumericalColumns.values():
-                      button.destroy()
-
-             self.selectedNumericalColumns.clear()
-             self.but_stored[10].configure(image= self.add_swarm_icon)
-             self.plt.addSwarm =  False
-             self.update_tooltip_in_receiverBox('numeric')
-
-         elif mode == 'cat':
-                for button in self.selectedCategories.values():
-                      button.destroy()
-                self.selectedCategories.clear()
-                self.update_tooltip_in_receiverBox('categories')
-         
-         if replot:
-            	plot_type = self.estimate_plot_type_for_default()
-            	self.interactiveWidgetHelper.clean_frame_up()
-            	self.prepare_plot(colnames = list(self.selectedNumericalColumns.keys()),                
-                                  catnames = list(self.selectedCategories.keys() ),
-                                  plot_type = plot_type)
 
 
      def save_current_session(self):
@@ -2241,7 +3029,7 @@ class analyze_data(tk.Frame):
          self.plt.reinitiate_chart()
          if self.plt.nonCategoricalPlotter is not None:
          	if self.plt.nonCategoricalPlotter.createIntWidgets:
-         		self.interactiveWidgetHelper.create_widgets(plotter=self.plt)
+         		self.interactiveWidgetHelper.create_widgets(plotter=self.plt,analyzeData = self)
 
          dataTypeColumCorrelation = self.sourceData.dfsDataTypesAndColumnNames
          file_names = self.sourceData.fileNameByID
@@ -2305,8 +3093,6 @@ class analyze_data(tk.Frame):
      				if transferAxisId  is not None:
      					break
 
-
-
      			else:
      				plotter = [plotter for plotter in self.plt.plotHistory[exportDetails['plotCount']]\
      				if plotter is not None]
@@ -2350,9 +3136,6 @@ class analyze_data(tk.Frame):
          										exportDetails['boxBool'],
          										exportDetails['gridBool'])
      					break
-
-
-
 
      def setup_main_figure(self):
      	'''
@@ -2414,9 +3197,7 @@ class analyze_data(tk.Frame):
      		
      		self.DataTreeview.add_new_data_frame(fileID,fileName,columnNameDataTyperRelationship)
      		tk.messagebox.showinfo('Done ..','Column unstacked. New data frame added.')
-
-	     		
-     		
+	
 
      def get_all_combs(self):
      	'''
@@ -2450,8 +3231,6 @@ class analyze_data(tk.Frame):
      			self.groupedStatsData[numColumn] , self.groupedStatsKeys = self.sourceData.get_positive_subsets([numColumn],
 																				   categoricalColumns,
 																				   self.sourceData.get_current_data())
-     		
-			
 
      	dataDict = OrderedDict([('id',[]),('Group 1',[]), ('Group 2',[])])
 
@@ -2470,85 +3249,33 @@ class analyze_data(tk.Frame):
      														  dfOutputName = optionalDfName,
      														  topmost=True)
 
-     def calculated_droped_stats_for_all_combs(self):
+
+     def select_features(self,featureSel):
+     	
      	'''
-     	Calculates the droped statitic.
      	'''
-     	if hasattr(self,'groupedStatsData') == False:
-     		tk.messagebox.showinfo('Error ..',
-     								'You have to reopen the window by a drag & drop event onto the figure to apply another test. Aborting..',
-     								parent=self)
-     		return
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:       		
+     		data = self.sourceData.get_current_data()[selectedColumns]
+     		if self.DataTreeview.onlyNumericColumnsSelected == False:
+     			
+     			tk.messagebox.showinfo('Error ..',
+     				'Please select only features containing floats and/or integers.')
+     			return
+     		X = data[selectedColumns].dropna(axis=1)
+     		featuresSelected = X.columns.values.tolist()
+     		Y = self.sourceData.get_current_data()['Genotype']
      		
-     	dataDict = OrderedDict([('id',[]),('Group 1',[]), ('Group 2',[])])
-     	numericColumns = list(self.selectedNumericalColumns.keys())
-
-     	if len(numericColumns) != 0:
-
-     		columnsToAdd = []#[col for col in self.DataTreeview.columnsSelected if col not in numericColumns]
-
-     		columnsForTest = numericColumns + columnsToAdd
-
-     		for column in columnsForTest:
-     			dataDict['{} p-value'.format(column)] = []
-     			dataDict['{} test statistic'.format(column)] = []
-
-
-     		testSettings = {'paired':self.paired,
-     						'test':self.test,
-     						'mode':self.mode}
+     		model = selectFeaturesFromModel(X.values,Y)
+     		featureImportance = model.featureImportance
+     		mask = model.featureMask
+     		df = pd.DataFrame()
+     		df['Features'] = [featuresSelected[n] for n,bool in enumerate(mask) if bool]
+     		df['Feature Importance'] = featureImportance[mask]
      		
-     		
-     		iterationObject = itertools.combinations(self.groupedStatsKeys,2)	     			
-     		
-     		for n,combination in enumerate(iterationObject):
-     			if self.split_on_cats_for_plot.get():
-     				valuesGroup1 = self.groupedStatsData.get_group(combination[0])
-     				valuesGroup2 = self.groupedStatsData.get_group(combination[1])
-     		# 	 else:
-#      				valuesGroup1 = self.groupedStatsData[combination[0]]
-#       				valuesGroup2 = self.groupedStatsData[combination[1]]     				
-     			## we do this again, because user could change the df and resort
-     			## to redo seems easier than matching and the df is usually not that long
-     			dataDict['id'].append(str(n+1))
-     			dataDict['Group 1'].append(get_elements_from_list_as_string(combination[0]))
-     			dataDict['Group 2'].append(get_elements_from_list_as_string(combination[1]))
+     		dataDialog = display_data.dataDisplayDialog(df,showOptionsToAddDf=True)
 
-     			for column in columnsForTest:
-     				
-     				
-     				if self.split_on_cats_for_plot.get():
-     					data1 = valuesGroup1[column].dropna().values
-     					data2 = valuesGroup2[column].dropna().values
-     				else:
-     					data1 = self.groupedStatsData[column][combination[0]].dropna().values
-     					data2 = self.groupedStatsData[column][combination[1]].dropna().values
-     				try:
-     					testResult = stats.compare_two_groups(testSettings,[data1,
-     											data2])
-     					t , p = round(testResult[0],4), testResult[1]
-     				except:
-     					t, p = np.nan, 1
-
-     				dataDict['{} p-value'.format(column)].append(p)
-     				dataDict['{} test statistic'.format(column)].append(t)
-
-     		for column in columnsForTest:
-     			pValColumn = '{} p-value'.format(column)
-     			data = np.array(dataDict[pValColumn])
-     			reject, corr_pvals,_,_ = multipletests(data, alpha = 0.05,
-     	 									 method = 'fdr_bh', is_sorted= False, returnsorted=False)
-     			dataDict['{} adj. p-values'.format(column)] = corr_pvals
-
-     		resultDf = pd.DataFrame.from_dict(dataDict)
-     		self.statsDataDialog.pt.model.df = resultDf
-     		self.statsDataDialog.pt.redraw()
-     	else:
-     		tk.messagebox.showinfo('No data ..','Please load numerical columns into the receiver box.')
-
-     	if hasattr(self,'groupedStatsData'):
-     		del self.groupedStatsData
-
+	
 
 
      def replace_data_in_df(self,replaceOption):
@@ -2561,15 +3288,13 @@ class analyze_data(tk.Frame):
      			parent = self)
      		if value is None:
      			return
-
-     	currentDataFrameId = self.sourceData.currentDataFile
-     	selectionIsFromSameData,selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     	if selectionIsFromSameData:
+     			
+     	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:   
      		if self.DataTreeview.onlyNumericColumnsSelected == False:
      			tk.messagebox.showinfo('Error ..','Please select only columns containing floats and/or integers.')
      			return
      		numericColumns = self.DataTreeview.columnsSelected
-     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
      		if 'Gauss Distribution' in replaceOption:
 
      			valueDialog = simpleUserInputDialog(descriptionValues = ['Downshift (in stdev)','Rel. Stdev'],
@@ -2606,84 +3331,7 @@ class analyze_data(tk.Frame):
      			for numColumn in numericColumns:
      				replaceDict[numColumn] = {0:np.nan}
      			self.sourceData.replace_values_by_dict(replaceDict)
-     		tk.messagebox.showinfo('Done ..','Calculations done.')
-
-     	else:
-     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-     		return
-
-
-     def build_analysis_tree(self):
-        '''
-        Builds treeview in analysis label frame (statistical toolbox)
-        '''
-        seps_tests =   ['Model fitting',
-                        'Compare two groups',
-                        'Compare multiple groups',
-                        'Two-W-ANOVA',
-                        'Three-W-ANOVA',
-                        'Cluster Analysis',
-                        'Classification',
-                        'Dimensional Reduction',
-                        'Multi-Block Analysis',
-                        'Correlation',
-                        'Curve fitting',
-                        'Miscellaneous',]
-
-        self.options_for_test = dict({'Model fitting':['linear',
-                                         # 'logarithmic',
-                                          'lowess',
-                                          #'expontential',
-                                          ],
-                        'Compare two groups':['t-test','Welch-test',
-                                              'Wilcoxon [paired non-para]',
-                                              'Whitney-Mann U [unparied non-para]'
-                                              ],
-                        'Compare multiple groups':['1W-ANOVA','1W-ANOVA-RepMeas','Kruskal-Wallis'],
-                        'Miscellaneous':['Pairwise Comparision','AUC','Density'],
-                        'Classification':['CV based Grid Search'],#classification.availableMethods,
-                        'Cluster Analysis':clustering.availableMethods,
-                        'Two-W-ANOVA':['2W-ANOVA','2W-ANOVA-RepMeas(1fac)','2W-ANOVA-RepMeas(2fac)'],
-                        'Three-W-ANOVA':['3W-ANOVA','3W-ANOVA-RepMeas(1fac)','3W-ANOVA-RepMeas(2fac)','3W-ANOVA-RepMeas(3fac)'],
-                        'Dimensional Reduction':list(stats.dimensionalReductionMethods.keys()),
-                        'Multi-Block Analysis': ['SGCCA'],#'PLS Canonical', 'PLS Regression','PLS-DA',
-                        'Correlation': ['Correlate rows to ..'],#'Display correlations'
-                                                  'Curve fitting':['Curve fit ..','Display curve fit(s)']})
-        opt_two_groups = ['paired',
-                          'unpaired']
-        direct_test = ['less','two-sided [default]',
-                       'greater']
-        self.stats_tree = ttk.Treeview(self.analysis_sideframe, height=8, show='tree',style='source.Treeview')
-        self.stats_tree.bind('<<TreeviewSelect>>',
-                             lambda event, stats_tree=self.stats_tree: self.retrieve_test_from_tree(event,stats_tree))
-        self.stats_tree.bind("<B1-Motion>", lambda event,analysis = True: self.on_motion(event, analysis))
-        self.stats_tree.bind("<ButtonRelease-1>", lambda event, analysis =True: self.release(event,analysis))
-        self.stats_tree.bind(right_click, self.on_slected_analysis_button3)
-        self.stats_tree.column("#0",minwidth=800)
-
-        for heads in seps_tests:
-            main = self.stats_tree.insert('','end',str(heads), text=heads)
-            for opt_test in self.options_for_test[heads]:
-
-                    sub1 = self.stats_tree.insert(main, 'end', str(opt_test), text = opt_test)
-                    if heads == 'Compare two groups':
-                        if opt_test in  ['t-test','Welch-test']:
-                            for sub_opt in opt_two_groups:
-                                 sub2 = self.stats_tree.insert(sub1, 'end','%s_%s' % (opt_test,sub_opt), text=sub_opt)
-                                 for direction in direct_test:
-                                    self.stats_tree.insert(sub2, 'end', '%s_%s_%s' %  (opt_test,sub_opt,direction), text=direction)
-
-                        else:
-                                for direction in direct_test:
-                                    self.stats_tree.insert(sub1, 'end', '%s_%s' % (str(opt_test),str(direction)), text=direction)
-        #grid items
-        sourceScroll = ttk.Scrollbar(self, orient = tk.HORIZONTAL, command = self.stats_tree.xview)
-        sourceScroll2 = ttk.Scrollbar(self,orient = tk.VERTICAL, command = self.stats_tree.yview)
-        self.stats_tree.configure(xscrollcommand = sourceScroll.set,
-                                          yscrollcommand = sourceScroll2.set)
-        sourceScroll2.pack(in_=self.analysis_sideframe, side = tk.LEFT, fill=tk.Y, anchor=tk.N)
-        self.stats_tree.pack(in_=self.analysis_sideframe, padx=0, expand=True, fill=tk.BOTH)
-        sourceScroll.pack(in_=self.analysis_sideframe, padx=0,anchor=tk.N, fill=tk.X)
+     		tk.messagebox.showinfo('Done ..','Calculations done.', parent = self)
 
 
      def  retrieve_test_from_tree(self,event,tree):
@@ -2707,93 +3355,6 @@ class analyze_data(tk.Frame):
             self.mode = itx[-1]
          else:
             pass
-
-
-     def combine_selected_columns(self):
-     	'''
-     	Combines the content of selected columns.
-     	'''
-     	if len(self.DataTreeview.columnsSelected  ) < 2:
-     		tk.messagebox.showinfo('Error..','Please select at least two columns')
-     		return
-
-
-     	currentDataFrameId = self.sourceData.currentDataFile
-     	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     	if selectionIsFromSameData:
-     		self.sourceData.set_current_data_by_id(selectionDataFrameId)
-     		combinedColumnName = self.sourceData.combine_columns_by_label(self.DataTreeview.columnsSelected  )
-     		self.DataTreeview.add_list_of_columns_to_treeview(selectionDataFrameId,
-     													dataType = 'object',
-     													columnList = [combinedColumnName])
-
-
-     		tk.messagebox.showinfo('Done ..','Selected columns were combined in a newly added column.')
-     		self.workflow.add('add_column',
-     				self.sourceData.currentDataFile,
-     				{'funcDataR':'delete_columns_by_label_list',
-     				'argsDataR':{'columnLabelList':[combinedColumnName]},
-     				'funcTreeR':'delete_entry_by_iid',
-     				'argsTreeR':{'iid':'{}_{}'.format(self.sourceData.currentDataFile,combinedColumnName)}})
-     	else:
-
-      		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-      		return
-
-
-     def duplicate_column(self):
-
-     	'''
-     	Duplicates selected columns. Changes dataframe selection if needed. Eventually
-     	it will change back to the previous selected dataframe.
-     	'''
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:  
-	
-     		columnLabelListDuplicate  = self.sourceData.duplicate_columns(self.DataTreeview.columnsSelected  )
-     		dataTypes = self.sourceData.get_data_types_for_list_of_columns(columnLabelListDuplicate)
-
-     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
-     													dataTypes,
-     													columnLabelListDuplicate)
-
-     		tk.messagebox.showinfo('Done ..','Selected column(s) were duplicated and added to the source data treeview.')
-     		self.workflow.add('add_column',
-     				self.sourceData.currentDataFile,
-     				{'funcDataR':'delete_columns_by_label_list',
-     				'argsDataR':{'columnLabelList':columnLabelListDuplicate},
-     				'funcTreeR':'delete_entry_by_iid',
-     				'argsTreeR':{'iid':['{}_{}'.format(self.sourceData.currentDataFile,col) for col in columnLabelListDuplicate]}})
-     	else:
-
-     		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-     		return
-
-	
-     def delete_column(self,event=None):
-     	'''
-     	Removes selected columns. Changes dataframe selection if needed. Eventually
-     	it will change back to the previous selected dataframe.
-     	'''
-     	if event is not None:
-     		if len(self.DataTreeview.columnsSelected) == 0:
-     			return
-     	selectedColumns = self.selection_is_from_one_df()
-     	if selectedColumns is not None:    
-     		dfForUndo =  self.sourceData.get_current_data_by_column_list(selectedColumns, ignore_clipping = True)
-     		self.sourceData.delete_columns_by_label_list(self.DataTreeview.columnsSelected)
-     		self.DataTreeview.delete_selected_entries()
-     		tk.messagebox.showinfo('Done ..','Selected columns were removed.')
-     		self.workflow.add('deleteColumn', 
-     					self.sourceData.currentDataFile,
-     					{'funcDataR':'join_df_to_df_by_id',
-     					'argsDataR':{'dfToAdd':dfForUndo,'id':self.sourceData.currentDataFile},
-     					'funcAnalyzeR':'update_all_dfs_in_treeview',
-     					'argsAnalyzeR':{},
-     					'description':OrderedDict([('Activity:','Delete column.'),
-     					('Description:','One or multiple columns were deleted.'),
-     					('Selected Columns:',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
-     					('Data ID:',self.sourceData.currentDataFile)])})
 
 
      def remove_rows_with_nan(self, how = 'all == NaN'):
@@ -2830,54 +3391,6 @@ class analyze_data(tk.Frame):
      				('Selected Columns',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
      				('Data ID:',self.sourceData.currentDataFile)])})
   	
-
-     def change_column_type(self, selectedColumns  = None, id = None, changeColumnTo = 'float64'):
-     	'''
-     	Changes the column type of the selected one.
-     	'''
-     	
-     	if selectedColumns is None:
-		
-     		selectedColumns = self.selection_is_from_one_df()
-     		
-     	elif id is not None:
-     		self.sourceData.set_current_data_by_id(id)
-     	else:
-     		return
-			
-			
-     	if selectedColumns is not None:
-     		oldDataTypes = self.sourceData.get_data_types_for_list_of_columns(selectedColumns)
-     		status = self.sourceData.change_data_type_in_current_data(selectedColumns,changeColumnTo)
-     		if status == 'worked':
-     			if changeColumnTo == 'str':
-     				changeColumnTo = 'object'
-     			self.DataTreeview.change_data_type_by_iid(self.DataTreeview.columnsIidSelected,changeColumnTo)
-     			tk.messagebox.showinfo('Done..','Column type changed.')
-     		
-     			
-     			self.workflow.add('deleteRows',
-     				self.sourceData.currentDataFile,
-     				
-     				{'funcDataR':'change_data_type_in_current_data',
-     				'argsDataR':{'columnList':selectedColumns, 'newDataType': oldDataTypes},
-     				'funcTreeR':'change_data_type_by_iid',
-     				'argsTreeR': {'iidList':self.DataTreeview.columnsIidSelected, 'newDataType' : oldDataTypes},
-     				'description':OrderedDict([('Activity:','Change column type to - ({})'.format(changeColumnTo)),
-     				('Description:','Column type has been changed.'),
-     				('Selected Columns',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
-     				('Data ID:',self.sourceData.currentDataFile)])})
-     				     			
-     		else:
-     			if changeColumnTo == 'int64':
-     				addToMsg = ' If the column contains NaN you cannot change it type to integer.Please remove NaN and try again.'
-     			else:
-     				addToMsg = ''
-     			tk.messagebox.showinfo('Error..','An error occured trying to change the column type.' + addToMsg)
-
-# remove ? 
-
-
      def transform_selected_columns(self, transformation):
      	'''
      	Transform data. Adds a new column to the data frame.
@@ -2906,13 +3419,17 @@ class analyze_data(tk.Frame):
      				
 
 
-     def split_column_content_by_string(self,splitStringCommand):
+     def split_column_content_by_string(self,splitStringCommand = None):
      	'''
      	Splits the content of a column row-wise with given splitString.
      	For example: KO_10min would be split by '_' into two new columns KO , 10min
      	'''
-
-     	splitString = splitStringCommand[-2]
+     	if splitStringCommand is None or splitStringCommand  == "Custom String":
+     		splitString = ts.askstring('Split strings','Please provide string for splitting')
+     		if splitStringCommand == '' or splitStringCommand is None:
+     			return
+     	else:
+     		splitString = splitStringCommand[-2]
      	selectedColumns = self.selection_is_from_one_df()
      	if selectedColumns is not None:
 
@@ -2928,7 +3445,7 @@ class analyze_data(tk.Frame):
      													startIndex = indexStart)
 
      		tk.messagebox.showinfo('Done ..','Selected column(s) were split and added to the source data treeview.')
-     		self.workflow.add('add_column',
+     		self.workflow.add('addColumn',
      				self.sourceData.currentDataFile,
      				{'funcDataR':'delete_columns_by_label_list',
      				'argsDataR':{'columnLabelList':splitColumnName},
@@ -2995,97 +3512,6 @@ class analyze_data(tk.Frame):
       		return
 
 
-     def change_plot_style(self, plot_type = ''):
-         '''
-         Function that handles the event triggered by plot options.
-         Very important step is to set the data selection back to the one
-         that was used to generate the last chart. Otherwise you might
-         experience difficulties that column headers are not present.
-         '''
-         
-         if len(self.sourceData.dfs) == 0:
-         	tk.messagebox.showinfo('No data ..','Please upload a file first.',parent = self)
-         	return
-	
-         if len(self.plt.plotHistory) == 0:
-             return
-
-         dataID = self.plt.get_dataID_used_for_last_chart()
-         self.sourceData.set_current_data_by_id(dataID)
-
-         numericColumns = list(self.selectedNumericalColumns.keys())
-         categoricalColumns = list(self.selectedCategories)
-
-         underlying_plot = self.plt.currentPlotType
-
-         if plot_type  not in ['boxplot','violinplot','barplot','add_swarm']:
-
-             self.but_stored[10].configure(image = self.add_swarm_icon)
-             self.swarm_but = 0
-             self.plt.addSwarm = False
-
-         if plot_type == 'add_swarm':
-
-
-             if underlying_plot not in ['boxplot','violinplot','barplot']:
-
-                 tk.messagebox.showinfo('Error..','Not useful to add swarm plot to this '+
-                 						'type of chart. Possible chart types: Boxplot, '+
-                 						'Violinplot and Barplot')
-                 return
-
-             if self.swarm_but == 0:
-                 self.but_stored[10].configure(image= self.remove_swarm_icon)
-                 self.add_swarm_to_figure()
-                 self.swarm_but = 1
-
-             else:
-                 self.but_stored[10].configure(image = self.add_swarm_icon)
-                 self.swarm_but = 0
-                 help = self.plt.get_active_helper()
-                 help.remove_swarm()
-                 self.plt.redraw()
-
-         else:
-         	if plot_type in ['hclust','corrmatrix'] and len(numericColumns) > 1\
-         	and len(categoricalColumns) > 0:
-         	## forces removable of categories upon selection
-         		self.clean_up_dropped_buttons('cat',replot=False)
-         		categoricalColumns = []
-         	
-         	if len(numericColumns) == 0 and len(categoricalColumns) != 0 \
-         	and plot_type != 'countplot':
-         		tk.messagebox.showinfo('Error ..',
-         								'Need at least one numeric columns. Drag & Drop them from the source data '+
-         								'treeview into the numerical receiver box.',
-         								parent=self)
-         		return	
-         	
-         	if len(numericColumns) != 2 and len(categoricalColumns) == 0\
-         	and plot_type == 'scatter':
-         		tk.messagebox.showinfo('Error ..',
-         							'Need two numeric columns for a scatter plot.',
-         							parent = self)
-         		return
-         		
-         	
-         	
-         	self.prepare_plot(colnames = numericColumns,
-             				   catnames = categoricalColumns,
-             				   plot_type = plot_type )
-
-     def add_swarm_to_figure(self):
-     	'''
-     	Helper function to trigger the addition of
-     	swarm plot onto the underlying graph.
-     	Please note that if the data get bigger stripplot instead of swarm
-     	will be used (less computing time) the difference is that in
-     	swarm plots you can estimate the distribution much better.
-     	'''
-     	help = self.plt.get_active_helper()
-     	help.add_swarm_to_plot()
-     	self.plt.redraw()
-
 
      def re_sort_source_data_columns(self):
      	'''
@@ -3096,50 +3522,7 @@ class analyze_data(tk.Frame):
      	dict_ = self.sourceData.dfsDataTypesAndColumnNames
      	file_names = self.sourceData.fileNameByID
      	self.DataTreeview.add_all_data_frame_columns_from_dict(dict_,file_names)
-
-
-     def delete_data_frame_from_source(self, fileIid = None):
-     	'''
-     	Removes data frames from sourceDataCollection and from DataTreeview.
-     	The data cannot be restored.
-     	'''
-     	if fileIid is None:
-		
-     		for fileIid in self.DataTreeview.dataFramesSelected:
-
-     			fileName = self.sourceData.fileNameByID[fileIid]
-     			dataFrameIid = '{}_{}'.format(fileIid,fileName)
-     			self.DataTreeview.delete_entry_by_iid(dataFrameIid)
-     			self.sourceData.delete_data_file_by_id(fileIid)
-     			self.remove_savedCalculations(fileIid)
-     			self.workflow.delete_branch(fileIid)
-
-     			if len(self.sourceData.fileNameByID) == 0:
-     				
-     				self.clean_up_dropped_buttons(mode = 'num')
-     				self.clean_up_dropped_buttons(mode = 'cat')
-				
-     			if len(self.sourceData.dfs) == 0 or fileIid == self.plt.get_dataID_used_for_last_chart():
-					
-     				self.clean_up_dropped_buttons(mode = 'num')
-     				self.clean_up_dropped_buttons(mode = 'cat')
-					
-     		tk.messagebox.showinfo('Done..','Selected data frame(s) deleted.')
-		
-     	else:
-		
-     			fileName = self.sourceData.fileNameByID[fileIid]
-     			dataFrameIid = '{}_{}'.format(fileIid,fileName)
-     			self.DataTreeview.delete_entry_by_iid(dataFrameIid)
-     			self.sourceData.delete_data_file_by_id(fileIid)
-     			self.remove_savedCalculations(fileIid)
-     			self.workflow.delete_branch(fileIid)
-     			
-     			if len(self.sourceData.dfs) == 0  or fileIid == self.plt.get_dataID_used_for_last_chart():
-					
-     				self.clean_up_dropped_buttons(mode = 'num')
-     				self.clean_up_dropped_buttons(mode = 'cat')
-     	
+   	
      						
      def remove_savedCalculations(self, dataId):
      	'''
@@ -3148,19 +3531,18 @@ class analyze_data(tk.Frame):
      	'''
      	self.curveFitCollection.remove_fits_by_dataId(dataId)
 
-     def on_slected_analysis_button3(self, event):
+     def post_analysis_menu(self, event):
      	'''
      	'''
      	self.post_menu(menu=self.menuCollection['analysis_treeview'] )
 
 
 
-     def on_slected_treeview_button3(self, event):
+     def post_treeview_menu(self, event):
          '''
          Button-3 drop-down menu.
          '''
          if self.DataTreeview.onlyDataFramesSelected:
-			
          	self.post_menu(menu = self.menuCollection['data_frame'])
          elif self.DataTreeview.onlyDataTypeSeparator:
          	self.post_menu(menu=self.menuCollection['data_type_menu'] )
@@ -3173,7 +3555,6 @@ class analyze_data(tk.Frame):
          checks current widget under mouse event and colors the motion button
          if it is over an appropiate widget that accepts a drag & drop event
          '''
-
          if self.DataTreeview.stopDragDrop:
          	return
 
@@ -3188,6 +3569,9 @@ class analyze_data(tk.Frame):
              	self.frame.configure(bd=2,relief=tk.SOLID)
              else:
              	but_text = str(self.DataTreeview.columnsSelected)[1:-1]
+             	if len(but_text) > 40:
+             		but_text = '#multiple'
+             		
              	self.indicate_drag_drop_areas(self.data_types_selected[0])
 
              self.mot_button = tk.Button(self, text=but_text, bd=1,
@@ -3204,13 +3588,9 @@ class analyze_data(tk.Frame):
 
          x = self.winfo_pointerx() - self.winfo_rootx()
          y = self.winfo_pointery() - self.winfo_rooty()
-         #print(self.widget)
 
-
-         self.mot_button.place( x= x-20 ,y = y-30) ## offset because otherwise dropped widget will always be the same button
-
-
-
+         self.mot_button.place( x= x-20 ,y = y-30) 
+         ## offset because otherwise dropped widget will always be the same button
 
          if analysis:
 
@@ -3234,9 +3614,9 @@ class analyze_data(tk.Frame):
                  	self.mot_button.configure(fg = "darkgrey")
 
 
-
      def indicate_slice_mark_buttons(self, which = 'all', frameRelief=tk.SOLID):
      	'''
+     	Give Slice and Marks button a frame
      	'''
      	if isinstance(which,list):
      		pass
@@ -3267,7 +3647,6 @@ class analyze_data(tk.Frame):
      	elif dataType == 'int64':
      		frames =  [self.column_sideframe,self.category_sideframe]
 
-
      	if plotTypeWithHue == False:
      			self.indicate_slice_mark_buttons(['filter'])
      	else:
@@ -3277,64 +3656,11 @@ class analyze_data(tk.Frame):
 
      		frame.config(relief=frameRelief)
 
-
-
-     def delete_dragged_buttons(self, event, but_name, columns=False):
-         '''
-         Remove dragged buttons from receiver boxes.
-         '''
-         # set correct df
-         dataID = self.plt.get_dataID_used_for_last_chart()
-         self.sourceData.set_current_data_by_id(dataID)
-		
-         if columns:
-             self.selectedNumericalColumns[but_name].destroy()
-             del self.selectedNumericalColumns[but_name]
-             self.update_tooltip_in_receiverBox('numeric')
-             self.plt.addSwarm = False
-             self.but_stored[10].configure(image = self.add_swarm_icon)
-             self.swarm_but = 0
-             	             	              	
-         else:
-             self.selectedCategories[but_name].destroy()
-             del self.selectedCategories[but_name]
-             self.update_tooltip_in_receiverBox('categories')		 
-
-         if len(self.selectedCategories) == 0 and len(self.selectedNumericalColumns) == 0:
-             self.plt.clean_up_figure()
-             self.interactiveWidgetHelper.clean_frame_up()
-             self.plt.redraw()
-             return
-         numericColumns = list(self.selectedNumericalColumns.keys())
-         categoricalColumns = list(self.selectedCategories.keys())
-                                 
-         _,_, plot_type, cmap = self.plt.current_plot_settings
-         if plot_type in ['hclust','corrmatrix'] and len(numericColumns) == 1:
-             plot_type = 'boxplot'
-         if columns == False and plot_type in ['scatter_matrix','hclust','corrmatrix']:
-             return
-         if plot_type == 'PCA':
-             plot_type = 'boxplot'
-		
-
-         
-         self.interactiveWidgetHelper.clean_frame_up()
-         
-         if len(numericColumns) == 0:
-         	plot_type = 'countplot'
-         elif len(numericColumns) == 1:
-         	plot_type = 'boxplot' 
-         	
-         self.plt.initiate_chart(numericColumns,categoricalColumns,
-         							plot_type, cmap)
-
-
      def remove_mpl_connection(self, plot_type = ''):
 
          try:
                               self.canvas.mpl_disconnect(self.pick_label)
                               self.canvas.mpl_disconnect(self.pick_freehand)
-                              self.annotations_dict.clear()
 
          except:
                                   pass
@@ -3342,9 +3668,6 @@ class analyze_data(tk.Frame):
                             self.selection_press_event,
                             self.pick_label,
                             self.pick_freehand,
-                            self._3d_update,
-                            self.mot_adjust,
-                            self.mot_adjust_ver,
                             self.release_event,
                             ]
          for con in mpl_connections:
@@ -3367,19 +3690,6 @@ class analyze_data(tk.Frame):
                     but = None
 
 
-     def check_input(self):
-     	'''
-     	Check if the data frame that was used for the last chart is the same
-     	as the one that is newly dropped onto the receiver boxes. If not
-     	the receiver boxed will be cleaned up.
-     	'''
-     	dataFrames = self.DataTreeview.dataFramesSelected
-     	lastUsedDf = self.plt.get_dataID_used_for_last_chart()
-     	if lastUsedDf is not None and len(dataFrames) != 0:
-            	if lastUsedDf == dataFrames[0]:
-            		pass
-            	else:
-            		self.clean_up_dropped_buttons()
 
      def bind_events_to_button_in_receiverbox(self,columnName,button,numeric):
      	'''
@@ -3410,7 +3720,6 @@ class analyze_data(tk.Frame):
 
      		button = tk.Button(self.receiverFrame[dtype], 
      							text = column)
-     		
      		if dtype == 'numeric':
      			self.selectedNumericalColumns[column] = button
      			numeric = True
@@ -3422,8 +3731,6 @@ class analyze_data(tk.Frame):
      		button.pack(side=tk.LEFT,padx=2)
      		self.bind_events_to_button_in_receiverbox(column,button,numeric)
      		
-     		
-
 
      def receiver_button_menu(self, columnName):     
      	'''
@@ -3454,43 +3761,6 @@ class analyze_data(tk.Frame):
      		self.catTool.text = toolTipText       		
 	 
 
-
-     def estimate_plot_type_for_default(self):
-         '''
-         Estimate default plot type.
-         '''
-         colnames = list(self.selectedNumericalColumns.keys())
-         catnames = list(self.selectedCategories.keys())
-         used_plot_style = self.plt.currentPlotType
-         n_col = len(colnames)
-         n_categories = len(catnames)
-         if used_plot_style in ['hclust','corrmatrix'] and n_categories > 0:
-             return 'boxplot'
-         if used_plot_style in ['hclust','corrmatrix'] and n_col == 1:
-             return 'boxplot'
-         if used_plot_style == 'PCA':
-             return 'boxplot'
-         if n_col == 1 and n_categories == 0:
-             plot_type = 'density'
-         elif n_categories != 0 and n_col == 0:
-             plot_type = 'countplot'
-         elif used_plot_style == 'density_from_scatter':
-             if n_col == 1:
-                 return 'boxplot'
-             else:
-                 return 'density_from_scatter'
-         elif n_col == 2 and n_categories == 0 and used_plot_style != 'time_series':
-             plot_type = 'scatter'
-         else:
-             if self.plt.plotCount > 0:
-                 if used_plot_style not in ['density','countplot','scatter','PCA']:
-                     plot_type = used_plot_style
-                 else:
-                     plot_type = 'boxplot'
-             else:
-                 plot_type = 'boxplot'
-         return plot_type
-
      def release(self,event,analysis=''):
          '''
          Handles all release events by drag & drop.
@@ -3499,7 +3769,10 @@ class analyze_data(tk.Frame):
 
          if len(self.data_types_selected) == 0:
              return
-
+        
+         if event is None:
+         	return
+         		
          widget = self.winfo_containing(event.x_root, event.y_root)
          self.frame.configure(bd=2,relief=tk.FLAT)
          self.indicate_drag_drop_areas(self.data_types_selected[0],frameRelief=tk.GROOVE)
@@ -3569,15 +3842,14 @@ class analyze_data(tk.Frame):
          elif widget == self.sliceMarkFrameButtons['label']:
 
 
-             last_plot_type = self.plt.currentPlotType
-             if last_plot_type not in ['scatter','hclust','PCA']:
+             if self.plt.currentPlotType not in ['scatter','hclust','PCA']:
                  return
              if self.label_button_droped is not None:
                  self.label_button_droped.destroy()
                  self.label_button_droped = None
 
              self.anno_column = self.DataTreeview.columnsSelected
-             if last_plot_type in ['scatter','PCA']:
+             if self.plt.currentPlotType in ['scatter','PCA']:
                  if all(self.sourceData.df[col].dtype == 'object' for col in self.DataTreeview.columnsSelected  ):
                      if all(self.sourceData.df[col].unique().size == 2 for col in self.DataTreeview.columnsSelected  ):
 
@@ -3605,7 +3877,7 @@ class analyze_data(tk.Frame):
                      self.make_labels_selectable()
              else:
                  if len(self.anno_column) > 1:
-                     tk.messagebox.showinfo('Info..','Please note that only column can be'+
+                     tk.messagebox.showinfo('Info..','Please note that only one column can be'+
                      						' used for labeling rows in a h-clust.\nHowever'+
                      						' you can also merge columns with the function:'+
                      						' Combine columns from the drop-down menu'
@@ -3618,7 +3890,7 @@ class analyze_data(tk.Frame):
              											image= self.but_label_icon,
              											compound=tk.CENTER)
 
-             if last_plot_type != 'hclust':
+             if self.plt.currentPlotType != 'hclust':
              	self.label_button_droped.bind(right_click,
              					self.remove_annotations_from_current_plot)
              else:
@@ -3631,7 +3903,6 @@ class analyze_data(tk.Frame):
          elif widget == self.sliceMarkFrameButtons['filter']:
 
              if any(self.sourceData.df[col].dtype not in [np.float64,np.int64] for col  in self.DataTreeview.columnsSelected):
-
 
                      if len(self.DataTreeview.columnsSelected) == 1:
 
@@ -3880,13 +4151,8 @@ class analyze_data(tk.Frame):
                         self.stat_button_droped.configure(command = self.show_statistical_test)
 
 
-                     elif self.test in  ['Correlate rows to ..']:#,'Display correlations']:
+                     elif self.test in  ['Correlate rows to ..']:
 
-          #            	tk.messagebox.showinfo('Under construction ..',
-#                      		'Under construction ..',
-#                      		parent=self)
-#                      		
-#                      	return
                      	self.calculate_correlations()
 
                      elif self.test == 'Display curve fit(s)':
@@ -3897,8 +4163,6 @@ class analyze_data(tk.Frame):
 
                      	self.curve_fit(from_drop_down=False)
 
-                         #self.design_popup(mode='Curve fit ..', from_drop_down = False)
-
                      elif self.test in stats.dimensionalReductionMethods:
 
                          self.interactiveWidgetHelper.clean_frame_up()
@@ -3907,27 +4171,6 @@ class analyze_data(tk.Frame):
                          									command = lambda: self.post_menu(menu=self.menuCollection['PCA']))#self.post_pca_menu)
                          self.dimReduction_button_droped.grid(columnspan=2, padx=0, pady=1)
                          self.perform_dimReduction_analysis()
-
-
-
-     def curve_fit(self,from_drop_down = True):
-     	'''
-     	Dialogue window to calculate curve fit.
-     	'''
-     	if  from_drop_down:
-     		selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-     		if selectionIsFromSameData:
-     			self.sourceData.set_current_data_by_id(selectionDataFrameId)
-     		else:
-     			tk.messagebox.showinfo('Error ..','Please select only columns from one data frame',parent=self)
-     			return
-     		columns = self.DataTreeview.columnsSelected
-     	else:
-     		id = self.plt.get_dataID_used_for_last_chart()
-     		self.sourceData.set_current_data_by_id(id)
-     		columns = list(self.selectedNumericalColumns.keys())
-
-     	curve_fitting.curveFitter(columns,self.sourceData,self.DataTreeview,self.curveFitCollection)
 
 
      def show_anova_results(self):
@@ -3978,6 +4221,44 @@ class analyze_data(tk.Frame):
      		del dataDialog
      		nameOfDf = 'aucResults_plotID:{}'.format(self.plt.plotCount)
      		self.add_new_dataframe(df,nameOfDf)
+     
+     def show_data(self):
+     	'''
+     	Shows all data and allows update of source data if anything as been done
+     	'''
+     	currentDataSelection = self.DataTreeview.get_data_frames_from_selection()
+     	if len(currentDataSelection) == 0:
+     		currentDataSelection = [self.sourceData.currentDataFile]
+     		if currentDataSelection is None:
+     			tk.messagebox.showinfo('No data ..','No data loaded.',parent=self)
+     			return
+     	else:
+     		pass
+     	datToInspect = self.sourceData.get_data_by_id(currentDataSelection[0]).copy() ## this is needed otherwise the self.df will be updated instantly
+     	dataDialogue = display_data.dataDisplayDialog(datToInspect,self.plt)
+     	data_ = dataDialogue.get_data()
+     	del dataDialogue
+     	if data_.equals(self.sourceData.df):
+     		pass
+     	else:
+     		quest = tk.messagebox.askquestion('Confirm ..','Data changed. Would you like to update?')
+     		if quest == 'yes':
+     			self.sourceData.update_data_frame(id=currentDataSelection[0],
+         													dataFrame = data_)
+     			self.update_all_dfs_in_treeview()
+     		else:
+     			pass
+     	return
+
+     def show_droped_data(self):
+         '''
+         Shows only selection of data when drag & drop was performed on the SourceData button.
+         '''
+         numericalColumns = list(self.selectedNumericalColumns.keys())
+         categoricalColumns = self.sourceData.get_columns_data_type_relationship()['object']
+         columSelection = categoricalColumns + numericalColumns + self.DataTreeview.columnsSelected
+         display_data.dataDisplayDialog(self.sourceData.df[columSelection],self.plt)
+
 
      def remove_stat_(self,event):
      	'''
@@ -4012,17 +4293,6 @@ class analyze_data(tk.Frame):
          	self.plt.redraw()
 
 
-     def define_size_range(self):
-     	'''
-     	Defining range of size interval to change to edges of a scatter plot
-     	where size is encoded. 
-     	'''
-     	if self.plt.plotCount == 0:
-     		return
-
-     	sizeDialog = size_configuration.sizeIntervalDialog(self.plt)
-
-
      def remove_sizes_(self,event):
          '''
          Resets the size of scatter points to the basic level.
@@ -4044,15 +4314,6 @@ class analyze_data(tk.Frame):
 
          	self.plt.redraw()
 
-     def check_button_handling(self, colormap):
-         '''
-         Change color map.
-         '''
-         self.cmap_in_use.set(colormap)
-
-         if self.plt.plotCount != 0:
-         	color_changer.colorChanger(self.plt,self.sourceData,colormap, self.interactiveWidgetHelper)
-
 
      def remove_tool_tip_active(self,event):
          '''
@@ -4069,9 +4330,8 @@ class analyze_data(tk.Frame):
          quest = tk.messagebox.askquestion('Deleting labels..','This step will remove all labels from your plot.\nPlease confirm..')
          if quest == 'yes':
 
-          	self.plt.nonCategoricalPlotter.annotationClass.remove_all_annotations()
-          	self.plt.nonCategoricalPlotter.annotationClass.disconnect_event_bindings()
-          	self.plt.nonCategoricalPlotter.annotationClass = None
+          	self.plt.nonCategoricalPlotter.remove_all_annotations()
+          
           	self.plt.redraw()
           	if self.label_button_droped is not None:
           		self.label_button_droped.destroy()
@@ -4110,17 +4370,32 @@ class analyze_data(tk.Frame):
          numericColumns = list(self.selectedNumericalColumns.keys())
          numbNumericColumns = len(numericColumns)
 
-         if len(numericColumns) == 0:
-             tk.messagebox.showninfo('Error..','Please add columns to the numeric data receiver box.')
+         if len(numericColumns) < 3:
+             tk.messagebox.showninfo('Error..','Please add columns to the numeric data receiver box. You need at least three numeric columns.')
              return
 
          nComps = self.dimensionReductionCollection.nComponents
          if nComps > numbNumericColumns:
          	nComps = numbNumericColumns
 
+         if self.test == 'Linear Discriminant Analysis':
+         	dialog = simpleListboxSelection('Select column that contains information about the class labels',
+         		data = self.sourceData.get_categorical_columns_by_id(id=self.sourceData.currentDataFile))
+         	
+         	selection = dialog.selection
+         	if len(selection) != 0:
+         		outcomeVariable = self.sourceData.df[selection[0]].values
+         	else:
+         		return
+     		
+         else:
+         	outcomeVariable = None
+
+	
          dimRedResult = stats.get_dimensionalReduction_results(self.sourceData.df[numericColumns],
          													method = self.test,
-         													nComps = nComps)
+         													nComps = nComps,
+         													outcomeVariable = outcomeVariable)
          # save dim red. results (a pca can also be used to fit other unseen data)
          self.dimensionReductionCollection.save_calculation(dimRedResult,
          													numericColumns,
@@ -4218,129 +4493,24 @@ class analyze_data(tk.Frame):
          return s
 
 
-
-     def categorical_column_handler(self,mode):
+     def summarize(self):
      	'''
-     	Open categorical filter dialog. Please note that this is also used
-     	to annotate scatter plot points which looks strange. But since the annotation
-     	can also only be considered as a categorical value, the dialog window is used as well.
-
-     	Parameter
-     	==========
-     	mode - Can only be one of :
-
-     			- Find category & annotate
-				- Search string & annotate
-				- Subset data on unique category
-				- Annotate scatter points
-				- Find entries in hierarch clustering
-				- Find entry in line plot
-		Output
-		==========
-		None - But new data frames are entered automatically from within the dialog
+     	Summarize Table
      	'''
      	selectedColumns = self.selection_is_from_one_df()
+     	if selectedColumns is not None:
      	
-     	if selectedColumns is None:
-     		return
-     	
-     	self.annot_label_scatter = False
-     	if mode == 'Annotate scatter points' and len(selectedColumns) == 0:
-     		filterColumn  = None
-     		dataSubset = None
-     	elif mode == 'Find entry in hierarch. cluster':
-     		if self.plt.currentPlotType != 'hclust':
-     			tk.messagebox.showinfo('Error ..','Please plot a hierarchical clustermap.')
-     			return
-     		else:
-     			filterColumn  = None
-     			dataSubset = self.plt.nonCategoricalPlotter._hclustPlotter.df
-     	elif mode == 'Find entry in line plot':
-      		if self.plt.currentPlotType != 'line_plot':
-      			tk.messagebox.showinfo('Error ..','Please plot a profile plot first.')
-      			return
-      		else:
-      			dataSubset = self.plt.nonCategoricalPlotter.linePlotHelper.get_data()
-      			filterColumn = None
+     		summarizedData = self.sourceData.get_current_data()[selectedColumns].describe(
+     													percentiles = [.25, .5, .75],
+     													include = 'all')
+     		countNanValues = self.sourceData.get_current_data()[selectedColumns].isnull().sum()
+     		summarizedData.loc['nan count',:] = countNanValues
+     		summarizedData.insert(0,'Measure',summarizedData.index)
+     		dataDialog = display_data.dataDisplayDialog(summarizedData,showOptionsToAddDf=True)
 
-     	elif mode == 'Search string & annotate':
-
-     		filterColumn = selectedColumns
-     		dataSubset = None
-
-     	else:
-
-     		filterColumn = selectedColumns[0]
-     		dataSubset = None
-
-     	categorical_filter.categoricalFilter(self.sourceData,self.DataTreeview,
-             										self.plt,operationType = mode,
-             										columnForFilter = filterColumn,
-             										dataSubset = dataSubset,
-             										workflow = self.workflow)
-     def clip_data(self):
-     
-     	dialog = mask_filtering.clippingMaskFilter(self.plt,self.sourceData,self)
-
-
-			
-
-     def add_linear_regression(self):
-         '''
-         Adds linear regression to scatter plot.
-         '''
-         plotHelper = self.plt.get_active_helper()
-         plotHelper.add_regression_line(list(self.selectedNumericalColumns.keys()))
-         self.plt.redraw()
-
-
-     def add_lowess(self):
-     	'''
-     	Adds lowess line to current plot.
-     	'''
-
-     	plotHelper = self.plt.get_active_helper()
-     	plotHelper.add_lowess_line(list(self.selectedNumericalColumns.keys()))
-     	self.plt.redraw()
-
-
-     def show_data(self):
-     	'''
-     	Shows all data and allows update of source data if anything as been done
-     	'''
-     	currentDataSelection = self.DataTreeview.get_data_frames_from_selection()
-     	if len(currentDataSelection) == 0:
-     		currentDataSelection = [self.sourceData.currentDataFile]
-     		if currentDataSelection is None:
-     			tk.messagebox.showinfo('No data ..','No data loaded.',parent=self)
-     			return
-     	else:
-     		pass
-     	datToInspect = self.sourceData.get_data_by_id(currentDataSelection[0]).copy() ## this is needed otherwise the self.df will be updated instantly
-     	dataDialogue = display_data.dataDisplayDialog(datToInspect,self.plt)
-     	data_ = dataDialogue.get_data()
-     	del dataDialogue
-     	if data_.equals(self.sourceData.df):
-     		pass
-     	else:
-     		quest = tk.messagebox.askquestion('Confirm ..','Data changed. Would you like to update?')
-     		if quest == 'yes':
-     			self.sourceData.update_data_frame(id=currentDataSelection[0],
-         													dataFrame = data_)
-     			self.update_all_dfs_in_treeview()
-     		else:
-     			pass
-     	return
-
-     def show_droped_data(self):
-         '''
-         Shows only selection of data when drag & drop was performed on the SourceData button.
-         '''
-         numericalColumns = list(self.selectedNumericalColumns.keys())
-         categoricalColumns = self.sourceData.get_columns_data_type_relationship()['object']
-         columSelection = categoricalColumns + numericalColumns + self.DataTreeview.columnsSelected
-         display_data.dataDisplayDialog(self.sourceData.df[columSelection],self.plt)
-
+     		if dataDialog.addDf:
+     			nameOfDf = 'Summary of {}'.format(get_elements_from_list_as_string(selectedColumns))
+     			self.add_new_dataframe(dataDialog.data,nameOfDf)
 
      def update_size(self, selectedColumn = None):
          '''
@@ -4361,7 +4531,11 @@ class analyze_data(tk.Frame):
 
          if selectedColumn is None:
 
-             selectedColumn = self.DataTreeview.columnsSelected[0]
+             selectedColumns = self.selection_is_from_one_df()
+             if selectedColumns is None:
+             	return
+             else:
+             	selectedColumn = selectedColumns[0]
 
          dtype = self.sourceData.df[selectedColumn].dtype
          if dtype == np.float64 or dtype == np.int64:
@@ -4369,7 +4543,7 @@ class analyze_data(tk.Frame):
 
              	self.plt.nonCategoricalPlotter._scatterMatrix.change_size_by_numeric_column(self.DataTreeview.columnsSelected[0])
 
-             elif plotType == 'scatter':
+             elif plotType in ['scatter','PCA']:
                  if self.plt.nonCategoricalPlotter is not None:
                  	self.plt.nonCategoricalPlotter.change_size_by_numerical_column(self.DataTreeview.columnsSelected,update=False)
                  else:
@@ -4397,10 +4571,13 @@ class analyze_data(tk.Frame):
          '''
 
          if columnNames is None:
-         	columnNames = self.DataTreeview.columnsSelected
+         	 columnNames = self.selection_is_from_one_df()
+         	 if columnNames is None:
+         	 	return
+             	
          if numericData is None:
          	numericData = self.DataTreeview.onlyNumericColumnsSelected
-         	
+                  
          if numericData:
          	#if len(self.DataTreeview.columnsSelected) > 1:
          	#	tk.messagebox.showinfo('Note..','Numerical columns cannot be combined. Only {} will be used.'.format(colorColumn))
@@ -4427,18 +4604,24 @@ class analyze_data(tk.Frame):
 
          		self.plt.nonCategoricalPlotter.linePlotHelper.change_color_by_categorical_columns(columnNames, updateColor=False)
          		self.interactiveWidgetHelper.clean_color_frame_up()
-         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt, 
+         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt, analyzeData = self,
          									droppedButton = self.color_button_droped)
 
-         	elif self.plt.currentPlotType in ['scatter','PCA']:
+         #	elif self.plt.currentPlotType == 'PCA':
+         	
+         #		self.plt.nonCategoricalPlotter.dimRedPlot.change_color_by_categorical_columns(columnNames, updateColor=False)
+				
+				
 
+         	elif self.plt.currentPlotType in ['PCA','scatter']:
          		if self.plt.nonCategoricalPlotter is not None:
          			self.plt.nonCategoricalPlotter.change_color_by_categorical_columns(columnNames, updateColor=False)
          		else:
+         			
          			self.plt.categoricalPlotter.scatterWithCategories.change_color_by_categorical_columns(columnNames, updateColor=False)
          		
          		self.interactiveWidgetHelper.clean_color_frame_up()
-         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt,
+         		self.interactiveWidgetHelper.create_widgets(plotter = self.plt, analyzeData = self,
          													droppedButton = self.color_button_droped )
 
          self.plt.redraw()
@@ -4450,6 +4633,8 @@ class analyze_data(tk.Frame):
         Allows to center and log-scale specific axis.
      	'''
         fig = self.plt.figure
+        if len(fig.axes) == 0:
+        	return
         if len(self.original_vals) == 0:
                  self.original_vals = [fig.axes[0].get_ylim(),fig.axes[0].get_xlim()]
                  self.center_x = False
@@ -4528,7 +4713,6 @@ class analyze_data(tk.Frame):
          if True:
 
              self.colormaps.clear()
-             self.annotations_dict.clear()
              self.remove_mpl_connection(plot_type = plot_type)
              self.selection_press_event = None
              self.original_vals = []
@@ -4549,7 +4733,7 @@ class analyze_data(tk.Frame):
              if catnames != []:
                  if any(len(self.sourceData.get_unique_values(cat)) > 100 for cat in \
                  catnames if cat in self.sourceData.get_columns_of_current_data()) \
-                 and plot_type not in ['network','hclust']:
+                 and plot_type not in ['hclust']:
 
                      quest = tk.messagebox.askquestion('More than 100 categories',
                      	'You have selected a categorical column with more than 100 unique values.'+
@@ -4565,16 +4749,16 @@ class analyze_data(tk.Frame):
 
              self.f1.subplots_adjust(right = 0.88, top = 0.88, bottom = 0.12)
 
-
          ## clean up
          self.interactiveWidgetHelper.clean_frame_up()
-
+         
+		
          if  n_categories != 0 and n_cols == 0:
 
              self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
 
-
-         elif plot_type == 'scatter' and n_categories > 0 and n_cols  > 0:
+         elif plot_type == 'scatter' and n_categories >= 0 and n_cols  > 0:
+          	        	
           	self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
           	return
 
@@ -4687,8 +4871,6 @@ class analyze_data(tk.Frame):
 
          elif (n_cols>2 and  n_categories == 0 and plot_type != 'pointplot' and plot_type != 'scatter' ) or plot_type in ['boxplot','violinplot','swarm','barplot']:
 
-
-
              if n_categories == 0:
 
                  	self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
@@ -4720,7 +4902,6 @@ class analyze_data(tk.Frame):
 
                  elif n_cols > 1 and n_categories == 1:
 
-                     n_in_cat = self.sourceData.df[catnames[0]].unique().size
                      self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
                      return
 
@@ -4736,22 +4917,13 @@ class analyze_data(tk.Frame):
 
              self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
 
+
          else:
 
              if n_cols == 2:
 
                  self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
-                 return
-
-     def add_tooltip_information(self, columnNames = None):
-     	'''
-     	'''
-     	self.stop_selection(replot = False)
-             
-     	if columnNames is None:
-     		columnNames = self.DataTreeview.columnsSelected
-     		
-     	self.plt.add_tooltip_info(columnNames)
+                 return    		
 
 
 
@@ -4765,28 +4937,6 @@ class analyze_data(tk.Frame):
          plotExporter.bind_label_event(self.anno_column)
     
 
-     def configure_chart(self):
-        '''
-        Helper function to open Chart Configuration Dialog that allows
-        easy adjustment of several chart properties. It also then
-        upgrades import things in the plotter class to maintain changes like
-        box around subplots or grid lines
-        Output 
-        ========
-        None
-        '''
-        plot_type = self.plt.currentPlotType
-        if plot_type in ['PCA','corrmatrix','hclust','cluster_analysis']:
-            tk.messagebox.showinfo('Not supported..','Configuration of this plot type is currently not supported.')
-            return
-
-
-        chart_configurator = chart_configuration.ChartConfigurationPopup(self.plt,
-        													self.global_chart_parameter)
-
-        self.global_chart_parameter = chart_configurator.global_chart_parameter
-        self.plt.showSubplotBox = chart_configurator.show_box
-        self.plt.showGrid = chart_configurator.show_grid
 
      def display_graph(self,f1, hover=False, label_selection=False, main_figure= False, fig_id = None):
          '''
@@ -4799,12 +4949,15 @@ class analyze_data(tk.Frame):
          plt.rcParams['svg.fonttype'] = 'none'
 
          if main_figure == False:
-             self.annotations_dict = dict()
              self.fire = 0
              self.artist_list = list()
              self.canvas = FigureCanvasTkAgg(f1,self.frame)
              f1.canvas.mpl_connect('button_press_event',lambda e: self.export_selected_figure(e))
-             self.canvas.show()
+             if hasattr(self.canvas,'show'):
+             	self.canvas.show()
+             elif hasattr(self.canvas,'draw'):
+             	self.canvas.draw()
+             	
              self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.frame)
              self.canvas.get_tk_widget().pack(in_=self.frame,
                                                  side="top",fill='both',expand=True)
@@ -4812,29 +4965,7 @@ class analyze_data(tk.Frame):
                                                  side="top",fill='both',expand=True)
 
 
-     def change_default_color(self, button, event = None):
-         '''
-         Changing the default color means that this color is used if the
-         hue is not reserved by a categorical data separation/grouping
-         
-         
-         Output 
-         ========
-         None
-         
-         '''
-         col_get = button.cget('background')
-         if len(self.colormaps) > 0:
-             for key, cb in self.colormaps.items():
-                 cb[0].remove()
-             self.colormaps.clear()
-         if len(self.plt.plotHistory) == 0:
-         	return
-         plotHelper = self.plt.get_active_helper()
-         plotHelper.change_nan_color(col_get)
-         self.plt.set_scatter_point_properties(color=col_get)
-         self.plt.redraw()
-
+     
     
      def get_selected_data(self):
      	
@@ -4853,114 +4984,7 @@ class analyze_data(tk.Frame):
 	
 
 
-     def export_data_to_file(self, data = None, format_type = 'Excel',
-     			sheet_name = 'ExportInstantClue', initial_file = 'Untitled',
-     			checkSelection = False):
-         '''
-         Export data frame to txt or excel.
-         Parameters
-         ==========
-         
-         data			- pandas data frame. Data to be saved
-         format_type	- string. Can be 'Excel' or 'txt'. 
-         sheet_name		- string. For Excel export.
-         initial_file	- string. File name.	
-         
-         Output 
-         ==========
-         None
-         
-         '''
-         if data is None:
-         	if checkSelection:
-         		data = self.get_selected_data()
-         		if data is None:
-         			return
-         				
-         	else:
-         	
-         		data = self.sourceData.get_current_data()
-         
-         if isinstance(data, pd.DataFrame) == False:
-         	print('Data must be a pandas data frame.')
-         	return
-         	
-         if format_type not in ['Excel','txt']:
-         	print('format_type must be "Excel" or "txt".')
-         	return
-         progressBar  = Progressbar(title = 'Saving')
-         
-         if format_type == 'txt':
 
-             file_name_saving = tf.asksaveasfilename(title='Select name for saving file',
-             		defaultextension = '.txt' ,
-             		initialfile=initial_file,
-             		filetypes = [('text files', '.txt')])
-             try:
-             	data.to_csv(file_name_saving, index=None, na_rep ='NaN', sep='\t')
-            
-             except PermissionError:
-             	tk.messagebox.showinfo('Error ..','Permission denied.')
-             	progressBar.close()
-             	return
-             
-             except:
-             	tk.messagebox.showinfo('Error ..','Unknown Error. Could not save file.')
-             	return
-         else:
-              file_name_saving = tf.asksaveasfilename(title='Select name for saving file',
-              		defaultextension='.xlsx',
-              		initialfile=initial_file,
-              		filetypes = [('Excel files', '.xlsx')])
-
-              try:
-              	data.to_excel(file_name_saving, index=None, sheet_name = sheet_name, na_rep = 'NaN')
-              except:
-              	tk.messagebox.showinfo('Error ..',
-              						   'File could not be saved. Might be due to denied permission.')
-              	progressBar.close()
-              	return
-         progressBar.update_progressbar_and_label(100,'Done..')
-         progressBar.close()
-                  
-
-			
-         tk.messagebox.showinfo('Done..','File has been saved!\nLocation - {}'.format(file_name_saving))
-
-
-     def numeric_filter_dialog(self):
-         	'''
-         	Numeric Filter.
-         	Checks if all columns are from one data type.
-         	If yes  - Opens dialog to set up parameter for filtering
-         	Adds a new column indicating matches by a "+" sign.
-         	'''
-
-         	currentDataFrameId = self.sourceData.currentDataFile
-         	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
-         	if selectionIsFromSameData:
-         		self.sourceData.set_current_data_by_id(selectionDataFrameId)
-         		if self.DataTreeview.onlyNumericColumnsSelected:
-         			numFilter = numeric_filter.numericalFilterDialog(self.sourceData,self.DataTreeview.columnsSelected )
-         			filterColumnName = numFilter.columnName
-         			if filterColumnName is None:
-         				return
-         		else:
-         			tk.messagebox.showinfo('Error..','Please select only columns with floats or integeres.')
-         			return
-         		self.DataTreeview.add_list_of_columns_to_treeview(selectionDataFrameId,
-     													dataType = 'object',
-     													columnList = [filterColumnName],
-     													)
-
-
-         		self.sourceData.set_current_data_by_id(currentDataFrameId)
-         		tk.messagebox.showinfo('Done ..','Filtering performed. Column was added.')
-
-
-         	else:
-         		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
-         		return
 
 
      def open_color_configuration(self):
@@ -5080,8 +5104,6 @@ class analyze_data(tk.Frame):
                      return
              self.categorical_column_handler('Annotate scatter points')
 
-
-
      def reset_dicts_and_plots(self):
         '''
         Resetting dicts.
@@ -5097,7 +5119,8 @@ class analyze_data(tk.Frame):
         self.plt.redraw()
 
 
-     def source_file_upload(self, pathUpload = None, resetTreeEntries = True, mergeMultipleFiles = False):
+     def source_file_upload(self, pathUpload = None, resetTreeEntries = True, 
+     						mergeMultipleFiles = False, loadTDTTanks = False):
           """Upload file, extract data types and insert columns names into the source data tree"""
           
           if resetTreeEntries and len(self.sourceData.dfs) != 0:
@@ -5122,8 +5145,14 @@ class analyze_data(tk.Frame):
           	
           	fileImporter = txt_file_importer.multipleTxtFileLoader() 
           	
-          	uploadedDataFrame, fileName ,naString = fileImporter.get_results()
+          	uploadedDataFrame, fileName , naString = fileImporter.get_results()
           	if len(uploadedDataFrame) == 0:
+          		return
+
+          elif loadTDTTanks:
+          	
+          	uploadedDataFrame, fileName ,naString = self.import_TDT()
+          	if uploadedDataFrame is None:
           		return
 
           elif '.xsl' in fileName or '.xlsx' in fileName:
@@ -5206,19 +5235,21 @@ class analyze_data(tk.Frame):
           self.sourceData.replaceObjectNan = naString
 
           if resetTreeEntries:
+          	self.set_up_plotter_and_workflow()
 			
-          	self.plt = plotter._Plotter(self.sourceData,self.f1, self.workflow)
-          	self.workflow.add_handles(plotter = self.plt)
-          	self.plt.set_auc_collection(self.aucResultCollection)
-          	self.plt.set_scatter_point_properties(GREY,round(float(self.alpha_selected.get()),2),
+     def set_up_plotter_and_workflow(self):
+     	'''
+     	'''
+     	self.plt = plotter._Plotter(self.sourceData,self.f1, self.workflow)
+     	self.workflow.add_handles(plotter = self.plt)
+     	self.plt.set_auc_collection(self.aucResultCollection)
+     	self.plt.set_scatter_point_properties(GREY,round(float(self.alpha_selected.get()),2),
           								int(float(self.size_selected.get())))
-          	
-          	for boolVar in ['plotCumulativeDist','circulizeDendrogram','showCluster']:
-          		
-          		bool = getattr(self,boolVar).get()
-          		setattr(self.plt,boolVar,bool)
-          	
-          	self.clean_up_dropped_buttons()
+     	for boolVar in ['plotCumulativeDist','circulizeDendrogram','showCluster']:
+     		bool = getattr(self,boolVar).get()
+     		setattr(self.plt,boolVar,bool)
+			
+     	self.clean_up_dropped_buttons()
 
      def update_all_dfs_in_treeview(self):
      	'''
@@ -5239,16 +5270,6 @@ class analyze_data(tk.Frame):
      	del mergeDialog
 
 
-     def add_new_dataframe(self,newDataFrame,fileName):
-     	'''
-     	Add new subset to source data collection and treeview
-     	'''
-     	id = self.sourceData.get_next_available_id()
-     	self.sourceData.add_data_frame(newDataFrame, id=id, fileName=fileName)
-     	dict_ = self.sourceData.dfsDataTypesAndColumnNames
-     	file_names = self.sourceData.fileNameByID
-
-     	self.DataTreeview.add_all_data_frame_columns_from_dict(dict_,file_names)
 
 
      def icon_switch_due_to_rescale(self,event):
@@ -5286,6 +5307,7 @@ class analyze_data(tk.Frame):
                     self.sliceMarkFrameButtons['label'].configure(image = self.label_icon_norm)
                     self.sliceMarkFrameButtons['tooltip'].configure(image = self.tooltip_icon_norm)
                     self.sliceMarkFrameButtons['selection'].configure(image = self.selection_icon_norm)
+                    
                     self.settingButton.configure(image = self.setting_icon_norm)
                     self.workflowButton.configure(image=self.workflow_icon_norm)
 
@@ -5487,10 +5509,57 @@ class analyze_data(tk.Frame):
            self.remove_swarm_icon = self.remove_swarm_icon_
      
      def import_TDT(self,event = None):
-     	dir = tf.askdirectory()
-     	import_TDT.TDTTankToPandas(dir)
      	
-
+     	dir = tf.askdirectory()
+     	if dir != '':
+     		
+     		importer = import_TDT.TDTTankToPandas(dir)
+     	
+     		data, columns, timeColumn, tankName = importer.get_raw_signal()
+     	
+     		df = pd.DataFrame(data, columns = columns)
+     		df['time [sec]'] = np.linspace(0,timeColumn, num = len(df.index), endpoint = True)
+     	
+     		return df, 'TDTtank_.{}'.format(tankName) ,'-'
+     	else:
+     		return None, None, None
+     	#self.add_new_dataframe(df,'TDTtank')
+     
+     def paste_file_to_clipboard(self,event = None):
+     	'''
+     	Reads clipboard and paste the data into Instant Clue.
+     	'''
+     	df = pd.read_clipboard()
+     	if df.empty:
+     		return
+     	if len(self.sourceData.dfs) == 0:
+     		self.set_up_plotter_and_workflow()
+     	self.add_new_dataframe(df,'fromClipboard')
+     	self.update_idletasks()
+     	tk.messagebox.showinfo('Copied.',
+     		'Data from clipboard copied and added.\nAt the moment only the dafault settings can be used.')
+	
+     def get_update_text(self):
+     	'''
+     	Read update data from text from instant clue webserver
+     	'''
+     	try:
+     		text = 'None'
+     		link = paperUrl
+     		#try:
+     		data = urlopen("http://www.instantclue.uni-koeln.de/updates.txt")
+     		for n,line in enumerate(data):
+     			#line = str(line).replace('\b','').replace('\n','').replace('\r','')
+     			line = line.decode("utf-8")
+     			if n == 0:
+     				text = line.replace('\r','').replace('\n','')
+     			elif n == 1:
+     				link = line.replace('\r','').replace('\n','')
+     			else:
+     				break
+     		return text, link
+     	except:
+     		return 'No internet connection' , 'http://www.instantclue.uni-koeln.de'
 
      def grid_widgets(self,controller):
            '''
@@ -5509,6 +5578,16 @@ class analyze_data(tk.Frame):
                            justify=tk.LEFT,bg=MAC_GREY)
 
            labelMain.grid(row=0, pady=5, padx=20, sticky=tk.NW, columnspan=5)
+           
+           text,link = self.get_update_text()
+           
+           labelUpdate = tk.Label(self, text = ':: Updates: {} ::'.format(text),
+           						font=LARGE_FONT, fg = '#420d09', justify = tk.CENTER, bg = MAC_GREY)
+           
+           labelUpdate.grid(row=0,pady=5,padx=20,column=2,columnspan=2)#, sticky=tk.W)
+           labelUpdate.bind('<Button-1>',lambda event, link = link: webbrowser.open(link))
+           make_label_button_like(labelUpdate)
+           
 
            self.f1 = plt.figure(figsize = (19.5,12.8), facecolor='white')
            #### styles
@@ -5732,10 +5811,13 @@ class analyze_data(tk.Frame):
            self.source_treeview.bind("<Delete>", self.delete_column)
            self.source_treeview.bind("<Escape>", self.DataTreeview.deselect_all_items)
            self.source_treeview.bind("<Double-Button-1>", lambda event : self.rename_columns(event=event))
+           
 
            if platform == 'MAC':
 
            		self.source_treeview.bind('<Command-c>', lambda event: self.copy_file_to_clipboard(fromSelection = True))
+           		self.source_treeview.bind('<Command-v>', lambda event: self.paste_file_to_clipboard())
+           		
            		self.source_treeview.bind('<Command-f>', lambda event: self.categorical_column_handler('Search string & annotate'))
            		self.source_treeview.bind('<Command-r>', lambda event: findAndReplace.findAndReplaceDialog(dfClass = self.sourceData, dataTreeview = self.DataTreeview))
            		self.source_treeview.bind('<Command-n>', lambda event: self.numeric_filter_dialog())
@@ -5750,8 +5832,9 @@ class analyze_data(tk.Frame):
            		self.source_treeview.bind('<Control-n>', lambda event: self.numeric_filter_dialog())
            		self.source_treeview.bind('<Control-m>', lambda event: self.combine_selected_columns())
            		self.source_treeview.bind('<Control-z>', lambda event: self.workflow.undo(event))
+           		self.source_treeview.bind('<Control-v>', lambda event: self.paste_file_to_clipboard())
 
-           self.source_treeview.bind(right_click, self.on_slected_treeview_button3)
+           self.source_treeview.bind(right_click, self.post_treeview_menu)
 
 
            sourceScroll = ttk.Scrollbar(self, orient = tk.HORIZONTAL, command = self.source_treeview.xview)

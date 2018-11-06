@@ -39,10 +39,10 @@ class storeAnovaResultsClass(object):
 									  'results':resultDf}
 		
 	def get_anova_results(self):
-	
+		'''
+		'''
 		return self.anovaResults
 		
-	
 	
 
 class anovaCalculationDialog(object):
@@ -54,7 +54,6 @@ class anovaCalculationDialog(object):
 	def __init__(self,anovaType,dependentVariable,
 					factors,dfClass,anovaTestsCollection):
 		'''
-		
 		'''
 		
 		self.anovaType = anovaType
@@ -268,7 +267,9 @@ class anovaCalculationDialog(object):
 
 
 class anovaResultDialog(object):
-
+	'''
+	Class to display anova results.
+	'''
 
 	def __init__(self, anovaTestCollection):
 	
@@ -307,7 +308,7 @@ class anovaResultDialog(object):
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Anova Results')
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w=790
+		w=990
 		h=680
 		self.toplevel = popup		
 		self.center_popup((w,h))

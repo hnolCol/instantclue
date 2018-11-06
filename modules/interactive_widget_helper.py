@@ -57,12 +57,13 @@ class interactiveWidgetsHelper(object):
 		self.selectedColors = dict() 
 		self.colorMapDict = dict()
 		
-	def create_widgets(self, mode = 'colorLevel', plotter = None, droppedButton = None):
+	def create_widgets(self, mode = 'colorLevel', plotter = None, analyzeData = None ,droppedButton = None):
 		'''
 		Create tkinter widgets
 		'''
 		self.mode = mode 
 		self.plotter = plotter
+		self.analyzeData = analyzeData
 		if plotter.currentPlotType == 'line_plot':
 			self.helper = plotter.nonCategoricalPlotter.linePlotHelper
 		elif plotter.nonCategoricalPlotter is not None:
@@ -73,7 +74,7 @@ class interactiveWidgetsHelper(object):
 		if self.mode == 'colorLevel':
 			self.clear_color_helper_dicts()
 			self.colorMapDict = self.helper.get_current_colorMapDict()
-		
+			if self.colorMapDict is None: return
 			
 			self.defaultColor = plotter.colorScatterPoints
 			self.defaultColorHex = col_c(self.defaultColor)			
@@ -110,7 +111,7 @@ class interactiveWidgetsHelper(object):
 		self.colorframe = tk.Frame(self.frame, bg=MAC_GREY, relief=tk.GROOVE)
 		self.colorframe.grid(columnspan=2, sticky=tk.EW)			
 		
-		catColumnList = self.helper.sizeStatsAndColorChanges['change_color_by_categorical_columns']
+		catColumnList = self.helper.get_size_color_categorical_column()
 				
 		for column in catColumnList:
 			headerLabel = tk.Label(self.colorframe, text = str(column)[:17], bg = MAC_GREY)
@@ -132,7 +133,8 @@ class interactiveWidgetsHelper(object):
 		self.bind_events_to_label(colorLabel)
 		
 		colorLabel.grid(column= 0, padx = 3, sticky=tk.W,pady=1)
-		groupLabel = tk.Label(self.colorframe, text = str(group)[:16], bg = MAC_GREY) 
+		groupLabel = tk.Label(self.colorframe, text = str(group)[:16], bg = MAC_GREY)
+		groupLabel.bind(right_click, lambda event, group = group :self.subset_group(event,group)) 
 		CreateToolTip(groupLabel,title_ = group,text = 'The color for each categorical value'+
 													   ' can be adjusted:\nYou can either disable'+
 													   ' the color highlight (left click)\nOr define'+
@@ -146,6 +148,20 @@ class interactiveWidgetsHelper(object):
 										'groupLabel': groupLabel}
 	
 	
+	def subset_group(self,event,group):
+		'''
+		'''
+		try:
+			self.colorMapDict = self.helper.get_current_colorMapDict()
+			boolidx = self.helper.data.loc[:,'color'] == self.colorMapDict[group]
+			subsetData = self.analyzeData.sourceData.get_data_by_id(\
+				self.plotter.get_dataID_used_for_last_chart()).iloc[self.helper.data[boolidx].index]
+			
+			self.analyzeData.add_new_dataframe(subsetData,'ScatterSubset_color_{}'.format(group))
+			tk.messagebox.showinfo('Done..','Subset created. Note that subsetting is done by color.'
+			' If the color is not unique for the selected group, results might be unexpected.')
+		except:
+			tk.messagebox.showinfo('Error..','There was an unknown error.')
 	
 	def bind_events_to_label(self, widget):
 		'''
@@ -213,7 +229,7 @@ class interactiveWidgetsHelper(object):
 		self.colorMapDict = self.helper.get_current_colorMapDict()
 		if self.colorMapDict is None:
 			return
-		rawColorMapDict = self.helper.rawColorMapDict 
+		rawColorMapDict = self.helper.get_raw_colorMapDict()
 		# we need the raw colorMap with user's changed to get the correct color
 		
 		for group, color in rawColorMapDict.items():
@@ -241,7 +257,7 @@ class interactiveWidgetsHelper(object):
 	def apply_changes(self):
 		'''
 		'''
-		self.helper.categoricalColorDefinedByUser = self.categoryToNewColor
+		self.helper.set_user_def_colors(self.categoryToNewColor)
 		self.helper.update_colorMap()
 		self.plotter.redraw()
 				

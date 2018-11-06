@@ -61,7 +61,6 @@ class correlationDialog(object):
 		self.toplevel.protocol("WM_DELETE_WINDOW", self.close_toplevel)
 		cont = tk.Frame(self.toplevel, background = MAC_GREY)
 		cont.pack(expand=True, fill='both')
-		#cont.grid_columnconfigure(5,weight=1)
 		self.cont = cont
 		
 		

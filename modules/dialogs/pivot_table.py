@@ -38,6 +38,8 @@ class pivotDialog(object):
 		self.build_toplevel() 
 		self.build_widgets()
 		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window()
 		
 			
@@ -55,7 +57,6 @@ class pivotDialog(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Pivot Table') 
-		popup.grab_set() 
         
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=340

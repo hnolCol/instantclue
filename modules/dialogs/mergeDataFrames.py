@@ -97,6 +97,8 @@ class mergeDataFrames(object):
 		self.build_toplevel()
 		self.build_widgets()
 		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window()
 	
 	def close(self,event=None):
@@ -391,9 +393,11 @@ class mergeDataFrames(object):
 		=========
 		Output	- None 
 		'''
-		
-		labelTree = tk.Label(self.treeviewFrame, text = caption + '({})'.format(self.dfNames[caption]), bg=MAC_GREY)
-		labelTree.grid(row=row, sticky=tk.W, column = column)
+		if self.method == 'Merge': 
+			labelTree = tk.Label(self.treeviewFrame, 
+				text = caption + '({})'.format(self.dfNames[caption]), 
+				bg=MAC_GREY)
+			labelTree.grid(row=row, sticky=tk.W, column = column)
 		treeview = ttk.Treeview(self.treeviewFrame,show='tree', 
 							style='source.Treeview')
 								 

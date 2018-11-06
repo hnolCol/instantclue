@@ -207,10 +207,8 @@ class settingsDialog(object):
 	def set_default_value(self, option):
 		'''
 		'''
-		print(self.type.get())
 		if self.type.get() == 'Hierarchical Clustering':
 			return getattr(self.plotter,attrNames[option])
-		
 		elif self.type.get() == 'Dimensional Reduction':
 			if option == 'Components':
 				return self.dimRedCollection.nComponents	
@@ -226,9 +224,6 @@ class settingsDialog(object):
 				return self.plotter.numbBins
 			elif option == 'Scale counts (1-0)':
 				return str(self.plotter.scaleBinsInScatter)
-		
-			
-			
 
 	def change_settings(self):
 		'''
@@ -250,7 +245,9 @@ class settingsDialog(object):
 			ncomps = self.get_number_from_string(self.settingsVar['Components'].get())
 			if ncomps is None:
 				return
-						
+			elif ncomps < 3:
+				tk.messagebox.showinfo('Error..','Minimum number of calculated components is 3. Falling back to the default = 3')
+				ncomps = 3
 			self.dimRedCollection.set_max_comps(ncomps)	
 		
 		elif type == 'Binned Scatter':

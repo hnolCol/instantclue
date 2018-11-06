@@ -49,7 +49,8 @@ Set6 = ["#444444", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 
 oneColorSeq = ['Greys','Blues','Greens','Purples','Reds']
 twoColorSeq = ['BuGn','PuBu','PuBuGn','BuPu','OrRd']
-diverging = ['BrBG','PuOr','Spectral','RdBu','RdYlBu','RdYlGn']
+diverging = ['BrBG','PuOr','Spectral','RdBu','RdBu_r',
+	'RdYlBu','RdYlGn','viridis','inferno','cubehelix']
 qualitative = ['Accent','Dark2','Paired','Pastel1','Pastel2','Set1','Set2','Set3']
 
 
@@ -59,7 +60,7 @@ class colorMapHelper(object):
 	'''
 	def __init__(self):
 	
-		self.path = os.path.join(path_file,'Data','colors','customPalettes.pkl')
+		self.path = os.path.join(path_file,'data','colors','customPalettes.pkl')
 		self.customColors = OrderedDict()
 		self.add_pre_defined_cols()
 		self.open_custom_colors()

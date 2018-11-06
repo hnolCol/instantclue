@@ -25,7 +25,7 @@ import matplotlib.patches as mpatches
 import matplotlib.ticker as mtick							
 					
 import seaborn as sns
-					
+import numpy as np	
 class axisStyler(object):
 	'''
 	little class to efficiently style axis. 
@@ -192,15 +192,27 @@ class axisStyler(object):
 				self.ax.yaxis.set_major_locator(mtick.MaxNLocator(nTicksOnYAxis))    
 			
 		if nTicksOnXAxis is not None:
+			xAxisTickLabels = self.ax.get_xticklabels() 			
+			
+			if len(xAxisTickLabels) <= nTicksOnXAxis:
+				if rotationXTicks is not None:
+					self.rotate_axis_tick_labels(rotationXTicks)
+				return
+				
 			if self.canvasHasBeenDrawn:
-				xAxisTickLabels = self.ax.get_xticklabels() 
+				
 				numbXAxisTickLabels = len(xAxisTickLabels) 
 				newXLabelsIndexes = [int(round(x,0)) for x in np.linspace(0,numbXAxisTickLabels-1, num = nTicksOnXAxis)]
 			
 				newxLabels = [getLabelOrEmptyString(label,i,newXLabelsIndexes) for i,label in enumerate(xAxisTickLabels)]
 			
 				self.ax.set_xticklabels(newxLabels, rotation = rotationXTicks)
+				
 			else:
-				self.ax.xaxis.set_major_locator(mtick.MaxNLocator(nTicksOnXAxis))    
+				
+				self.ax.xaxis.set_major_locator(mtick.MaxNLocator(nTicksOnXAxis)) 
+				self.rotate_axis_tick_labels(rotationXTicks)
+		
 		elif rotationXTicks is not None:
+			
 			self.rotate_axis_tick_labels(rotationXTicks)

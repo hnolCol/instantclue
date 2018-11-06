@@ -31,7 +31,8 @@ class simpleUserInputDialog(object):
 		self.selectionOutput = OrderedDict()
 		self.build_toplevel() 
 		self.build_widgets()
-		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window()
 		
 			
@@ -49,7 +50,6 @@ class simpleUserInputDialog(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title(self.title) 
-		popup.grab_set() 
 		popup.bind('<Escape>', self.close) 
 		popup.bind('<Return>',self.save_selection)
 		popup.protocol("WM_DELETE_WINDOW", self.close)
@@ -144,6 +144,8 @@ class simpleListboxSelection(object):
 		self.build_toplevel()
 		self.build_widgets()
 		self.fill_listbox()
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window()
 	
 	def close(self,event = None, discard = True):
@@ -162,7 +164,6 @@ class simpleListboxSelection(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title(self.title) 
-		popup.grab_set() 
 		popup.bind('<Escape>', self.close) 
 		popup.bind('<Return>',self.define_selection)
 		popup.protocol("WM_DELETE_WINDOW", self.close)

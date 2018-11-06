@@ -41,6 +41,7 @@ import numpy as np
 from scipy.signal import lfilter
 from sklearn.neighbors import KernelDensity
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.preprocessing import scale
 from itertools import compress, chain
 import pandas as pd
 
@@ -61,7 +62,7 @@ calculations = {'log2':np.log2,
 					'-log2':lambda x: np.log2(x)*(-1),
 					'log10':np.log10,
 					'-log10':lambda x: np.log10(x)*(-1),
-					'ln':np.log,
+					'ln':lambda x: np.log(x),
 					'Z-Score':lambda x: z_score(x),
 					}	
 	
@@ -450,13 +451,31 @@ class DataCollection(object):
 			pass
 		elif isinstance(columnLabelList,str):
 			columnLabelList = [columnLabelList]
-		dfnoNaN = self.df.dropna(how = how,subset=columnLabelList, thresh=thresh)
-		idxNaN = [i for i in self.df.index.tolist() if i not in dfnoNaN.index.tolist()]
-		self.save_dropped_rows(self.currentDataFile,idxNaN)
+		#import time 
+		#t1 = time.time() 
+		if len(columnLabelList) == 1:
+			bool = np.invert(np.isnan(self.df[columnLabelList].values)) 
+			dfnoNaN = self.df[bool.tolist()]
+		
+		else:
+		
+			dfnoNaN = self.df.dropna(how = how,subset=columnLabelList, thresh=thresh)
+		
+		if len(self.df.index) > 10000:
+		
+			idxNaN_txt = '\nDf to big to save. Cannot be undone.\n'
+		
+		else:
+			boolIn = np.isin(self.df.index,dfnoNaN.index)
+			idxNaN = self.df.index[boolIn == False]
+			idxNaN_txt = np.sum(boolIn == False)
+			self.save_dropped_rows(self.currentDataFile,idxNaN)
+		
 		self.df = self.dfs[id] = dfnoNaN
 		self.update_columns_of_current_data()
+		#print(time.time()-t1)
 		
-		return len(idxNaN)
+		return idxNaN_txt
 				
 			
 	def save_dropped_rows(self,id=None,rowIdx=None,reverse=False):
@@ -635,7 +654,32 @@ class DataCollection(object):
 		
 		self.set_current_data_by_id(id=id)
 		self.export_current_data(format=format) 		
-	
+
+	def factorize_column(self,columnLabelList):
+		'''
+		Factorizes categories in columns. 
+		'''
+		if isinstance(columnLabelList,list) == False:
+			columnLabelList = [columnLabelList]
+		dfLabels = pd.DataFrame(columns = ['Category','Factors'])
+		newColumnNames = [self.evaluate_column_name('{}_fact'.format(col), useExact = True) for col in columnLabelList]
+		for n,column in enumerate(columnLabelList):
+			
+			y,yLabels = pd.factorize(self.df[column].values)
+			df = pd.DataFrame() 
+			df['Category_{}'.format(column)] = yLabels
+			df['Factors_{}'.format(column)] = list(range(yLabels.size))
+			if n == 0:
+				dfLabels = df
+			else:
+				dfLabels = pd.concat([dfLabels,df], axis = 1, ignore_index = True)
+			
+			self.df[newColumnNames[n]] = y
+		dfColumns = [('Category_{}'.format(column),'Factors_{}'.format(column)) for column in columnLabelList]
+		dfLabels.columns = list(sum(dfColumns, ()))
+		return newColumnNames, dfLabels
+		
+		
 	def fill_na_in_columnList_by_rowMean(self,columnLabelList):
 		'''
 		'''
@@ -668,14 +712,40 @@ class DataCollection(object):
 		
 	def fit_transform(self,obj,columns,namePrefix = 'Scaled'):
 		'''
+		Fit and transform data using an object from the scikit library.
 		'''
+		newColumnNames = [self.evaluate_column_name('{}{}'.format(namePrefix,column), useExact = True)
+						 	for column in columns]
 		
-		for column in columns:
-			X = self.df[column].dropna().values.reshape(-1, 1)
-			normX = getattr(obj,'fit_transform')(X)
+		df, idx = self.row_scaling(obj,columns)
+		df_ = pd.DataFrame(df,index = idx, columns = newColumnNames)
+		newColumnNames = self.join_df_to_currently_selected_df(df_, exportColumns = True)
+		return newColumnNames
+		#return
+		collectDF = pd.DataFrame()
+		for n,column in enumerate(columns):
+			X = self.df[column].dropna()
+			normX = getattr(obj,'fit_transform')(X.values.reshape(-1, 1))
+			df = pd.DataFrame(normX,index = X.index, columns = [newColumnNames[n]])
 			
+			if len(collectDF.index) == 0:
+				collectDF = df
+			else:
+				collectDF = pd.concat([collectDF,df],axis=1)
+		newColumnNames = self.join_df_to_currently_selected_df(collectDF, exportColumns = True)
+		return newColumnNames
 		
-		print(normX)
+		#print(collectDF)
+			
+	def row_scaling(self,obj,columnNames):
+		"""
+		"""
+		data = self.df[columnNames].dropna()
+		X = np.transpose(data.values)
+		normX = getattr(obj,'fit_transform')(X)
+		return np.transpose(normX), data.index
+		
+		
 	
 	
 	def get_categorical_columns_by_id(self,id = None):
@@ -977,6 +1047,7 @@ class DataCollection(object):
 		else:
 			storedData = self.dfs[id]
 		columnsJoinDf = otherDf.columns
+		
 		if len(definedColumnsList) == 0:
 			columnsMissing = [columnName for columnName in storedData.columns  if columnName\
 			 not in columnsJoinDf]
@@ -985,6 +1056,7 @@ class DataCollection(object):
 			# values are taken from
 			columnsMissing = [columnName for columnName in definedColumnsList if columnName \
 			not in columnsJoinDf and columnName in storedData.columns]
+		
 		if len(columnsMissing) != 0: 
 			resultDataFrame = otherDf.join(storedData[columnsMissing])
 			return resultDataFrame
@@ -1064,20 +1136,29 @@ class DataCollection(object):
 		'''	
 		newColumnNames = [self.evaluate_column_name('{}_{}'.format(transformation,columnName)) \
 		for columnName in columnNameList]
-		s1 = time.time() 
+		
 		if transformation == 'Z-Score_row':
 			transformation = 'Z-Score'
+			t1 = time.time()			
 			axis_ = 1
 		elif transformation == 'Z-Score_col':
 			transformation = 'Z-Score' 
 			axis_ = 0 
 		else:
 			axis_ = 0 
-		#surprisingly this is faster than simply np.log2(self.df[columnNameList])
-		transformedDataFrame = self.df[columnNameList].apply(calculations[transformation], axis=axis_)
-		transformedDataFrame.columns = newColumnNames
+		
+		if 'Z-Score' in transformation:
+			transformedDataFrame = pd.DataFrame(scale(self.df[columnNameList].values, axis = axis_),
+				columns = newColumnNames, index = self.df.index)
+		else:
+			transformedDataFrame = pd.DataFrame(
+							calculations[transformation](self.df[columnNameList].values),
+							columns = newColumnNames,
+							index = self.df.index)
+			
 		if transformation != 'Z-Score':
 			transformedDataFrame[~np.isfinite(transformedDataFrame)] = np.nan
+		
 		self.df[newColumnNames] = transformedDataFrame
 		self.update_columns_of_current_data()
 		
@@ -1267,7 +1348,9 @@ class DataCollection(object):
 			indexColumnInData = self.df_columns.index(columnName)
 			indexInTreeview = self.dfsDataTypesAndColumnNames[self.currentDataFile]['object'].index(columnName)
 			
-			newColumnNames = df_split.columns = ["{}_[by_{}]_{}".format(columnName,splitString,colIndex) for colIndex in expandedSplitOnDataColumns]
+			newColumnNames = df_split.columns = [self.evaluate_column_name("{}_[by_{}]_{}".format(columnName,splitString,colIndex), 
+				useExact = True) for colIndex in expandedSplitOnDataColumns]
+				
 			df_split.fillna(self.replaceObjectNan,inplace=True)
 			self.insert_data_frame_at_index(df_split,newColumnNames,indexColumnInData)
 			

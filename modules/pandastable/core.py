@@ -4,8 +4,8 @@
 Comment:
 This great packages was created by Damien Ferrell. We included it in
 the module path of Instant Clue because we modified especially the menu
-to not have style/logic errors for users. (e.g. you can change an upload
-new data sets otherwise that are not tracked easily by Instant Clue.
+to not have style/logic errors for users. (e.g. you cannot change and upload
+new data sets otherwise they are not tracked easily by Instant Clue.
 Licence is below and also in the folder modules/pandastable.
 All changes are indicated by a "#changed" before the section
 '''
@@ -232,7 +232,7 @@ class Table(Canvas):
         if noRowIndex:
         	self.rowheader = RowHeader(self.parentframe, self, width=self.rowheaderwidth)
         	if colorsForRow is not None:
-        		## CHNAGED
+        		## CHANGED
         		self.rowheader.color = colorsForRow
         self.tablecolheader = ColumnHeader(self.parentframe, self)
         self.rowindexheader = IndexHeader(self.parentframe, self)
@@ -1957,7 +1957,11 @@ class Table(Canvas):
         df = self.model.df.copy()
         #flatten multi-index
         df.columns = df.columns.get_level_values(0)
-        df.to_clipboard(sep=',')
+        try:
+        	df.to_clipboard(sep=',')
+        except:
+        	tk.messagebox.showinfo('Error ..',
+        		'No copy/paste mechanism found for your system. Please export via txt files.')
         return
 
     def pasteTable(self, event=None):

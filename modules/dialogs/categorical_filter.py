@@ -132,6 +132,8 @@ class categoricalFilter(object):
 		self.prepare_data()
 		self.display_data()
 		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window()
 		
 	def close(self,event = None):
@@ -151,7 +153,6 @@ class categoricalFilter(object):
 		'''
 		popup = tk.Toplevel(bg=MAC_GREY) 
 		popup.wm_title('Categorical Filter - '+self.operationType) 
-		popup.grab_set()
 		popup.bind('<Escape>', self.close) 
         
 		popup.protocol("WM_DELETE_WINDOW", self.close)
@@ -284,7 +285,9 @@ class categoricalFilter(object):
  			elif self.plotter.categoricalPlotter.scatterWithCategories is not None:
  				self.numericColumns = self.plotter.categoricalPlotter.scatterWithCategories.numericalColumns
  			
- 			if self.operationType != 'Find entry in line plot': # allows NaNs 
+ 				
+ 			if self.operationType != 'Find entry in line plot' and self.plotter.currentPlotType != 'PCA': 
+ 				# line plot allows NaNs , PCA already filtered
  				self.df = self.df.dropna(subset=self.numericColumns)
  			
  			if self.columnForFilter not in self.df.columns:
@@ -794,10 +797,8 @@ class categoricalFilter(object):
 		'''
 		rowsSelected = self.get_selected_row()
 		selection = self.pt.model.df.iloc[rowsSelected[:1]]
-		labelColumn = selection.columns.values.tolist()
-		
+		labelColumn = selection.columns.values.tolist()	
 		index = selection.index.tolist()[0]		
-		
 		## add this column as label 
 		self.plotter.nonCategoricalPlotter._hclustPlotter.add_label_column(labelColumn)
 		self.plotter.nonCategoricalPlotter._hclustPlotter.find_index_and_zoom(index)

@@ -59,8 +59,11 @@ from modules.plots.scatter_with_categories import scatterWithCategories, binnedS
 from modules.plots.grid_search_results import gridSearchVisualization 
 from modules.plots.line_plot import linePlotHelper
 from modules.dialogs import curve_fitting
+from modules.plots.dim_reduction import dimensionalReductionPlot
 from modules.plots.grid_search_results import chartToolTip
 from modules.plots.axis_styler import axisStyler
+#from modules.plots.scatter_annotations import annotateScatterPoints
+from modules.plots.scatter_plotter import scatterPlot    			
 from .utils import *
 
 if platform == 'WINDOWS':
@@ -94,7 +97,7 @@ class _Plotter(object):
 		self.aggMethod = 'mean'
 		
 		self.binnedScatter = False
-		
+		self.updatingAxis = False
 		self.axesLimits = OrderedDict()
 		self.clusterEvalScores = OrderedDict() 
 		self.statistics = OrderedDict()
@@ -136,6 +139,14 @@ class _Plotter(object):
 		self.addSwarm =  False
 		self.disconnect_event_bindings()
 		self.figure.clf()
+	
+	def delete_legend(self,ax):	
+		'''
+		Gets the current legend and deletes it. 
+		'''
+		legend = ax.get_legend()
+		if legend is not None:
+			legend.remove() 	
 	
 	def disconnect_event_bindings(self):
 		'''
@@ -242,7 +253,6 @@ class _Plotter(object):
 			self.clean_up_figure()
 			self.redraw()
 			
-		
 		else:
 			
 			self.reinitiate_chart()
@@ -283,6 +293,20 @@ class _Plotter(object):
 		'''
 		'''
 		return self.plotProperties[self.plotCount]
+
+	def attach_color_data(self, categoricalColumn, data, dataID, colorMapDict):
+		'''
+		'''
+		data = self.dfClass.join_missing_columns_to_other_df(data,id=dataID,
+																  definedColumnsList=categoricalColumn)	
+
+		if len(categoricalColumn) == 1:
+			data.loc[:,'color'] = data[categoricalColumn[0]].map(colorMapDict)
+		else:
+			data.loc[:,'color'] = data[categoricalColumn].apply(tuple,axis=1).map(colorMapDict)
+		return data
+
+
 				
 	def get_lenghts_of_lists(self,inputLists):
 		'''
@@ -350,29 +374,25 @@ class _Plotter(object):
 		else:
 			return None	
 					
-	def redraw(self):
+	def redraw(self, backgroundUpdate = True):
 		'''
 		Redraws the canvas
 		'''
 		for tooltip in self.tooltips.values():
-			tooltip.set_invisible(update =False)
+			tooltip.set_invisible(update = False)
+			
+		self.set_hover_points_invisible()
 		
 		self.figure.canvas.draw() 
 		
 		self.update_tooltip_background()
+					
+		self.update_background_in_scatter_plots()
 			
-	def update_tooltip_background(self, event=None, redraw_ = False, updateProps = False):
-		'''
-		Updates the background of a tooltip object.
-		'''	
-		for tooltip in self.tooltips.values():
-			tooltip.update_background(redraw = redraw_)
-			if updateProps:
-				tooltip.extract_ax_props()
+
 	def set_scatter_point_properties(self,color = None,alpha = None,size = None):
 		'''
 		'''
-		
 		if size is not None:
 			self.sizeScatterPoints = size
 			self.settings_points['sizes'] = [size]
@@ -423,14 +443,9 @@ class _Plotter(object):
 		for ax in axes:  
 				axCollections = ax.collections
 				for collection in axCollections:
-					
 					collection.set(**self.settings_points)
-				#leg = ax.get_legend()
-				#if leg is not None and self.splitCategories: # if this is false we used patches to show legend
-					#for handle in leg.legendHandles:
-				#		handle.set(**self.settings_points)
 		
-	def set_limits_by_plotCount(self,plotCount,subplotNum,axis):
+	def set_limits_by_plotCount(self,plotCount,subplotNum,ax):
 		'''
 		Define axis limits
 		'''
@@ -559,10 +574,50 @@ class _Plotter(object):
 		
 		self.gridSearchData = data
 	
+	def get_scatter_plots(self):
+		'''
+		'''
+		helper = self.get_active_helper()
+		if helper is None:
+			return {}
+		scatterPlots = helper.get_scatter_plots()
+		return scatterPlots
+
+	def annotate_in_scatter_points(self, calledFromScat ,idx):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			if scatterPlot != calledFromScat:
+				scatterPlot.set_hover_data(idx)
+		
+	def set_hover_points_invisible(self, calledFromScat = None):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			if calledFromScat is not None and scatterPlot != calledFromScat:
+				scatterPlot.set_invisible()	
+			else:
+				scatterPlot.set_invisible()	
+
+	def update_background_in_scatter_plots(self):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.update_background(redraw=False)			
+
+	def add_tooltip_to_scatter(self, annotationColumns):
+		'''
+		'''
+		scatterPlots = helper.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.add_tooltip(annotationColumns)		
+	
 	def get_grid_search_results(self):
 		'''
 		'''
-		
 		return self.gridSearchData 
 	
 	def display_statistics(self,ax, axNumber = None, plotCount = None): ###IMPORTANT WITH ID OF AXIS!!
@@ -653,7 +708,6 @@ class _Plotter(object):
 	def get_size_interval(self):
 		'''
 		'''
-		
 		return self.minSize, self.maxSize
 
 	def set_dist_settings(self,bool = False):
@@ -778,7 +832,16 @@ class _Plotter(object):
 			return collection
 		else:
 			return None
-
+			
+	def update_tooltip_background(self, event=None, redraw_ = False, updateProps = False):
+		'''
+		Updates the background of a tooltip object.
+		'''	
+		for tooltip in self.tooltips.values():
+			tooltip.update_background(redraw = redraw_)
+			if updateProps:
+				tooltip.extract_ax_props()
+				
 
 	def add_tooltip_info(self,annotationColumnList,scatterCombination=None,redraw=True):
 		'''
@@ -794,15 +857,21 @@ class _Plotter(object):
 				axScats.append(ax)
 				
 		axes = self.get_axes_of_figure()		
-		
+		if self.currentPlotType in ['scatter','PCA'] and self.categoricalPlotter is None:
+			self.nonCategoricalPlotter.add_tooltip_to_scatter(annotationColumnList)
+			return
+			
 		for n,ax in enumerate(axes):
 			if (self.currentPlotType in ['scatter','scatter_matrix','line_plot']) or \
-			(self.currentPlotType in ['cluster_analysis','PCA'] and n == 0) or \
+			(self.currentPlotType == 'cluster_analysis' and n == 0) or \
 			(self.currentPlotType  in ['hclust','corrmatrix'] and n == 2) or \
 			(self.currentPlotType  == 'hclust' and n == 0 and self.circulizeDendrogram):
+				
 				if self.currentPlotType == 'PCA':
-					
-					numericColumns = ['Comp_1','Comp_2']
+					if n == 0:
+						numericColumns = ['Comp_1','Comp_2']
+					elif n == 2:
+						numericColumns = ['Comp_2','Comp_3']
 					
 				elif self.currentPlotType == 'scatter' and \
 				self.categoricalPlotter is not None:
@@ -833,7 +902,7 @@ class _Plotter(object):
 				if self.currentPlotType not in ['hclust','corrmatrix']:
 					self.tooltips[n].annotate_data_in_collections(self.dfClass,
 															annotationColumnList,
-															numericColumns,axisId = n,
+															numericColumns, axisId = n,
 															scatterCombination = scatterCombination)
 					ax.callbacks.connect('ylim_changed', \
 					lambda event:self.update_tooltip_background(redraw_ = True,updateProps=True))
@@ -849,8 +918,8 @@ class _Plotter(object):
   		'''
   		if event.inaxes:
   			n = self.get_number_of_axis(event.inaxes)
-  			if n in self.tooltips:
   			
+  			if n in self.tooltips:
   				if self.currentPlotType in ['hclust','corrmatrix']:
   					self.tooltips[n].evaluate_event_in_cluster(event)
   				elif self.currentPlotType == 'line_plot':
@@ -887,6 +956,8 @@ class _Plotter(object):
 		matplotlib.rcParams['savefig.dpi'] = 600      
 		#matplotlib.rcParams['figure.facecolor'] = '#FDF6E3'
 		#matplotlib.rcParams['axes.labelcolor'] = '#657b83'
+		
+		
 	def __getstate__(self):
 		'''
 		Promotes sterilizing of this class (pickle)
@@ -983,7 +1054,13 @@ class categoricalPlotter(object):
 						else:
 							ax.set_xscale('symlog')
 					
-						
+	def get_scatter_plots(self):
+		''''''
+		if self.currentPlotType == 'scatter':
+			return self.scatterWithCategories.scatterPlots
+		else:
+			return {}
+								
 	def add_axis_to_figure(self):
 		'''
 		Adds the needed axis for plotting. The arangement depends on the number of categories
@@ -1035,9 +1112,7 @@ class categoricalPlotter(object):
 				for n in range(self.numberOfSubplots):
 					
 					self.axisDict[n] = self.figure.add_subplot(rows,cols,n+1)
-				self.adjust_margin_of_figure(self.numberOfSubplotsCols*1.7)
-				
-					
+				self.adjust_margin_of_figure(self.numberOfSubplotsCols*1.7)					
 				self.figure.subplots_adjust(wspace=0, hspace=0.36) 
 		
 		elif self.currentPlotType == 'curve_fit':	
@@ -1188,7 +1263,7 @@ class categoricalPlotter(object):
 						removeXTicks = False
 						
 					axisStyler(ax,xlabel = '',ylabel = numColumn,
-								rotationXTicks=90,nTicksOnYAxis=4,
+								rotationXTicks=40,nTicksOnYAxis=4,
 								addLegendToFirstSubplot = True, 
 								removeXTicks = removeXTicks,
 								forceLegend = forceLegend,
@@ -1231,10 +1306,11 @@ class categoricalPlotter(object):
 					addLeg = False
 					kwsLeg  = {}
 					
-				axisStyler(ax,rotationXTicks=90,xlabel= '', nTicksOnYAxis=4,
-								addLegendToFirstCol = addLeg,
+				axisStyler(ax,rotationXTicks=90, xlabel= '', nTicksOnYAxis=4,
+								addLegendToFirstCol = addLeg, nTicksOnXAxis = 30,
 								kwsLegend= kwsLeg)
 				
+				#print(ax.get_xticklabels())
 			elif self.numbCategoricalColumns == 2:
 			
 				xAxisOrder = self.data[self.categoricalColumns[0]].unique()
@@ -1250,15 +1326,17 @@ class categoricalPlotter(object):
 					else:
 						ax = self.axisDict[n]
 
-					fill_axes_with_plot(ax = ax,x= self.categoricalColumns[0], y = numColumn, hue = self.categoricalColumns[1],
+					fill_axes_with_plot(ax = ax,x= self.categoricalColumns[0], y = numColumn, 
+										hue = self.categoricalColumns[1],
 										data = self.data, order = xAxisOrder, hue_order = hueOrder,
 										plot_type = plotType, cmap = self.colorMap,
 										inmutableCollections = self.inmutableCollections,
 										error = self.error)
 					leg = ax.get_legend()
-					if leg is not None: leg.remove()					
+					if leg is not None: leg.remove()
+					
 					axisStyler(ax,rotationXTicks=90,nTicksOnYAxis=4,addLegendToFirstSubplot = True,
-								forceLegend = forceLegend,
+								forceLegend = forceLegend, nTicksOnXAxis = 40,
 								kwsLegend= {'leg_title':self.categoricalColumns[1]})
 					
 				
@@ -1306,9 +1384,15 @@ class categoricalPlotter(object):
 														ylabel = 'mean({})'.format(numColumn), yLabelFirstCol = True,
 														rotationXTicks = 90,addLegendToFirstSubplot = True,
 														forceLegend = forceLegend,
+														nTicksOnXAxis = 35,
 														kwsLegend= {'leg_title':self.categoricalColumns[1]})
 														
 						subId += 1
+				yLims = [ax.get_ylim() for ax in self.axisDict.values()]
+				yMax = max(yLims, key = lambda x: x[1])
+				yMin = min(yLims, key = lambda x: x[0])
+				for ax in self.axisDict.values():
+					ax.set_ylim((yMin[0],yMax[1]))
 				
 		#self.aggregateScatterWithCategories = True
 		#self.aggregateMethod = 'count'		
@@ -1596,6 +1680,48 @@ class categoricalPlotter(object):
 		if adjustRight > 1.8:
 			adjustRight = 1.75
 		self.figure.subplots_adjust(right = adjustRight)  
+			
+	
+# 	def add_legend_for_caetgories_in_scatter(self,ax,colorMapDict,categoricalColumn, export = False):
+# 		'''
+# 		Add legend to scatter plot when color has been changed by categorical column
+# 		'''
+# 		if len(colorMapDict) > 21:
+# 			return
+# 		if export == False:
+# 			self.clean_up_old_legend_collections() 
+# 		
+# 		leg = ax.get_legend()
+# 		if leg is not None:
+# 			leg.remove()
+# 			
+# 		for level,color in colorMapDict.items():
+# 		 	if str(level)  not in ['nan',' ']:
+# 		 		# generate and save collection that is used for legend
+# 		 		collectionLegend = self.plotter.add_scatter_collection(ax = ax,x=[],y=[],
+# 		 										label = level,color = color, returnColl=True)
+# 		 		if export == False:
+# 		 			self.savedLegendCollections.append(collectionLegend)
+# 		 		 
+# 		legendTitle = get_elements_from_list_as_string(categoricalColumn, addString = 'Levels: ', newLine=False)	
+# 
+# 		axisStyler(ax,forceLegend=True,kwsLegend={'leg_title':legendTitle})
+# 		
+# 	def clean_up_old_legend_collections(self):
+# 		'''
+# 		Cleaning up collections used to build up a legend. 
+# 		'''
+# 		if hasattr(self,'savedLegendCollections') == False:
+# 			self.savedLegendCollections = []
+# 		if len(self.savedLegendCollections) == 0:
+# 			pass
+# 		else:
+# 			for collection in self.savedLegendCollections:
+# 				try:
+# 					collection.remove()
+# 				except:
+# 					pass
+# 			self.savedLegendCollections = []			
 	
 	
 	def __getstate__(self):
@@ -1620,23 +1746,20 @@ class nonCategoricalPlotter(object):
 		self.plotter = plotter
 		self.figure = figure
 		
-		
 		self.numericColumns = numericColumns
 		self.categoricalColumns = categoricalColumns
 		self.numbNumericColumns = numbNumbericColumns
 		self.currentPlotType = selectedPlotType
 		self.dfClass = sourceDataClass
 		self.dataID = sourceDataClass.currentDataFile
-
 		self.get_data() 
-		
 		self.colorMap = colorMap
 		self.error = self.plotter.errorBar
-
 		self.define_variables()
 		
 		self.add_axis_to_figure() 
 		self.filling_axis()
+		
 		if self.plotter.addSwarm:
 			self.add_swarm_to_plot()
 			self.addSwarm = True
@@ -1666,10 +1789,12 @@ class nonCategoricalPlotter(object):
 		self.annotationClass = None
 		self.pcaProjectionAnnotations = None
 		self._hclustPlotter = None
-		self._scatterMatrix = None    
+		self._scatterMatrix = None   
+		self.dimRedPlot = None 
 		self.sizeStatsAndColorChanges = OrderedDict()
 		self.axisDict = dict()  
-		self.categoricalColorDefinedByUser = dict()		
+		self.categoricalColorDefinedByUser = dict()
+		self.scatterPlots = OrderedDict()		
 		self.get_scatter_props()
 		self.get_size_interval()
 		self.get_agg_method()
@@ -1721,7 +1846,7 @@ class nonCategoricalPlotter(object):
 			if self.currentPlotType in nonScatterPlotTypes:
 				self.axisDict[0] = self.figure.add_subplot(221) 
 				self.adjust_margin_of_figure_for_non_scatter()
-			elif self.currentPlotType in ['hclust','scatter_matrix','corrmatrix','line_plot']:
+			elif self.currentPlotType in ['hclust','scatter_matrix','corrmatrix','line_plot','PCA']:
 				pass
 				
 			elif self.currentPlotType == 'density':
@@ -1730,13 +1855,6 @@ class nonCategoricalPlotter(object):
 				self.figure.subplots_adjust(wspace=0.25, hspace = 0.25)
 				for n,numericColumn in enumerate(self.numericColumns):
 					self.axisDict[n] = self.figure.add_subplot(row,column,n+1) 
-					
-			elif self.currentPlotType == 'PCA':
-			
-				row, column = 2,2
-				for n in range(3):
-					self.axisDict[n] = self.figure.add_subplot(row,column,n+1)
-				self.figure.subplots_adjust(wspace=0.3,hspace=0.3,right=0.9)
 							
 			elif self.currentPlotType == 'cluster_analysis':
 				
@@ -1752,7 +1870,25 @@ class nonCategoricalPlotter(object):
 				self.axisDict[2] = self.figure.add_subplot(subplotspec3)
 				self.figure.subplots_adjust(wspace=0.35, hspace = 0.35)     
 			else:
-				self.axisDict[0] = self.figure.add_subplot(111) 
+				self.numericColumnPairs = list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))
+				rows,cols = self.find_scatter_props(self.numericColumnPairs)
+				for n in range(len(self.numericColumnPairs)):
+					self.axisDict[n] = self.figure.add_subplot(rows,cols,n+1) 
+	
+	def find_scatter_props(self,numericPairs):
+		'''
+		'''
+		n_pairs = len(numericPairs)
+		if  n_pairs == 1:
+			return 1,1
+		
+		self.figure.subplots_adjust(wspace=0.30, hspace = 0.30)    
+		if n_pairs < 5:
+			return 2,2
+		else: 
+			rows = np.ceil(n_pairs/3)
+			columns = 3 
+			return rows, columns
 	
 
 	def replot(self, updateData = False):
@@ -1774,7 +1910,6 @@ class nonCategoricalPlotter(object):
 		else:
 			if updateData:
 				self.get_data() 
-				
 			self.axisDict = dict() 
 			self.add_axis_to_figure() 
 			self.filling_axis()
@@ -1813,49 +1948,17 @@ class nonCategoricalPlotter(object):
 		'''
 		add regression line to scatter plot
 		'''
-		if self.currentPlotType != 'scatter':
-			return
-
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=numericColumnList)	
-																  
-		dat = self.data[numericColumnList] 												  			
-		xList,yList,slope,intercept,rValue,pValue, stdErrorSlope = stats.get_linear_regression(dat)
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.add_regression_line(specificAxis)		
 		
-		if specificAxis is None:
-			ax = self.axisDict[0]
-		else:
-			ax = specificAxis
-
-		regressionLabel = 'Slope: {}\nIntercept: {}\nr: {}\np-val: {:.2e}'.format(round(slope,2),round(intercept,2),round(rValue,2),pValue)  	
-		self.plotter.add_annotationLabel_to_plot(ax,text=regressionLabel)
-		
-		ax.plot(xList,yList,linewidth = 1, linestyle= 'dashed')
-		self.add_color_and_size_changes_to_dict('add_regression_line',numericColumnList)
-			
-		
-	def add_lowess_line(self,numericColumnList,specificAxis=None):
+	def add_lowess_line(self,numericColumnList = None,specificAxis=None):
 		'''
 		add lowess line to scatter plot
 		'''
-		if self.currentPlotType != 'scatter':
-			return
-			
-		if self.lowessData is None: ## because lowess calculations are time consuming we save this for export to main figure
-			self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=numericColumnList)	
-			dat = self.data[numericColumnList]
-			self.lowessData = stats.get_lowess(dat)		
-														  
-		if specificAxis is None:
-			ax = self.axisDict[0]
-		else:
-			ax = specificAxis
-			
-
-		ax.plot(self.lowessData[:,0],self.lowessData[:,1],linewidth = 1, linestyle= 'dashed',color="red")														  
-		self.add_color_and_size_changes_to_dict('add_lowess_line',numericColumnList)	
-		
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.add_lowess_line(specificAxis)
 	
 	def adjust_margin_of_figure_for_non_scatter(self):
 		'''
@@ -1872,110 +1975,90 @@ class nonCategoricalPlotter(object):
 		To do - maybe make this an own class. Could then be used also for scatter with categories and for PCAs
 		## Done
 		'''
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=labelColumnList)
-		self.textAnnotationColumns = labelColumnList
-		
-		if self.annotationClass is not None: ## useful to keep already added annotations by another column selectable
-			madeAnnotations = self.annotationClass.madeAnnotations
-			selectionLabels = self.annotationClass.selectionLabels
-			## avoid wrong labeling
-			try:
-				self.annotationClass.disconnect_event_bindings()
-			except:
-				pass
-		else:
-			madeAnnotations = OrderedDict()
-			selectionLabels = OrderedDict()
-		self.annotationClass = annotateScatterPoints(self.plotter,self.figure,self.axisDict[0],
-													  self.data,labelColumnList,self.numericColumns[:2],
-													  madeAnnotations,selectionLabels) 
+		#if hasattr(self,'dimRedPlot') and self.currentPlotType == 'PCA':
+		#	self.dimRedPlot.bind_label_event(labelColumnList) 
+		#	return
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.bind_label_event(labelColumnList)
 
+		
+	def get_scatter_plots(self):
+		'''
+		'''
+		if self.currentPlotType == 'scatter':
+			return self.scatterPlots
+		elif self.currentPlotType == 'PCA':
+			return self.dimRedPlot.scatterPlots
+		else:
+			return {}
+		
 	def update_size_interval_in_chart(self):
 		'''
 		Update the size interval in a scatter plot.
 		'''
-		for key, categoricalColumns in self.sizeStatsAndColorChanges.items():
-			if 'size' in key:
-				self.get_size_interval()
-				getattr(self,key)(categoricalColumns)
-				break 
-				
-				
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.update_size_interval()
+	
+	def remove_all_annotations(self):
+		'''
+		Remove all annotations made.
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.annotationClass.remove_all_annotations()
+			scatterPlot.annotationClass.disconnect_event_bindings()
+			scatterPlot.annotationClass = None
+		
 	def change_color_by_numerical_column(self, numericColumn, specificAxis = None):
 		'''
 		Accepts a numeric column from the dataCollection class. This column is added using 
 		the index ensuring that correct dots get the right color. 
 		'''
-		cmap = get_max_colors_from_pallete(self.colorMap)
-		if isinstance(numericColumn,str):
-			numericColumn = [numericColumn]
-		
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=numericColumn)	
-		if specificAxis is None:
-			ax = self.axisDict[0]
-			self.clean_up_saved_size_and_color_changes('color')
-		else:
-			ax = specificAxis
-		
-		axCollection = ax.collections
-		if len(numericColumn) > 1:
-			# check for updated aggregation method
-			if specificAxis is None:
-				self.get_agg_method()
-			## merge columns 
-			if self.aggMethod == 'mean':
-				colorData = self.data[numericColumn].mean(axis=1)
-			else:
-				colorData = self.data[numericColumn].sum(axis=1)
-		else:
-			colorData = self.data[numericColumn[0]]
-			
-		scaledData = scale_data_between_0_and_1(colorData) 
-		axCollection[0].set_facecolors(cmap(scaledData))
-		
-		self.add_color_and_size_changes_to_dict('change_color_by_numerical_column',numericColumn)
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.change_color_by_numerical_column(numericColumn,specificAxis)
 
+	def annotate_in_scatter_points(self, calledFromScat ,idx):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			if scatterPlot != calledFromScat:
+				scatterPlot.set_hover_data(idx)
 		
+	def set_hover_points_invisible(self, calledFromScat = None):
+		
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			if calledFromScat is not None and scatterPlot != calledFromScat:
+				scatterPlot.set_invisible()	
+			else:
+				scatterPlot.set_invisible()	
+
+	def update_background_in_scatter_plots(self):
+		''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			
+			scatterPlot.update_background(redraw=False)			
+
+
+	def add_tooltip_to_scatter(self, annotationColumns):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.add_tooltip(annotationColumns)		
 		
 	def change_size_by_numerical_column(self, numericColumn, specificAxis = None, update = True):
 		'''
 		change sizes of scatter points by a numerical column
 		'''
-		if isinstance(numericColumn,str):
-			numericColumn = [numericColumn]
-		## update data if missing columns is used to encode color
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=numericColumn)	
-		if specificAxis is None:
-			ax = self.axisDict[0]
-			# clean up stuff
-			if update == False:
-				self.clean_up_saved_size_and_color_changes('size')
-		else:
-			ax = specificAxis
-		
-		if len(numericColumn) > 1:
-			# check for updated aggregation method
-			if specificAxis is None:
-				self.get_agg_method()
-			## merge columns 
-			if self.aggMethod == 'mean':
-				sizeDataRaw = self.data[numericColumn].mean(axis=1)
-			else:
-				sizeDataRaw = self.data[numericColumn].sum(axis=1)
-		else:
-			sizeDataRaw = self.data[numericColumn[0]]
-		
-		axCollection = ax.collections
-		scaledData = scale_data_between_0_and_1(sizeDataRaw)
-		sizeData = (scaledData)*(self.maxSize-self.minSize) + self.minSize
-		axCollection[0].set_sizes(sizeData)
-		
-		self.add_color_and_size_changes_to_dict('change_size_by_numerical_column',numericColumn)
-
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.change_size_by_numerical_column(numericColumn,specificAxis,update)		
 
 	def change_size_by_categorical_column(self, categoricalColumn, specificAxis = None, update = True):
 		'''
@@ -1983,53 +2066,53 @@ class nonCategoricalPlotter(object):
 		'''
 		if isinstance(categoricalColumn,str):
 			categoricalColumn = [categoricalColumn]
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=categoricalColumn)	
-		if specificAxis is None:
-			ax = self.axisDict[0]
-			## clean up saved changes
-			if update == False:
-				self.clean_up_saved_size_and_color_changes('size')
-		else:
-			ax = specificAxis
-			
+		self.plotter.updatingAxis = True
 		
-		uniqueCategories = self.data[categoricalColumn].apply(tuple,axis=1).unique()
-			
-			
-		numberOfUuniqueCategories = uniqueCategories.size
-
-		scaleSizes = np.linspace(0.3,1,num=numberOfUuniqueCategories,endpoint=True)
-		sizeMap = dict(zip(uniqueCategories, scaleSizes))
+		scatterPlots = self.get_scatter_plots()
 		
-		sizeMap = replace_key_in_dict('-',sizeMap,0.1)
-		scaledData = self.data[categoricalColumn].apply(tuple,axis=1).map(sizeMap)
-		
-		axCollection = ax.collections
-		sizeData = (scaledData)*(self.maxSize-self.minSize) + self.minSize
-		axCollection[0].set_sizes(sizeData)
-		
-		self.add_color_and_size_changes_to_dict('change_size_by_categorical_column',categoricalColumn)
-	
-	
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.change_size_by_categorical_column(categoricalColumn,
+															update=update)
+															
+		self.plotter.updatingAxis = False
 		
 	def change_color_by_categorical_columns(self, categoricalColumn, specificAxis = None, 
-												updateColor = True, adjustLayer = True):
+												updateColor = True, adjustLayer = True,
+												annotationClass = None, numericColumns = None):
 		'''
 		Takes a categorical column and plots the levels present in different colors.
 		Reorders the categories in a way that ensures that the NanReplaceString is 
-		last in the list and also has the lowest zorder.
+		last in the list and also has the lowest zorder. This works on scatter plots. 
 		'''
 		if isinstance(categoricalColumn,str):
 			categoricalColumn = [categoricalColumn]
+		
+		self.plotter.updatingAxis = True
+		
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.change_color_by_categorical_columns(categoricalColumn,
+															updateColor=updateColor,
+															adjustLayer=adjustLayer)
 			
-		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,categoricalColumn,
+		self.plotter.updatingAxis = False
+		return
+			
+		if numericColumns is None:
+			numericColumns = self.numericColumns[:2]
+		numCol1, numCol2  = numericColumns 
+		
+		if annotationClass is None:
+			annotationClass = self.annotationClass
+		
+		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,
+												categoricalColumn,
 												self.colorMap, self.categoricalColorDefinedByUser,
 												self.colorScatterPoints)
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=categoricalColumn)	
+		## update data if missing columns and add column 'color'
+		self.data  = self.plotter.attach_color_data(categoricalColumn, self.data, 
+													self.dataID, self.colorMapDict)
+		
 		if specificAxis is None:
 			ax = self.axisDict[0]
 			## clean up changes
@@ -2037,54 +2120,39 @@ class nonCategoricalPlotter(object):
 				self.clean_up_saved_size_and_color_changes('color')
 		else:
 			ax = specificAxis
-		
-		if len(categoricalColumn) == 1:
-		
-			self.data.loc[:,'color'] = self.data[categoricalColumn[0]].map(self.colorMapDict)
-		else:
-			self.data.loc[:,'color'] = self.data[categoricalColumn].apply(tuple,axis=1).map(self.colorMapDict)
-		
 		axCollection = ax.collections
-		
 		if updateColor == False and adjustLayer:
 			
 			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)		
 			self.data.loc[:,'size'] =  axCollection[0].get_sizes()	
-			self.data.sort_values('layer', ascending = True, inplace=True)		
+			self.data = self.data.sort_values('layer', ascending = True)		
 			
 			axCollection[0].remove() 
 		
 		## we need to replot this, otherwise the layer/order cannot be changed. 
 		
-			self.plotter.add_scatter_collection(ax,x=self.data[self.numericColumns[0]],
-											y = self.data[self.numericColumns[1]], size=self.data['size'],
+			self.plotter.add_scatter_collection(ax,x=self.data[numCol1],
+											y = self.data[numCol2], size=self.data['size'],
 											color = self.data['color'].values, picker = True)
 			## index changed .. update data in annotation class
-			if self.annotationClass is not None:
-				self.annotationClass.update_data(self.data)								
-		
-			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			if len(self.colorMapDict) < 21:
+			if annotationClass is not None:
+				annotationClass.update_data(self.data)
 			
-				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
-		
+			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
+			self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
 			
 		elif adjustLayer == False:
 			axCollection[0].set_facecolor(self.data['color'].values)
-			
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumn)
-			if len(self.colorMapDict) < 21:
-				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
+			self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,categoricalColumn)
 
 		else:
 			axCollection[0].set_facecolor(self.data['color'].values)
 			if specificAxis is None: ##indicating that graph is not exported but only modified
-				self.update_legend(ax,self.colorMapDict)
-				
+				self.update_legend(ax,self.colorMapDict)				
 			else:
-				if len(self.colorMapDict) < 21:
-					self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
-														  categoricalColumn, export = True)
+				self.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
+														  categoricalColumn, export = True)		
 			#print(specificAxis)	
 			## check if we plot a cluster representation, and if then check if there are any line segments to plot
 			if self.currentPlotType == 'cluster_analysis':
@@ -2099,54 +2167,61 @@ class nonCategoricalPlotter(object):
 						else:
 							color = self.colorMapDict[str(n)]
 							lineSegment.set_color(color)	
-							
 
-					
+	def get_size_color_categorical_column(self,which='change_color_by_categorical_columns'):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+				return scatterPlot.sizeStatsAndColorChanges[which]
+		
+	def get_raw_colorMapDict(self):
+		
+		if self.currentPlotType in ['scatter','PCA']:
+			scatterPlots = self.get_scatter_plots()
+			for scatterPlot in scatterPlots.values():
+				return scatterPlot.rawColorMapDict
+	
 	def get_current_colorMapDict(self):
 		'''
 		Categorical columns can be used to display categorical levels within that column.
 		The color is determined by the colorMapDict which can be accessed and used. 
 		'''
+		if self.currentPlotType in ['scatter','PCA']:
+			scatterPlots = self.get_scatter_plots()
+			for scatterPlot in scatterPlots.values():
+				return scatterPlot.colorMapDict
+			
 		if hasattr(self,'colorMapDict'):
 			return self.colorMapDict	
 		else:
 			return None
-	
-	def clean_up_saved_size_and_color_changes(self,which = 'color'):
-		'''
-		'''
-		
-		toDelete = []
-		for functionName,column in self.sizeStatsAndColorChanges.items(): 
-			if which in functionName:
-				toDelete.append(functionName)
-		if 'change_color_by_categorical_columns' in toDelete:
-			self.delete_legend(self.axisDict[0])
+
 			
-		for func in toDelete:
-			del self.sizeStatsAndColorChanges[func]	
-			
-				
 	def reset_color_and_size_level(self,resetColor=False,resetSize=False):
 		'''
 		Takes collections and resets size and color
 		'''
 		self.sizeScatterPoints, self.alphaScatterPoints,self.colorScatterPoints = \
 											self.plotter.get_scatter_point_properties()
+		scatterPlots = self.get_scatter_plots()
 		for ax in self.axisDict.values():
 			axisCollections = ax.collections
 			for axisCollection in axisCollections:
 				if resetColor:
 				
 					axisCollection.set_facecolor(self.colorScatterPoints)
-					self.clean_up_saved_size_and_color_changes('color')
-					
-					
+					for scatterPlot in scatterPlots.values():
+						scatterPlot.scatterKwargs['color'] = self.colorScatterPoints
+						scatterPlot.clean_up_saved_size_and_color_changes('color')
 					
 				if resetSize:
 				
 					axisCollection.set_sizes([self.sizeScatterPoints])
-					self.clean_up_saved_size_and_color_changes('size')
+					
+					for scatterPlot in scatterPlots.values():
+						scatterPlot.scatterKwargs['s'] = self.sizeScatterPoints
+						scatterPlot.clean_up_saved_size_and_color_changes('size')
 					
 			self.delete_legend(ax)
 			
@@ -2208,7 +2283,6 @@ class nonCategoricalPlotter(object):
 			for patch in axPatches:
 				patch.set_facecolor(newColor) 
 		
-		
 		elif self.currentPlotType == 'PCA':
 			axCollections = ax.collections
 			for collection in axCollections:
@@ -2221,6 +2295,8 @@ class nonCategoricalPlotter(object):
 		'''
 		Add legend to scatter plot when color has been changed by categorical column
 		'''
+		if len(colorMapDict) > 21:
+			return
 		if export == False:
 			self.clean_up_old_legend_collections() 
 		
@@ -2235,7 +2311,7 @@ class nonCategoricalPlotter(object):
 		 		if export == False:
 		 			self.savedLegendCollections.append(collectionLegend)
 		 		 
-		legendTitle = get_elements_from_list_as_string(categoricalColumn, addString = 'Categorical Levels: ', newLine=True)	
+		legendTitle = get_elements_from_list_as_string(categoricalColumn, addString = 'Levels: ', newLine=False)	
 
 		axisStyler(ax,forceLegend=True,kwsLegend={'leg_title':legendTitle})
 			
@@ -2268,7 +2344,13 @@ class nonCategoricalPlotter(object):
 					pass
 			self.savedLegendCollections = []
 						
-		
+	def set_user_def_colors(self,categoricalColorDefinedByUser):
+		'''
+		'''
+		scatterPlots = self.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.categoricalColorDefinedByUser = categoricalColorDefinedByUser
+			
 	def update_colorMap(self,newCmap = None):
 		'''
 		allows changes of color map by the user. Simply updates the color code.
@@ -2278,10 +2360,12 @@ class nonCategoricalPlotter(object):
 		'''
 		if newCmap is not None:
 			self.colorMap = newCmap 
-		for functionName,column in self.sizeStatsAndColorChanges.items(): 
-			getattr(self,functionName)(column)  
-			
-	
+		scatterPlots = self.get_scatter_plots()
+		self.plotter.updatingAxis = True		
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.update_colorMap(self.colorMap)
+		self.plotter.updatingAxis = False
+		
 	def export_selection(self,axisExport, subplotIdNumber, exportFigure = None,
 			limits=None, boxBool = None, gridBool = None, plotCount = None):
 		'''
@@ -2295,10 +2379,11 @@ class nonCategoricalPlotter(object):
 		elif self.currentPlotType == 'line_plot':
 			self.linePlotHelper.export_selection(axisExport)
 		elif self.currentPlotType == 'scatter' and self.binnedScatter:
-			
 			self.binnedScatterHelper.export_selection(axisExport)
-				
-					
+		elif self.currentPlotType == 'scatter':	
+			self.scatterPlots[subplotIdNumber].export_selection(axisExport)
+		elif self.currentPlotType == 'PCA':
+			self.dimRedPlot.export_selection(axisExport,subplotIdNumber)
 		else:	
 			self.filling_axis(subplotIdNumber,axisExport) 
 			if self.addSwarm:
@@ -2339,15 +2424,11 @@ class nonCategoricalPlotter(object):
 		a session. Since tkinter widgets cannot be saved (e.g. the canvas that is used to
 		display the figure)
 		'''
-		
 		self.figure = figure
 		self.axisDict = {}
 		for plotHelper in [self._hclustPlotter,self.annotationClass,self._scatterMatrix]:
 			if plotHelper is not None:
-				plotHelper.figure = figure
-			
-		
-	
+				plotHelper.figure = figure	
 	
 	def filling_axis(self,onlySelectedAxis = None, axisExport = None,plotType = None):
 		'''
@@ -2355,6 +2436,7 @@ class nonCategoricalPlotter(object):
 		'''
 		dataInput = self.data
 		colorMap = self.colorMap
+
 		
 		if plotType is None:
 			plotType = self.currentPlotType
@@ -2373,7 +2455,6 @@ class nonCategoricalPlotter(object):
 								inmutableCollections = self.inmutableCollections,
 								error = self.error)
 			
-		
 		elif plotType == 'density':
 			if hasattr(self,'cdf') == False:
 				self.cdf = self.plotter.get_dist_settings()
@@ -2406,15 +2487,11 @@ class nonCategoricalPlotter(object):
 			if onlySelectedAxis is None:
 				self.timeSeriesHelper = _timeSeriesHelper(self.plotter,self.dfClass,
 										ax,dataInput,self.numericColumns,colors,collectLines)
-			
 			else:
 				self.timeSeriesHelper.export_selection(ax)
-			
-			
-			
+						
 		elif plotType == 'scatter':
-			
-			if self.numbNumericColumns == 2:
+			if True:
 				if self.binnedScatter:
 				
 					self.binnedScatterHelper = binnedScatter(self.plotter,self.dfClass, 
@@ -2422,17 +2499,20 @@ class nonCategoricalPlotter(object):
 				
 				else:
 			
-			
-					ax.scatter(dataInput[self.numericColumns[0]],
-									dataInput[self.numericColumns[1]],
-									edgecolor = 'black',
-									linewidth = 0.3,
-									s = self.sizeScatterPoints,
-									alpha =  self.alphaScatterPoints,
-									color = self.colorScatterPoints,
-									picker=True, label = None)
-		
-		
+					for n,pair in enumerate(self.numericColumnPairs):
+						self.scatterPlots[n] = scatterPlot(
+									dataInput,
+									list(pair),
+									self.plotter,
+									self.colorMap,
+									self.dfClass,									
+									self.axisDict[n],
+									self.dataID,								
+									{'s':self.sizeScatterPoints,'alpha':self.alphaScatterPoints,
+									'picker':True,'label':None,'color':self.colorScatterPoints,
+									'edgecolor':'black','linewidth':0.3},
+									showLegend = True if n == 0 else False)
+										
 		elif plotType == 'line_plot':
 		
 			self.linePlotHelper = linePlotHelper(self.plotter,self.dfClass,self.numericColumns,self.colorMap)
@@ -2488,68 +2568,8 @@ class nonCategoricalPlotter(object):
 			
 		elif plotType == 'PCA':
 			## plot drivers
-			if onlySelectedAxis is None or onlySelectedAxis == 0:
-				drivers = self.data
-				if onlySelectedAxis is None:
-					ax = self.axisDict[0]
-				else:
-					ax = axisExport
+			self.dimRedPlot = dimensionalReductionPlot(self.dfClass, self.plotter, self.colorMap)
 			
-			
-				ax.scatter(drivers.iloc[:,0],drivers.iloc[:,1],
-									edgecolor = 'black',
-									linewidth = 0.3,
-									s = self.sizeScatterPoints,
-									alpha =  self.alphaScatterPoints,
-									color = self.colorScatterPoints,
-									picker=True, label = None)
-			
-			## projections
-			if onlySelectedAxis is None or onlySelectedAxis == 1:
-				components = self.plotter.dimRedResults['data']['Components']
-				if onlySelectedAxis is None:
-					ax = self.axisDict[1]
-				else:
-					ax = axisExport
-				ax.scatter(components.iloc[0,:], components.iloc[1,:],
-									edgecolor = 'black',
-									linewidth = 0.3,
-									s = self.sizeScatterPoints,
-									alpha =  self.alphaScatterPoints,
-									color = self.colorScatterPoints,
-									picker=True, label = None)
-				data = components.T
-				data['experiments'] = data.index
-				
-				if onlySelectedAxis is None:					
-					self.pcaProjectionAnnotations = annotateScatterPoints(Plotter = self.plotter,
-										figure = self.figure, ax = ax, data = data,
-										numericColumns = data.columns.values.tolist()[:2],
-										labelColumns = ['experiments'], madeAnnotations = OrderedDict(),
-										selectionLabels = OrderedDict()) 
-					self.pcaProjectionAnnotations.annotate_all_row_in_data()	
-				else:
-					self.update_color_in_projection(self.plotter.dimRedResults,ax)
-					if self.pcaProjectionAnnotations is not None:
-						for key,props in self.pcaProjectionAnnotations.selectionLabels.items():
-							axisExport.annotate(ha='left', arrowprops=arrow_args,**props)
-																			
-									
-										
-			##explained variance
-			if onlySelectedAxis is None or onlySelectedAxis == 2:
-				if 'ExplainedVariance' in self.plotter.dimRedResults['data']:
-				
-					data = self.plotter.dimRedResults['data']['ExplainedVariance'].loc[:,0]
-					xTicks = [x+1 for x in data.index.tolist()]
-				else:
-					data = self.plotter.dimRedResults['data']['ReconstructionError']
-					xTicks = 1 
-				if onlySelectedAxis is None:
-					ax = self.axisDict[2]
-				else:
-					ax = axisExport
-				ax.bar(xTicks, data)
 			
 	def update_color_in_projection(self,resultDict = None, ax = None):
 		'''
@@ -2557,42 +2577,17 @@ class nonCategoricalPlotter(object):
 		be colored occording to groups. (For example if feature == name of experiment
 		where expresison values of several proteins/genes have been measured (e.g Tutorial Data 2)
 		'''
-		if resultDict is None:
-			resultDict =  self.plotter.dimRedResults
-		
-		if 'color' in resultDict:
-			colorDict = resultDict['color']
-			groupDict = resultDict['group']	 
-			featureOrder = self.plotter.dimRedResults['data']['Components'].T.index
-			colors = [colorDict[feature] for feature in featureOrder]
-			groups = [groupDict[feature] for feature in featureOrder]
-			uniqueValuesDict = OrderedDict((comb,True) for comb in list(zip(colors,groups)))
-			colorsUnique,groupsUnique = zip(*list(uniqueValuesDict.keys()))
-			if ax is None:
-				ax = self.axisDict[1]
-			ax.collections[0].set_facecolor(colors)
-			axisStyler(ax,forceLegend = True ,kwsLegend = {'addPatches':True,
- 									   		'legendItems' : list(groupsUnique),
- 									   		'colorMap' : list(colorsUnique),
- 									   		'leg_title':'Grouping',
- 									   		 'patchKws':{'alpha':self.alphaScatterPoints,
- 									   		 'lw':0.5}}) 
- 									   
+		if hasattr(self,'dimRedPlot'):
+			self.dimRedPlot.update_color_in_projection(resultDict,ax)				   
 											
 	def hide_show_feature_names(self):
 	
 		'''
 		Handles feature names in projection plot of 
 		a dimensional reduction procedure
-		'''	
-		if self.pcaProjectionAnnotations is not None:
-			if len(self.pcaProjectionAnnotations.selectionLabels) != 0:
-				self.pcaProjectionAnnotations.remove_all_annotations()
-			else:
-				self.pcaProjectionAnnotations.annotate_all_row_in_data()
-			
-			self.plotter.redraw()					
-						
+		'''
+		if hasattr(self,'dimRedPlot'):	
+			self.dimRedPlot.hide_show_feature_names()
 					
 	def update_cluster_analysis_score(self, ax):
 		'''
@@ -2680,40 +2675,24 @@ class nonCategoricalPlotter(object):
 	
 		plotType = self.currentPlotType
 		
-		if plotType in ['hclust','corrmatrix','scatter_matrix','line_plot']:
+		if plotType in ['hclust','corrmatrix','scatter_matrix','line_plot','PCA']:
 			return
 		if ax is None and plotType !='scatter_matrix':
 			ax = self.axisDict[0]
+		
 			
 		if plotType in nonScatterPlotTypes:
 		
-			axisStyler(ax, xlabel=None, ylabel = None,rotationXTicks = 90,nTicksOnYAxis=4)
+			axisStyler(ax, xlabel=None, ylabel = None,
+					rotationXTicks = 90, nTicksOnYAxis=4,
+					nTicksOnXAxis = 25,canvasHasBeenDrawn = True)
+			
 			
 		elif plotType == 'time_series':
 			axisStyler(ax,xlabel=self.numericColumns[0],ylabel = 'Value',
 						forceLegend = True, kwsLegend={'leg_title':'Time series'})
 		
-		elif plotType == 'PCA':
-			if onlySelectedAxis is not None:
-				if onlySelectedAxis < 2:
-					axisStyler(ax, xlabel='Component 1', ylabel = 'Component 2')
-				else:
-					if self.plotter.dimRedResults['method'] != 'Non-Negative Matrix Factorization':
-						axisStyler(ax, ylabel='Explained Variance Ratio', 
-										 xlabel = 'Components')
-					else:
-						axisStyler(ax, ylabel='Reconstruction Error', 
-										 xlabel = 'Analysis ID', newXLim = (-1,3))
-			else:
-				for n in [0,1]:
-					axisStyler(self.axisDict[n], xlabel='Component 1', ylabel = 'Component 2',
-									nTicksOnYAxis = 4, nTicksOnXAxis = 4)
-				if self.plotter.dimRedResults['method'] != 'Non-Negative Matrix Factorization':
-					axisStyler(self.axisDict[2], ylabel='Explained Variance Ratio', 
-										 xlabel = 'Components',nTicksOnYAxis = 4)
-				else:
-					axisStyler(self.axisDict[2], ylabel='Reconstruction Error', 
-										 xlabel = 'Analysis ID',newXLim = (-1,3))
+	
 		            
 		elif plotType == 'density':
 		
@@ -2733,13 +2712,16 @@ class nonCategoricalPlotter(object):
 				else:	
 					axisStyler(ax, nTicksOnYAxis = 4, nTicksOnXAxis=4)
 		else:
-			if self.numbNumericColumns == 2:
-				xlabel, ylabel = self.numericColumns[:2] # precaution
-				axisStyler(ax, xlabel=xlabel, ylabel = ylabel,nTicksOnYAxis=5,nTicksOnXAxis=5)
+				for n,pair in enumerate(self.numericColumnPairs):
+					xlabel, ylabel = pair
+					axisStyler(self.axisDict[n], xlabel=xlabel, 
+								ylabel = ylabel,nTicksOnYAxis=5,
+								nTicksOnXAxis=5)
 						
 	def disconnect_event_bindings(self):
 		for eventBindingClass in [self._hclustPlotter,self.annotationClass,
-											self.pcaProjectionAnnotations]:
+											self.pcaProjectionAnnotations,
+											self.dimRedPlot]:
 			if eventBindingClass is not None:
 				eventBindingClass.disconnect_event_bindings()								
 	
@@ -3142,272 +3124,271 @@ class _scatterMatrixHelper(object):
 					else:
 						plt.setp(ax.get_yticklabels() , visible=False) 
 						plt.setp(ax.get_xticklabels() , visible=False)
-
                               			
-		
-class annotateScatterPoints(object):
-	'''
-	Adds an annotation triggered by a pick event. Deletes annotations by right-mouse click
-	and moves them around.
-	Big advantage over standard draggable(True) is that it takes only the closest annotation to 
-	the mouse click and not all the ones below the mouse event.
-	'''
-	def __init__(self,Plotter,figure,ax,data,labelColumns,
-					numericColumns,madeAnnotations,selectionLabels):
-		self.figure = figure
-		self.plotter = Plotter
-		self.ax = ax
-		self.data = data
-		self.numericColumns = numericColumns
-		self.textAnnotationColumns = labelColumns
-		self.eventOverAnnotation = False
-		
-		self.selectionLabels = selectionLabels
-		self.madeAnnotations = madeAnnotations
-		
-		
-		self.on_press =  self.plotter.figure.canvas.mpl_connect('button_press_event', lambda event:  self.onPressMoveAndRemoveAnnotions(event))
-		self.on_pick_point =  self.plotter.figure.canvas.mpl_connect('pick_event', lambda event:  self.onClickLabelSelection(event))
-	
-	def disconnect_event_bindings(self):
-		'''
-		'''
-		
-		self.plotter.figure.canvas.mpl_disconnect(self.on_press)
-		self.plotter.figure.canvas.mpl_disconnect(self.on_pick_point)
-		
-	def onClickLabelSelection(self,event):
-		'''
-		Drives a matplotlib pick event and labels the scatter points with the column choosen by the user
-		using drag & drop onto the color button..
-		'''
-		if hasattr(event,'ind'):
-			pass
-		else:
-			return
-		## check if the axes is used that was initiated
-		## allowing several subplots to have an annotation (PCA)
-		if event.mouseevent.inaxes != self.ax:
-			return
-		
-		if event.mouseevent.button != 1:
-			self.plotter.castMenu = False
-			return
-					
-		ind = event.ind
-		## check if we should label
-		xyEvent =  (event.mouseevent.xdata,event.mouseevent.ydata)
-		self.find_closest_and_check_event(xyEvent,event.mouseevent)
-		if self.eventOverAnnotation:
-			return
-		
-		selectedData = self.data.iloc[ind]
-		key = selectedData.index.values.item(0)
-		clickedData = selectedData.iloc[0]
-		
-		
-		if key in self.selectionLabels: ## easy way to check if that row is already annotated
-			return
-		
-		xyDataLabel = tuple(clickedData[self.numericColumns])
-		if len(self.textAnnotationColumns) != 1:
-			textLabel = str(clickedData[self.textAnnotationColumns]).split('Name: ')[0] ## dangerous if 'Name: ' is in column name
-		else:
-			textLabel = str(clickedData[self.textAnnotationColumns].iloc[0])
-		ax = self.ax
-		xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
-		xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
-		annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', arrowprops=arrow_args)
-		
-		self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
-		self.madeAnnotations[key] = annotObject
-		
-		self.plotter.redraw()
-	
-	def addAnnotationFromDf(self,dataFrame):
-		'''
-		'''
-		ax = self.ax
-
-		for rowIndex in dataFrame.index:
-			if rowIndex not in self.data.index:
-				continue
-			textData = self.data[self.textAnnotationColumns].loc[rowIndex]
-			textLabel = str(textData.iloc[0])
-			
-			key = rowIndex
-			xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
-			xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
-			xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
-			annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', arrowprops=arrow_args)
-		
-			self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
-			self.madeAnnotations[key] = annotObject	
-		## redraws added annotations	
-		self.plotter.redraw()
-
-	
-	def replotAllAnnotations(self, ax):
-		'''
-		If user opens a new session, we need to first replot annotation and then enable
-		the drag&drop events..
-		'''
-		
-		self.madeAnnotations.clear() 
-		for key,annotationProps in self.selectionLabels.items():
-			annotObject = ax.annotate(ha='left', arrowprops=arrow_args,**annotationProps)
-			self.madeAnnotations[key] = annotObject
-		
-	def onPressMoveAndRemoveAnnotions(self,event):
-		'''
-		Depending on which button used by the user, it trigger either moving around (button-1 press)
-		or remove the label.
-		'''
-		if event.inaxes is None:
-			return 
-		if event.button in [2,3]: ## mac is 2 and windows 3..
-			self.remove_clicked_annotation(event)
-		elif event.button == 1:
-			self.move_annotations_around(event)
-	
-	def annotate_all_row_in_data(self):
-		'''
-		'''
-		self.addAnnotationFromDf(self.data)
-	
-			
-	def remove_clicked_annotation(self,event):
-		'''
-		Removes annotations upon click from dicts and figure
-		does not redraw canvas
-		'''
-		self.plotter.castMenu = True
-		toDelete = None
-		for key,madeAnnotation  in self.madeAnnotations.items():
-			if madeAnnotation.contains(event)[0]:
-				self.plotter.castMenu = False
-				madeAnnotation.remove()
-				toDelete = key
-				break
-		if toDelete is not None:
-			del self.selectionLabels[toDelete] 
-			del self.madeAnnotations[toDelete] 
-			self.eventOverAnnotation = False
-			self.plotter.redraw()		
-	
-	def remove_all_annotations(self):
-		'''
-		Removes all annotations. Might be called from outside to let 
-		the user delete all annotations added
-		'''
-		
-		for madeAnnotation  in self.madeAnnotations.values():
-				madeAnnotation.remove()
-		self.madeAnnotations.clear()
-		self.selectionLabels.clear()
-
-	def find_closest_and_check_event(self,xyEvent,event):
-		'''
-		'''
-		if len(self.selectionLabels) == 0:
-			return
-		annotationsKeysAndPositions = [(key,annotationDict['xytext']) for key,annotationDict \
-		in self.selectionLabels.items()][::-1]
-		
-		keys, xyPositions = zip(*annotationsKeysAndPositions)
-		idxClosest = closest_coord_idx(xyPositions,xyEvent)[0]
-		keyClosest = keys[idxClosest]
-		annotationClostest = self.madeAnnotations[keyClosest]
-		self.eventOverAnnotation = annotationClostest.contains(event)[0]
-		
-		return annotationClostest,xyPositions,idxClosest,keyClosest
-
-			
-	def move_annotations_around(self,event):
-		'''
-		wrapper to move around labels. We did not use the annotation.draggable(True) option
-		because this moves all artists around that are under the mouseevent.
-		'''
-		if len(self.selectionLabels) == 0 or event.inaxes is None:
-			return 
-		self.eventOverAnnotation = False	
-		
-		xyEvent =  (event.xdata,event.ydata)
-		
-		annotationClostest,xyPositions,idxClosest,keyClosest = \
-		self.find_closest_and_check_event(xyEvent,event)	
-					
-		
-		if self.eventOverAnnotation:
-			ax = self.ax
-			inv = ax.transData.inverted()
-			
-			#renderer = self.figure.canvas.renderer() 
-			xyPositionOfLabelToMove = xyPositions[idxClosest] 
-			background = self.figure.canvas.copy_from_bbox(ax.bbox)
-			widthRect, heightRect = self.get_rectangle_size_on_text(ax,annotationClostest.get_text(),inv)
-			recetangleToMimicMove = patches.Rectangle(xyPositionOfLabelToMove,width=widthRect,height=heightRect,
-													fill=False, linewidth=0.6, edgecolor="darkgrey",
-                             						animated = True,linestyle = 'dashed', clip_on = False)
-			
-			ax.add_patch(recetangleToMimicMove)
-			
-			self.rectangleMoveEvent = self.figure.canvas.mpl_connect('motion_notify_event', 
-										lambda event:self.move_rectangle_around(event,recetangleToMimicMove,background,inv,ax))
-                             									
-                             									
-			self.releaseLabelEvent = self.figure.canvas.mpl_connect('button_release_event', 
-										lambda event: self.disconnect_label_and_update_annotation(event,
-																					recetangleToMimicMove,
-																					annotationClostest,
-																					keyClosest))
-		
-	def move_rectangle_around(self,event,rectangle,background,inv, ax):
-		'''
-		actually moves the rectangle
-		'''
-		x_s,y_s = event.x, event.y
-		x,y= list(inv.transform((x_s,y_s)))
-		self.figure.canvas.restore_region(background)
-		rectangle.set_xy((x,y))  
-		ax.draw_artist(rectangle)
-		self.figure.canvas.blit(ax.bbox)    
-          
-	def disconnect_label_and_update_annotation(self,event,rectangle,annotation,keyClosest):
-		'''
-		Mouse release event. disconnects event handles and updates the annotation dict to
-		keep track for export
-		'''
-		self.figure.canvas.mpl_disconnect(self.rectangleMoveEvent)
-		self.figure.canvas.mpl_disconnect(self.releaseLabelEvent)
-		
-		xyRectangle = rectangle.get_xy()
-		annotation.set_position(xyRectangle)
-		
-		rectangle.remove()
-		self.plotter.redraw() 
-		self.selectionLabels[keyClosest]['xytext'] = xyRectangle
-
-	def get_rectangle_size_on_text(self,ax,text,inv):
-		'''
-		Returns rectangle to mimic the position
-		'''	
-		renderer = self.figure.canvas.get_renderer() 
-		fakeText = ax.text(0,0,s=text)
-		patch = fakeText.get_window_extent(renderer)
-		xy0 = list(inv.transform((patch.x0,patch.y0)))
-		xy1 = list(inv.transform((patch.x1,patch.y1)))
-		fakeText.remove()
-		widthText = xy1[0]-xy0[0]
-		heightText = xy1[1]-xy0[1]
-		return widthText, heightText
-                             
-	def update_data(self,data):
-		'''
-		Updates data to be used. This is needed if the order of the data 
-		changed.
-		'''
-		self.data = data		
+# 		
+# class annotateScatterPoints(object):
+# 	'''
+# 	Adds an annotation triggered by a pick event. Deletes annotations by right-mouse click
+# 	and moves them around.
+# 	Big advantage over standard draggable(True) is that it takes only the closest annotation to 
+# 	the mouse click and not all the ones below the mouse event.
+# 	'''
+# 	def __init__(self,Plotter,figure,ax,data,labelColumns,
+# 					numericColumns,madeAnnotations,selectionLabels):
+# 		self.figure = figure
+# 		self.plotter = Plotter
+# 		self.ax = ax
+# 		self.data = data
+# 		self.numericColumns = numericColumns
+# 		self.textAnnotationColumns = labelColumns
+# 		self.eventOverAnnotation = False
+# 		
+# 		self.selectionLabels = selectionLabels
+# 		self.madeAnnotations = madeAnnotations
+# 		
+# 		
+# 		self.on_press =  self.plotter.figure.canvas.mpl_connect('button_press_event', lambda event:  self.onPressMoveAndRemoveAnnotions(event))
+# 		self.on_pick_point =  self.plotter.figure.canvas.mpl_connect('pick_event', lambda event:  self.onClickLabelSelection(event))
+# 	
+# 	def disconnect_event_bindings(self):
+# 		'''
+# 		'''
+# 		
+# 		self.plotter.figure.canvas.mpl_disconnect(self.on_press)
+# 		self.plotter.figure.canvas.mpl_disconnect(self.on_pick_point)
+# 		
+# 	def onClickLabelSelection(self,event):
+# 		'''
+# 		Drives a matplotlib pick event and labels the scatter points with the column choosen by the user
+# 		using drag & drop onto the color button..
+# 		'''
+# 		if hasattr(event,'ind'):
+# 			pass
+# 		else:
+# 			return
+# 		## check if the axes is used that was initiated
+# 		## allowing several subplots to have an annotation (PCA)
+# 		if event.mouseevent.inaxes != self.ax:
+# 			return
+# 		
+# 		if event.mouseevent.button != 1:
+# 			self.plotter.castMenu = False
+# 			return
+# 					
+# 		ind = event.ind
+# 		## check if we should label
+# 		xyEvent =  (event.mouseevent.xdata,event.mouseevent.ydata)
+# 		self.find_closest_and_check_event(xyEvent,event.mouseevent)
+# 		if self.eventOverAnnotation:
+# 			return
+# 		
+# 		selectedData = self.data.iloc[ind]
+# 		key = selectedData.index.values.item(0)
+# 		clickedData = selectedData.iloc[0]
+# 		
+# 		
+# 		if key in self.selectionLabels: ## easy way to check if that row is already annotated
+# 			return
+# 		
+# 		xyDataLabel = tuple(clickedData[self.numericColumns])
+# 		if len(self.textAnnotationColumns) != 1:
+# 			textLabel = str(clickedData[self.textAnnotationColumns]).split('Name: ')[0] ## dangerous if 'Name: ' is in column name
+# 		else:
+# 			textLabel = str(clickedData[self.textAnnotationColumns].iloc[0])
+# 		ax = self.ax
+# 		xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
+# 		xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
+# 		annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', arrowprops=arrow_args)
+# 		
+# 		self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
+# 		self.madeAnnotations[key] = annotObject
+# 		
+# 		self.plotter.redraw()
+# 	
+# 	def addAnnotationFromDf(self,dataFrame):
+# 		'''
+# 		'''
+# 		ax = self.ax
+# 
+# 		for rowIndex in dataFrame.index:
+# 			if rowIndex not in self.data.index:
+# 				continue
+# 			textData = self.data[self.textAnnotationColumns].loc[rowIndex]
+# 			textLabel = str(textData.iloc[0])
+# 			
+# 			key = rowIndex
+# 			xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
+# 			xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
+# 			xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
+# 			annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', arrowprops=arrow_args)
+# 		
+# 			self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
+# 			self.madeAnnotations[key] = annotObject	
+# 		## redraws added annotations	
+# 		self.plotter.redraw()
+# 
+# 	
+# 	def replotAllAnnotations(self, ax):
+# 		'''
+# 		If user opens a new session, we need to first replot annotation and then enable
+# 		the drag&drop events..
+# 		'''
+# 		
+# 		self.madeAnnotations.clear() 
+# 		for key,annotationProps in self.selectionLabels.items():
+# 			annotObject = ax.annotate(ha='left', arrowprops=arrow_args,**annotationProps)
+# 			self.madeAnnotations[key] = annotObject
+# 		
+# 	def onPressMoveAndRemoveAnnotions(self,event):
+# 		'''
+# 		Depending on which button used by the user, it trigger either moving around (button-1 press)
+# 		or remove the label.
+# 		'''
+# 		if event.inaxes is None:
+# 			return 
+# 		if event.button in [2,3]: ## mac is 2 and windows 3..
+# 			self.remove_clicked_annotation(event)
+# 		elif event.button == 1:
+# 			self.move_annotations_around(event)
+# 	
+# 	def annotate_all_row_in_data(self):
+# 		'''
+# 		'''
+# 		self.addAnnotationFromDf(self.data)
+# 	
+# 			
+# 	def remove_clicked_annotation(self,event):
+# 		'''
+# 		Removes annotations upon click from dicts and figure
+# 		does not redraw canvas
+# 		'''
+# 		self.plotter.castMenu = True
+# 		toDelete = None
+# 		for key,madeAnnotation  in self.madeAnnotations.items():
+# 			if madeAnnotation.contains(event)[0]:
+# 				self.plotter.castMenu = False
+# 				madeAnnotation.remove()
+# 				toDelete = key
+# 				break
+# 		if toDelete is not None:
+# 			del self.selectionLabels[toDelete] 
+# 			del self.madeAnnotations[toDelete] 
+# 			self.eventOverAnnotation = False
+# 			self.plotter.redraw()		
+# 	
+# 	def remove_all_annotations(self):
+# 		'''
+# 		Removes all annotations. Might be called from outside to let 
+# 		the user delete all annotations added
+# 		'''
+# 		
+# 		for madeAnnotation  in self.madeAnnotations.values():
+# 				madeAnnotation.remove()
+# 		self.madeAnnotations.clear()
+# 		self.selectionLabels.clear()
+# 
+# 	def find_closest_and_check_event(self,xyEvent,event):
+# 		'''
+# 		'''
+# 		if len(self.selectionLabels) == 0:
+# 			return
+# 		annotationsKeysAndPositions = [(key,annotationDict['xytext']) for key,annotationDict \
+# 		in self.selectionLabels.items()][::-1]
+# 		
+# 		keys, xyPositions = zip(*annotationsKeysAndPositions)
+# 		idxClosest = closest_coord_idx(xyPositions,xyEvent)[0]
+# 		keyClosest = keys[idxClosest]
+# 		annotationClostest = self.madeAnnotations[keyClosest]
+# 		self.eventOverAnnotation = annotationClostest.contains(event)[0]
+# 		
+# 		return annotationClostest,xyPositions,idxClosest,keyClosest
+# 
+# 			
+# 	def move_annotations_around(self,event):
+# 		'''
+# 		wrapper to move around labels. We did not use the annotation.draggable(True) option
+# 		because this moves all artists around that are under the mouseevent.
+# 		'''
+# 		if len(self.selectionLabels) == 0 or event.inaxes is None:
+# 			return 
+# 		self.eventOverAnnotation = False	
+# 		
+# 		xyEvent =  (event.xdata,event.ydata)
+# 		
+# 		annotationClostest,xyPositions,idxClosest,keyClosest = \
+# 		self.find_closest_and_check_event(xyEvent,event)	
+# 					
+# 		
+# 		if self.eventOverAnnotation:
+# 			ax = self.ax
+# 			inv = ax.transData.inverted()
+# 			
+# 			#renderer = self.figure.canvas.renderer() 
+# 			xyPositionOfLabelToMove = xyPositions[idxClosest] 
+# 			background = self.figure.canvas.copy_from_bbox(ax.bbox)
+# 			widthRect, heightRect = self.get_rectangle_size_on_text(ax,annotationClostest.get_text(),inv)
+# 			recetangleToMimicMove = patches.Rectangle(xyPositionOfLabelToMove,width=widthRect,height=heightRect,
+# 													fill=False, linewidth=0.6, edgecolor="darkgrey",
+#                              						animated = True,linestyle = 'dashed', clip_on = False)
+# 			
+# 			ax.add_patch(recetangleToMimicMove)
+# 			
+# 			self.rectangleMoveEvent = self.figure.canvas.mpl_connect('motion_notify_event', 
+# 										lambda event:self.move_rectangle_around(event,recetangleToMimicMove,background,inv,ax))
+#                              									
+#                              									
+# 			self.releaseLabelEvent = self.figure.canvas.mpl_connect('button_release_event', 
+# 										lambda event: self.disconnect_label_and_update_annotation(event,
+# 																					recetangleToMimicMove,
+# 																					annotationClostest,
+# 																					keyClosest))
+# 		
+# 	def move_rectangle_around(self,event,rectangle,background,inv, ax):
+# 		'''
+# 		actually moves the rectangle
+# 		'''
+# 		x_s,y_s = event.x, event.y
+# 		x,y= list(inv.transform((x_s,y_s)))
+# 		self.figure.canvas.restore_region(background)
+# 		rectangle.set_xy((x,y))  
+# 		ax.draw_artist(rectangle)
+# 		self.figure.canvas.blit(ax.bbox)    
+#           
+# 	def disconnect_label_and_update_annotation(self,event,rectangle,annotation,keyClosest):
+# 		'''
+# 		Mouse release event. disconnects event handles and updates the annotation dict to
+# 		keep track for export
+# 		'''
+# 		self.figure.canvas.mpl_disconnect(self.rectangleMoveEvent)
+# 		self.figure.canvas.mpl_disconnect(self.releaseLabelEvent)
+# 		
+# 		xyRectangle = rectangle.get_xy()
+# 		annotation.set_position(xyRectangle)
+# 		
+# 		rectangle.remove()
+# 		self.plotter.redraw() 
+# 		self.selectionLabels[keyClosest]['xytext'] = xyRectangle
+# 
+# 	def get_rectangle_size_on_text(self,ax,text,inv):
+# 		'''
+# 		Returns rectangle to mimic the position
+# 		'''	
+# 		renderer = self.figure.canvas.get_renderer() 
+# 		fakeText = ax.text(0,0,s=text)
+# 		patch = fakeText.get_window_extent(renderer)
+# 		xy0 = list(inv.transform((patch.x0,patch.y0)))
+# 		xy1 = list(inv.transform((patch.x1,patch.y1)))
+# 		fakeText.remove()
+# 		widthText = xy1[0]-xy0[0]
+# 		heightText = xy1[1]-xy0[1]
+# 		return widthText, heightText
+#                              
+# 	def update_data(self,data):
+# 		'''
+# 		Updates data to be used. This is needed if the order of the data 
+# 		changed.
+# 		'''
+# 		self.data = data		
 			
 
 

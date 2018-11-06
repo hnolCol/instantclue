@@ -28,7 +28,10 @@ import pandas as pd
 
 from modules.utils import *
 
-operator_options = ['> greater than','>= greater equal than','== equal','!= unequal','<= smaller equal than','< smaller than','[] / () within']
+operator_options = ['> greater than',
+	'>= greater equal than','== equal',
+	'!= unequal','<= smaller equal than',
+	'< smaller than','[] / () within']
 
 
 class numericalFilterDialog(object):
@@ -37,11 +40,12 @@ class numericalFilterDialog(object):
 		
 		if len(numericalColumns) == 0:
 			return
-			
+				
 		self.numericalColumns = numericalColumns
 		self.numbNumericalColumns = len(numericalColumns)
 		self.mainOperator = tk.StringVar()
-		
+
+
 		self.columnName = None
 		self.replaceDict = {True:'+',False:'-'}
 		
@@ -50,6 +54,8 @@ class numericalFilterDialog(object):
 		self.build_toplevel() 
 		self.build_widgets()
 		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window() 
 		
 	def close(self, event = None):
@@ -69,7 +75,7 @@ class numericalFilterDialog(object):
 		popup.wm_title('Numerical Filter') 
 		popup.bind('<Escape>', self.close) 
 		popup.protocol("WM_DELETE_WINDOW", self.close)
-		w = 600
+		w = 650
 		h = 140 + self.numbNumericalColumns * 45
 		
 		self.toplevel = popup
@@ -126,21 +132,21 @@ class numericalFilterDialog(object):
 								   fg="#4C626F")
 			
 			## operator menu 
-			opCombo = ttk.Combobox(self.cont, textvariable = variableOperator ,values = operator_options)
+			opCombo = ttk.Combobox(self.cont, textvariable = variableOperator ,
+				values = operator_options, width = 13)
 			opCombo.insert('end','> greater than')
+			opCombo.configure(state='readonly')
 			
 			## entry for user to provide criteria 
-			filterEntry = ttk.Entry(self.cont, width = 5)
+			filterEntry = ttk.Entry(self.cont, width = 4)
 			
 			## grid widgets
 			absoluteValuesCB.grid(row=row, column = 1, sticky=tk.W, pady=8, padx=3)
 			columnLabel.grid(row=row,column = 2, sticky=tk.EW, pady=8, padx=3)
-			opCombo.grid(row=row,column =3 , sticky=tk.W,pady=8, padx=3)
+			opCombo.grid(row=row,column =3 , sticky=tk.E,pady=8, padx=3)
 			filterEntry.grid(row=row,column=4, sticky=tk.EW,pady=8, padx=8,columnspan=2)
 			##  Lets save everything in a dict to be used later in applying filter
 			self.filterSettings[numColumn] = [absoluteValuesCB, variableOperator, filterEntry]
-		
-		
 		
 	def center_popup(self,size):
          	'''
@@ -196,11 +202,9 @@ class numericalFilterDialog(object):
  		outputColumn = selectionColumn.map(self.replaceDict)
  		
  		self.columnName = self.build_columnName()
- 		self.columnName = self.dfClass.evaluate_column_name(self.columnName)
- 		self.dfClass.add_column_to_current_data(self.columnName,outputColumn)
+ 		self.columnName = self.dfClass.evaluate_column_name(self.columnName, useExact = True)
+ 		self.dfClass.add_column_to_current_data(self.columnName,outputColumn, evaluateName = False)
  		self.close()
- 			 
-
 
 	def build_columnName(self):
 		'''
@@ -208,7 +212,9 @@ class numericalFilterDialog(object):
 		'''
 		
 		operator = [variableOperator.get()[:2] for _,variableOperator,_ in self.filterSettings.values()]
-		columnName = 'numFilt_{}_{}_{}'.format(self.mainOperator.get(),self.numericalColumns,operator).replace(" ",'').replace("'",'')
+		columnName = 'numFilt_{}_{}_{}'.format(self.mainOperator.get(),
+							get_elements_from_list_as_string(self.numericalColumns, maxStringLength = 20),
+							operator).replace(" ",'').replace("'",'')
 		return columnName
 
 	def check_if_condition_is_true(self,filterValue,operator,numColumn,absoluteBool):

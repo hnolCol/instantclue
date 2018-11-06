@@ -20,7 +20,7 @@ tooltip_information_plotoptions = [
          "Lineplot\n\nInput:"],
         ["At least one numeric column\nMax. Categories for factorplot: 3\nData are represented by a single point showing the confidence interval (0.95) and are connected if they belong to the same group.",
          "Pointplot\n\nInput:"],
-        ["At least two numeric columns (maximum 3)\ Categories for factorplot: up to 3 supported. More categories can be added using the color option. Simply drag & drop the desired numerical or categorical column to the color button.\nAdditional categories can be added using drag & drop to the newly created color button.",
+        ["At least two numeric columns. Need an even number of columns.\ Categories for factorplot: up to 3 supported. More categories can be added using the color option. Simply drag & drop the desired numerical or categorical column to the color button.\nAdditional categories can be added using drag & drop to the newly created color button.",
          "Scatter\n\nInput:"],
          ["At least two numeric columns\nCategories are not supported.\nTime series option uses the first column as the x-axis and all addition columns are plotted against this value. E.g. the first column should be the time while the following columns are numeric values (measurements)",
          "Time Series\n\nInput:"],

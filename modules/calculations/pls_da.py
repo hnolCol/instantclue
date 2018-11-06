@@ -7,8 +7,6 @@ from sklearn.cross_decomposition import PLSRegression
 class PLS_DA(object):
 	'''
 	'''
-	
-	
 	def __init__(self, n_comps = 3, yIsDummyMatrix = False, scaleData = False):
 		'''
 		data contains n_samples, n_features
@@ -46,7 +44,6 @@ class PLS_DA(object):
 		
 		if block == 'x':
 			return self.plsr.x_loadings_
-	
 	def get_squared_r(self,X,Y):
 		'''
 		'''
@@ -59,6 +56,11 @@ class PLS_DA(object):
 		'''
 		'''
 		return self.Ym
+		
+	@property
+	def loadings_(self):
+		return self.plsr.x_loadings_
+		
 					
 	def evaluate_data(self,X,Y):
 		'''
@@ -80,38 +82,4 @@ class PLS_DA(object):
 			Ydummy[n,col] = 1
 		self.classOrder = uniqueVals.tolist()
 		return Ydummy
-			
-		
-# 	TESTING	
-# X = np.array([[1.2,1.22,1.33],[2.3,2.5,2.9],[4.3,5.1,7.1],
-# 			  [2.7,2.5,2.22],[2.12,2.23,2.23]])
-# y = np.array(['ill','ill','fine','blood','ill'])
-# data = pd.read_table('all_lipids2.txt', sep = '\t')
-# Y = data['Index']
-# X = data[[col for col in data.columns if col != 'Index']]
-# Ybase = Y
-# Y,YGroups = pd.factorize(Y)
-# model = PLS_DA(yIsDummyMatrix=False,scaleData=True)
-# model.fit(X,Ybase)
-# 
-# print(model.get_squared_r(X,model.get_dummy_Y()))
-# scores = model.get_scores()
-# import matplotlib.pyplot as plt
-# f1 = plt.figure()
-# ax = f1.add_subplot(311)
-# ax.scatter(scores[:,0],scores[:,1])
-# for n,group in enumerate(Y):
-# 	text = YGroups[group]
-# 	ax.text(scores[n,0],scores[n,1],text)
-# 
-# 
-# 
-# ax = f1.add_subplot(312)
-# scores = model.get_weights()
-# ax.scatter(scores[:,0],scores[:,1])
-# 
-# ax = f1.add_subplot(313)
-# scores = model.get_loadings()
-# ax.scatter(scores[:,0],scores[:,1])
-# 
-# plt.show()
+	

@@ -24,7 +24,21 @@ class defineGroupsDialog(object):
 	def __init__(self,dimRedCollection,plotter,colorHelper):
 		'''
 		=====
-
+		
+		Define groups for Score plot after dimensional reduction technique has been applied.
+		Groups can either be infered by clustering technique, modified individual cells, 
+		or by copy pase (Ctrl-v, command-v)
+		
+		Input
+		-----
+			- dimRedCollection - Class type. Saved dimensional reduction results
+			- plotter		   - Class type. Instant Clue plotter.
+			- colorHelper	   - Class type. Color palettes stored.
+		Result
+		------
+		
+		Dimensional reduction Score plot is colored according to the defined groups.
+		
 		=====
 		'''
 		
@@ -133,21 +147,25 @@ class defineGroupsDialog(object):
 		## unbind some events that are not needed
 		if platform == 'MAC':			
 			self.pt.unbind('<MouseWheel>') # for Mac it looks sometimes buggy
+			self.pt.bind('<Command-v>',self.check_clipboard)
+		
 		self.pt.bind('<Control-v>',self.check_clipboard)
+		
+		
 		self.pt.show()		
 				 		
 	def check_clipboard(self,event):
 		'''
+		Copy data for grouping.
 		'''
-		print('buum')
-		cb = self.toplevel.clipboard_get()
 		df = pd.read_clipboard(header=None)
-		rows = self.pt.multiplerowlist
-		cols = self.pt.multiplecollist
-		
-		
-		
-		print(rows,cols)
+		data = df.values
+		try:
+			self.data['Group'] = data
+		except:
+			tk.messagebox.showinfo('Error ..','Paste data do not fit. Pasted data shape was {}'.format(data.shape)+
+			' but required shape is ({},1). No header is assumed.'.format(self.data.shape[-1]))
+		self.refresh()
 		
 		
 	def create_preview_container(self,sheet = None):

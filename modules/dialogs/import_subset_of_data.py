@@ -56,7 +56,8 @@ class importDataFromDf(object):
 		self.allowMultSelection = allowMultSelection
 		self.build_toplevel() 
 		self.build_widgets()
-		
+		self.toplevel.wait_visibility()
+		self.toplevel.grab_set() 
 		self.toplevel.wait_window() 
 		
 	def close(self,reset = False):
@@ -77,8 +78,7 @@ class importDataFromDf(object):
 		'''
         
 		popup = tk.Toplevel(bg=MAC_GREY) 
-		popup.wm_title('Data Importer') 
-         
+		popup.wm_title('Data Importer')  
 		popup.protocol("WM_DELETE_WINDOW", self.close)
 		w=880
 		h=430

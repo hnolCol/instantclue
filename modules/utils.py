@@ -80,7 +80,7 @@ websiteUrl = 'http://www.instantclue.uni-koeln.de'
 websiteUrlVideos = 'http://www.instantclue.uni-koeln.de/videos.html'
 webisteUrlTutorial = 'http://www.instantclue.uni-koeln.de/tutorials.html'
 gitHubUrl = 'http://github.com/hnolCol/InstantClue'
-paperUrl = 'www.nature.com/articles/s41598-018-31154-6'
+paperUrl = 'http://www.nature.com/articles/s41598-018-31154-6'
 videoURLDict = dict()
 videoURLDict['main_figure'] = r'https://www.youtube.com/watch?v=5kSy53gpV5Y'
 
@@ -138,7 +138,11 @@ pdist_metric = ['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation
 stringBool = {'True':True,
 			  'False':False}
 
-
+styleHoverScat = dict(visible=False, c = 'red', marker = 'o',
+				markeredgecolor = 'black',
+				markeredgewidth = 0.3)#
+				
+				
 def merge_two_dicts(x,y):
 	z = x.copy()
 	z.update(y)
@@ -188,6 +192,20 @@ multCorrAbbr = {'bonferroni':'bonferroni',
 
 namedColors = matplotlib.colors.get_named_colors_mapping()
 
+def common_start_string(*strings):
+    """ Returns the longest common substring
+        from the beginning of the `strings`
+        from here: https://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings
+    """
+    def _iter():
+        for z in zip(*strings):
+            if z.count(z[0]) == len(z):  # check all elements in `z` are the same
+                yield z[0]
+            else:
+                return
+
+    return ''.join(_iter())
+    
 def evaluate_screen(screen_width,screen_height,w,h):
      '''
      Checks if the desired resultion (w,h) fits to screen
@@ -664,7 +682,8 @@ def get_max_colors_from_pallete(cmap):
     '''
     '''
 
-    if cmap in ["Greys","Blues","Greens","Purples",'Reds',"BuGn","PuBu","PuBuGn","BuPu","OrRd","BrBG","PuOr","Spectral","RdBu","RdYlBu","RdYlGn"]:
+    if cmap in ["Greys","Blues","Greens","Purples",'Reds',"BuGn","PuBu","PuBuGn","BuPu",
+    	"OrRd","BrBG","PuOr","Spectral","RdBu","RdYlBu","RdYlGn","viridis","inferno","cubehelix"]:
         n = 60
     elif cmap in ['Accent','Dark2','Pastel2','Set2','Set4']:
         n=8
@@ -999,7 +1018,7 @@ class CreateToolTip(object):
         	if self.cm in ["Greys","Blues","Greens","Purples",'Reds',"BuGn","PuBu","PuBuGn","BuPu","OrRd"]:
         		type = 'sequential'
         		n = np.inf
-        	elif self.cm in ["BrBG","PuOr","Spectral","RdBu","RdYlBu","RdYlGn"]:
+        	elif self.cm in ["BrBG","PuOr","Spectral","RdBu","RdBu_r","RdYlBu","RdYlGn","viridis","inferno","cubehelix"]:
         		type = 'diverging'
         		n = np.inf
         	elif self.cm in savedMaxColors:

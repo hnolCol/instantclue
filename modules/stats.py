@@ -30,24 +30,32 @@ from scipy.stats import wilcoxon
 from scipy.stats import ranksums
 from scipy.stats import ttest_ind
 from scipy.stats import ttest_rel
-
+from scipy.stats import f_oneway
 from scipy import interpolate
 
+
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD
+from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD, FactorAnalysis
 from sklearn.manifold import TSNE
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
 from collections import OrderedDict
 
 from modules.calculations.anova import Anova
 from modules.utils import *
-
+from modules.calculations.pls_da import PLS_DA
 
 dimensionalReductionMethods = OrderedDict([('Principal Component Analysis',PCA),
 								('Non-Negative Matrix Factorization',NMF),
 								('Incremental PCA',IncrementalPCA),
-								('Latent Semantic Analysis',TruncatedSVD)
+								('Latent Semantic Analysis',TruncatedSVD),
+								('t-distributed Stochastic Neighbor Embedding',TSNE),
+								('Linear Discriminant Analysis',LinearDiscriminantAnalysis),
+								('Factor Analysis',FactorAnalysis),
 								])
-
+#('PLS-DA - Partial Least Squares - Discrimant Analysis',PLS_DA)
+dic = {'t-distributed Stochastic Neighbor Embedding':{'init':'pca','perplexity':30,
+		'learning_rate':100,'method':'barnes_hut','early_exaggeration':3}}
 
 class dimensionReductionCollection(object):
 	'''
@@ -121,7 +129,7 @@ class dimensionReductionCollection(object):
 		self.dimRedResults[self.id] = base
 		
 		
-def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
+def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', outcomeVariable = None):
 	'''
 	dataFrame might be either a pandas dataframe or directly a ndarray.
 	'''
@@ -138,24 +146,36 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA'):
 	if method == 'Latent Semantic Analysis':
 		if nComps is None:
 			nComps -= 1
-			
-	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps)
-	dimReductionClass.fit(data)
+	kwargs = dic[method] if method in dic else {}
+	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps,**kwargs)
 	
-	components = dimReductionClass.components_
-	drivers = dimReductionClass.transform(data)
-	
-	outputDict['Components'] = pd.DataFrame(components, columns = columnsNames,
-										index = ['Comp_'+str(i+1) for i in range(components.shape[0])])
-	if method != 'Non-Negative Matrix Factorization':
-		outputDict['ExplainedVariance'] = pd.DataFrame(dimReductionClass.explained_variance_ratio_)
+	if method == 't-distributed Stochastic Neighbor Embedding':
+		drivers = dimReductionClass.fit_transform(data)
+	elif method == 'Linear Discriminant Analysis':
+		drivers = dimReductionClass.fit_transform(data,outcomeVariable)
+		print(dimReductionClass.predict_proba(data))
+		#components = dimReductionClass.components_
 		
+	else:
+		dimReductionClass.fit(data)
+		components = dimReductionClass.components_
+		drivers = dimReductionClass.transform(data)
+	
+		outputDict['Components'] = pd.DataFrame(components, columns = columnsNames,
+										index = ['Comp_'+str(i+1) for i in range(components.shape[0])])
+	if method == 't-distributed Stochastic Neighbor Embedding':
+		outputDict['klDivergence'] = dimReductionClass.kl_divergence_	
+	elif method == 'Factor Analysis':
+		outputDict['noiseVariance'] = dimReductionClass.noise_variance_							
+	elif method != 'Non-Negative Matrix Factorization':
+		outputDict['ExplainedVariance'] = pd.DataFrame(dimReductionClass.explained_variance_ratio_)
 	else:
 		outputDict['ReconstructionError'] = dimReductionClass.reconstruction_err_
 		
 	outputDict['Drivers'] = pd.DataFrame(drivers, index = dataFrame.index, 
-		columns = ['Comp_'+str(i+1) for i in range(components.shape[0])])
+		columns = ['Comp_'+str(i+1) for i in range(drivers.shape[1])])
 	outputDict['Predictor'] = dimReductionClass
+	
 	return outputDict
 	
 
@@ -759,6 +779,7 @@ def compare_two_groups(testSettings,groupList):
 						group1, group2 = groupList
 					elif mode == 'less':
 						group1, group2 = groupList[1], groupList[0]
+					
 					testResult = ttest_rel(group1,group2,nan_policy='omit')
 					if mode != 'two-sided [default]':
 						if mode == 'greater':
@@ -796,7 +817,7 @@ def compare_two_groups(testSettings,groupList):
 				except:
 					testResult = (np.nan,np.nan)
 					
-		elif test == 'Whitney-Mann U [unparied non-para]':
+		elif test == 'Whitney-Mann U [unpaired non-para]':
 			if mode == 'two-sided [default]':
 				alt_test = 'two-sided'
 			else:
@@ -805,7 +826,7 @@ def compare_two_groups(testSettings,groupList):
 				testResult = mannwhitneyu(groupList[0],groupList[1],alternative=alt_test)
 			except:
 				testResult = (np.nan,np.nan)
-				
+			
 		elif test == 'Wilcoxon [paired non-para]': 
 		
 			groupList = [group[~np.isnan(group)] for group in groupList]
@@ -834,9 +855,23 @@ def compare_two_groups(testSettings,groupList):
 							testResult = (mult*testResult[0], 1-testResult[1]/2)
 						else:	
 							testResult = (mult*testResult[0], testResult[1]/2)
+		
+			 
 				
 		return testResult
 
+def compare_multiple_groups(test,data):
+	'''
+	'''
+	
+	if test == '1-W-ANOVA':
+		if True:
+			testResult= f_oneway(*data)
+			#testResult = (stat,pValue)
+		else:
+			testResult = (np.nan,np.nan)
+	return testResult
+		
 def estimateQValue(pv, m=None, verbose=False, lowmem=False, pi0=None):
     '''
     =============================================

@@ -69,8 +69,13 @@ import tkinter.filedialog as tf
 from modules import images
 from modules.utils import *
 from modules.dialogs import VerticalScrolledFrame
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-
+try:
+	#matplotlib 2
+	from matplotlib.backends.backend_tkagg import NavigationToolbar2TkAgg
+except:
+	#matplotlib 3
+	from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
+	
 from modules.dialogs import text_editor
 from modules.dialogs import artist_editor
 from modules.dialogs import simple_dialog
@@ -300,7 +305,7 @@ class mainFigureTemplateDialog(object):
 		closing the toplevel
 		'''
 		quest = tk.messagebox.askquestion('Confirm ..',
-			'Closing main figure template window. Proceed?',
+			'Closing report window. Proceed?',
 			parent = self.toplevel)
 
 		if quest == 'yes':
@@ -411,7 +416,10 @@ class mainFigureTemplateDialog(object):
 		self.figure.subplots_adjust(top=0.94, bottom=0.05,left=0.1,
 									right=0.95, wspace = 0.32, hspace=0.32)
 		canvas  = FigureCanvasTkAgg(self.figure,frameFigure)
-		canvas.show()
+		if hasattr(canvas,'show'):
+			canvas.show()
+		elif hasattr(canvas,'draw'):
+			canvas.draw()
 		self.toolbar_main = NavigationToolbar2TkAgg(canvas, toolbarFrame)
 		canvas._tkcanvas.pack(in_=frameFigure,side="top",fill='both',expand=True)
 		canvas.get_tk_widget().pack(in_=frameFigure,side="top",fill='both',expand=True)

@@ -141,8 +141,10 @@ class workflowCollection(object):
 			
 			tagId = 'branch_{}'.format(itemId)
 			getattr(self.analyzeData,self.history[itemId]['funcAnalyzeR'])(**self.history[itemId]['argsAnalyzeR'])
-			self.canvas.delete(tagId)
-			self.canvas.delete(tagId+'_filter')
+			
+			if hasattr(self,'canvas'):
+				self.canvas.delete(tagId)
+				self.canvas.delete(tagId+'_filter')
 			if itemId in self.plotHistory:
 				branchId = self.plotHistory[itemId]
 				
@@ -230,7 +232,7 @@ class workflowCollection(object):
 		self.imageTasks['deleteRows'], self.imageTasks['deleteColumn'],\
 		self.imageTasks['renameColumn'], self.imageTasks['replaceColumn'],\
 		self.imageTasks['mergeDfs'], self.imageTasks['appendDfs'],\
-		self.imageTasks['subsetDf']  = images.get_workflow_images()		
+		self.imageTasks['subsetDf'], self.imageTasks['addColumn']  = images.get_workflow_images()		
 		
 		
 		self.imageTasks['boxplot'],self.imageTasks['barplot'],\
@@ -609,10 +611,9 @@ class workflowCollection(object):
 		'''		
 		state = self.__dict__.copy()
 		for list in [ 'canvas','imageTasks','toplevel','inFront','treeView',
-									'sourceData','treeView','analyzeData']:#, 'nonCategoricalPlotter', 'plotHistory']:
+					'showDetails','sourceData','treeView','analyzeData']:#, 'nonCategoricalPlotter', 'plotHistory']:
 			if list in state:
 				del state[list]
-				
 		return state			
 		
 			

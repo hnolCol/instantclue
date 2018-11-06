@@ -1,11 +1,11 @@
-"""
+"""
 	""MAIN FILE - THIS FILE STARTS THE PROGRAM""
-    Instant Clue - Interactive Data Visualization and Analysis.
+    Instant Clue - Interactive Data Visuali5zation and Analysis.
     Copyright (C) Hendrik Nolte
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
-    as published by the Free Software Foundation; either version 3
+    as published by the Free Software Foundation; either version 3
     of the License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -24,7 +24,7 @@ import os
 
 import matplotlib
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg#, NavigationToolbar2TkAgg
 
 import webbrowser
 import urllib.request as urllibReq
@@ -52,7 +52,6 @@ class instantClueApp(tk.Tk):
         tk.Tk.wm_title(self, "Interactive Data Analysis - CECAD Cologne")
         self.protocol("WM_DELETE_WINDOW", self.close_up)
 
-
         container = tk.Frame(self)
         container.pack(side="top", fill="both", expand = True)
         container.grid_rowconfigure(0, weight=1)
@@ -79,7 +78,7 @@ class instantClueApp(tk.Tk):
                         frame.grid_columnconfigure(3, weight=1, minsize=200)
                         frame.grid_rowconfigure(5, weight=1, minsize=345)
                         frame.grid_rowconfigure(11, weight=1, minsize=70)
-                        frame.grid_columnconfigure(0,weight=3,minsize=355)
+                        frame.grid_columnconfigure(0,weight=3,minsize=400)
 
 
         self.show_frame(start_page.StartPage)
@@ -102,7 +101,7 @@ class instantClueApp(tk.Tk):
         menubar.add_cascade(label="Help", menu=helpmenu)
 
         helpmenu = tk.Menu(menubar, tearoff=0)
-        helpmenu.add_command(label="Orig. Publication", command = lambda: webbrowser.open('http://google.de'))
+        helpmenu.add_command(label="Orig. Publication", command = lambda: webbrowser.open(paperUrl))
         menubar.add_cascade(label="Read more", menu=helpmenu)
 
         return menubar
@@ -128,6 +127,11 @@ class instantClueApp(tk.Tk):
 
     	for n,num in enumerate(textSplitVersion):
     		if float(num) > float(currentVersion[n]):
+    			if n != 0:
+    				if float(currentVersion[n-1]) == textSplitVersion[n-1]:
+    					pass
+    				else:
+    					continue
     			update = True
     			break
     	if update:
