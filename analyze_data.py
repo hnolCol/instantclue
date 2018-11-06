@@ -2488,8 +2488,29 @@ class analyze_data(tk.Frame):
      			return	
      		     		
      	if selectedColumns is not None:
+<<<<<<< HEAD
      		renameDialog = change_columnName.ColumnNameConfigurationPopup(self.DataTreeview.columnsSelected,
      														self.sourceData, self.DataTreeview, self)
+=======
+     		if byValue or byMedian:
+     			if byValue:
+     				value = ts.askfloat('Provide Value','Enter value for division:')
+     				if value is not None:
+     					calcDict = OrderedDict([(column,value) for column in selectedColumns])
+     					baseString = 'by_{}:'.format(value)
+     			elif byMedian:
+     				values = self.sourceData.df[selectedColumns].median()
+     				calcDict = OrderedDict([(column,value) for column,value in zip(selectedColumns,values.tolist())])
+     				baseString = 'by_median:'  
+     			
+     			if operation == 'divide':
+     				baseString = 'div_' + baseString
+     				newColumns = self.sourceData.divide_columns_by_value(calcDict,baseString)
+     				
+     			elif operation == 'substract':
+     				baseString = 'sub_' + baseString
+     				newColumns = self.sourceData.substract_columns_by_value(calcDict,baseString)
+>>>>>>> 4839eb2fc5d58e35d92c34afdab504beafb469d2
      		
      		if renameDialog.renamed: #indicates if any renaming was done (or closed)
      			
