@@ -78,7 +78,7 @@ class fileImporter(object):
 		'''
 		Close toplevel
 		'''
-		if hasattr(self,'pt'):
+		if hasattr(self,'pt') and self.pt is not None:
 			self.pt.remove()
 			del self.pt	
 		self.toplevel.destroy() 

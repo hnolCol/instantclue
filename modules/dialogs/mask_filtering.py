@@ -337,7 +337,7 @@ class clippingMaskFilter(object):
 		self.plotter.save_axis_limits()		
 		self.plotter.clean_up_figure()
 		
-		self.plotter.reinitiate_chart(updateData=True)			
+		self.plotter.reinitiate_chart(updateData=True, fromFilter = True)			
 		
 
 	def create_num_clipping_mask(self,event,columnName,id):

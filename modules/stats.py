@@ -48,9 +48,9 @@ from modules.calculations.pls_da import PLS_DA
 dimensionalReductionMethods = OrderedDict([('Principal Component Analysis',PCA),
 								('Non-Negative Matrix Factorization',NMF),
 								('Incremental PCA',IncrementalPCA),
-								('Latent Semantic Analysis',TruncatedSVD),
-								('t-distributed Stochastic Neighbor Embedding',TSNE),
-								('Linear Discriminant Analysis',LinearDiscriminantAnalysis),
+								#('Latent Semantic Analysis',TruncatedSVD),
+								#('t-distributed Stochastic Neighbor Embedding',TSNE),
+								#('Linear Discriminant Analysis',LinearDiscriminantAnalysis),
 								('Factor Analysis',FactorAnalysis),
 								])
 #('PLS-DA - Partial Least Squares - Discrimant Analysis',PLS_DA)
@@ -146,14 +146,25 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', o
 	if method == 'Latent Semantic Analysis':
 		if nComps is None:
 			nComps -= 1
+	
+	
+
 	kwargs = dic[method] if method in dic else {}
 	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps,**kwargs)
 	
 	if method == 't-distributed Stochastic Neighbor Embedding':
 		drivers = dimReductionClass.fit_transform(data)
 	elif method == 'Linear Discriminant Analysis':
-		drivers = dimReductionClass.fit_transform(data,outcomeVariable)
-		print(dimReductionClass.predict_proba(data))
+		dimReductionClass.fit(data,outcomeVariable)
+		drivers = dimReductionClass.transform(data)
+		#print(drivers)
+		#print(dimReductionClass.get_params())
+		coeffs = dimReductionClass.coef_
+		outputDict['Components'] = pd.DataFrame(coeffs, columns = columnsNames,
+										index = ['Comp_'+str(i+1) for i in range(coeffs.shape[0])])
+		
+		#print(drivers.shape)
+		#print(dimReductionClass.predict_proba(data))
 		#components = dimReductionClass.components_
 		
 	else:
@@ -740,8 +751,9 @@ class interactiveStatistics(object):
 		yValuesLine = [yPositionClick1,h,
 					   h,yPositionClick2]
 					   
-		line = ax.plot(xValuesLine,yValuesLine,**signLineProps) 
-		pValue = '{:.2e}'.format(testResult[1])
+		line = ax.plot(xValuesLine,yValuesLine,**signLineProps)
+		pValue = return_readable_numbers(testResult[1]) 
+		#pValue = '{:.2e}'.format(testResult[1])
 		text_stat = ax.text(midXPosition, h, pValue, **standardTextProps)
 		## saving text items and line
 		self.saveClickCoords['text'] = text_stat

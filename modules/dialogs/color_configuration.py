@@ -141,7 +141,7 @@ class colorMapHelper(object):
 		
 		if os.path.exists(self.path) == False:
 			self.reset_default()
-			self.save_custom_colors()
+			return
 			
 		with open(self.path,'rb') as file:
 			self.customColors = pickle.load(file)
@@ -163,10 +163,16 @@ class colorMapHelper(object):
 		Pickles the modified dict containing the colors
 		(customColors).
 		'''
-		try:
+		
+		
+		if True:
+			if os.path.exists(os.path.join(path_file,'data')) == False:
+				os.mkdir(os.path.join(path_file,'data'))
+				os.mkdir(os.path.join(path_file,'data','colors'))
+				print('created folder')
 			with open(self.path,'wb') as file:
 				pickle.dump(self.customColors, file)
-		except:
+		else:
 			try:
 				tk.messagebox.showinfo('Error ..','Color package file not found or no permission?')
 			except:

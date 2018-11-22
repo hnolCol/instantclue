@@ -12,7 +12,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.5.2' #Date 12.09.2018
+__VERSION__ = '0.5.2' #Date 22.11.2018
 
 
 class StartPage(tk.Frame):

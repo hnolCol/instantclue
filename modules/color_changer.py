@@ -116,9 +116,7 @@ class colorChanger(object):
 					lines.set_edgecolor(colorPalette[i])
 				else:
 					lines.set_color(colorPalette[i])
-					
-					
-                             	 
+					                             	 
 	def change_color(self):
 		'''
 		First check all plot types that need a helper function

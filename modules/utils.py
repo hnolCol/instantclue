@@ -505,10 +505,10 @@ def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot', erro
          elif plot_type in ['add_swarm','swarm']:
                          if len(data.index) < 1000:
                          	sns.swarmplot(x= x, y=y,data=data, palette = cmap, hue = hue,
-                         	split = True, order=order, ax = ax, hue_order = hue_order)
+                         	dodge = True, order=order, ax = ax, hue_order = hue_order)
                          else:
                          	sns.stripplot(x= x, y=y,data=data, palette = cmap, hue = hue,
-                         	split = True, order=order, ax = ax, hue_order = hue_order, jitter = True)
+                         	dodge = True, order=order, ax = ax, hue_order = hue_order, jitter = True)
                          if plot_type == 'add_swarm':
                          	collections = ax.collections
                          	for collection in collections:
@@ -665,7 +665,7 @@ def get_elements_from_list_as_string(itemList, addString = '',newLine = False, m
 
 def return_readable_numbers(number):
      """Returns number as string in a meaningful and readable way to omit to many digits"""
-     if number < 0.1:
+     if number < 0.001:
      		new_number = '{:.2E}'.format(number)
      elif number < 10:
      		new_number = round(number,2)
@@ -875,6 +875,7 @@ class CreateToolTip(object):
         self.id = self.widget.after(self.waittime, self.show)
 
     def unschedule(self):
+    	
         id_ = self.id
         self.id = None
         if id_:
@@ -917,6 +918,10 @@ class CreateToolTip(object):
         pad = self.pad
         widget = self.widget
         n = 6
+        
+        if hasattr(self,'tw') and self.tw is not None:
+        	self.tw.destroy()
+        
         self.tw = tk.Toplevel(widget)
         
 

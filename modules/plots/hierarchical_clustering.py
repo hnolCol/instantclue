@@ -22,6 +22,7 @@ import numpy as np
 import xlsxwriter
 
 from tkinter import filedialog as tf
+import tkinter as tk
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -527,7 +528,7 @@ class hierarchichalClustermapPlotter(object):
 													  **self.meshKwargs)
 			
 			
-			plt.colorbar(self.colorMesh, cax=self.axColormap)
+			self.colorBar = plt.colorbar(self.colorMesh, cax=self.axColormap)
 			if self.plotCorrMatrix == False:
 				self.axColormap.set_title('n={}'.format(dataRowCluster.shape[0]))
 		
@@ -549,13 +550,14 @@ class hierarchichalClustermapPlotter(object):
 		
 	def get_cluster_number(self,linkage,maxD):
 		'''
+		Returns cluster numbers
 		'''
-		
 		return sch.fcluster(linkage,maxD,'distance')		
 	
 		
 	def cluster_data(self, dataFrame, metric, method):
 		'''
+		Clusters the data
 		'''
 		try:
 			if  metric ==  'euclidean':   
@@ -582,11 +584,6 @@ class hierarchichalClustermapPlotter(object):
 		dependent_coord = dendrogram['dcoord']
 		independent_coord = dendrogram['icoord']
 		max_dependent_coord = max(map(max, dependent_coord))
-		
-		#print(dependent_coord)
-		#print(independent_coord)
-		
-
 		
 		if rotate:
 			lines = LineCollection([list(zip(x, y))
@@ -681,7 +678,10 @@ class hierarchichalClustermapPlotter(object):
 		axLabelColor.yaxis.set_label_position('right')
 		axLabelColor.set_yticklabels([], minor=False)
 		axLabelColor.yaxis.tick_right()
-		axLabelColor.axis('off')
+		try: #matplotlib 3.0
+			axLabelColor.axis(False)
+		except:
+			axLabelColor.axis('off')
 		
 		##remove xticklabels from dendrogram axes
 		axRowDendro.set_xticklabels([])
@@ -690,12 +690,7 @@ class hierarchichalClustermapPlotter(object):
 		
 		## format colormap 
 		self.format_colorMap_ticks(axColormap)
-
-		
-		
-		
-		#axColormap.yaxis.set_major_locator(mtick.MaxNLocator(5)) 
-		
+				
 		## adds cluster numbers to dendrogram
 		if self.showCluster and self.plotCorrMatrix == False:
 			self.add_cluster_label(axRowDendro, export = export)
@@ -703,18 +698,17 @@ class hierarchichalClustermapPlotter(object):
 			axRowDendro.set_yticklabels([])
 	
 	def format_colorMap_ticks(self,axColormap):
-		
+		'''
+		Tick of color map formatting.
+		'''
 		axColormap.tick_params(axis=u'y', which=u'both',length=2.3,direction='out')
-		ticks = axColormap.get_yticklabels()
-		nTicks = len(ticks)
-		newTicks = ['' for n in range(nTicks)]		
-		for n in np.linspace(start=0,stop=nTicks-1,
-								num=3,endpoint=True):
-			idx = int(n) 
-			newTicks[idx] = ticks[idx].get_text() 
-					
-		axColormap.set_yticklabels(newTicks)
-						
+		yMin, yMax = axColormap.get_ylim() 
+		yTickTlabels = [return_readable_numbers(x) for x in np.linspace(yMin,yMax,num=3,endpoint=True)]
+		
+		self.colorBar.set_ticks(np.linspace(yMin,yMax,num=3,endpoint=True))
+		self.colorBar.set_ticklabels(yTickTlabels)
+		
+		
 	def add_some_bindings(self,ax):
 		'''
 		'''
@@ -857,6 +851,11 @@ class hierarchichalClustermapPlotter(object):
 		'''
 		Function handling actions on ylim change.
 		'''
+		if self.circulizeDendrogram:
+			return
+		if hasattr(self,'axClusterMap') == False:
+			return
+			
 		newYLimits = self.axClusterMap.get_ylim()
 		if newYLimits[0] == 0 and newYLimits[1] == 1:
 			self.reset_xlimits_of_row_dendro()
@@ -893,20 +892,25 @@ class hierarchichalClustermapPlotter(object):
 		self.plotter.redraw()
 	
 	
-	def update_linestyle(self, numberOfRows):
+	def update_linestyle(self, numberOfRows, mesh = None):
 		'''
 		Update linestyle of Quadmesh to show nice borders if appropiate.
 		'''
-		if hasattr(self,'colorMesh') == False:
+		if hasattr(self,'colorMesh') == False and mesh is None:
 			return
+		
+		elif mesh is None:
+			
+			mesh = self.colorMesh
+			
 		if numberOfRows < 60 and len(self.numericColumns) < 30:
 			props = dict(linewidth = 0.01, linestyle = '-',
 					edgecolor = 'k')
-			self.colorMesh.update(props)
+			mesh.update(props)
 		else:
 			props = dict(linewidth = 0, linestyle = '-',
 					edgecolor = 'k')
-			self.colorMesh.update(props)
+			mesh.update(props)
 			
 	def add_cluster_label(self, axRowDendro, export = False):
 		'''
@@ -1158,8 +1162,14 @@ class hierarchichalClustermapPlotter(object):
 	def remove_color_column(self,event = '', label = None):
 		'''
 		'''
+		if self.circulizeDendrogram:
+			tk.messagebox.showinfo('Error.','Cannot remove color from circularized dendrogram. Please replot.')
+			return
 		self.axLabelColor.clear()	
-		self.axLabelColor.axis('off')
+		try:
+			self.axLabelColor.axis(False)
+		except:
+			self.axLabelColor.axis('off')
 		self.colorData = pd.DataFrame()
 		self.colorColumnList  = []
 		self.update_tick_labels_of_rows()
@@ -1173,7 +1183,12 @@ class hierarchichalClustermapPlotter(object):
 		
 		self.labelColumnList = []
 		self.update_tick_labels_of_rows()
-		self.on_ylim_change(event)
+		if self.circulizeDendrogram and hasattr(self,'circDAxis'):
+			for txt in self.polarXTicks:
+				txt.update({'visible':False})
+			self.polarXTicks = []
+		else:
+			self.on_ylim_change(event)
 		self.plotter.redraw()
 		if label is not None:
 			label.destroy()
@@ -1237,23 +1252,20 @@ class hierarchichalClustermapPlotter(object):
 			self.add_dendrogram(self.Z_col,False,axColumnDendro)
 			axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
 		else:
-			axColumnDendro.axis('off')
+			axColumnDendro.axis(False)
 		if self.Z_row is not None:
 			self.add_dendrogram(self.Z_row,True,axRowDendro,create_background=False)
 			axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
 		else:	
-			axRowDendro.axis('off')
+			axRowDendro.axis(False)
 		
-		im = axClusterMap.pcolormesh(self.df[self.numericColumns].values, cmap = self.cmapClusterMap,**self.meshKwargs)
-		
-		
-		
+		im = axClusterMap.pcolormesh(self.df[self.numericColumns].values, 
+								cmap = self.cmapClusterMap,**self.meshKwargs)
+
 		plt.colorbar(im, cax=axColormap)
 		if self.plotCorrMatrix == False:
 				axColormap.set_title('n={}'.format(self.df.shape[0]))
-				
 		self.adjust_axis_limits_and_labels(axClusterMap,axLabelColor,axRowDendro,axColumnDendro,axColormap,export=True)
-		
 		if self.fromSavedSession:
 			currentYLim = self.exportYLim[self.exportId]
 			yticks, ylabels = self.savedLabels[self.exportId]
@@ -1267,7 +1279,7 @@ class hierarchichalClustermapPlotter(object):
 				ylabels = self.axClusterMap.get_yticklabels()			
 		
 		if self.colorData.empty == False:
-			axLabelColor.axis('on')
+			axLabelColor.axis(True)
 			# +0.5 to get enough space for labels! 
 			self.adjust_colorLabel_axis(len(self.colorData.columns)+0.5, ax = axLabelColor) 
 			self.draw_color_data(axLabelColor,len(self.colorData.columns))
@@ -1277,6 +1289,9 @@ class hierarchichalClustermapPlotter(object):
 			axClusterMap.set_yticks(yticks)
 			axClusterMap.set_yticklabels(ylabels)
 			
+		newYLimits = [round(x,0) for x in currentYLim]
+		numberOfRows = newYLimits[1]-newYLimits[0]	
+		self.update_linestyle(numberOfRows, mesh = im)			
 		## Needed to not get a white box on top of the hclust
 			
 		for ax in [axClusterMap,axLabelColor]:
@@ -1305,9 +1320,7 @@ class hierarchichalClustermapPlotter(object):
 
 	def save_data_to_excel(self):
 		'''
-		'''
-		#df = self.df[self.numericColumns].values	
-		
+		'''		
 		pathSave = tf.asksaveasfilename(initialdir=path_file,
                                         title="Choose File",
                                         filetypes = (("Excel files","*.xlsx"),),
@@ -1434,7 +1447,6 @@ class hierarchichalClustermapPlotter(object):
 			for event in bindingEvents:
 		
 				self.figure.canvas.mpl_disconnect(event)
-		
 	
 	def __getstate__(self):
 	

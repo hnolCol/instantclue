@@ -272,8 +272,10 @@ class scatterWithCategories(object):
 
 				if self.numbNumericalColumns == 1:
 					n_data_group = len(group.index)
-					x_ = range(0,n_data_group) 
-					y_ = group[self.numericalColumns[0]]	
+					x_ = list(range(0,n_data_group))
+					y_ = group[self.numericalColumns[0]]
+					#self.numericalColumns.append('idx')
+					group.loc[:,'idx'] = x_
 				
 				else:			
 					x_ = group[self.numericalColumns[0]]
@@ -296,20 +298,23 @@ class scatterWithCategories(object):
 				n = levels_3.index(comb[2])
 				ax_ = self.create_ax_from_grid_spec(comb,pos,n, gs_saved)	
 			
-			
+			numColumns = self.numericalColumns
+			if len(numColumns) == 1:
+				numColumns = ['idx'] + self.numericalColumns
 			self.scatterPlots[i] = scatterPlot(
-									group,
-									self.numericalColumns,
-									self.plotter,
-									self.colorMap,
-									self.dfClass,									
-									ax_,
-									self.dataID,								
-									{'s':self.size,'alpha':self.alpha,
+									data=group,
+									numericColumns = numColumns,
+									plotter = self.plotter,
+									colorMap = self.colorMap,
+									dfClass = self.dfClass,									
+									ax = ax_,
+									dataID = self.dataID,								
+									scatterKwargs  = {'s':self.size,'alpha':self.alpha,
 									'picker':True,'label':None,'color':self.color,
 									'edgecolor':'black','linewidth':0.3},
 									showLegend = True if i == 0 else False,
 									ignoreYlimChange = True)
+			
 			
 			
 			#scat = self.plotter.add_scatter_collection(ax_,x_,y_, color = self.color, 
@@ -422,7 +427,7 @@ class scatterWithCategories(object):
 		sizeMap = replace_key_in_dict('-',sizeMap,0.1)
 				
 		for scatterPlot in self.scatterPlots.values():
-			scatterPlot.change_size_by_categorical_columns(categoricalColumn, sizeMap = sizeMap)
+			scatterPlot.change_size_by_categorical_column(categoricalColumn, sizeMap = sizeMap)
 		return		
 		
 		
@@ -474,100 +479,46 @@ class scatterWithCategories(object):
 				
 				
 			
-	def change_color_by_numerical_column(self,numericColumn):
+	def change_color_by_numerical_column(self,numericColumn, updateColor = True):
 		'''
 		accepts a numeric column from the dataCollection class. numeric is added using 
 		the index ensuring that correct dots get the right color. 
 		'''
 		for scatterPlot in self.scatterPlots.values():
-			scatterPlot.change_color_by_numerical_column(numericColumn)
-		return
+			scatterPlot.change_color_by_numerical_column(numericColumn, update = updateColor)
 		
-		cmap = get_max_colors_from_pallete(self.colorMap)
-			
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=numericColumn)	
-		scaledData = scale_data_between_0_and_1(self.data[numericColumn[0]].values) 
-		self.data['color']= [col_c(cmap(value)) for value in scaledData]
-		self.group_data()
-		for comb in self.all_combinations:
-			if comb in self.grouped_keys:
-				subset = self.grouped_data.get_group(comb)
-				ax,_ = self.axes_combs[comb]
-				axCollection = ax.collections
-				axCollection[0].set_facecolor(subset['color'].values)		
-		self.save_color_and_size_changes('change_color_by_numerical_column',numericColumn)
+		#self.save_color_and_size_changes('change_color_by_numerical_column',numericColumn)
 		
 			
 	def change_color_by_categorical_columns(self,categoricalColumn, updateColor = True):
 		'''
 		'''
 		for scatterPlot in self.scatterPlots.values():
-			scatterPlot.change_color_by_categorical_columns(categoricalColumn,updateColor)
-		return
+			scatterPlot.change_color_by_categorical_columns(categoricalColumn,updateColor = updateColor)
+
 		
-		
-		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,categoricalColumn,
-												self.colorMap, self.categoricalColorDefinedByUser,
-												self.color)
-		## update data if missing columns 
-		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
-																  definedColumnsList=categoricalColumn)			
-		
-		
-		if len(categoricalColumn) == 1:
-			self.data.loc[:,'color'] = self.data[categoricalColumn[0]].map(self.colorMapDict)
-		else:
-			self.data.loc[:,'color'] = self.data[categoricalColumn].apply(tuple,axis=1).map(self.colorMapDict)
-				
-		if updateColor == False:
-			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)		
-			self.data.sort_values('layer', ascending = True, inplace=True)	
-		self.group_data()				
-						
-		for comb in self.all_combinations:
-			if comb in self.grouped_keys:
-				subset = self.grouped_data.get_group(comb)
-				ax,_ = self.axes_combs[comb]
-				if updateColor:
-					axCollection = ax.collections
-					axCollection[0].set_facecolor(subset['color'].values)
-				else:
-					# get the previous size
-					size = ax.collections[0].get_sizes()
-					## delete the previous collection
-					## needed because otherwise we cannot change the layer 
-					## changing the layer is actually not needed if the number of numerical
-					## columns is 1 because they points cannot really overly unless
-					## we have a lot of data points, therefore we keep it like this. 
-					ax.collections[0].remove()
-					if self.numbNumericalColumns == 1:
-						n_data_group = len(subset.index)
-						x_ = range(0,n_data_group) 
-						y_ = subset[self.numericalColumns[0]]								
-					else:			
-						x_ = subset[self.numericalColumns[0]]
-						y_ = subset[self.numericalColumns[1]]				
-														
-					self.plotter.add_scatter_collection(ax,x=x_,
-											y = y_, size=size,
-											color = subset['color'].values, picker = True)		
-		self.save_color_and_size_changes('change_color_by_categorical_columns',
-													categoricalColumn)	
 	def get_current_colorMapDict(self):
 		'''
 		'''
-		return self.colorMapDict
+		for scatterPlot in self.scatterPlots.values():
+				return scatterPlot.colorMapDict
+		
+		
+	def set_user_def_colors(self,categoricalColorDefinedByUser):
+		'''
+		'''
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.categoricalColorDefinedByUser = categoricalColorDefinedByUser	
+		
 			
 	def update_colorMap(self,newColorMap=None):
 		'''
 		'''
 		if newColorMap is not None:
 			self.colorMap = newColorMap
-		for functionName,column in self.sizeStatsAndColorChanges.items(): 
-			getattr(self,functionName)(column)  
-				
+		for scatterPlot in self.scatterPlots.values():
+			scatterPlot.update_colorMap(newColorMap)
+			
 	def change_nan_color(self,newColor):
 		'''
 		'''
@@ -594,7 +545,14 @@ class scatterWithCategories(object):
 		ax = plt.subplot(gs_[pos])
 		return ax
 				
-	
+	def get_size_color_categorical_column(self, which='change_color_by_categorical_columns'):
+		'''
+		'''
+		for scatterPlot in self.scatterPlots.values():
+			if which  in scatterPlot.sizeStatsAndColorChanges:
+				return scatterPlot.sizeStatsAndColorChanges[which]
+		
+			
 	def add_labels_to_figure(self):
 		'''
 		Adds labels to figure  - still ugly 
@@ -744,6 +702,11 @@ class scatterWithCategories(object):
 			
 			self.unique_values[category] = [list(uniq_levels),n_levels]
 			
+	def get_raw_colorMapDict(self):
+		'''
+		'''
+		for scatterPlot in self.scatterPlots.values():
+			return scatterPlot.rawColorMapDict
 		
 	def group_data(self):
 		'''

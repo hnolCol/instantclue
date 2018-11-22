@@ -855,6 +855,9 @@ class DataCollection(object):
 		'''
 		Returns df by id that was given in function: addDf(self)..
 		'''
+		
+		if id not in self.dfs:
+			return pd.DataFrame()
 
 		if id in self.clippings:
 			rowIdx = self.clippings[id]
@@ -1089,6 +1092,46 @@ class DataCollection(object):
 		self.add_data_frame(meltedDataFrame,id = id, fileName = fileName)
 		
 		return id,fileName,self.dfsDataTypesAndColumnNames[id]
+
+
+
+	def melt_data_by_groups(self,columnGroups, id = None):
+		'''
+		Melts multiple subsets of data to one df
+		'''
+		if id is not None:
+			self.set_current_data_by_id(id)
+			
+		meltedSubsets = []
+		columnNames = []
+		
+		groupColumns = []
+		# get columns that will be used for merging
+		[groupColumns.extend(columns) for columns in columnGroups.values()]
+		for n,(groupId, columnList) in enumerate(columnGroups.items()):
+			#almost impossible to occur from instant clue but rather check this
+			if any(column not in self.df.columns for column in columnList):
+				continue
+			if n == 0:
+				idVars = [column for column in self.df.columns if column not in groupColumns]
+			else:
+				idVars = None			
+			
+			meltDf = pd.melt(self.df, value_vars = columnList,
+							id_vars = idVars, 
+							value_name = 'Values_{}'.format(groupId),
+							var_name = 'Variable_{}'.format(groupId))
+			columnNames.extend(meltDf.columns.values.tolist())
+			meltedSubsets.append(meltDf)
+		
+		if len(meltedSubsets) > 1:
+			conDf = pd.concat(meltedSubsets,axis=1,ignore_index=True)
+			conDf.columns = columnNames
+			return conDf
+		else:
+			return None
+
+
 		
 	def unstack_column(self,columnName, separator = ';', verbose = False):
 		'''

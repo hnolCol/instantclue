@@ -18,8 +18,7 @@
     
     
     Website : http://www.instantclue.uni-koeln.de
-    Original Publication: Not published yet
-    
+    Original Publication: https://www.nature.com/articles/s41598-018-31154-6    
     For License information check https://opensource.org/licenses
    
    
@@ -28,7 +27,7 @@
 To make the treeview work you will have to change 
 the function 
 
-	def selection in the ttk.py file in the tkinter package folder:
+    def selection in the ttk.py file in the tkinter package folder:
 	line 1392
     
     def selection(self, selop=None, items=None):
@@ -36,11 +35,7 @@ the function
         if isinstance(items, (str, bytes)):
             items = (items,)
         return self.tk.splitlist(self.tk.call(self._w, "selection", selop, items))
-   
-   
-   
-   
-   
+
     Dependencies (alphabetic order):
     
     -husl (color palettes)
@@ -52,7 +47,8 @@ the function
     -scikit-learn (BSD 3)
     -scipy (‎BSD-new license - https://www.scipy.org/scipylib/license.html)
     -seaborn (BSD 3)
-    -statsmodels (BSD 3 https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt)
+    -statsmodels (BSD 3 https://github.com/statsmodels/statsmodels/blob/master/			LICENSE.txt)
+    -tslearn
     
     Please check the licence of the individual packages before redistribution.
 """

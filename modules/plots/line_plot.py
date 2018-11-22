@@ -348,8 +348,18 @@ class linePlotHelper(object):
 			line = Line2D(**lineProps)
 			ax.add_artist(line)
 			self.savedMeanLines.append(line)
-
-					
+	
+	def get_size_color_categorical_column(self,which = 'change_color_by_categorical_columns'):
+		'''
+		'''
+		if which in self.sizeStatsAndColorChanges:
+			return self.sizeStatsAndColorChanges[which]
+	
+	def set_user_def_colors(self,categoricalColorDefinedByUser):
+		'''
+		'''
+		self.categoricalColorDefinedByUser = categoricalColorDefinedByUser
+								
 	def export_selection(self, specificAxis):
 		'''
 		Export chart to a main figure.

@@ -12,6 +12,10 @@ class scatterPlot(object):
 						dfClass, ax, dataID, scatterKwargs,
 						showLegend = True, ignoreYlimChange = False):
 		'''
+		Class to handle scatter plots. Scatter plots that are generated together
+		are connected and allow to hover over points to see the location of each
+		data entry row in each plot. 
+		Additional information of data can be added due to additional color and size levels.
 		'''
 		self.ax = ax
 		self.plotter = plotter
@@ -187,6 +191,7 @@ class scatterPlot(object):
 		'''
 		Adds information on how to modify the chart further
 		'''
+		
 		self.sizeStatsAndColorChanges[changeDescription] = keywords
 			
 	def bind_label_event(self,labelColumnList):
@@ -219,13 +224,12 @@ class scatterPlot(object):
 													  			
 	def change_color_by_categorical_columns(self,categoricalColumns,
 													specificAxis = None,
-													updateColor = False, 
+													updateColor = True, 
 													adjustLayer = True):
 		'''
 		Adjust colors according to the categorical level in selected columns
 		'''
 		ax = self.ax if specificAxis is None else specificAxis
-		
 		self.colorMapDict,layerMapDict, self.rawColorMapDict = get_color_category_dict(self.dfClass,
 												categoricalColumns,
 												self.colorMap, self.categoricalColorDefinedByUser,
@@ -238,8 +242,9 @@ class scatterPlot(object):
 		
 		axCollection = self.ax.collections
 		if updateColor == False and adjustLayer:
-			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)		
-			self.data.loc[:,'size'] =  axCollection[0].get_sizes()	
+			self.data.loc[:,'layer'] = self.data['color'].map(layerMapDict)	
+			if 'size' not in self.data.columns:	
+				self.data.loc[:,'size'] =  axCollection[0].get_sizes()	
 			self.data = self.data.sort_values('layer', ascending = True)		
 			axCollection[0].remove() 
 			## we need to replot this, otherwise the layer/order cannot be changed. 
@@ -256,21 +261,22 @@ class scatterPlot(object):
 			
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumns)
 			if self.showLegend:
-				self.plotter.nonCategoricalPlotter.add_legend_for_caetgories_in_scatter(ax,
-																	self.colorMapDict,categoricalColumns)
+				self.plotter.add_legend_for_caetgories_in_scatter(ax,
+															self.colorMapDict,categoricalColumns)
 		elif adjustLayer == False:
 			axCollection[0].set_facecolor(self.data['color'].values)
 			self.add_color_and_size_changes_to_dict('change_color_by_categorical_columns',categoricalColumns)
+			
 			if self.showLegend:
-				self.plotter.nonCategoricalPlotter.add_legend_for_caetgories_in_scatter(ax,
-																	self.colorMapDict,categoricalColumns)
+				self.plotter.add_legend_for_caetgories_in_scatter(ax,
+															self.colorMapDict,categoricalColumns)
 		else:
 			axCollection[0].set_facecolor(self.data['color'].values)
 			if specificAxis is None: ##indicating that graph is not exported but only modified
-				self.update_legend(ax,self.colorMapDict)				
+				self.plotter.update_legend(ax,self.colorMapDict)				
 			else:
 				if self.showLegend or specificAxis is not None:
-					self.plotter.nonCategoricalPlotter.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
+					self.plotter.add_legend_for_caetgories_in_scatter(ax,self.colorMapDict,
 														  categoricalColumns, export = True)						
 
 
@@ -289,13 +295,14 @@ class scatterPlot(object):
 		
 		if update == False:
 			self.clean_up_saved_size_and_color_changes('color')
+			
 		axCollection = ax.collections
 		if len(numericColumn) > 1:
 			# check for updated aggregation method
 			if specificAxis is None:
 				self.get_agg_method()
 			## merge columns 
-			if self.aggMethod == 'mean':
+			if self.plotter.aggMethod == 'mean':
 				colorData = self.data[numericColumn].mean(axis=1)
 			else:
 				colorData = self.data[numericColumn].sum(axis=1)
@@ -306,7 +313,8 @@ class scatterPlot(object):
 		scaledColorData = cmap(scaledData)
 		axCollection[0].set_facecolors(scaledColorData )
 		self.scatterKwargs['color'] = scaledColorData 
-		self.add_color_and_size_changes_to_dict('change_color_by_numerical_column',numericColumn)
+		if update == False:
+			self.add_color_and_size_changes_to_dict('change_color_by_numerical_column',numericColumn)
 
 
 
@@ -337,7 +345,9 @@ class scatterPlot(object):
 		axCollection[0].set_sizes(sizeData)
 		self.scatterKwargs['s'] = sizeData
 		self.data.loc[:,'size'] = sizeData
-		self.add_color_and_size_changes_to_dict('change_size_by_categorical_column',categoricalColumn)
+		if update == False:
+			self.add_color_and_size_changes_to_dict('change_size_by_categorical_column',categoricalColumn)
+			
 
 	def change_size_by_numerical_column(self, numericColumn, specificAxis = None, update = True, limits = None):
 		'''
@@ -358,10 +368,8 @@ class scatterPlot(object):
 		
 		if len(numericColumn) > 1:
 			# check for updated aggregation method
-			if specificAxis is None:
-				self.get_agg_method()
 			## merge columns 
-			if self.aggMethod == 'mean':
+			if self.plotter.aggMethod	 == 'mean':
 				sizeDataRaw = self.data[numericColumn].mean(axis=1)
 			else:
 				sizeDataRaw = self.data[numericColumn].sum(axis=1)
@@ -380,7 +388,8 @@ class scatterPlot(object):
 		axCollection[0].set_sizes(sizeData)
 		self.scatterKwargs['s'] = sizeData
 		self.data.loc[:,'size'] = sizeData
-		self.add_color_and_size_changes_to_dict('change_size_by_numerical_column',numericColumn)
+		if update == False:
+			self.add_color_and_size_changes_to_dict('change_size_by_numerical_column',numericColumn)
 
 
 	def export_selection(self, exportAxis):
@@ -389,7 +398,7 @@ class scatterPlot(object):
 		'''
 		self.replot(exportAxis,**self.scatterKwargs)
 		if 'change_color_by_categorical_columns' in self.sizeStatsAndColorChanges:
-			self.plotter.nonCategoricalPlotter.add_legend_for_caetgories_in_scatter(exportAxis,
+			self.plotter.add_legend_for_caetgories_in_scatter(exportAxis,
 									self.colorMapDict,
 									self.sizeStatsAndColorChanges['change_color_by_categorical_columns'], 
 									export = True)
@@ -436,9 +445,6 @@ class scatterPlot(object):
 		if 'change_color_by_categorical_columns' in toDelete:
 			self.plotter.delete_legend(self.ax)
 			
-		# if which == 'color':
-# 			self
-			
 		for func in toDelete:
 			del self.sizeStatsAndColorChanges[func]	
 # 	
@@ -453,8 +459,8 @@ class scatterPlot(object):
 		if newCmap is not None:
 			self.colorMap = newCmap 
 			
-		for functionName,column in self.sizeStatsAndColorChanges.items(): 
-			getattr(self,functionName)(column)  
+		for functionName,column in self.sizeStatsAndColorChanges.items():
+				getattr(self,functionName)(column)  
 
 
 	def add_tooltip(self, annotationColumns):
@@ -473,7 +479,15 @@ class scatterPlot(object):
 		'''
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
-			
+
+	def disconnect_tooltip(self):
+		'''
+		Destroy tooltip text
+		'''		
+		if hasattr(self,'tooltip'):
+			self.tooltip.remove()
+			del self.tooltip
+			self.toolTipsActive = False	
 	
 	def determine_position(self,x,y):
 		'''
@@ -560,8 +574,35 @@ class scatterPlot(object):
 		ax = self.ax if specificAxis is None else specificAxis
 		ax.plot(self.lowessData[:,0],self.lowessData[:,1],linewidth = 1, linestyle= 'dashed',color="red")														  
 		self.add_color_and_size_changes_to_dict('add_lowess_line',None)	
+
+	def set_nan_color(self,newColor = None):
+		'''
+		'''
+		self.scatterKwargs['color'] = newColor
+		#self.nanScatterColor = self.scatterKwargs['color']
+		self.ax.collections[0].set_facecolor(self.scatterKwargs['color'])
+		#self.ignoreYlimChange = ignoreYlimChange
 		
+		#self.define_variables()
+		#self.get_size_interval()
+		#self.replot(ax=self.ax,**self.scatterKwargs)
+
+
+	def update_size(self, size):
+		'''
+		'''
+		nIdx = len(self.data.index)
+		self.data.loc[:,'size'] = [size] * nIdx 
+
 		
+	def __getstate__(self):
+	
+		state = self.__dict__.copy()
+		for attr in ['figure', 'axisDict','annotationClass']:
+			if attr in state: 
+				del state[attr]
+		self.annotationClass = None
+		return state		
 		
 
 		

@@ -133,8 +133,10 @@ class clusteringDialog(object):
 		self.cmap = cmap
 		
 		self.dfClass = dfClass
+		self.dataID = plotter.get_dataID_used_for_last_chart()
+		self.dfClass.set_current_data_by_id(self.dataID)
 		self.data = dfClass.get_current_data_by_column_list(numericColumns)
-		self.data.dropna(inplace=True)
+		self.data = self.data.dropna()
 		
 		self.plotter = plotter
 		self.widgetHandler = widgetHandler
@@ -178,7 +180,7 @@ class clusteringDialog(object):
 		
 		labelTitle = tk.Label(self.cont, text = 'Unsupervised clustering algorithms', 
                                      **titleLabelProperties)
-		labelHelp = tk.Label(self.cont, text ='We are using the skilearn.cluster module and therefore names \nof parameters and description'+
+		labelHelp = tk.Label(self.cont, text ='We are using the skilearn.cluster module and therefore names \nof parameters and descriptions '+
 												'are similiar. The sklearn webpage has\na brilliant overview of the available cluster methods, advantages and disadvantages.',
 												justify=tk.LEFT, bg=MAC_GREY)
 									
@@ -260,10 +262,25 @@ class clusteringDialog(object):
 	def perform_analysis(self):
 		'''
 		'''
-		self.extract_current_settings()  # defines self.settingDict
-		
-		clusterClass = classDict[self.initialMethod](**self.settingDict)
-		
+		try:
+			self.extract_current_settings()  # defines self.settingDict
+		except:
+			tk.messagebox.showinfo('Error ..','While extracting the settings, an error occured.')
+			return
+		if 'n_clusters' in self.settingDict:
+			try:
+				if float(self.settingDict['n_clusters']) > 1:
+					pass
+				else:
+					tk.messagebox.showinfo('Error..','n_clusters must be > 1.')
+					return
+			except:
+				tk.messagebox.showinfo('Error..','Could not interpret setting n_clusters.')
+				return
+		try:
+			clusterClass = classDict[self.initialMethod](**self.settingDict)
+		except:
+			tk.messagebox.showinfo('Error..','Initializing cluster estimator failed. Check settings and data.')
 		try:
 			clusterLabels = clusterClass.fit_predict(self.data[self.numericColumns])
 		except ValueError as e:
@@ -285,7 +302,7 @@ class clusteringDialog(object):
 		calinskiScore = calinski_harabaz_score(self.data[self.numericColumns], clusterClass.labels_)
 		scoreDict = {'Silhouette':silhouetteScore, 'Calinski': calinskiScore}
 		self.plotter.update_cluster_anaylsis_evalScores(scoreDict, classLabels)
-		
+		self.dfClass.set_current_data_by_id(self.dataID)
 		self.data = self.data.join(classLabels)
 		self.data[columnName].fillna(self.dfClass.replaceObjectNan)
 		## add data to dfClass
@@ -295,7 +312,6 @@ class clusteringDialog(object):
 		# replace nan in data (happens if missing values are present in source data)
 		self.dfClass.fill_na_in_columnList(columnName)
 		
-		
 		## plot the cluster result
 		self.plotter.initiate_chart(numericColumns = self.numericColumns,
 									categoricalColumns = [], selectedPlotType = 'cluster_analysis',
@@ -304,8 +320,8 @@ class clusteringDialog(object):
 		self.plotter.nonCategoricalPlotter.change_color_by_categorical_columns(columnName, adjustLayer = False)
 
 		## connect cluster if desired for some methods
-		if self.initialMethod in ['k-means','Affinity Propagation','MiniBatch-Kmeans'] and self.connectCenter.get():
-			self.plot_cluster_centers(clusterClass, columnName)
+		#if self.initialMethod in ['k-means','Affinity Propagation','MiniBatch-Kmeans'] and self.connectCenter.get():
+		#	self.plot_cluster_centers(clusterClass, columnName)
 				
 		self.plotter.redraw()
 		## 
@@ -343,11 +359,13 @@ class clusteringDialog(object):
 	def plot_cluster_centers(self,clusterClass, columnName):
 		'''
 		Calculate line collection to connect cluster center with data/scatter points
+		_____Depracted!_____ 
 		'''
 		clustCenters = clusterClass.cluster_centers_[:,:len(self.numericColumns)]
 		clusterSeq = pd.DataFrame(clustCenters, columns = self.numericColumns)
 		lineSegments = self.extract_line_segments(clusterSeq, self.numericColumns[:2], columnName)
 		colors = self.plotter.nonCategoricalPlotter.get_current_colorMapDict()
+		return
 		for n,segment in enumerate(lineSegments):
 			color = colors[str(n)]
 			self.plotter.nonCategoricalPlotter.add_line_collection(segment, colors=color, zorder = 1)

@@ -124,11 +124,11 @@ class instantClueApp(tk.Tk):
 
     	if len(currentVersion) != len(textSplitVersion):
     		return
-
+    	
     	for n,num in enumerate(textSplitVersion):
     		if float(num) > float(currentVersion[n]):
     			if n != 0:
-    				if float(currentVersion[n-1]) == textSplitVersion[n-1]:
+    				if float(currentVersion[n-1]) >= float(textSplitVersion[n-1]):
     					pass
     				else:
     					continue

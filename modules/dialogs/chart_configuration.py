@@ -179,7 +179,7 @@ class ChartConfigurationPopup(object):
 			for ax in self.fig_axes:
 				ax.grid('off')
 		self.show_grid  = bool_	
-		self.figure.canvas.draw()
+		self.plotter.redraw()
 
 
 	def remove_box(self):

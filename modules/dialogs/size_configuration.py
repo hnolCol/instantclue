@@ -195,7 +195,9 @@ class SizeConfigurationPopup(object):
 		'''
 		Close toplevel
 		'''
-
+		scatterPlots = self.plotter.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			scatterPlot.update_size(self.size)
 		self.toplevel.destroy() 
 		
 			
@@ -274,7 +276,13 @@ class SizeConfigurationPopup(object):
              	axes = self.figure.axes
              	for ax in axes:
              		axColl.extend(ax.collections)
-             		
+		       
+         elif plot_type == 'PCA':
+         	
+         	axes = [ax for n,ax in enumerate(self.figure.axes) if n in [0,2]]
+         	for ax in axes:
+         		axColl.extend(ax.collections)
+       
              			
          elif plot_type == 'cluster_analysis':
          
@@ -310,7 +318,11 @@ class SizeConfigurationPopup(object):
 		
          if event is not None:
          	val = self.size_selected.get() 
-         	val = round(float(val),0)
+         	try:
+         		val = round(float(val),0)
+         	except:
+         		tk.messagebox.showinfo('Error..','Could not convert input to float.')
+         		return
          	self.slider_size.set(val)
          else:	
          	val = round(float(val),0)

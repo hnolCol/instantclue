@@ -117,6 +117,8 @@ class workflowCollection(object):
 	def show(self):
 		'''
 		'''
+		if hasattr(self,'showDetails') == False:
+			self.showDetails = OrderedDict()
 		if self.open:
 			self.toplevel.lift()
 			return
@@ -204,7 +206,10 @@ class workflowCollection(object):
 			
 		self.branches.clear()
 		self.history.clear()
-		self.showDetails.clear()
+		if hasattr(self,'showDetails') == False:
+			self.showDetails = OrderedDict()
+		else:
+			self.showDetails.clear()
 		self.lineCoords.clear()
 		self.endPosition.clear()
 
@@ -355,6 +360,7 @@ class workflowCollection(object):
 	def calculate_positions(self, taskName, tagId, branchId, isChart):
 		'''
 		'''
+		
 		if tagId in self.showDetails:
 			return self.showDetails[tagId]
 
@@ -382,7 +388,7 @@ class workflowCollection(object):
 				self.move_images(tagCharts,posCharts)			
 			
 			detailsImgs = {'position':posCharts[-1],
-						   'image': self.imageTasks[taskName],
+						   'image': taskName,
 						   'anchor': tk.NW, 
 						   'tag' : tagId}
 			
@@ -395,7 +401,7 @@ class workflowCollection(object):
 			
 			lineCoords = middlePosition + (middlePosition[0], middlePosition[1]+10)
 			detailsImgs = {'position':(middlePosition[0],middlePosition[1]+12), 
-									'image' : self.imageTasks[taskName],
+									'image' : taskName,
 									'anchor' : tk.N, 
 									'tag' : tagId}
 			detailsLine = {'coords':lineCoords,
@@ -438,7 +444,7 @@ class workflowCollection(object):
 				
 				if n == 1:
 				
-					self.canvas.create_image(details['position'], image = details['image'],
+					self.canvas.create_image(details['position'], image = self.imageTasks[details['image']],
 											tag = details['tag'], anchor = details['anchor'])						
 					
 				if 'description' in addInfo and 'Activity:' in addInfo['description']:
@@ -519,6 +525,8 @@ class workflowCollection(object):
 		'''
 		Moving images for charts. 
 		'''
+		if hasattr(self,'showDetails') == False:
+			return
 		for n,tagId in enumerate(tagIds):
 
 			posOld = self.showDetails[tagId][1]['position']
@@ -611,9 +619,10 @@ class workflowCollection(object):
 		'''		
 		state = self.__dict__.copy()
 		for list in [ 'canvas','imageTasks','toplevel','inFront','treeView',
-					'showDetails','sourceData','treeView','analyzeData']:#, 'nonCategoricalPlotter', 'plotHistory']:
+					'sourceData','treeView','analyzeData']:#, 'nonCategoricalPlotter', 'plotHistory']:
 			if list in state:
 				del state[list]
+		
 		return state			
 		
 			

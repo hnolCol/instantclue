@@ -31,7 +31,10 @@ from modules.utils import *
 class ExcelImporter(object):
 
 	def __init__(self,excel_sheets, excel_file):
-	
+		'''
+		Import Excel tables. Some modifications can be done.
+		Sadly Excel data have to be loaded completely.
+		'''
 		self.data = dict()
 		self.excel_file = excel_file
 		self.replaceObjectNan = '-'		
@@ -123,7 +126,6 @@ class ExcelImporter(object):
  		buttonLoad = ttk.Button(self.cont_widgets, text = "Load", width=9, command  = self.save_changes)
  		# bind Return to upload stuff
  		self.toplevel.bind('<Return>', self.save_changes)
- 				
  		## grid widgets
  		labTitle.grid(padx=5,pady=5, columnspan=7, sticky=tk.W) 
  		 		
@@ -510,7 +512,6 @@ class _HelperMelt(object):
 		'''
 		Actually displaying the data.
 		'''
-
 		if self.cont_preview is None:
 			self.create_preview_container()
 		

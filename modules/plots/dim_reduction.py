@@ -21,6 +21,8 @@ class dimensionalReductionPlot(object):
 		self.annotationClass = [None,None] 
 		self.colorMap = colorMap
 		self.categoricalColorDefinedByUser = OrderedDict()
+		self.pcaProjectionAnnotations = OrderedDict()
+
 		self.scatterPlots = OrderedDict() 
 	
 		self.dfClass = dfClass
@@ -28,8 +30,7 @@ class dimensionalReductionPlot(object):
 		self.dataID = plotter.get_dataID_used_for_last_chart()
 		self.get_scatter_props()
 		self.get_data()
-		self.add_axis()
-		self.fill_axis()
+		self.replot()
 
 	def disconnect_bindings(self):
 		'''
@@ -39,10 +40,15 @@ class dimensionalReductionPlot(object):
 	
 	def replot(self):
 		'''
+		Replot the complete plot compilation.
 		'''
+		self.add_axis()
+		self.fill_axis()
+		self.style_axis()
 
 	def get_scatter_props(self):
 		'''
+		Save scatter plot settings.
 		'''
 		self.scatStyle = dict()
 		self.scatStyle['s'], self.scatStyle['alpha'],self.scatStyle['color'] = \
@@ -60,10 +66,10 @@ class dimensionalReductionPlot(object):
 			self.axisDict[n] = self.plotter.figure.add_subplot(2,2,n+1)
 		self.plotter.figure.subplots_adjust(wspace=0.3,hspace=0.3,right=0.9)
 
-	def fill_axis(self, specificAxis = None):
+	def fill_axis(self, specificAxis = None, id = None):
 		'''
 		'''
-		if specificAxis is None:
+		if specificAxis is None or id == 0:
 
 			ax = self.axisDict[0] if specificAxis is None else specificAxis
 			self.scatterPlots[0] = scatterPlot(
@@ -77,7 +83,7 @@ class dimensionalReductionPlot(object):
 									self.scatStyle)
 			
 			
-		if specificAxis is None:
+		if specificAxis is None or id == 2:
 
 			ax = self.axisDict[2] if specificAxis is None else specificAxis		
 			
@@ -91,70 +97,61 @@ class dimensionalReductionPlot(object):
 									self.dataID,								
 									self.scatStyle,
 									showLegend = False)
-											
-		if (specificAxis  is None or specificAxis  == 1) and 'Components' in self.plotter.dimRedResults['data']:
+				
+									
+		if (specificAxis is None or id == 1) and 'Components' in self.plotter.dimRedResults['data']:
+				
 				
 				ax = self.axisDict[1] if specificAxis is None else specificAxis	
-				components = self.plotter.dimRedResults['data']['Components']
 				
+				components = self.plotter.dimRedResults['data']['Components']
+				scatStyle = self.scatStyle.copy()
+				if specificAxis is not None:
+					scatStyle['color'] = self.axisDict[1].collections[0].get_facecolor()
 				ax.scatter(components.iloc[0,:], components.iloc[1,:],
-									**self.scatStyle)
+									**scatStyle)
 				data = components.T
 				data['experiments'] = data.index
 				
+				
+				
 				if specificAxis is None:					
-					self.pcaProjectionAnnotations = annotateScatterPoints(Plotter = self.plotter,
+					self.pcaProjectionAnnotations[0] = annotateScatterPoints(Plotter = self.plotter,
 										ax = ax, data = data,
 										numericColumns = data.columns.values.tolist()[:2],
 										labelColumns = ['experiments'], madeAnnotations = OrderedDict(),
 										selectionLabels = OrderedDict()) 
-					self.pcaProjectionAnnotations.annotate_all_row_in_data()
+					self.pcaProjectionAnnotations[0].annotate_all_row_in_data()
 								
-		if specificAxis is None or specificAxis == 3:
+		if (specificAxis is None or id == 3) and 'Components' in self.plotter.dimRedResults['data']:
 				
-				if 'ExplainedVariance' in self.plotter.dimRedResults['data']:
-					data = self.plotter.dimRedResults['data']['ExplainedVariance'].loc[:,0]
-					xTicks = [x+1 for x in data.index.tolist()]
-				elif 'klDivergence' in self.plotter.dimRedResults['data']:
-					data = self.plotter.dimRedResults['data']['klDivergence']
-					xTicks = 1
-				elif 'noiseVariance' in self.plotter.dimRedResults['data']:
-					data = self.plotter.dimRedResults['data']['noiseVariance']
-					xTicks = list(range(1,data.shape[0]+1))
-				else:
-					data = self.plotter.dimRedResults['data']['ReconstructionError']
-					xTicks = 1 
-				ax = self.axisDict[3] if specificAxis is None else specificAxis
-				ax.bar(xTicks, data)
-				ax.set_xticks(xTicks)
-				if specificAxis is None:
-					ax.callbacks.connect('xlim_changed', \
-						lambda event, axis = ax: axis.set_xlim(0.5,len(xTicks)+0.5))
+				
+				ax = self.axisDict[3] if specificAxis is None else specificAxis	
+				
+				components = self.plotter.dimRedResults['data']['Components']
+				scatStyle = self.scatStyle.copy()
+				if specificAxis is not None:
+					scatStyle['color'] = self.axisDict[1].collections[0].get_facecolor()				
+				ax.scatter(components.iloc[1,:], components.iloc[2,:],
+									**scatStyle)
+				data = components.T
+				data['experiments'] = data.index
+				
+				if specificAxis is None:					
+					self.pcaProjectionAnnotations[1] = annotateScatterPoints(Plotter = self.plotter,
+										ax = ax, data = data,
+										numericColumns = data.columns.values.tolist()[1:3],
+										labelColumns = ['experiments'], madeAnnotations = OrderedDict(),
+										selectionLabels = OrderedDict()) 
+					self.pcaProjectionAnnotations[1].annotate_all_row_in_data()# 				
+
 	
 	def get_data(self):
 		'''
+		Retrieve data.
 		'''
 		self.data = self.plotter.dimRedResults['data']['Drivers']
 		self.numericColumns = self.data.columns.values.tolist()
-		
-	# def change_color_by_categorical_columns(self,columnNames, updateColor=False):
-# 		'''
-# 		'''
-# 		
-# 		self.plotter.nonCategoricalPlotter.change_color_by_categorical_columns(categoricalColumn = columnNames,
-# 						updateColor=False, 
-# 						annotationClass = self.annotationClass[0],
-# 						specificAxis = self.axisDict[0], 
-# 						numericColumns = ['Comp_1','Comp_2'])
-# 		
-# 		self.plotter.nonCategoricalPlotter.change_color_by_categorical_columns(categoricalColumn = columnNames,
-# 						updateColor=False, 
-# 						annotationClass = self.annotationClass[1],
-# 						specificAxis = self.axisDict[2], 
-# 						numericColumns = ['Comp_2','Comp_3'])					
-# 
-# 		self.data = self.plotter.nonCategoricalPlotter
-# 		
 		
 		
 	def export_selection(self, specificAxis, id):	
@@ -163,25 +160,72 @@ class dimensionalReductionPlot(object):
 		'''
 		if id in [0,2]:
 			self.scatterPlots[id].export_selection(specificAxis)
+		else:
+			self.fill_axis(specificAxis,id)
 		
+			if id == 1:
+				if 0 in self.pcaProjectionAnnotations:
+					for key,props in self.pcaProjectionAnnotations[0].selectionLabels.items():
+						specificAxis.annotate(ha='left', arrowprops=arrow_args,**props)	
+			if id == 3:
+				if 1 in self.pcaProjectionAnnotations:
+					for key,props in self.pcaProjectionAnnotations[1].selectionLabels.items():
+						specificAxis.annotate(ha='left', arrowprops=arrow_args,**props)			
+			self.update_color_in_projection(ax = specificAxis, export = True)
 		
+		self.style_axis(specificAxis,id)
 		
+	def style_axis(self, specificAxis = None, id = None):
+		'''
+		Style axis.
+		'''
+		if specificAxis is None:
+			for n, ax in self.axisDict.items():
+				xLabel, yLabel = self.get_axisLabels(n)
+				axisStyler(ax,ylabel = yLabel, xlabel = xLabel)
+		else:
+			xLabel, yLabel = self.get_axisLabels(id)
+			axisStyler(specificAxis,ylabel = yLabel, xlabel = xLabel)
+			
+	def get_axisLabels(self, n ):
+		'''
+		'''
+		if 'ExplainedVariance' in self.plotter.dimRedResults['data']:
+					data = self.plotter.dimRedResults['data']['ExplainedVariance'].loc[:,0].tolist()
+					
+		elif 'noiseVariance' in self.plotter.dimRedResults['data']:
+					data = self.plotter.dimRedResults['data']['noiseVariance'].tolist()
+		else:
+			if n < 2:
+				return 'Component 1', 'Component 2'
+			else:
+				return 'Component 2', 'Component 3'
+				
+		xLabel = 'Component 1 ({}%)'.format(round(data[0] * 100,0)) if n < 2 \
+			else 'Component 2 ({}%)'.format(round(data[1] * 100,0))
+		yLabel = 'Component 2 ({}%)'.format(round(data[1] * 100,0)) if n < 2 \
+			else 'Component 3 ({}%)'.format(round(data[2] * 100,0))
 		
+		return xLabel, yLabel
+					
+	
 	def hide_show_feature_names(self):
 	
 		'''
 		Handles feature names in projection plot of 
 		a dimensional reduction procedure
 		'''	
-		if self.pcaProjectionAnnotations is not None:
-			if len(self.pcaProjectionAnnotations.selectionLabels) != 0:
-				self.pcaProjectionAnnotations.remove_all_annotations()
-			else:
-				self.pcaProjectionAnnotations.annotate_all_row_in_data()
+		if len(self.pcaProjectionAnnotations) != 0:
+		
+			for id,pcaProjAnnot in self.pcaProjectionAnnotations.items():
+				if len(pcaProjAnnot.selectionLabels) != 0:
+					pcaProjAnnot.remove_all_annotations()
+				else:
+					pcaProjAnnot.annotate_all_row_in_data()
 			
 			self.plotter.redraw(backgroundUpdate = False)		
 	
-	def update_color_in_projection(self,resultDict = None, ax = None):
+	def update_color_in_projection(self,resultDict = None, ax = None, export = False):
 		'''
 		Projection plot in dimensional reduction show feature names and can
 		be colored occording to groups. (For example if feature == name of experiment
@@ -206,34 +250,6 @@ class dimensionalReductionPlot(object):
  									   		'colorMap' : list(colorsUnique),
  									   		'leg_title':'Grouping',
  									   		 'patchKws':{'alpha':self.scatStyle['alpha'],
- 									   		 'lw':0.5}}) 	# elif plotType == 'PCA':
-# 			if onlySelectedAxis is not None:
-# 				print(onlySelectedAxis)
-# 				if onlySelectedAxis < 2:
-# 					axisStyler(ax, xlabel='Component 1', ylabel = 'Component 2')
-# 				elif onlySelectedAxis == 2:
-# 					axisStyler(ax, xlabel='Component 2', ylabel = 'Component 3')
-# 				else:
-# 					if self.plotter.dimRedResults['method'] != 'Non-Negative Matrix Factorization':
-# 						axisStyler(ax, ylabel='Explained Variance Ratio', 
-# 										 xlabel = 'Components')
-# 					else:
-# 						axisStyler(ax, ylabel='Reconstruction Error', 
-# 										 xlabel = 'Analysis ID', newXLim = (-1,3))
-# 			else:
-# 				for n in [0,1]:
-# 					axisStyler(self.axisDict[n], xlabel='Component 1', ylabel = 'Component 2',
-# 									nTicksOnYAxis = 4, nTicksOnXAxis = 4)
-# 				
-# 				axisStyler(self.axisDict[2], xlabel='Component 2', ylabel = 'Component 3',
-# 									nTicksOnYAxis = 4, nTicksOnXAxis = 4)				
-# 				if self.plotter.dimRedResults['method'] != 'Non-Negative Matrix Factorization':
-# 					axisStyler(self.axisDict[3], ylabel='Explained Variance Ratio', 
-# 										 xlabel = 'Components',nTicksOnYAxis = 4)
-# 				elif self.plotter.dimRedResults['method'] != 'Factor Analysis':
-# 					axisStyler(self.axisDict[3], ylabel='Estimated noise variance', 
-# 										 xlabel = 'Feature',nTicksOnYAxis = 4)
-# 				
-# 				else:
-# 					axisStyler(self.axisDict[3], ylabel='Reconstruction Error', 
-# 										 xlabel = 'Analysis ID',newXLim = (-1,3))
+ 									   		 'lw':0.5}})
+			if export == False:
+				self.axisDict[3].collections[0].set_facecolor(colors)	

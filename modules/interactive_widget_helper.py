@@ -66,22 +66,21 @@ class interactiveWidgetsHelper(object):
 		self.analyzeData = analyzeData
 		if plotter.currentPlotType == 'line_plot':
 			self.helper = plotter.nonCategoricalPlotter.linePlotHelper
+		elif plotter.currentPlotType == 'cluster_analysis':
+			self.helper = plotter.nonCategoricalPlotter.clustPlot
 		elif plotter.nonCategoricalPlotter is not None:
 			self.helper = plotter.nonCategoricalPlotter
-		elif plotter.currentPlotType == 'scatter':
-			self.helper = plotter.categoricalPlotter.scatterWithCategories
-		
+		elif plotter.currentPlotType == 'scatter' and plotter.categoricalPlotter is not None:
+			self.helper = plotter.categoricalPlotter.scatterWithCategories		
 		if self.mode == 'colorLevel':
 			self.clear_color_helper_dicts()
 			self.colorMapDict = self.helper.get_current_colorMapDict()
 			if self.colorMapDict is None: return
-			
+
 			self.defaultColor = plotter.colorScatterPoints
 			self.defaultColorHex = col_c(self.defaultColor)			
-			
 			droppedButton.config(command = lambda : longLegendColorChanger(self.colorMapDict,self.helper,
 										 self.colorHelper,self.plotter, self))			
-			
 			if len(self.colorMapDict) > 20:
 				if droppedButton is not None:
 					tk.messagebox.showinfo('Info ..',
@@ -111,9 +110,9 @@ class interactiveWidgetsHelper(object):
 		self.colorframe = tk.Frame(self.frame, bg=MAC_GREY, relief=tk.GROOVE)
 		self.colorframe.grid(columnspan=2, sticky=tk.EW)			
 		
-		catColumnList = self.helper.get_size_color_categorical_column()
+		self.catColumnList = self.helper.get_size_color_categorical_column()
 				
-		for column in catColumnList:
+		for column in self.catColumnList:
 			headerLabel = tk.Label(self.colorframe, text = str(column)[:17], bg = MAC_GREY)
 			headerLabel.grid(column= 0, padx = 3, sticky=tk.W,pady=1)
 			CreateToolTip(headerLabel,title_ = column, text = '')
@@ -134,11 +133,12 @@ class interactiveWidgetsHelper(object):
 		
 		colorLabel.grid(column= 0, padx = 3, sticky=tk.W,pady=1)
 		groupLabel = tk.Label(self.colorframe, text = str(group)[:16], bg = MAC_GREY)
-		groupLabel.bind(right_click, lambda event, group = group :self.subset_group(event,group)) 
+		groupLabel.bind('<Double-Button-1>', lambda event, group = group :self.subset_group(event,group)) 
 		CreateToolTip(groupLabel,title_ = group,text = 'The color for each categorical value'+
 													   ' can be adjusted:\nYou can either disable'+
 													   ' the color highlight (left click)\nOr define'+
-													   ' a custom color. (right-click)')
+													   ' a custom color. (right-click)'+
+													   '\nDouble click on the name allows easy subsetting of the group by color.')
 		groupLabel.grid(row = colorLabel.grid_info()['row'], 
 						column = 0,padx=(28,0), 
 						sticky = tk.W, columnspan=3) 
@@ -147,19 +147,28 @@ class interactiveWidgetsHelper(object):
 		self.colorLevelWidgets[group] = {'colorLabel':colorLabel,
 										'groupLabel': groupLabel}
 	
-	
 	def subset_group(self,event,group):
 		'''
+		Subset group by color.
 		'''
 		try:
 			self.colorMapDict = self.helper.get_current_colorMapDict()
-			boolidx = self.helper.data.loc[:,'color'] == self.colorMapDict[group]
-			subsetData = self.analyzeData.sourceData.get_data_by_id(\
-				self.plotter.get_dataID_used_for_last_chart()).iloc[self.helper.data[boolidx].index]
-			
-			self.analyzeData.add_new_dataframe(subsetData,'ScatterSubset_color_{}'.format(group))
-			tk.messagebox.showinfo('Done..','Subset created. Note that subsetting is done by color.'
-			' If the color is not unique for the selected group, results might be unexpected.')
+			dataID = self.plotter.get_dataID_used_for_last_chart()
+		
+			df = self.helper.data
+			if 'color' not in df.columns:
+				df = self.plotter.attach_color_data(self.catColumnList, df, 
+							dataID,self.colorMapDict)
+			boolidx = df.loc[:,'color'] == self.colorMapDict[group]
+			columnsUsed = [col for col in df.columns if col != 'color']
+			subsetData = df.loc[boolidx,:]
+			subsetData = self.analyzeData.sourceData.join_missing_columns_to_other_df(subsetData,id=dataID)
+			if len(subsetData.index) == 0:
+				tk.messagebox.showinfo('Error ..','Filtering resulted in an empty data frame.')
+			else:
+				self.analyzeData.add_new_dataframe(subsetData,'ScatterSubset_color_{}'.format(group))
+				tk.messagebox.showinfo('Done..','Subset created. Note that subsetting is done by color.'
+					' If the color is not unique for the selected group, results might be unexpected.')
 		except:
 			tk.messagebox.showinfo('Error..','There was an unknown error.')
 	
@@ -257,6 +266,8 @@ class interactiveWidgetsHelper(object):
 	def apply_changes(self):
 		'''
 		'''
+		dataID = self.plotter.get_dataID_used_for_last_chart()
+		self.analyzeData.sourceData.set_current_data_by_id(dataID)
 		self.helper.set_user_def_colors(self.categoryToNewColor)
 		self.helper.update_colorMap()
 		self.plotter.redraw()
@@ -267,7 +278,8 @@ class interactiveWidgetsHelper(object):
 		self.colorLevelWidgets.clear()
 		self.categoryToNewColor.clear()
 		self.selectedColors.clear()	
-		self.colorMapDict.clear()
+		if self.colorMapDict is not None:
+			self.colorMapDict.clear()
 	
 	def clean_color_frame_up(self):
 		'''
