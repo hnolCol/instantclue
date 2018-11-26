@@ -27,7 +27,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
+    You should have recweived a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 """
@@ -57,6 +57,7 @@ from modules.plots.hierarchical_clustering import hierarchichalClustermapPlotter
 from modules.plots.time_series_helper import _timeSeriesHelper
 from modules.plots.scatter_with_categories import scatterWithCategories, binnedScatter
 from modules.plots.grid_search_results import gridSearchVisualization 
+from modules.plots.stacked_area_plotter import stackedAreaPlot
 from modules.plots.line_plot import linePlotHelper
 from modules.dialogs import curve_fitting
 from modules.plots.dim_reduction import dimensionalReductionPlot
@@ -86,7 +87,6 @@ class _Plotter(object):
 		
 		self.tooltips = dict() 
 		self.onMotionEvents = dict()
-		
 		
 		self.set_axis_props()
 		
@@ -1068,6 +1068,7 @@ class categoricalPlotter(object):
 						numbNumbericColumns,categoricalColumns,numbCategoricalColumns,
 						selectedPlotType,colorMap, specificAxis = None):
 	
+		selectedPlotType = 'stacked_area'
 		self.inmutableCollections = []
 		self.plotter = _PlotterClass
 		self.figure = figure
@@ -1157,7 +1158,7 @@ class categoricalPlotter(object):
 		Adds the needed axis for plotting. The arangement depends on the number of categories
 		'''
 		self.figure.subplots_adjust(bottom=.15,top=.88,left=.15)
-		if self.currentPlotType == 'scatter':
+		if self.currentPlotType in ['scatter','stacked_area']:
 			return
 		elif self.currentPlotType == 'grid_search_results':
 			return
@@ -1498,6 +1499,11 @@ class categoricalPlotter(object):
 				self.scatterWithCategories = scatterWithCategories(self.plotter,self.dfClass,
 								self.figure, self.categoricalColumns,self.numericColumns,
 								self.colorMap)
+	
+		elif plotType == 'stacked_area':
+			
+			self.stackedArea = stackedAreaPlot(self.numericColumns,self.categoricalColumns,
+												self.dfClass, self.plotter, self.colorMap)
 	
 		elif plotType == 'grid_search_results':
 		

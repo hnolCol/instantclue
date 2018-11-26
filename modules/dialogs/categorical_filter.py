@@ -785,11 +785,15 @@ class categoricalFilter(object):
 		
 		if self.plotter.categoricalPlotter is not None:
 			if self.plotter.categoricalPlotter.scatterWithCategories is not None:
-				self.plotter.categoricalPlotter.scatterWithCategories.bind_label_event(labelColumn)
-				self.plotter.categoricalPlotter.scatterWithCategories.add_annotation_from_df(annotationData)
+				scatterPlots = self.plotter.categoricalPlotter.get_scatter_plots()
+				for scatterPlot in scatterPlots.values():
+					scatterPlot.annotationClass.addAnnotationFromDf(annotationData, redraw=False)
 		else:
 			self.plotter.nonCategoricalPlotter.bind_label_event(labelColumn)
-			self.plotter.nonCategoricalPlotter.annotationClass.addAnnotationFromDf(annotationData)
+			scatterPlots = self.plotter.get_scatter_plots()
+			for scatterPlot in scatterPlots.values():
+				scatterPlot.annotationClass.addAnnotationFromDf(annotationData, redraw=False)
+		self.plotter.redraw()
 	
 	def search_for_entry_in_hclust(self, event = None):
 		'''

@@ -5064,7 +5064,9 @@ class analyze_data(tk.Frame):
 
                  self.plt.initiate_chart(colnames,catnames,plot_type,cmap_)
                  return    		
-
+		  
+		  
+		 
 
 
      def make_labels_selectable(self):

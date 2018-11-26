@@ -68,6 +68,8 @@ class interactiveWidgetsHelper(object):
 			self.helper = plotter.nonCategoricalPlotter.linePlotHelper
 		elif plotter.currentPlotType == 'cluster_analysis':
 			self.helper = plotter.nonCategoricalPlotter.clustPlot
+		elif plotter.currentPlotType == 'stacked_area':
+			self.helper = plotter.nonCategoricalPlotter.stackedArea
 		elif plotter.nonCategoricalPlotter is not None:
 			self.helper = plotter.nonCategoricalPlotter
 		elif plotter.currentPlotType == 'scatter' and plotter.categoricalPlotter is not None:
@@ -78,8 +80,9 @@ class interactiveWidgetsHelper(object):
 			if self.colorMapDict is None: return
 
 			self.defaultColor = plotter.colorScatterPoints
-			self.defaultColorHex = col_c(self.defaultColor)			
-			droppedButton.config(command = lambda : longLegendColorChanger(self.colorMapDict,self.helper,
+			self.defaultColorHex = col_c(self.defaultColor)	
+			if droppedButton is not None:		
+				droppedButton.config(command = lambda : longLegendColorChanger(self.colorMapDict,self.helper,
 										 self.colorHelper,self.plotter, self))			
 			if len(self.colorMapDict) > 20:
 				if droppedButton is not None:

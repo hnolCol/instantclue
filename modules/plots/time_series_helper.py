@@ -156,10 +156,7 @@ class _timeSeriesHelper(object):
 					del self.aucItems[key]
 					self.plotter.redraw()
 					self.background = self.plotter.figure.canvas.copy_from_bbox(self.ax.bbox)
-					return
-					
-					
-					
+					return					
 				
 		
 		x,y = event.xdata, event.ydata
@@ -209,7 +206,7 @@ class _timeSeriesHelper(object):
 		if mode == 'baselineCorrection':
 			## add extra columns 
 			self.dataId = self.plotter.get_dataID_used_for_last_chart()
-			self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataId,
+			data = self.dfClass.join_missing_columns_to_other_df(data,id=self.dataId,
 									definedColumnsList=self.extraColumns)
 			selectedColumns = self.numericColumns + self.extraColumns
 			for column in selectedColumns:

@@ -1,0 +1,45 @@
+
+
+from module.utils import *
+
+class stackedAreaPlot(object):
+	
+	def __init__(self, numericColumns, categoricalColumn, dataID, dfClass, plotter, cmap = None):
+	
+		self.axisDict = OrderedDict()
+		
+		self.dfClass = dfClass
+		self.plotter = plotter
+		self.dataID = dataID
+		
+		self.numericColumns = numericColumns
+		self.categoricalColumns = categoricalColumns
+		
+		self.get_data()
+		
+		self.create_axis()
+
+	def create_axis(self):
+		'''
+		'''
+		if len(self.categoricalColumns) == 1:
+			self.axisDict[0] = self.plotter.figure.add_subplot(111)		
+		
+	def get_data(self):
+		'''
+		'''
+		
+		self.data = self.dfClass.get_current_data_by_column_list(self.numericColumns+self.categoricalColumns)
+		
+	
+	def fill_axis(self):
+		'''
+		'''
+		if len(self.categoricalColumns) == 1:
+			self.axisDict[0].plot([3,6,7],[4,5,6])
+		
+		
+		
+		
+	
+	

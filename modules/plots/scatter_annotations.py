@@ -80,7 +80,7 @@ class annotateScatterPoints(object):
 		
 		self.plotter.redraw()
 	
-	def addAnnotationFromDf(self,dataFrame):
+	def addAnnotationFromDf(self,dataFrame, redraw = True):
 		'''
 		'''
 		ax = self.ax
@@ -99,8 +99,9 @@ class annotateScatterPoints(object):
 		
 			self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
 			self.madeAnnotations[key] = annotObject	
-		## redraws added annotations	
-		self.plotter.redraw()
+		## redraws added annotations
+		if redraw:	
+			self.plotter.redraw()
 
 	
 	def replotAllAnnotations(self, ax):
