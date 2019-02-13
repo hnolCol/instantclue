@@ -115,12 +115,13 @@ class axisStyler(object):
 		
 		if len(patches) > 0:
 			leg = ax.legend(handles = patches, bbox_to_anchor=(0., 1.0), loc=3, title = leg_title,
-                                   ncol=ncols, borderaxespad=0.)
+                                   ncol=ncols, borderaxespad=0., frameon=False)
 		elif handles is not None and labels is not None:
-			leg = x.legend(handles,labels, bbox_to_anchor=(0., 1.0), loc=3, title = leg_title, ncol=ncols, borderaxespad=0.)                                  
+			leg = x.legend(handles,labels, bbox_to_anchor=(0., 1.0), loc=3, 
+				title = leg_title, ncol=ncols, borderaxespad=0., frameon=False)                                  
 		else:
 			leg  = ax.legend( bbox_to_anchor=(0., 1.0), loc=3, title = leg_title,
-                                   ncol=ncols, borderaxespad=0.)
+                                   ncol=ncols, borderaxespad=0., frameon=False)
             
 		if leg is not None:
 			try:
