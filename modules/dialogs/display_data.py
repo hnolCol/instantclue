@@ -171,7 +171,7 @@ class dataDisplayDialog(object):
 		self.pt = core.Table(cont,dataframe = self.data, showtoolbar=False, showstatusbar=False)
 		
 		self.pt.show()
-		self.identify_data()
+		#self.identify_data()
 	
 	def get_data(self):
 		dat_ = self.data

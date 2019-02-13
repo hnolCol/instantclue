@@ -175,7 +175,7 @@ class shiftTimeData(object):
 		intervalData = self.read_entries()
 		if intervalData is None:
 			return
-		try:
+		if True:
 		
 			df = self.dfClass.shift_data_by_row_matches(matchColumn = self.cbColumns.get(), 
 											  adjustColumns = self.columns,
@@ -189,7 +189,7 @@ class shiftTimeData(object):
 				'Data shifting applied. Data frame has been added.',
 				parent = self.toplevel)
 		
-		except:
+		else:
 			
 			tk.messagebox.showinfo('Error..',
 				'There was an error shifting your data.',

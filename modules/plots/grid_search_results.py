@@ -13,8 +13,8 @@ class gridSearchVisualization(object):
 	
 		self.plotter = plotter
 		self.figure = plotter.figure
-		self.colorMap = self.plotter.get_active_helper().colorMap
-		
+		self.colorMap = self.plotter.get_color_map()
+			
 		self.tooltips = dict()
 		self.originalColors = dict()
 		self.motionEvent = None

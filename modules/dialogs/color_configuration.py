@@ -45,6 +45,10 @@ Set5 = ['#7F3F98','#2E5FAC','#27AAE1','#9BD5F4','#017789','#00A14B',
 Set6 = ["#444444", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
             "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a"]
 
+tenenH = ['#c92a17','#a6621c','#a4c4d0','#585b7b','#e0cdc9']
+darj = ['#e30d2b','#008a76','#e19e23','#e47820','#5facc8']
+moon = ['#8c191e','#e3b20e','#967129','#85b0a5','#dfccab']
+acqua = ['#75a9b6','#4587a1','#daba31','#d19c17','#d42e16']
 ## standard repartoire of seabrn/matplotlib color palettes in Instant Clue                                 
 
 oneColorSeq = ['Greys','Blues','Greens','Purples','Reds']
@@ -89,6 +93,11 @@ class colorMapHelper(object):
 		self.customColors['Set4'] = Set4
 		self.customColors['Set5'] = Set5
 		self.customColors['Set6'] = Set6
+		self.customColors['Tenenbaums'] = tenenH
+		self.customColors['Darjeeling Limited'] = darj
+		self.customColors['Moonrise Kingdom'] = moon
+		self.customColors['Life Acquatic'] = acqua
+		
 		self.save_custom_colors()
 	
 	def add_palette(self,palette):
@@ -214,7 +223,7 @@ class colorChooseDialog(object):
 		popup.wm_title('Color Configuration') 
 		popup.protocol('WM_DELETE_WINDOW', self.close)
 		popup.bind('<Escape>', self.close) 
-		w = 790
+		w = 820
 		h = 375
 		
 		self.toplevel = popup
@@ -431,6 +440,7 @@ class createColorMapsDialog(object):
 		'''
 		Close toplevel
 		'''
+
 		self.disconnect_bindings()
 		self.toplevel.destroy() 
 			
@@ -689,9 +699,10 @@ class createColorMapsDialog(object):
 		self.onRelease = self.figure.canvas.mpl_connect('button_release_event',self.on_release)
 
 	def disconnect_bindings(self):
-		
-		self.figure.canvas.mpl_disconnect(self.onPress)
-		self.figure.canvas.mpl_disconnect(self.onRelease)
+		if hasattr(self,'onPress'):
+			self.figure.canvas.mpl_disconnect(self.onPress)
+		if hasattr(self,'onRelease'):
+			self.figure.canvas.mpl_disconnect(self.onRelease)
 		self.disconnect_motion()
 
 	def disconnect_motion(self):
@@ -842,7 +853,10 @@ class createColorMapsDialog(object):
 		self.figure.subplots_adjust(top=.95, bottom=.05,left=.05,
 									right=.95, wspace = 0, hspace=0)
 		canvas  = FigureCanvasTkAgg(self.figure,frameFigure)
-		canvas.show() 
+		try:
+			canvas.show()
+		except:
+			canvas.draw() 
 		canvas._tkcanvas.pack(in_=frameFigure,side='top',fill='both',expand=True)
 		canvas.get_tk_widget().pack(in_=frameFigure,side='top',fill='both',expand=True)
 

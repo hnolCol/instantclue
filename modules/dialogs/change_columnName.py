@@ -179,12 +179,12 @@ class ColumnNameConfigurationPopup(object):
 			
 			elif oldName in categoricalColumns:
 				
-				button = self.analyzeClass.categoricalColumns[oldName]
+				button = self.analyzeClass.selectedCategories[oldName]
 				self.analyzeClass.bind_events_to_button_in_receiverbox(newName,button,False)
 				#delete entry
-				del self.analyzeClass.categoricalColumns[oldName]
+				del self.analyzeClass.selectedCategories[oldName]
 				#replace with new name
-				self.analyzeClass.categoricalColumns[newName] = button
+				self.analyzeClass.selectedCategories[newName] = button
 			     				     
 		
 	def center_popup(self,size):

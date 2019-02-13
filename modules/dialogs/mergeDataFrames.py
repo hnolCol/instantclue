@@ -26,7 +26,6 @@ import numpy as np
 
 import tkinter as tk
 from tkinter import ttk
-
 from modules.pandastable import core 
 from modules.utils import *
 from modules import images
@@ -170,13 +169,14 @@ class mergeDataFrames(object):
 					
 			n+=1
 		if self.method == 'Merge': 
-			
+			tk.Label(self.cont,text = 'Choose columns to be included (otherwise all)',
+				bg = MAC_GREY).grid(row = n + 1, pady=5)
 			defineLeftColsButton = ttk.Button(self.cont, text  = 'Columns [left]', 
 											command = lambda : self.subset_dfs('left'))
 			defineRightColsButton = ttk.Button(self.cont, text  = 'Columns [right]', 	
 											command = lambda : self.subset_dfs('right'))
-			defineLeftColsButton.grid(row= n +1, padx=15, sticky=tk.W,column=0,pady=10)
-			defineRightColsButton.grid(row= n + 1, padx=15, sticky=tk.E, column=4,pady=10)		
+			defineLeftColsButton.grid(row= n + 2, padx=15, sticky=tk.W,column=0,pady=10)
+			defineRightColsButton.grid(row= n + 2, padx=15, sticky=tk.E, column=4,pady=10)		
 		
 							
 		combineButton = ttk.Button(self.cont, text = str(self.method), 
@@ -185,8 +185,8 @@ class mergeDataFrames(object):
 									command = self.close)
 		
 
-		combineButton.grid(row= n +2, padx=15, sticky=tk.W,column=0,pady=10)
-		closeButton.grid(row= n +2, padx=15, sticky=tk.E, column=4,pady=10)
+		combineButton.grid(row= n +3, padx=15, sticky=tk.W,column=0,pady=10)
+		closeButton.grid(row= n +3, padx=15, sticky=tk.E, column=4,pady=10)
 	
 	def enter_information_in_treeview(self,treeview,iidAndItemDict):
 		'''
@@ -394,9 +394,13 @@ class mergeDataFrames(object):
 		Output	- None 
 		'''
 		if self.method == 'Merge': 
+			#if caption == 'left data frame':
+				#tk.Label(self.treeviewFrame,
+				#	text='Choose KEY columns (column used to match rows)', 
+				#	bg = MAC_GREY).grid(row=row,sticky=tk.W)
 			labelTree = tk.Label(self.treeviewFrame, 
-				text = caption + '({})'.format(self.dfNames[caption]), 
-				bg=MAC_GREY)
+				text = caption + '({})\nChoose key column(s) (used to match rows)'.format(self.dfNames[caption]), 
+				bg=MAC_GREY, justify = tk.LEFT)
 			labelTree.grid(row=row, sticky=tk.W, column = column)
 		treeview = ttk.Treeview(self.treeviewFrame,show='tree', 
 							style='source.Treeview')
@@ -446,7 +450,6 @@ class mergeDataFrames(object):
 				
 		if self.method == 'Concatenate':
 			propsConcat = self.extract_merge_props()
-			
 			try:
 				newDf = pd.concat(dfsToConat, **propsConcat)
 			except Exception as e:
@@ -459,7 +462,6 @@ class mergeDataFrames(object):
 		else:
 			propsMerge = self.extract_merge_props(columnsForMerge)
 			## check if user has selected columns to use	
-			print(propsMerge)
 			if propsMerge is None:
 				return		
 			leftCol, rightCol = self.extract_columns(propsMerge)			
@@ -468,7 +470,7 @@ class mergeDataFrames(object):
 			#print(self.dfClass.dfs[self.dataFrameList[0]])
 			leftDf = self.dfClass.dfs[self.dataFrameList[0]][leftCol]
 			rightDf = self.dfClass.dfs[self.dataFrameList[1]][rightCol]
-			
+
 			try:
 				newDf = pd.merge(leftDf, rightDf, sort = False, **propsMerge)
 			except Exception as e:
@@ -478,8 +480,13 @@ class mergeDataFrames(object):
 				return
 			nameOfNewDf = '{}: {} {}'.format(self.method,self.dataFrameList[0],self.dataFrameList[1])
 		id = self.dfClass.get_next_available_id()
+		if '_merge' in newDf.columns:
+			columnName = self.dfClass.evaluate_column_name('mergeIndic',newDf.columns.values.tolist())
+			newDf[columnName] = newDf['_merge'].astype(str)
+			newDf = newDf.drop(columns=['_merge'])
+			
+		#check df naming
 		dfName = self.dfClass.evaluate_column_name(nameOfNewDf,self.fileNames.values())
-		
 		self.dfClass.add_data_frame(newDf, id = id, fileName = dfName)
 		columnDataTypeRel = self.dfClass.get_columns_data_type_relationship_by_id(id)
 		self.dataTreeView.add_new_data_frame(id,dfName,columnDataTypeRel)

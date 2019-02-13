@@ -421,6 +421,14 @@ class _Plotter(object):
 		'''
 		return self.figure.axes 
 		
+	def get_color_map(self):
+		'''
+		'''
+		if self.get_active_helper() is None:
+			return 'Blues'
+		else:
+			return self.get_active_helper().colorMap
+			
 	def get_active_helper(self):
 		'''
 		Returns the active helper function e.g. categorical or 
@@ -1068,7 +1076,7 @@ class categoricalPlotter(object):
 						numbNumbericColumns,categoricalColumns,numbCategoricalColumns,
 						selectedPlotType,colorMap, specificAxis = None):
 	
-		selectedPlotType = 'stacked_area'
+		#selectedPlotType = 'stacked_area'
 		self.inmutableCollections = []
 		self.plotter = _PlotterClass
 		self.figure = figure
@@ -1373,6 +1381,8 @@ class categoricalPlotter(object):
 				else:
 					ax = self.axisDict[0]
 				
+				self.data = self.data.dropna(subset = self.numericColumns, thresh = 1)
+				
 				if self.numbNumericColumns > 1:
 					
 						
@@ -1399,14 +1409,16 @@ class categoricalPlotter(object):
 										error = self.error)
 					addLeg = False
 					kwsLeg  = {}
-					
+				
+				leg = ax.get_legend()
+				if leg is not None: leg.remove()
 				axisStyler(ax,rotationXTicks=90, xlabel= '', nTicksOnYAxis=4,
 								addLegendToFirstCol = addLeg, nTicksOnXAxis = 30,
-								kwsLegend= kwsLeg)
+								kwsLegend= kwsLeg,forceLegend = forceLegend)
 				
 				#print(ax.get_xticklabels())
 			elif self.numbCategoricalColumns == 2:
-			
+				self.data = self.data.dropna(subset = self.numericColumns, thresh = 1)
 				xAxisOrder = self.data[self.categoricalColumns[0]].unique()
 				hueOrder = self.data[self.categoricalColumns[1]].unique()
 				colorDict = match_color_to_uniqe_value(xAxisOrder,self.colorMap)
@@ -1435,7 +1447,7 @@ class categoricalPlotter(object):
 					
 				
 			elif self.numbCategoricalColumns == 3:
-			
+				self.data = self.data.dropna(subset = self.numericColumns, thresh = 1)
 				xAxisOrder = self.data[self.categoricalColumns[0]].unique()
 				hueOrder = self.data[self.categoricalColumns[1]].unique()
 				colorDict = match_color_to_uniqe_value(xAxisOrder,self.colorMap)

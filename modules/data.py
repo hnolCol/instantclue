@@ -442,6 +442,21 @@ class DataCollection(object):
 			newColumnNames.append(newColumnName) 
 		self.update_columns_of_current_data()
 		return newColumnNames
+		
+		
+	def drop_columns_with_nan(self,columnLabelList,how,thresh=None):
+		'''
+		Drops columns with NaN
+		'''
+		if isinstance(columnLabelList,list):
+			pass
+		elif isinstance(columnLabelList,str):
+			columnLabelList = [columnLabelList]
+		
+		cleanedDf = self.df[columnLabelList].dropna(how = how, thresh = thresh,axis=1) 
+		
+		return cleanedDf.columns.values.tolist()
+		
 				
 	def drop_rows_with_nan(self,columnLabelList,how,thresh=None):
 		'''
@@ -695,12 +710,13 @@ class DataCollection(object):
 		self.df[columnLabelList] = self.df[columnLabelList].fillna(naFill)
 	
 	
-	def fill_na_with_data_from_gauss_dist(self,columnLabelList,downshift,width):
+	def fill_na_with_data_from_gauss_dist(self,columnLabelList,downshift,width,mode):
 		'''
 		Replaces nans with random samples from standard distribution. 
 		'''
 		means = self.df[columnLabelList].mean()
 		stdevs =  self.df[columnLabelList].std()
+		df = pd.DataFrame()
 		for n,numericColumn in enumerate(columnLabelList):
 			data = self.df[numericColumn].values
 			mu, sigma = means[n], stdevs[n]
@@ -708,7 +724,15 @@ class DataCollection(object):
 			newSigma = sigma * width
 			mask = np.isnan(data)
 			data[mask] = np.random.normal(newMu, newSigma, size=mask.sum())
-			self.df[numericColumn] = data
+			if mode in ['Replace','Replace & add indicator']:
+				self.df[numericColumn] = data
+				df['indicImp_{}'.format(numericColumn)] = mask
+			else:
+				df['imput_{}'.format(numericColumn)] = data
+		
+		if mode in ['Create new columns','Replace & add indicator']:
+			newColumns = self.join_df_to_currently_selected_df(df,exportColumns = True)
+			return newColumns
 		
 	def fit_transform(self,obj,columns,namePrefix = 'Scaled'):
 		'''
@@ -744,9 +768,7 @@ class DataCollection(object):
 		X = np.transpose(data.values)
 		normX = getattr(obj,'fit_transform')(X)
 		return np.transpose(normX), data.index
-		
-		
-	
+			
 	
 	def get_categorical_columns_by_id(self,id = None):
 		'''

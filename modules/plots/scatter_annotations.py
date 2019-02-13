@@ -56,16 +56,23 @@ class annotateScatterPoints(object):
 		self.find_closest_and_check_event(xyEvent,event.mouseevent)
 		if self.eventOverAnnotation:
 			return
-		
-		selectedData = self.data.iloc[ind]
-		key = selectedData.index.values.item(0)
+			
+		scatterPlots = self.plotter.get_scatter_plots()
+		for scatterPlot in scatterPlots.values():
+			if scatterPlot.ax == self.ax:
+				idxData = scatterPlot.idxData
+				boolIdx = self.data.index == idxData
+				break
+		if np.sum(boolIdx) == 0:
+			return
+			
+		selectedData = self.data.loc[boolIdx,:]
+		key = idxData
 		clickedData = selectedData.iloc[0]
-		
-		
 		if key in self.selectionLabels: ## easy way to check if that row is already annotated
 			return
 		
-		xyDataLabel = tuple(clickedData[self.numericColumns])
+		xyDataLabel = tuple(selectedData[self.numericColumns].iloc[0])
 		if len(self.textAnnotationColumns) != 1:
 			textLabel = str(clickedData[self.textAnnotationColumns]).split('Name: ')[0] ## dangerous if 'Name: ' is in column name
 		else:

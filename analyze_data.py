@@ -76,8 +76,8 @@ from modules.plots.time_series_helper import aucResultCollection
 from modules.dialogs.simple_dialog import simpleUserInputDialog, simpleListboxSelection
 from modules.utils import *
 
-from modules.calculations.normalize import dataNormalizer
-from modules.calculations.feature_selection import selectFeaturesFromModel
+from modules.calculations.normalize import dataNormalizer, quantileNormalize
+from modules.calculations.feature_selection import selectFeaturesFromModel, estimators, estimatorSettings,checkDataType
 import os
 import time
 import string
@@ -124,12 +124,6 @@ sns.set(style="ticks",font=defaultFont)
 sns.axes_style('white')
 ##
 
-#import multiprocessing
-#from multiprocessing import Process
-#from threading import Timer,Thread,Event
-#import concurrent.futures
-#from multiprocessing import Pool
-
 from scipy.stats import wilcoxon
 from scipy.stats import f_oneway
 from scipy.stats import kruskal
@@ -138,7 +132,6 @@ from scipy.stats import f
 from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.nonparametric.smoothers_lowess import lowess
-#from statsmodels.formula.api import ols
 from statsmodels.stats.libqsturng import psturng
 
 
@@ -366,7 +359,7 @@ class analyze_data(tk.Frame):
            'rolling','smoothing','rowColCalc','multTest','curvefit','categories',\
            'predict','transform','correlation','nanReplace','basicCalc','normalization',\
            'featureSelection','columnBasicDiv','columnBasicSub','aggRows','time_series',
-           'compareGroups','featureSelection']
+           'compareGroups','featureSelection','classification','modelFeatSel','nanReplaceCol']
            
           # _, self.filterIcon,self.calcAddColumn,_ = images.get_workflow_images()
 
@@ -384,7 +377,7 @@ class analyze_data(tk.Frame):
            replace_options = ['0 -> NaN','NaN -> 0','NaN -> Constant','NaN -> Mean[col]','NaN -> Mean[row]',
            					  'NaN -> Median[col]','NaN -> Gauss Distribution']
            
-           normOptions = ['Standardize','Quantile','0->1']
+           normOptions = ['Standardize','Quantile (25,75)','0->1']
 
            rollingOptions = ['mean','median','quantile','sum','max','min','std']
 
@@ -413,12 +406,17 @@ class analyze_data(tk.Frame):
            menuDict['column'].add_command(label='Factorize', command = self.factorize_column)
             
            menuDict['column'].add_cascade(label='Drop rows with NaN ..', menu = menuDict['nanReplace'])
+           menuDict['column'].add_cascade(label='Drop columns with NaN ..', menu = menuDict['nanReplaceCol'])
            #menuDict['column'].add_cascade(label='Feature selection', menu = menuDict['featureSelection'])
            
           
            for opt in nanDroppingOptions:
            	menuDict['nanReplace'].add_command(label=opt, command = lambda how = opt: self.remove_rows_with_nan(how))
-
+			
+          
+           for opt in nanDroppingOptions:
+           	menuDict['nanReplaceCol'].add_command(label=opt, command = lambda how = opt, columns = True: self.remove_rows_with_nan(how,columns))
+			
            menuDict['dataType'].add_command(label='Float', command = lambda: self.change_column_type(changeColumnTo ='float64'))
            menuDict['dataType'].add_command(label='Category', command = lambda: self.change_column_type(changeColumnTo ='str'))
            menuDict['dataType'].add_command(label='Integer', command = lambda: self.change_column_type(changeColumnTo = 'int64'))
@@ -473,7 +471,9 @@ class analyze_data(tk.Frame):
            menuDict['main'].add_cascade(label='Row & column calculations', menu = menuDict['rowColCalc'])
            menuDict['rowColCalc'].add_command(label='Summary Statistics', command = self.summarize)
            menuDict['rowColCalc'].add_cascade(label="Basic", menu = menuDict['basicCalc'])
-           menuDict['rowColCalc'].add_cascade(label="Normalization", menu = menuDict['normalization'])
+           menuDict['rowColCalc'].add_cascade(label="Row Normalization", menu = menuDict['normalization'])
+           menuDict['rowColCalc'].add_command(label="Quantile Normalization (col)", command = self.norm_quant_data)
+           
            menuDict['rowColCalc'].add_cascade(label="Logarithmic", menu = menuDict['logCalc'])
            
            for logType in ['log2','-log2','ln','log10','-log10']:
@@ -538,8 +538,12 @@ class analyze_data(tk.Frame):
            #menuDict['correlation'].add_command(label="Display correlation analysis .." ,
            #	command = lambda: tk.messagebox.showinfo('Under construction','Under construction ..',parent=self))
 
-           for featureSel in ['Model','Variance']:#,'Recursive elimination']:
-           	menuDict['featureSelection'].add_command(label=featureSel, command = lambda featureSel = featureSel: self.select_features(featureSel))
+          # for featureSel in ['Model','Variance']:#,'Recursive elimination']:
+           menuDict['featureSelection'].add_command(label='Variance', command = lambda featureSel = 'Variance': self.select_features(featureSel))
+           menuDict['featureSelection'].add_cascade(label='Model',menu = menuDict['modelFeatSel'])
+           for model in estimators.keys():
+           	menuDict['modelFeatSel'].add_command(label=model, command = lambda featureSel = model: self.select_features(featureSel))
+           
            
            menuDict['main'].add_cascade(label='Feature selection by..', menu= menuDict['featureSelection'])
            menuDict['main'].add_separator()
@@ -550,6 +554,8 @@ class analyze_data(tk.Frame):
            menuDict['main'].add_cascade(label='Curve fit', menu= menuDict['curvefit'] )
            menuDict['curvefit'].add_command(label="Curve fit of rows to...", command = self.curve_fit)
            menuDict['curvefit'].add_command(label="Display curve fit(s)", command = self.display_curve_fits)
+           menuDict['main'].add_cascade(label='Classification', menu = menuDict['classification'])
+           menuDict['classification'].add_command(label='Cross Validation Based Grid Search', command = self.start_grid_search)
            menuDict['main'].add_separator()
            menuDict['main'].add_cascade(label='Predictions', menu= menuDict['predict'] )
            menuDict['predict'].add_command(label = 'Predict Cluster', command = lambda: clustering.predictCluster(self.clusterCollection, self.sourceData, self.DataTreeview))
@@ -2037,10 +2043,15 @@ class analyze_data(tk.Frame):
      	if selectedColumns is not None:
      		if byValue or byMedian:
      			if byValue:
-     				value = ts.askfloat('Provide Value','Enter value for division:')
-     				if value is not None:
+     				value = ts.askfloat('Provide Value','Enter value for division/subtraction:')
+     				if value is not None and value != 0:
      					calcDict = OrderedDict([(column,value) for column in selectedColumns])
      					baseString = 'by_{}:'.format(value)
+     				else:
+     					if int(value) == 0:
+     						tk.messagebox.showinfo('Error..','Division/Subtraction by zero.')
+     					return
+     						
      			elif byMedian:
      				values = self.sourceData.get_current_data()[selectedColumns].median()
      				calcDict = OrderedDict([(column,value) for column,value in zip(selectedColumns,values.tolist())])
@@ -2048,9 +2059,8 @@ class analyze_data(tk.Frame):
      			
      			if operation == 'divide':
      				baseString = 'div_' + baseString
-     				newColumns = self.sourceData.divide_columns_by_value(calcDict,baseString)
-     				
-     			elif operation == 'substract':
+     				newColumns = self.sourceData.divide_columns_by_column(calcDict,baseString)
+     			elif operation == 'subtract':
      				baseString = 'sub_' + baseString
      				newColumns = self.sourceData.substract_columns_by_value(calcDict,baseString)
      		
@@ -2072,7 +2082,7 @@ class analyze_data(tk.Frame):
      				
      				if operation == 'divide':
      					newColumns = self.sourceData.divide_columns_by_column(selectedColumns,selection)
-     				elif operation == 'substract':
+     				elif operation == 'subtract':
      					newColumns = self.sourceData.substract_columns_by_column(selectedColumns,selection)
      			else:
      				return
@@ -2453,6 +2463,23 @@ class analyze_data(tk.Frame):
                           catnames = list(self.selectedCategories.keys()),
                           plot_type = plot_type)
 
+     def norm_quant_data(self):
+     	'''
+     	
+     	'''
+     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
+     	if selectedColumns is not None:   
+     	
+     		df = self.sourceData.df[selectedColumns]
+     		data = quantileNormalize(df).values
+     		newColumnNames = ['quantN_{}'.format(col) for col in selectedColumns]
+     		dfToAdd = pd.DataFrame(data, columns = newColumnNames)
+     		evalColumnNames = self.sourceData.join_df_to_currently_selected_df(dfToAdd, exportColumns = True)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													'float64',evalColumnNames)
+     		tk.messagebox.showinfo('Done..','Calculations done. New columns added.')
+     			
+     	     
      def normalize_data(self,metric):
      	'''
      	
@@ -2460,13 +2487,17 @@ class analyze_data(tk.Frame):
      	selectedColumns = self.selection_is_from_one_df()
      	if selectedColumns is not None:
      	
-
      		columnsSelected = self.DataTreeview.columnsSelected
+     		if metric == '0->1':
+     			scaler = dataNormalizer(metric,**{'feature_range':(0.01, 1)})
+     		else:
+     			scaler = dataNormalizer(metric)
      		
-     		scaler = dataNormalizer(metric,**{'feature_range':(0.01, 1)})
      		columnNames = self.sourceData.fit_transform(scaler,columnsSelected)
      		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
      													'float64',columnNames)
+     		tk.messagebox.showinfo('Done..','Calculations done. New columns added.')
+    
      def numeric_filter_dialog(self):
          	'''
          	Numeric Filter.
@@ -2499,7 +2530,6 @@ class analyze_data(tk.Frame):
          	else:
          		tk.messagebox.showinfo('Error ..','Please select only columns from one file.')
          		return
-
      	
      def rename_data_frame(self):
      	'''
@@ -2531,7 +2561,7 @@ class analyze_data(tk.Frame):
      	selectedColumns = self.selection_is_from_one_df()
      	if selectedColumns is None or len(selectedColumns) == 0:
      		return
-     		
+     	
      	if event is not None:
      		itemClicked = [self.DataTreeview.clicked_item(event)]
      		if itemClicked[0] == '': 
@@ -2588,6 +2618,8 @@ class analyze_data(tk.Frame):
      	Check if user's selection is from one data set
      	'''
      	selectionIsFromSameData, selectionDataFrameId = self.DataTreeview.check_if_selection_from_one_data_frame()
+     	if selectionIsFromSameData is None:
+     		return
      	if selectionIsFromSameData:
      		self.sourceData.set_current_data_by_id(selectionDataFrameId)
      		if onlyNumeric and self.DataTreeview.onlyNumericColumnsSelected == False:
@@ -3366,6 +3398,8 @@ class analyze_data(tk.Frame):
      	'''
      	'''
      	selectedColumns = self.selection_is_from_one_df()
+     	dataID = self.sourceData.currentDataFile
+     	nFeatures = None
      	if selectedColumns is not None:       		
      		data = self.sourceData.get_current_data()[selectedColumns]
      		if self.DataTreeview.onlyNumericColumnsSelected == False:
@@ -3387,10 +3421,40 @@ class analyze_data(tk.Frame):
      				return
      			settings['threshold'] = value
      				
-     		else:
-     			Y = self.sourceData.get_current_data()['class']
+     		elif featureSel in estimators:
+     			targetSelection = simpleListboxSelection('Select target column for feature selection.',
+     			 			data = self.sourceData.get_categorical_columns_by_id(id=self.sourceData.currentDataFile),
+     			 			title = 'Select target column')
+     			if len(targetSelection.selection) > 0:
+     				Y = self.sourceData.get_current_data()[targetSelection.selection[0]]
+     			else:
+     				return
+     			
+     			modelProps = estimatorSettings[featureSel].keys() 
+     			
+     			defaultSett = [x[0] for x in estimatorSettings[featureSel].values()]
+     			optionSett = [x[1] for x in estimatorSettings[featureSel].values()]
+     			
+     			
+     			modelSettingDialog = simpleUserInputDialog(modelProps,defaultSett, optionSett,
+     				title = 'Select settings for model', 
+     				infoText = 'Enter or select settings for model')
+     				
+     			modelSettings = modelSettingDialog.selectionOutput
+     			settings = checkDataType(modelSettings)   
+     			nFeatures = ts.askinteger('Number of features',  	
+     				prompt='Provide the number of the most important features that should be selected.',
+     				parent = self, initialvalue = 20)		
 
-     		model = selectFeaturesFromModel(X.values,Y = Y ,model=featureSel,addSettings = settings)
+     			if nFeatures is None:
+     				return
+     		else:
+     			return	
+				
+     		model = selectFeaturesFromModel(X.values,Y = Y ,
+     			model=featureSel, 
+     			max_features = nFeatures,
+     			addSettings = settings)
      		featureImportance = model.featureImportance
      		mask = model.featureMask
      					
@@ -3406,11 +3470,11 @@ class analyze_data(tk.Frame):
      		
      		if quest == 'yes':
      		
-     			dfColumns = self.sourceData.get_columns_of_current_data()
+     			dfColumns = self.sourceData.get_columns_of_df_by_id(dataID)
      			newColumns = [column for column in dfColumns if column in df['Selected Features'].values.tolist()]
      			oldColumns = [column for column in dfColumns if column not in selectedColumns]
      			combColumns = newColumns + oldColumns 
-     			df = self.sourceData.get_current_data()[combColumns]
+     			df = self.sourceData.get_data_by_id(dataID)[combColumns]
      			self.add_new_dataframe(df,'FeatureSelection ({})'.format(self.sourceData.get_file_name_of_current_data()))
 					
      def replace_data_in_df(self,replaceOption):
@@ -3432,20 +3496,28 @@ class analyze_data(tk.Frame):
      		numericColumns = self.DataTreeview.columnsSelected
      		if 'Gauss Distribution' in replaceOption:
 
-     			valueDialog = simpleUserInputDialog(descriptionValues = ['Downshift (in stdev)','Rel. Stdev'],
-     											initialValueList = ['1.8','0.4'],
+     			valueDialog = simpleUserInputDialog(descriptionValues = ['Downshift (in stdev)','Rel. Stdev','Mode'],
+     											initialValueList = ['1.8','0.4','Replace & add indicator'],
      											optionList = [np.round(np.linspace(-2,2,num=10,endpoint=True),decimals=1).tolist(),
-     														  np.round(np.linspace(0.1,1.5,num=10,endpoint=True),decimals=1).tolist()],
+     														  np.round(np.linspace(0.1,1.5,num=10,endpoint=True),decimals=1).tolist(),
+     														  ['Replace','Create new columns','Replace & add indicator']],
      											title = 'Settings for NaN Replacement',
      											infoText = 'Replace NaN with data drawn from a Gaussian Distribution.')
 
 	     		selection = valueDialog.selectionOutput
 	     		if len(selection) != 0:
-	     			self.sourceData.fill_na_with_data_from_gauss_dist(numericColumns,
+	     			newColumns = self.sourceData.fill_na_with_data_from_gauss_dist(numericColumns,
 	     				float(selection['Downshift (in stdev)']),
-	     				float(selection['Rel. Stdev']))
+	     				float(selection['Rel. Stdev']),
+	     				selection['Mode'])
+	     			if newColumns is not None:
+	     				self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     										dataType = 'float64' if selection['Mode'] == 'Create new columns' else 'object',
+     										columnList = newColumns,
+     										)
 	     		else:
       				return
+      				
      		elif replaceOption == 'NaN -> Mean[row]':
      			self.sourceData.fill_na_in_columnList_by_rowMean(numericColumns)
       				
@@ -3492,7 +3564,7 @@ class analyze_data(tk.Frame):
             pass
 
 
-     def remove_rows_with_nan(self, how = 'all == NaN'):
+     def remove_rows_with_nan(self, how = 'all == NaN', dropColumns = False):
      	'''
      	Drops rows from selected columns. Changes, if necessary, to the selected DataFrame.
      	'''
@@ -3505,7 +3577,7 @@ class analyze_data(tk.Frame):
      		elif 'any' in how:
      			how = 'any'
      		else:
-     			thresh = ts.askinteger('Threshold ..',prompt = 'Please provide threshold for dropping rows with nan.\n'+
+     			thresh = ts.askinteger('Threshold ..',prompt = 'Please provide threshold for dropping rows/columns with nan.\n'+
      									' A threshold of two means that at least 2 non-nan\nvalues are required '+
      									'to keep a row.', parent = self,
      									initialvalue = int(float(len(self.DataTreeview.columnsSelected)/2)),
@@ -3513,16 +3585,33 @@ class analyze_data(tk.Frame):
      									maxvalue = len(self.DataTreeview.columnsSelected))
      			if thresh is None:
      				return
-     		numRemoved = self.sourceData.drop_rows_with_nan(self.DataTreeview.columnsSelected, how, thresh)
-     		tk.messagebox.showinfo('Done ..','NaN were removed in selected columns. In total {} rows.'.format(numRemoved))
-     		self.workflow.add('deleteRows',
+     		if dropColumns:
+     			columnsRemained = self.sourceData.drop_columns_with_nan(self.DataTreeview.columnsSelected, how, thresh)
+     			nanRemoved = len(self.DataTreeview.columnsSelected) - len(columnsRemained)
+     			deleteColumns = [col for col in self.DataTreeview.columnsSelected if col not in columnsRemained]
+     			if len(deleteColumns) == 0:
+     				tk.messagebox.showinfo('Aborting..','No columns contain NaN matching the selected threshold/criteria')
+     				return
+     			quest = tk.messagebox.askquestion('Proceed ?','The following columns will be removed: {}'.format(str(deleteColumns).replace(',','\n')))
+     			if quest == 'yes':
+     				self.sourceData.delete_columns_by_label_list(deleteColumns)
+     				tk.messagebox.showinfo('Done..','Columns containing NaN removed. In total {} columns were removed'.format(nanRemoved))     		
+     				dict_ = self.sourceData.dfsDataTypesAndColumnNames
+     				file_names = self.sourceData.fileNameByID
+     				self.DataTreeview.add_all_data_frame_columns_from_dict(dict_,file_names)
+     		else:
+     			nanRemoved = self.sourceData.drop_rows_with_nan(self.DataTreeview.columnsSelected, how, thresh)
+     		
+     			tk.messagebox.showinfo('Done ..','NaN were removed in selected columns. In total {} rows.'.format(nanRemoved))
+     		
+     			self.workflow.add('deleteRows',
      				self.sourceData.currentDataFile,
      				{'funcDataR':'save_dropped_rows',
      				'argsDataR':{'id':self.sourceData.currentDataFile,
      				'reverse':True},
      				'description':OrderedDict([('Activity:','Drop Rows with NaN - ({})'.format(how)),
      				('Description:','Rows containing NaN were dropped. If a threshold of 3 is given rows are retained that contain at least 3 non-NaN values'),
-     				('Removed Rows:','{}'.format(numRemoved)),
+     				('Removed Rows:','{}'.format(nanRemoved)),
      				('Selected Columns',get_elements_from_list_as_string(selectedColumns, maxStringLength = None)),
      				('Data ID:',self.sourceData.currentDataFile)])})
   	
@@ -3843,7 +3932,37 @@ class analyze_data(tk.Frame):
      	self.place_buttons_in_receiverbox(numericColumns,'numeric')
      	self.place_buttons_in_receiverbox(categoricalColumns,'category')
 
+     def start_grid_search(self,features = [], targetColumn = None):
+     	'''
+     	Start Grid search from context menu.
+     	'''
+     	if self.DataTreeview.onlyNumericColumnsSelected == False:
+     		tk.messagebox.showinfo('Error..',
+     			'Please select only numeric columns. Note: You can change the data type using the context menu.',
+     			parent = self)
+     			
+     	features = self.selection_is_from_one_df()
+     	if features is not None:
+     		
+     		if targetColumn is None:
+     		
+     			 targetSelection = simpleListboxSelection('Select target column.',
+     			 						data = self.sourceData.get_categorical_columns_by_id(id=self.sourceData.currentDataFile),
+     			 						title = 'Select target column for grid search')
+				
+     			 if len(targetSelection.selection) > 0:
+     			 	targetColumn = [targetSelection.selection[0]]
+     			 	if len(targetSelection.selection) != 1:
+     			 		tk.messagebox.showinfo('Note..',
+     			 			'Multiple columns selected, only the first one will be used: {}'.format(targetSelection.selection[0]),
+     			 			parent=self)
+     			 else:
+     			 	return
+     	
+     		classification.gridSearchClassifierOptimization(self.classificationCollection, self.sourceData,
+                     											features,targetColumn,plotter=self.plt)
 
+   
      def place_buttons_in_receiverbox(self,columnNames,dtype):
      	'''
      	Receiver boxes do receive drag & dropped items by the user.
@@ -4165,6 +4284,10 @@ class analyze_data(tk.Frame):
                  CreateToolTip(self.color_button_droped,
                  	text = get_elements_from_list_as_string(self.DataTreeview.columnsSelected))
 
+
+
+
+
          elif analysis:
 
              if len(self.plt.plotHistory) == 0:
@@ -4243,12 +4366,15 @@ class analyze_data(tk.Frame):
                      			'Need more features (numerical Columns) in receiver box.',
                      			parent=self)
                      		return
+                     	
+                     	
+                     		
                      	if len(self.selectedCategories) == 0:
                      		tk.messagebox.showinfo('Error ..',
                      			'Need at  least one categorical column. (Target variable, class)',
                      			parent=self)
                      		return
-
+						
                      	features = list(self.selectedNumericalColumns.keys())
                      	targetColumn = list(self.selectedCategories.keys())
 
@@ -4371,13 +4497,15 @@ class analyze_data(tk.Frame):
      			return
      	else:
      		pass
-     	datToInspect = self.sourceData.get_data_by_id(currentDataSelection[0]).copy() ## this is needed otherwise the self.df will be updated instantly
+     	
+     	datToInspect = self.sourceData.get_data_by_id(currentDataSelection[0]).copy()  ## this is needed otherwise the self.df will be updated instantly
+     	dataID = currentDataSelection[0]
      	dataDialogue = display_data.dataDisplayDialog(datToInspect,self.plt)
      	data_ = dataDialogue.get_data()
      	del dataDialogue
      	if data_.equals(self.sourceData.df):
      		pass
-     	else:
+     	elif dataID == self.sourceData.currentDataFile:
      		quest = tk.messagebox.askquestion('Confirm ..','Data changed. Would you like to update?')
      		if quest == 'yes':
      			self.sourceData.update_data_frame(id=currentDataSelection[0],

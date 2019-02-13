@@ -123,7 +123,10 @@ class axisStyler(object):
                                    ncol=ncols, borderaxespad=0.)
             
 		if leg is not None:
-			leg.draggable(state=True, use_blit=True)
+			try:
+				leg.set_draggable(state=True, use_blit=True)
+			except:
+				leg.draggable(state=True, use_blit=True)
 			leg._legend_box.align = 'left'
 			#title = leg.get_title()
 			#title.set_ha('left')

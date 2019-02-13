@@ -877,10 +877,10 @@ def compare_multiple_groups(test,data):
 	'''
 	
 	if test == '1-W-ANOVA':
-		if True:
+		try:
 			testResult= f_oneway(*data)
 			#testResult = (stat,pValue)
-		else:
+		except:
 			testResult = (np.nan,np.nan)
 	return testResult
 		

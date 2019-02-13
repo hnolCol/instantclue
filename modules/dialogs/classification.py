@@ -116,29 +116,28 @@ sgdLossFuncs = ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron',
 
 randomForestWidgets = OrderedDict([('n_estimators',['50',list(range(10,100,10)),'The number of trees in the forest.']),
 					 ('max_features',['sqrt',['sqrt','log2'],'The number of features to consider when looking for the best split:\nIf int, then consider max_features features at each split.\nIf float, then max_features is a percentage and int(max_features * n_features) features are considered at each split.\nIf “auto”, then max_features=sqrt(n_features).\nIf “sqrt”, then max_features=sqrt(n_features) (same as “auto”).\nIf “log2”, then max_features=log2(n_features).\nIf None, then max_features=n_features.\nNote: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than max_features features.']),
-					 ('max_depth',['None','The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.']),
-					 ('min_samples_split',['2','The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
-					 ('min_samples_leaf',['1','The minimum number of samples required to be at a leaf node:\nIf int, then consider min_samples_leaf as the minimum number.\nIf float, then min_samples_leaf is a percentage and ceil(min_samples_leaf * n_samples) are the minimum number of samples for each node.']),
-					 ('max_leaf_nodes',['None','Grow trees with max_leaf_nodes in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.']),
-					 ('oob_score',['True',trueFalse,'The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
-					 ('bootstrap',['True',trueFalse,'Whether bootstrap samples are used when building trees.']),
+					 ('max_depth',['None',['None','1','2','5'],'The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.']),
+					 ('min_samples_split',['2',['2','4','0.5'],'The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
+					 ('min_samples_leaf',['1',['1','2','3'],'The minimum number of samples required to be at a leaf node:\nIf int, then consider min_samples_leaf as the minimum number.\nIf float, then min_samples_leaf is a percentage and ceil(min_samples_leaf * n_samples) are the minimum number of samples for each node.']),
+					 ('max_leaf_nodes',['None',['None','1','2','3'],'Grow trees with max_leaf_nodes in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.']),
+					 #('oob_score',['True',trueFalse,'The minimum number of samples required to split an internal node:\nIf int, then consider min_samples_split as the minimum number.\nIf float, then min_samples_split is a percentage and ceil(min_samples_split * n_samples) are the minimum number of samples for each split.']),
+					 #('bootstrap',['True',trueFalse,'Whether bootstrap samples are used when building trees.']),
 					 ('class_weight',['balanced_subsample',['balanced_subsample','balanced','None'],'The “balanced” mode uses the values of y to automatically adjust weights inversely proportional to class frequencies in the input data as n_samples / (n_classes * np.bincount(y))\nThe “balanced_subsample” mode is the same as “balanced” except that weights are computed based on the bootstrap sample for every tree grown.']),
-					 ('n_jobs',['-2','The number of jobs to use for the computation. This works by computing each of the n_init runs in parallel. If -1 all CPUs are used. If 1 is given, no parallel computing code is used at all, which is useful for debugging. For n_jobs below -1, (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one are used.']),
+					# ('n_jobs',['-2','The number of jobs to use for the computation. This works by computing each of the n_init runs in parallel. If -1 all CPUs are used. If 1 is given, no parallel computing code is used at all, which is useful for debugging. For n_jobs below -1, (n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one are used.']),
 					 ])
 					 
 extraTreeWidgets = randomForestWidgets
 
 					 
 					 
-supportVectorWidgets = OrderedDict([('C',['1','Penalty parameter C of the error term.']),
-					 ('kernel',['rbf',['rbf','poly','linear'],'Specifies the kernel type to be used in the algorithm.']),
-					 ('degree',['3','Degree of the polynomial kernel function (‘poly’). Ignored by all other kernels.']),
-					 ('gamma',['auto','Kernel coefficient for ‘rbf’, ‘poly’ and ‘sigmoid’. If gamma is ‘auto’ then 1/n_features will be used instead.']),
-					 ('coef0',['0','Independent term in kernel function. It is only significant in ‘poly’ and ‘sigmoid’.']),
-					 ('probability',['False',trueFalse,'Whether to enable (class) probability estimates. This must be enabled prior to calling fit, and will slow down that method.']),
-					 ('shrinking',['False',trueFalse,'Whether to use the shrinking heuristic.']),
+supportVectorWidgets = OrderedDict([('C',['1',['0.01','1','10'],'Penalty parameter C of the error term.']),
+					# ('kernel',['rbf',['rbf','poly','linear','sigmoid'],'Specifies the kernel type to be used in the algorithm.']),
+					 #('degree',['3',['2','3','4'],'Degree of the polynomial kernel function (‘poly’). Ignored by all other kernels.']),
+					# ('gamma',['auto',['auto','0.1','0.3'],'Kernel coefficient for ‘rbf’, ‘poly’ and ‘sigmoid’. If gamma is ‘auto’ then 1/n_features will be used instead.']),
+					 ('loss',['squared_hinge',['hinge','squared_hinge'],'']),
+					 ('penalty',['l2',['l1','l2'],'']),
 					 ('tol',['1e-3','Tolerance for stopping criterion.']),
-					 ('cache_size',['300','Specify the size of the kernel cache (in MB).']),
+					# ('cache_size',['300','Specify the size of the kernel cache (in MB).']),
 					 ('class_weight',['None',['balanced','None'],'The “balanced” mode uses the values of y to automatically adjust weights inversely proportional to class frequencies in the input data as n_samples / (n_classes * np.bincount(y))\nThe “balanced_subsample” mode is the same as “balanced” except that weights are computed based on the bootstrap sample for every tree grown.']),
 					 ])
 
@@ -1695,8 +1694,12 @@ class gridSearchClassifierOptimization(object):
 		self.plotter.set_current_grid_search_results(results)
 		
 		self.classificationCollection.save_grid_search_results(results)
+		if self.plotter.get_active_helper() is not None:
+			colorMap = self.plotter.get_active_helper().colorMap
+		else:
+			colorMap = 'Blues'
 		self.plotter.initiate_chart(self.features,self.targetColumn,'grid_search_results',
-			self.plotter.get_active_helper().colorMap)
+			colorMap)
 		self.plotter.redraw()
 		progressBar.close()
 		return

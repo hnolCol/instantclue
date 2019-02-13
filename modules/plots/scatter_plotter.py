@@ -201,20 +201,19 @@ class scatterPlot(object):
 		self.data = self.dfClass.join_missing_columns_to_other_df(self.data,id=self.dataID,
 																  definedColumnsList=labelColumnList)
 		self.textAnnotationColumns = labelColumnList
+		madeAnnotations = OrderedDict()
+		selectionLabels = OrderedDict()
 		
 		if self.annotationClass is not None: ## useful to keep already added annotations by another column selectable
 			
 			madeAnnotations = self.annotationClass.madeAnnotations
-			madeAnnotations = self.annotationClass.selectionLabels
+			selectionLabels = self.annotationClass.selectionLabels
 			## avoid wrong labeling
 			try:
 				self.annotationClass.disconnect_event_bindings()
 			except:
 				pass
-		else:
-			madeAnnotations = OrderedDict()
-			selectionLabels = OrderedDict()
-		
+				
 		numColumns = self.numericColumns
 
 		self.annotationClass = annotateScatterPoints(self.plotter,self.ax,

@@ -36,8 +36,9 @@ try:
 except:
 	pass
 from scipy.spatial.distance import cdist
+from scipy.stats import ttest_1samp
 
-availableTests = ['t-test','Welch-test','Whitney-Mann U [unpaired non-para]',
+availableTests = ['t-test','Welch-test','one-sample t-test','Whitney-Mann U [unpaired non-para]',
 			'Wilcoxon [paired non-para]','1-W-ANOVA',#'Kruskal-Wallis',
 			'Soft-TDW (time series)']
 
@@ -51,6 +52,7 @@ class compareGroupsDialog(object):
 		self.treeView = treeView
 		self.groups = OrderedDict()
 		self.selectedColumns = selectedColumns
+		self.dataID = self.dfClass.get_id_of_current_data()
 		# stat Testing == False can be used to use this dialog to define groups
 		# instead of testing row wise
 		self.statTesting = statTesting
@@ -65,7 +67,9 @@ class compareGroupsDialog(object):
 		self.build_menu()
 		self.add_column_to_group('Group_1',selectedColumns)
 		self.add_column_to_group('Group_2',[])
+		
 		self.toplevel.wait_window()
+		
 		
 		
 
@@ -180,6 +184,56 @@ class compareGroupsDialog(object):
 		self.group_treeview.insert('','end',iid = groupName,text=groupName)
 		self.groups[groupName] = []
 
+
+	def adjust_p_value_to_side(self,x,side='less',columnNames=[]):
+		c1,c2 = columnNames
+		if side == 'less':
+			if x[c1] < 0:
+				return x[c2] / 2
+			else:
+				return 1-x[c2]/2
+		elif side == 'greater':
+			if x[c1] > 0:
+				return x[c2] / 2
+			else:
+				return 1-x[c2]/2
+				
+
+	def one_sample_test(self):
+		''
+		df = self.dfClass.get_data_by_id(self.dataID, setDataToCurrent=True)
+		
+		value = ts.askfloat('Provide Value','Enter expected value in null hypothesis:', parent = self.toplevel)
+		if value is None or value == '':
+			return
+		addedColumnNames = []
+		for group,columnNames in self.groups.items():
+			if len(columnNames) != 0:
+				rawData = df[columnNames]
+				data = ttest_1samp(rawData,value, axis=1, nan_policy = 'omit')
+				result = pd.DataFrame(index=df.index)
+				tCol = 'test_stat ({},{},{})'.format(group,self.sideVar.get(),value)
+				pCol = 'p-values ({},{},{})'.format(group,self.sideVar.get(),value)
+				mCol = 'mean ({},{},{})'.format(group,self.sideVar.get(),value)
+				result[pCol] = data[1]
+				result[tCol] = data[0]
+				result[mCol] = rawData.mean(axis=1)
+				if self.sideVar.get() != 'two-sided [default]':
+					
+					result[pCol] = result.apply(self.adjust_p_value_to_side,
+									axis=1,
+									side=self.sideVar.get(),
+									columnNames = [tCol,pCol]
+									)
+					
+				
+				columnNames = self.dfClass.join_df_to_currently_selected_df(result, exportColumns = True)
+				addedColumnNames.extend(columnNames)
+				
+		self.treeView.add_list_of_columns_to_treeview(self.dfClass.currentDataFile,
+     													'float64',addedColumnNames) 			
+		tk.messagebox.showinfo('Done..','Calculations performed. Result columns were added.')
+		
 	def perform_calculation(self):
 		'''
 		'''
@@ -188,26 +242,30 @@ class compareGroupsDialog(object):
 			self.close()
 			return
 				
+		if self.testSelected.get() in ['one-sample t-test']:
+			self.one_sample_test()
+			return
+
 
 		progBar = Progressbar('Comparing two groups ..')
 		
 		if any(len(k) < 2 for v,k in self.groups.items()):
 			tk.messagebox.showinfo('Warning..',
-				'There are groups with less than two columns selected.\nNaN will be returned.',
+				'There are groups with less than two columns selected.\nNaN will be returned. Aborting.',
 				parent=self.toplevel)
+			return
 						
 		combinations = list(itertools.combinations(self.groups.keys(),2))
 		nTotal = len(combinations)
 		n = 0
 		#nTotal = len(list(combinations))
-		df = self.dfClass.get_current_data()
-		addedColumnNames = []
+		df = self.dfClass.get_data_by_id(self.dataID, setDataToCurrent=True)
+		addedColumnNames = []		
+		
 		for group1,group2 in combinations:
 			if any(len(group) == 0 for group in [group1,group2]):
 				continue
 			n+=1
-			#s1 = common_start_string(*self.groups[group1])
-			#s2 = common_start_string(*self.groups[group2])
 			if self.testSelected.get() in ['1-W-ANOVA','Kruskal-Wallis']:
 				colName = '{}_{}'.format(self.testSelected.get(), get_elements_from_list_as_string(list(self.groups.keys())))
 				nTotal = 1.2
@@ -217,7 +275,7 @@ class compareGroupsDialog(object):
 			progBar.update_progressbar_and_label(n/nTotal * 100,
 				':: Calculating .. {}/{}'.format(n,nTotal))
 			
-			if self.testSelected.get() in ['1-W-ANOVA','Kruskal-Wallis']:
+			if self.testSelected.get() in ['1-W-ANOVA','Kruskal-Wallis','']:
 				if n > 1:
 					continue
 				groupColumns = [list(v) for v in self.groups.values()]
@@ -255,18 +313,19 @@ class compareGroupsDialog(object):
 				if self.logPVal.get():
 					result['-log10_{}'.format(newColumnNames[-1])] = (-1)*np.log10(result[newColumnNames[-1]].values)
 					newColumnNames[-1] = '-log10_{}'.format(newColumnNames[-1])
-				result = result[newColumnNames]
-			
-			
+				diffName = 'test-diff_{}_{}'.format(colName,self.testSelected.get())
+				result[diffName] = df[self.groups[group1]].mean(axis=1) - df[self.groups[group2]].mean(axis=1)
+				newColumnNames.append(diffName)
+				result = result[newColumnNames]			
 			
 			columnNames = self.dfClass.join_df_to_currently_selected_df(result, exportColumns = True)
 			addedColumnNames.extend(columnNames)
 		progBar.close()		
-		tk.messagebox.showinfo('Done ..','Calculations done.')			  
-		
+		  
 		self.treeView.add_list_of_columns_to_treeview(self.dfClass.currentDataFile,
      													'float64',addedColumnNames)  
-
+		tk.messagebox.showinfo('Done ..','Calculations done.')	
+		
 	def get_images(self):
 		'''
 		Get images for buttons.
@@ -289,12 +348,15 @@ class compareGroupsDialog(object):
 		data = [x[~np.isnan(x)] for x in data]
 		if any(x.size < 2 for x in data):
 			return (np.nan,np.nan)
-		#print(data)
 		return stats.compare_multiple_groups(test,data)
-		
+	
+	def compare_one_group(self,x,value):
+		''
+		data = x[~np.isnan(x)]
+		return ttest_1samp(data,value,axis=None)
 		
 	def compare_two_groups(self,row,testSettings = {}, groupColumns = []):
-		
+		#bad - correct this
 		data = [row[col].values.astype(np.float) for col in groupColumns]
 		
 		data = [x[~np.isnan(x)] for x in data]

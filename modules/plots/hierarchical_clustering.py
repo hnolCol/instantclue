@@ -1252,12 +1252,12 @@ class hierarchichalClustermapPlotter(object):
 			self.add_dendrogram(self.Z_col,False,axColumnDendro)
 			axColumnDendro.axhline(self.colMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
 		else:
-			axColumnDendro.axis(False)
+			axColumnDendro.set_axis_off()
 		if self.Z_row is not None:
 			self.add_dendrogram(self.Z_row,True,axRowDendro,create_background=False)
 			axRowDendro.axvline(self.rowMaxD , linewidth=1.3, color = 'k')#'#1f77b4')
 		else:	
-			axRowDendro.axis(False)
+			axRowDendro.set_axis_off()
 		
 		im = axClusterMap.pcolormesh(self.df[self.numericColumns].values, 
 								cmap = self.cmapClusterMap,**self.meshKwargs)
@@ -1360,8 +1360,11 @@ class hierarchichalClustermapPlotter(object):
 				clustRow += 1
 		
 		progBar.update_progressbar_and_label(20,'Writing column headers ..')
+		
 		for n ,colHead in enumerate(['Clust_#'] +\
-			 self.df.columns.values.tolist() + ['Cluster Index','Data Index'] + selection):
+			 self.numericColumns + self.colorData.columns.tolist()  + \
+			 ['Cluster Index','Data Index'] +\
+			 self.labelColumnList + selection):
 			 
 			worksheet.write_string(0, n, colHead)		 
 		
@@ -1384,7 +1387,7 @@ class hierarchichalClustermapPlotter(object):
 		worksheet.set_column(1,len(self.numericColumns),3)
 		worksheet.freeze_panes(1, 0)
 		progBar.update_progressbar_and_label(37,'Writing color data ..')
-		
+
 		if len(self.colorData.columns) != 0:
 			currColumn = nCol + 1
 			colorFac_r = dict((v,k) for k,v in self.factorDict.items())
@@ -1398,7 +1401,7 @@ class hierarchichalClustermapPlotter(object):
 						colorSave[str(c)] = col_c(c)
 						
 					cellInt = self.colorData.iloc[nRow,nCol]
-					cellStr = colorFac_r[cellInt]
+					cellStr = str(colorFac_r[cellInt])
 					
 					cell_format = workbook.add_format({
                                      			   'border':1,
@@ -1413,6 +1416,11 @@ class hierarchichalClustermapPlotter(object):
 			worksheet.write_number(n+1,currColumn+1,n+1)
 			worksheet.write_number(n+1,currColumn+2,idx + 1)	
 			
+		progBar.update_progressbar_and_label(66,'Writing label data ..')
+		if len(self.labelColumnList) != 0:
+			for nRow, labelStr in enumerate(self.labelColumn):
+				worksheet.write_string(totalRows-nRow,currColumn+3,str(labelStr))
+			
 		progBar.update_progressbar_and_label(77,'Writing additional data ..')
 		
 		df = self.dfClass.join_missing_columns_to_other_df(self.df, self.dataID, definedColumnsList = selection) 
@@ -1424,10 +1432,10 @@ class hierarchichalClustermapPlotter(object):
 				for nCol in range(len(selection)):
 					cellContent = data[nCol]
 					if dataTypes[selection[nCol]] == 'object':
-						worksheet.write_string(totalRows-nRow, currColumn+3+nCol,str(cellContent))
+						worksheet.write_string(totalRows-nRow, currColumn+4+nCol,str(cellContent))
 					else:
 						try:
-							worksheet.write_number(totalRows-nRow, currColumn+3+nCol,cellContent)
+							worksheet.write_number(totalRows-nRow, currColumn+4+nCol,cellContent)
 						except:
 							#ignoring nans
 							pass

@@ -67,7 +67,6 @@ class sourceDataTreeview(object):
 		
 		self.delete_all_entries()
 		
-		
 		for id, columnDataTypeRelation in columnDataTypeRelationshipDict.items():
 		
 			fileName = fileNameDict[id]
@@ -164,6 +163,8 @@ class sourceDataTreeview(object):
 		
 		if len(uniqueDataFrames) == 1:
 			return True, uniqueDataFrames[0]
+		elif len(uniqueDataFrames) == 0:
+			return None, None
 		else:
 			return False, None
 			

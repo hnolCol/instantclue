@@ -665,6 +665,8 @@ def get_elements_from_list_as_string(itemList, addString = '',newLine = False, m
 
 def return_readable_numbers(number):
      """Returns number as string in a meaningful and readable way to omit to many digits"""
+     orgNumber = number
+     number = np.abs(number)
      if number < 0.001:
      		new_number = '{:.2E}'.format(number)
      elif number < 10:
@@ -675,7 +677,10 @@ def return_readable_numbers(number):
      		new_number = round(number,0)
      else:
      		new_number = '{:.2E}'.format(number)
-     return new_number
+     if orgNumber >= 0:
+     	return new_number
+     else:
+     	return new_number * (-1)
 
 
 def get_max_colors_from_pallete(cmap):
@@ -687,6 +692,8 @@ def get_max_colors_from_pallete(cmap):
         n = 60
     elif cmap in ['Accent','Dark2','Pastel2','Set2','Set4']:
         n=8
+    elif cmap in ['Tenenbaums','Darjeeling Limited','Moonrise Kingdom','Life Acquatic']:
+    	n = 5
     elif cmap in ['Paired','Set3']:
         n = 12
     elif cmap in ['Pastel1','Set1']:
@@ -1011,10 +1018,12 @@ class CreateToolTip(object):
 					
 					
 					
-
         if self.showcolors == True:
 
-        	if 'Custom' in self.cm:
+        	if 'Custom' in self.cm or self.cm in ['Tenenbaums',
+        											'Darjeeling Limited',
+        											'Moonrise Kingdom',
+        											'Life Acquatic']:
         		col_blind = 'Not defined'
         	elif self.cm not in ['Accent','Pastel1','Pastel2','Set1','Set3','Spectra','RdYlGn']:
         		col_blind = 'True'
