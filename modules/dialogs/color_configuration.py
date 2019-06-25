@@ -346,6 +346,8 @@ class colorChooseDialog(object):
 						coll.set_alpha(value)
 		
 			self.analyze.plt.redraw()
+			for scatterPlot in self.analyze.plt.get_scatter_plots().values():
+				scatterPlot.update_transparancy(value)
 			self.analyze.plt.set_scatter_point_properties(alpha=value)				
 
 						

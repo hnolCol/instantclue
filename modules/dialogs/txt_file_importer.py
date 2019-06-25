@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk             
 import tkinter.simpledialog as ts
 import matplotlib.pyplot as plt
-from pandastable import Table, TableModel
+#from pandastable import Table, TableModel
 import numpy as np
 import pandas as pd
 from modules.pandastable import core
@@ -14,16 +14,6 @@ import xml.etree.ElementTree as ET
 from modules.dialogs.simple_dialog import simpleUserInputDialog, simpleListboxSelection
 from modules.dialogs.VerticalScrolledFrame import VerticalScrolledFrame
 import tkinter.filedialog as tf
-
-
-'''
-Need: live link to data
-Enocidng
-separator
-decemial point
-Parse only selected columns -> selected ones!! Checkbutton? 
-
-'''
 
 
 encodingsCommonInPython = ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp']
@@ -39,7 +29,6 @@ comboBoxToGetInputFromUser = OrderedDict([('Encoding:',encodingsCommonInPython),
 											('Decompression:',compressionsForSourceFile),
 											('Skip Rows:',list(range(0,20))),
 											('Replace NaN in Object Columns:',nanReplaceString)])
-
 
 
 pandasInstantTranslate = {'Encoding:':'encoding',
@@ -70,9 +59,15 @@ class fileImporter(object):
 		self.preview_df = self.load_n_rows_of_file(self.pathUpload, N = 50)
 		self.initiate_preview(self.preview_df)
 		
-		self.toplevel.wait_visibility()
-		self.toplevel.grab_set() 
-		self.toplevel.wait_window() 	
+		try:
+			
+			self.toplevel.wait_visibility()
+			self.toplevel.grab_set() 
+			self.toplevel.wait_window() 
+		
+		except:
+			
+			pass
 	
 	def close(self,event=None):
 		'''
@@ -108,7 +103,6 @@ class fileImporter(object):
  		self.cont_widgets.pack(fill=tk.X, anchor = tk.W) 
  		self.cont_widgets.grid_columnconfigure(1,weight=1)
  		self.create_preview_container() 
- 		
  		
  		
 		## define widgets 
@@ -209,7 +203,6 @@ class fileImporter(object):
 		self.pt.show()
 
 	def discard_changes(self):
-	
  		'''
  		No Export and close toplevel
  		'''
@@ -288,6 +281,7 @@ class fileImporter(object):
 		'''
 		self.cont_preview.destroy()
 		self.create_preview_container()
+
 		## reload data with new settings
 		
 		self.preview_df = self.load_n_rows_of_file(self.pathUpload, N = 50)
@@ -305,17 +299,16 @@ class fileImporter(object):
 			return
 			
 		columnsToUpload = self.pt.model.df.columns
-		
+		if len(columnsToUpload) == 0:
+			tk.messagebox.showinfo('No columns..','All columns deleted?')
 		self.data_to_export = self.load_n_rows_of_file(self.pathUpload, N = None, 
 														usecols = columnsToUpload)
 		if self.data_to_export is None:
 			return
 		else:
+			
 			self.pt.parentframe.destroy()												
 			self.close()
-
-
-
 
 
 

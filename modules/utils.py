@@ -22,7 +22,10 @@ import matplotlib
 from matplotlib.colors import ListedColormap
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-from matplotlib._color_data import TABLEAU_COLORS,TABLEAU_COLORS,XKCD_COLORS,CSS4_COLORS
+try:
+	from matplotlib._color_data import TABLEAU_COLORS,XKCD_COLORS,CSS4_COLORS	
+except:
+	TABLEAU_COLORS,XKCD_COLORS,CSS4_COLORS = dict(), dict(), dict()
 import seaborn as sns
 from math import sqrt
 import numpy as np
@@ -498,7 +501,8 @@ def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot', erro
 							order = None,dodge=False, hue_order = None, inmutableCollections = [],
 							addSwarmSettings = {'label':None,'sizes':[20],'facecolor':'white',
 							'edgecolor':'black','linewidth':0.4,'alpha':1}):
-
+        # plot_type = 'line'
+			
          if plot_type == 'boxplot':
                          sns.boxplot(x= x, y=y,data=data, hue = hue, palette = cmap, order = order,
                          fliersize = 3, linewidth=0.65, ax = ax, hue_order = hue_order)
@@ -528,6 +532,10 @@ def fill_axes_with_plot(data, x , y , hue, ax, cmap, plot_type = 'boxplot', erro
                          linewidth=0.65, ax = ax, hue_order = hue_order)
                          give_violins_edge_color(ax)
 
+         elif plot_type == 'line':
+         	sns.lineplot(x= x, y=y, hue = hue, data=data, 
+         		palette = cmap,ax=ax,hue_order = hue_order,
+         		ci=None)
 
 
 def give_violins_edge_color(ax):
@@ -665,10 +673,17 @@ def get_elements_from_list_as_string(itemList, addString = '',newLine = False, m
 
 def return_readable_numbers(number):
      """Returns number as string in a meaningful and readable way to omit to many digits"""
+     
      orgNumber = number
      number = np.abs(number)
-     if number < 0.001:
+     if number == 0:
+     	new_number = 0.0
+     elif number < 0.001:
      		new_number = '{:.2E}'.format(number)
+     elif number < 0.1:
+     		new_number = round(number,4)
+     elif number < 1:
+     		new_number = round(number,3)
      elif number < 10:
      		new_number = round(number,2)
      elif number < 200:
@@ -736,8 +751,6 @@ class Progressbar(object):
 
 		self.build_toplevel()
 		self.build_widgets()
-
-
 
 	def close(self):
 		'''

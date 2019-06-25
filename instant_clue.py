@@ -25,20 +25,14 @@ import os
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg#, NavigationToolbar2TkAgg
-
 import webbrowser
 import urllib.request as urllibReq
-
-import start_page
-import analyze_data
-
-import multiprocessing
-
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from modules.utils import *
+
+import multiprocessing
 
 class instantClueApp(tk.Tk):
 
@@ -78,7 +72,7 @@ class instantClueApp(tk.Tk):
                         frame.grid_columnconfigure(3, weight=1, minsize=200)
                         frame.grid_rowconfigure(5, weight=1, minsize=345)
                         frame.grid_rowconfigure(11, weight=1, minsize=70)
-                        frame.grid_columnconfigure(0,weight=3,minsize=400)
+                        frame.grid_columnconfigure(0,weight=3,minsize=300)
 
 
         self.show_frame(start_page.StartPage)
@@ -161,9 +155,12 @@ class instantClueApp(tk.Tk):
         if quest == 'yes':
              for frame in self.frames.values():
                  frame.destroy()
-
-             instantClueApp.destroy(self)
-             app.quit()
+             try:
+             	instantClueApp.destroy(self)
+             	app.quit()
+             except:
+             	pass
+             	
         else:
             return
 
@@ -171,6 +168,11 @@ class instantClueApp(tk.Tk):
 if __name__ == "__main__":
 
      multiprocessing.freeze_support()
+     
+     import analyze_data
+     import start_page
+     from modules.utils import *
+     
      app = instantClueApp()
      if platform == 'LINUX':
      	#enable cascade extension automatically on linux systems

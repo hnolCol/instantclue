@@ -42,8 +42,8 @@ tooltip_information_plotoptions = [
          "Hierachical Clustering\n\nInput:"],
         ["At least two numeric columns.\nA correlation matrix calculates the Pearson correlation coefficient and uses hierachical clustering for interpretation.",
          "Correlation Matrix\n\nInput:"],
-        # ["Up to one nuermic column to control size of each node.\nAt least two categorical columns to describe the edges.",
-        # "Network\n\nInput:"],
+        ["At least two numeric columns - \nMust be an adjacent matrix of n x n. If data are not ordered an additional column as the index must be provided.",
+         "Choord Diagram\n\nInput:"],
            ["Opens a popup that allows you too change details of your created chart.\nNote that you can also save settings as templates and load them to get the exact same chart configuration.\nFor same coloring it is essential that the categories are sorted in the same way as in the template.",
          "Configure\n\n"]
         ]	

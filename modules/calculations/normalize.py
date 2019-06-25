@@ -23,10 +23,11 @@ class dataNormalizer(object):
 
 
 def quantileNormalize(df_input):
+
     df = df_input.copy()
     #compute rank
     dic = {}
-    for col in df:
+    for col in df.columns:
         dic.update({col : sorted(df[col])})
     sorted_df = pd.DataFrame(dic)
     rank = sorted_df.mean(axis = 1).tolist()

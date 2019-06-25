@@ -80,12 +80,16 @@ class hierarchichalClustermapPlotter(object):
 		cmapClusterMap, self.cmapRowDendrogram, \
 		self.cmapColorColumn, self.metricRow, self.metricColumn, \
 		self.methodRow, self.methodColumn, self.circulizeDendrogram ,\
-		self.showCluster = self.plotter.get_hClust_settings()
+		self.showCluster, self.numRows = self.plotter.get_hClust_settings()
 		
 		self.cmapClusterMap = get_max_colors_from_pallete(cmapClusterMap) ## to avoid same color over and over again
 		self.cmapClusterMap.set_bad(color='lightgrey')
 		self.Z_row = None
 		self.Z_col = None
+		
+		
+		
+	
 		
 		self.rectanglesForRowDendro = []
 		
@@ -98,12 +102,11 @@ class hierarchichalClustermapPlotter(object):
 		self.lenDf = len(self.df.index)
 		self.axClusterMapXLimits = (0,len(numericColumns))
 		
-		
 		if self.circulizeDendrogram :
 			self.metricColumn = 'None'
-			
 		
-		self.create_cluster_map()
+		self.create_cluster_map(redraw=False)
+		self.on_ylim_change()
 		
 	def get_data(self):
 		'''
@@ -421,7 +424,7 @@ class hierarchichalClustermapPlotter(object):
 		self.progressClass = Progressbar('Hierarchical Clustering ..')
 		self.create_cluster_map()
 		
-	def create_cluster_map(self,specificAxis=None,figure=None):
+	def create_cluster_map(self,specificAxis=None,figure=None, redraw = True):
 		'''
 		'''
 		if len(self.df.index) < 2:
@@ -523,6 +526,8 @@ class hierarchichalClustermapPlotter(object):
 					edgecolor = 'k')
 			else:
 				self.meshKwargs = dict() 
+			self.update_limits()
+			
 			self.colorMesh = self.axClusterMap.pcolormesh(self.df[self.numericColumns].values, 
 													  cmap = self.cmapClusterMap,
 													  **self.meshKwargs)
@@ -542,11 +547,51 @@ class hierarchichalClustermapPlotter(object):
 		
 			self.progressClass.update_progressbar_and_label(85,'Draw heatmap ...')
 		
-		
-		self.plotter.redraw()
+		if redraw:
+			self.plotter.redraw()
 		
 		self.progressClass.update_progressbar_and_label(100,'Done ...')
 		self.progressClass.close()
+
+	def update_limits(self):
+		'''
+		'''
+		if hasattr(self, 'meshKwargs'):
+		
+			type = self.plotter.get_hclust_limit_type()
+			if isinstance(type,str):
+				if type == 'min = -1, max = 1':
+					
+					self.meshKwargs['vmin'] = -1
+					self.meshKwargs['vmax'] = 1
+			
+				elif type == 'Center 0':
+					
+					max = np.amax(np.abs(self.df[self.numericColumns].values))
+					self.meshKwargs['vmin'] = -max
+					self.meshKwargs['vmax'] = max
+				
+				elif type == 'Raw data':
+					
+					self.meshKwargs['vmin'] = np.amin(self.df[self.numericColumns].values)
+					self.meshKwargs['vmax'] = np.amax(self.df[self.numericColumns].values)										
+									
+			elif isinstance(type,list):
+				
+				self.meshKwargs['vmin'] = type[0]
+				self.meshKwargs['vmax'] = type[1]
+				
+			
+	def update_colorMesh(self):
+		'''
+		'''
+		self.update_limits()
+		self.colorMesh.set_clim(self.meshKwargs['vmin'],self.meshKwargs['vmax'])
+		self.format_colorMap_ticks(self.axColormap)
+		self.plotter.redraw()
+					
+		
+		
 		
 	def get_cluster_number(self,linkage,maxD):
 		'''
@@ -575,11 +620,10 @@ class hierarchichalClustermapPlotter(object):
 		
 		maxD = 0.7*max(linkage[:,2])
 		return linkage, maxD 
-		
-	
+
 	def add_dendrogram(self,dendrogram,rotate,ax,create_background = True):
 		'''
-		Idea is from the great seaborn package.
+		Idea is from the seaborn package.
 		'''
 		dependent_coord = dendrogram['dcoord']
 		independent_coord = dendrogram['icoord']
@@ -872,7 +916,7 @@ class hierarchichalClustermapPlotter(object):
 			ax = self.axLabelColor
 			
 		self.update_linestyle(numberOfRows)
-		if numberOfRows < 55:	
+		if numberOfRows < self.numRows:	
 				yTicks = np.linspace(newYLimits[0]+0.5,newYLimits[1]-0.5,
 										 num=numberOfRows)
 				ax.set_yticks(yTicks)
@@ -1432,10 +1476,10 @@ class hierarchichalClustermapPlotter(object):
 				for nCol in range(len(selection)):
 					cellContent = data[nCol]
 					if dataTypes[selection[nCol]] == 'object':
-						worksheet.write_string(totalRows-nRow, currColumn+4+nCol,str(cellContent))
+						worksheet.write_string(totalRows-nRow, currColumn+3+nCol,str(cellContent))
 					else:
 						try:
-							worksheet.write_number(totalRows-nRow, currColumn+4+nCol,cellContent)
+							worksheet.write_number(totalRows-nRow, currColumn+3+nCol,cellContent)
 						except:
 							#ignoring nans
 							pass

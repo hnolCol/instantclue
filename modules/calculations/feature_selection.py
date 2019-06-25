@@ -7,11 +7,12 @@ from sklearn.svm import LinearSVC
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import VarianceThreshold
 from modules.dialogs.classification import randomForestWidgets, supportVectorWidgets
-
+from collections import OrderedDict
 estimators = {'Random Forest':RandomForestClassifier,
 			  'SVM':LinearSVC
 			  }
-
+#randomForestWidgets = OrderedDict()
+#supportVectorWidgets = OrderedDict()
 # randomForestWidgets = OrderedDict([('n_estimators',['50',list(range(10,100,10)),'The number of trees in the forest.']),
 # 					 ('max_features',['sqrt',['sqrt','log2'],'The number of features to consider when looking for the best split:\nIf int, then consider max_features features at each split.\nIf float, then max_features is a percentage and int(max_features * n_features) features are considered at each split.\nIf “auto”, then max_features=sqrt(n_features).\nIf “sqrt”, then max_features=sqrt(n_features) (same as “auto”).\nIf “log2”, then max_features=log2(n_features).\nIf None, then max_features=n_features.\nNote: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than max_features features.']),
 # 					 ('max_depth',['None',['None','1','2','5'],'The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.']),
@@ -158,12 +159,12 @@ class selectFeaturesFromModel(object):
 			
 ## testing
 		
-if __name__ == "__main__":
+#if __name__ == "__main__":
 
-	from sklearn.datasets import load_iris
-	iris = load_iris()
-	X, y = iris.data, iris.target
-	selectFeaturesFromModel(X,y)
+#	from sklearn.datasets import load_iris
+#	iris = load_iris()
+#	X, y = iris.data, iris.target
+#	selectFeaturesFromModel(X,y)
 
 	
 		

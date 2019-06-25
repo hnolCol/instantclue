@@ -16,7 +16,7 @@ from scipy import interpolate
 from modules.utils import *
 from modules.dialogs.import_subset_of_data import importDataFromDf
 from modules.dialogs.VerticalScrolledFrame import VerticalScrolledFrame
-from pandastable import Table, TableModel
+from modules.pandastable import Table, TableModel
 
 import time
 

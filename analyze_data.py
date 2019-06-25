@@ -71,6 +71,8 @@ from modules.dialogs import multi_block
 from modules.dialogs import import_TDT
 from modules.dialogs import shift_data
 from modules.dialogs import compare_groups
+from modules.dialogs import legend_handler
+
 
 from modules.plots.time_series_helper import aucResultCollection
 from modules.dialogs.simple_dialog import simpleUserInputDialog, simpleListboxSelection
@@ -145,18 +147,21 @@ class analyze_data(tk.Frame):
            default_font = tkFont.nametofont("TkDefaultFont")
            # parameters are defined in utils.py
            default_font.configure(size=defaultFontSize,family=defaultFont)
-
+			
            self.get_images()
            self.define_variables()
            self.build_menus()
            self.build_label_frames()
+           
            self.grid_widgets(controller)
            self.initiate()
 
            # add empty figure to GUI
            self.display_graph(self.f1)
            # actions on resizing the window (e.g. changing the icons to smaller/bigger ones)
-           self.bind("<Configure>", self.icon_switch_due_to_rescale)
+           #self.bind("<Configure>", self.icon_switch_due_to_rescale)
+           self.scale_icons_to_small() #default for all screen resolutions now
+           self.grid_columnconfigure(0, weight=1, minsize=50)
            self.bind("<Button-1>", self.app_has_focus)
 
      def initiate(self):
@@ -188,6 +193,7 @@ class analyze_data(tk.Frame):
            
            self.circulizeDendrogram = tk.BooleanVar(value=False)
            self.showCluster = tk.BooleanVar(value=True)
+           self.enforceLabel = tk.BooleanVar(value=False)
            self.size_selected = tk.StringVar(value = '50')
 
            ## stats Test
@@ -297,9 +303,9 @@ class analyze_data(tk.Frame):
 
            self.sideframe_upload.grid(in_=self,
                                      row=1,
-                                     column =0,
+                                     column = 0,
                                      rowspan = 4,
-                                     sticky=tk.EW+tk.NW,
+                                     sticky=tk.EW,#+tk.NW,
                                      padx=5)
 
            self.source_sideframe.grid(in_=self,
@@ -473,6 +479,10 @@ class analyze_data(tk.Frame):
            menuDict['rowColCalc'].add_cascade(label="Basic", menu = menuDict['basicCalc'])
            menuDict['rowColCalc'].add_cascade(label="Row Normalization", menu = menuDict['normalization'])
            menuDict['rowColCalc'].add_command(label="Quantile Normalization (col)", command = self.norm_quant_data)
+           menuDict['rowColCalc'].add_command(label="Scale to mean and unit variance (col)", command = self.scale_quant_data)
+           menuDict['rowColCalc'].add_command(label="Scale to mean (col)", command = lambda: self.scale_quant_data(withStd=False))
+           
+           
            
            menuDict['rowColCalc'].add_cascade(label="Logarithmic", menu = menuDict['logCalc'])
            
@@ -541,8 +551,8 @@ class analyze_data(tk.Frame):
           # for featureSel in ['Model','Variance']:#,'Recursive elimination']:
            menuDict['featureSelection'].add_command(label='Variance', command = lambda featureSel = 'Variance': self.select_features(featureSel))
            menuDict['featureSelection'].add_cascade(label='Model',menu = menuDict['modelFeatSel'])
-           for model in estimators.keys():
-           	menuDict['modelFeatSel'].add_command(label=model, command = lambda featureSel = model: self.select_features(featureSel))
+           #for model in estimators.keys():
+           	#menuDict['modelFeatSel'].add_command(label=model, command = lambda featureSel = model: self.select_features(featureSel))
            
            
            menuDict['main'].add_cascade(label='Feature selection by..', menu= menuDict['featureSelection'])
@@ -597,20 +607,68 @@ class analyze_data(tk.Frame):
      def build_hclust_menu(self):
 
          self.menuCollection['hclust'] =  tk.Menu(self,**styleDict)
+         colorBarMenu = tk.Menu(self,**styleDict)
          
          self.menuCollection['hclust'].add_checkbutton(label='Circular row dendrogram',
          		variable = self.circulizeDendrogram,
          		command = self.plot_circulized_dendrogram) 
+         for t in ['Raw data','Center 0','min = -1, max = 1','Custom values']:
+         	colorBarMenu.add_command(label= t, command = lambda type = t: self.scale_colorbar(type))         
+
+        
+         self.menuCollection['hclust'].add_cascade(label='Colorbar',
+         		menu = colorBarMenu)             
          
          self.menuCollection['hclust'].add_checkbutton(label='Show clusters',
          		variable = self.showCluster,
          		command = lambda: setattr(self.plt,'showCluster',self.showCluster.get()))          		         
-         
+         self.menuCollection['hclust'].add_checkbutton(label='Enforce row labels', 
+         		variable = self.enforceLabel,
+         		command = self.add_row_labels)         
          self.menuCollection['hclust'].add_command(label='Add cluster # to source file', 
          		command = self.add_cluster_to_source)
          self.menuCollection['hclust'].add_command(label='Find entry in hierarch. cluster', 
          		command = lambda: self.categorical_column_handler('Find entry in hierarch. cluster'))
          self.menuCollection['hclust'].add_command(label='Export Cluster to Excel', command = self.save_hclust_to_excel)	     		
+
+	
+    
+     def scale_colorbar(self, type = 'Raw data'):
+     	'''
+     	'''
+     	if type not in ['Raw data','Center 0','min = -1, max = 1','Custom values']:
+     		return
+     	
+     	if type == 'Custom values':
+     		xRange = [str(x) for x in np.arange(-10,10)]
+     		input = simpleUserInputDialog(['Min','Max'],
+     			self.plt.hclustLimitType if len(self.plt.hclustLimitType) == 2 and isinstance(self.plt.hclustLimitType,list) else ['-1','1'],
+     			[xRange,xRange],
+     			'Provide min and max',
+     			'Set min and maximum for hierarchical clustering.')
+     		if len(input.selectionOutput) != 0:
+     			vals = []
+     			for v in input.selectionOutput.values():
+     				try:
+     					vals.append(float(v))
+     				except:
+     					
+     					tk.messagebox.showinfo('Error..',
+     						'Transforming input to float failed. Aborting.')
+     					return
+     			
+     			self.plt.hclustLimitType = vals
+     		
+     	else:
+     	
+     		self.plt.hclustLimitType = type
+     	
+     	if self.plt.currentPlotType in ['hclust','corrmatrix']:
+     		
+     		plotterInUse = self.plt.nonCategoricalPlotter
+     		plotterInUse._hclustPlotter.update_colorMesh()
+     
+
     
      def build_lineplot_menu(self):
 
@@ -897,7 +955,7 @@ class analyze_data(tk.Frame):
      	Adds an error represented by a grey area around a time series signal.
      	'''
      	if self.plt.currentPlotType != 'time_series':
-     		tk.messagebox.showinfo('Error..','Only useful for chart type time series.')
+     		tk.messagebox.showinfo('Error..','Only useful for chart type : "time series".')
      		return
 
      	if self.DataTreeview.onlyNumericColumnsSelected:
@@ -979,7 +1037,23 @@ class analyze_data(tk.Frame):
      					('Selected Columns (hclust):',get_elements_from_list_as_string(plotterInUse.numericColumns, maxStringLength = None)),
      					('Data ID:',self.sourceData.currentDataFile)])})
 
-
+     def add_row_labels(self):
+     	'''
+     	Cluster being identified in a hclust plot can be added to the source file.
+     	'''
+     	if self.enforceLabel.get():
+     		value = np.inf
+     	else:
+     		value = 55
+     		
+     	self.plt.numRows = value
+     	if self.plt.currentPlotType in ['hclust','corrmatrix']:
+     		
+     		plotterInUse = self.plt.nonCategoricalPlotter
+     		plotterInUse._hclustPlotter.numRows = value
+     		plotterInUse._hclustPlotter.on_ylim_change()
+     
+     
      def add_new_dataframe(self,newDataFrame,fileName):
      	'''
      	Add new subset to source data collection and treeview
@@ -2469,8 +2543,11 @@ class analyze_data(tk.Frame):
      	'''
      	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
      	if selectedColumns is not None:   
-     	
+     		
      		df = self.sourceData.df[selectedColumns]
+     		if len(df.dropna().index) != len(df.index):
+     			tk.messagebox.showinfo('Careful..','Quantile normalization works only on complete data at the moment. Please remove NaN first.',parent=self)
+     			return
      		data = quantileNormalize(df).values
      		newColumnNames = ['quantN_{}'.format(col) for col in selectedColumns]
      		dfToAdd = pd.DataFrame(data, columns = newColumnNames)
@@ -2479,7 +2556,29 @@ class analyze_data(tk.Frame):
      													'float64',evalColumnNames)
      		tk.messagebox.showinfo('Done..','Calculations done. New columns added.')
      			
-     	     
+     def scale_quant_data(self, withMean = True, withStd = True):    
+     	'''
+     	
+     	'''
+     	from sklearn.preprocessing import scale
+    		
+     	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
+     	if selectedColumns is not None:   
+     		
+     		data = scale(self.sourceData.df[selectedColumns].values, 
+     				with_mean = withMean,
+     				with_std = withStd, axis = 0)
+     		
+     		newColumnNames = ['scaled_{}'.format(col) for col in selectedColumns]   
+     		
+     		dfToAdd = pd.DataFrame(data, columns = newColumnNames)
+     		evalColumnNames = self.sourceData.join_df_to_currently_selected_df(dfToAdd, exportColumns = True)
+     		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
+     													'float64',evalColumnNames)
+     		tk.messagebox.showinfo('Done..','Calculations done. New columns added.')
+     		
+     
+     
      def normalize_data(self,metric):
      	'''
      	
@@ -4232,7 +4331,8 @@ class analyze_data(tk.Frame):
 
             self.color_button_droped = create_button(self.interactiveWidgetHelper.frame, text = s,
              											image= self.but_col_icon,
-             											compound=tk.CENTER)
+             											compound=tk.CENTER, 
+             											command = lambda: legend_handler.legendDialog(self.plt))
             if last_plot_type != 'hclust':
                     self.color_button_droped.bind(right_click,
                     		self.remove_color_)
@@ -4536,10 +4636,21 @@ class analyze_data(tk.Frame):
 
      			self.twoGroupstatsClass.delete_all_stats()
      			self.twoGroupstatsClass.disconnect_event()
-     			self.stat_button_droped.destroy()
+     			
      			del self.twoGroupstatsClass
      			self.twoGroupstatsClass = None
      			self.plt.redraw()
+     		
+     		if self.plt.currentPlotType == "scatter":
+     			scatterPlots = self.plt.get_scatter_plots()
+     			for scatterPlot in scatterPlots.values():
+     				scatterPlot.remove_stat_line()
+     			self.plt.redraw()
+				
+					
+				
+     		
+     		self.stat_button_droped.destroy()
      			
 
      def remove_color_(self,event):
@@ -4577,7 +4688,6 @@ class analyze_data(tk.Frame):
          	self.plt.remove_size_level()
          	self.size_button_droped.destroy()
          	self.size_button_droped = None
-
          	self.plt.redraw()
 
 
@@ -5542,50 +5652,33 @@ class analyze_data(tk.Frame):
 
 
 
-     def icon_switch_due_to_rescale(self,event):
+     def scale_icons_to_small(self,icon_ = "NORM"):
 
-            new_width = event.width
-            new_height = event.height
-            n = 0
             global NORM_FONT
-            if self.old_width is None:
-                # defining the resoltion from start
-
-                self.old_width = event.width
-                self.old_height = event.height
-                n = 1 ## to trigger rescaling if screen resolution is very small from beginning (e.g. laptop)
-
-            icon_ =  check_resolution_for_icons(new_width,
-                                                         new_height,
-                                                         self.old_width,
-                                                         self.old_height,
-                                                         n)
 
             if icon_ is not None:
-           ## data / session load and save
-
-
+            ## data / session load and save
                 if icon_ == 'NORM':
-                    self.uploadFrameButtons['upload'].configure(image=self.open_file_icon_norm)
-                    self.uploadFrameButtons['saveSession'].configure(image=self.save_session_icon_norm)
-                    self.uploadFrameButtons['openSession'].configure(image=self.open_session_icon_norm )
-                    self.uploadFrameButtons['addData'].configure(image=self.add_data_icon_norm)
+                    #self.uploadFrameButtons['upload'].configure(image=self.open_file_icon_norm)
+                    #self.uploadFrameButtons['saveSession'].configure(image=self.save_session_icon_norm)
+                    #self.uploadFrameButtons['openSession'].configure(image=self.open_session_icon_norm )
+                    #self.uploadFrameButtons['addData'].configure(image=self.add_data_icon_norm)
 
-                    self.sliceMarkFrameButtons['size'].configure(image = self.size_icon_norm)
-                    self.sliceMarkFrameButtons['filter'].configure(image = self.filter_icon_norm)
-                    self.sliceMarkFrameButtons['color'].configure(image = self.color_icon_norm)
-                    self.sliceMarkFrameButtons['label'].configure(image = self.label_icon_norm)
-                    self.sliceMarkFrameButtons['tooltip'].configure(image = self.tooltip_icon_norm)
-                    self.sliceMarkFrameButtons['selection'].configure(image = self.selection_icon_norm)
+                    #self.sliceMarkFrameButtons['size'].configure(image = self.size_icon_norm)
+                    #self.sliceMarkFrameButtons['filter'].configure(image = self.filter_icon_norm)
+                    #self.sliceMarkFrameButtons['color'].configure(image = self.color_icon_norm)
+                    #self.sliceMarkFrameButtons['label'].configure(image = self.label_icon_norm)
+                    #self.sliceMarkFrameButtons['tooltip'].configure(image = self.tooltip_icon_norm)
+                    #self.sliceMarkFrameButtons['selection'].configure(image = self.selection_icon_norm)
                     
-                    self.settingButton.configure(image = self.setting_icon_norm)
-                    self.workflowButton.configure(image=self.workflow_icon_norm)
+                   # self.settingButton.configure(image = self.setting_icon_norm)
+                   # self.workflowButton.configure(image=self.workflow_icon_norm)
 
-                    self.but_col_icon = self.but_col_icon_norm
-                    self.but_size_icon = self.but_size_icon_norm
-                    self.but_tooltip_icon = self.but_tooltip_icon_norm
-                    self.but_label_icon = self.but_label_icon_norm
-                    self.but_stat_icon = self.but_stat_icon_norm
+                  #  self.but_col_icon = self.but_col_icon_norm
+                  #  self.but_size_icon = self.but_size_icon_norm
+                  #  self.but_tooltip_icon = self.but_tooltip_icon_norm
+                  #  self.but_label_icon = self.but_label_icon_norm
+                  #  self.but_stat_icon = self.but_stat_icon_norm
 
 
                     if self.color_button_droped is not None:
@@ -5606,28 +5699,23 @@ class analyze_data(tk.Frame):
                         	NORM_FONT =  (defaultFont,11)
 
                     ###### LIST FOR PLOT OPTIONS
-                    icon_list = [self.line_icon_norm,self.point_plot_icon_norm,self.scatter_icon_norm,self.time_series_icon_norm ,self.matrix_icon_norm,self.dist_icon_norm,self.barplot_icon_norm ,
-                                 self.box_icon_norm,self.violin_icon_norm, self.swarm_icon_norm ,self.add_swarm_icon_norm
-                                 ,self.hclust_icon_norm,self.corr_icon_norm,self.config_plot_icon_norm]
+                    icon_list = [self.line_icon,self.point_plot_icon,self.scatter_icon,self.time_series_icon ,
+                    			self.matrix_icon,self.dist_icon,self.barplot_icon,
+                    			self.box_icon,self.violin_icon, self.swarm_icon ,self.add_swarm_icon,
+                    			self.hclust_icon,self.corr_icon,self.choord_icon,self.config_plot_icon]
+                                 
+                                 
                     for i, icon in enumerate(icon_list):
                         self.but_stored[i].configure(image = icon)
 
-                    self.remove_swarm_icon = self.remove_swarm_icon_norm
-                    self.add_swarm_icon = self.add_swarm_icon_norm
-
-
-                    self.main_fig.configure(image=self.main_figure_icon_norm)
-
-                   # self.fig_history_button.configure(image=self.figure_history_icon_norm)
-                    self.data_button.configure(image = self.streteched_data_norm )
+                    self.main_fig.configure(image=self.main_figure_icon)
+                    self.data_button.configure(image = self.streteched_data)
                     self.mark_sideframe .configure(pady=2,padx=1)
 
 
                     self.sideframe_upload.configure(pady=2)
 
-                    self.grid_columnconfigure(0, weight=1, minsize=255)
                     if platform == 'MAC':
-
                     	font_ = ('Helvertica',12)
                     	self.tx_space.configure(font = font_)
                     	self.cat_space.configure(font = font_)
@@ -5645,116 +5733,36 @@ class analyze_data(tk.Frame):
                     self.delete_all_button_cat.configure(image = self.delete_all_cols_norm)
 
 
-                elif icon_ == 'LARGE':
-
-                    self.uploadFrameButtons['upload'].configure(image=self.open_file_icon)
-                    self.uploadFrameButtons['saveSession'].configure(image=self.save_session_icon)
-                    self.uploadFrameButtons['openSession'].configure(image=self.open_session_icon)
-                    self.uploadFrameButtons['addData'].configure(image=self.add_data_icon)
-
-                    self.sliceMarkFrameButtons['size'].configure(image = self.size_icon)
-                    self.sliceMarkFrameButtons['filter'].configure(image = self.filter_icon)
-                    self.sliceMarkFrameButtons['color'].configure(image = self.color_icon)
-                    self.sliceMarkFrameButtons['label'].configure(image = self.label_icon)
-                    self.sliceMarkFrameButtons['tooltip'].configure(image = self.tooltip_icon)
-                    self.sliceMarkFrameButtons['selection'].configure(image = self.selection_icon)
-
-                    self.but_col_icon = self.but_col_icon_
-                    self.but_size_icon = self.but_size_icon_
-                    self.but_tooltip_icon = self.but_tooltip_icon_
-                    self.but_label_icon = self.but_label_icon_
-                    self.but_stat_icon = self.but_stat_icon_
-
-                    self.settingButton.configure(image=self.setting_icon)
-                    self.workflowButton.configure(image=self.workflow_icon)
-
-
-
-                    if self.color_button_droped is not None:
-                        self.color_button_droped.configure(image= self.but_col_icon)
-                    if self.size_button_droped is not None:
-                        self.size_button_droped.configure(image= self.but_size_icon)
-                    if self.label_button_droped is not None:
-                        self.label_button_droped.configure(image= self.but_label_icon)
-                    if self.stat_button_droped is not None:
-                         self.stat_button_droped.configure(image = self.but_stat_icon)
-                    if self.tooltip_button_droped is not None:
-                        self.tooltip_button_droped.configure(image=self.but_tooltip_icon)
-
-                    self.main_fig.configure(image=self.main_figure_icon)
-
-                    self.sideframe_upload.configure(pady=5)
-                    self.data_button.configure(image = self.streteched_data)
-                    self.grid_columnconfigure(0, weight=3, minsize = 355)
-                    self.mark_sideframe.configure(pady=10,padx=5)
-                    self.remove_swarm_icon = self.remove_swarm_icon_
-                    self.add_swarm_icon = self.add_swarm_icon_
-
-                    if platform in ['WINDOWS','LINUX']:
-                    	NORM_FONT   = (defaultFont, 9)
-                    else:
-                    	NORM_FONT =  (defaultFont,12)
-
-
-                    icon_list = [self.line_icon,self.point_plot_icon,self.scatter_icon,self.time_series_icon ,self.matrix_icon,self.dist_icon,self.barplot_icon ,
-                                 self.box_icon,self.violin_icon, self.swarm_icon ,self.add_swarm_icon
-                                 ,self.hclust_icon,self.corr_icon,self.config_plot_icon]
-                    for i, icon in enumerate(icon_list):
-                        self.but_stored[i].configure(image = icon)
-                    #self.fig_history_button.configure(image=self.figure_history_icon)
-
-                    if platform == 'MAC':
-
-                    	font_ = (defaultFont,15)
-                    	self.tx_space.configure(font = font_)
-                    	self.cat_space.configure(font = font_)
-                    for frame in self.label_frames:
-                    	frame.configure(font=NORM_FONT)
-                    self.label_marks1.configure(font=NORM_FONT)
-                    self.label_marks2.configure(font=NORM_FONT)
-                    self.label_nav.configure(font=NORM_FONT)
-                    for but in self.selectedNumericalColumns.values():
-                    	but.configure(font=NORM_FONT)
-                    for but in self.selectedCategories.values():
-                    	but.configure(font=NORM_FONT)
-                    self.delete_all_button_num.configure(image = self.delete_all_cols)
-                    self.delete_all_button_cat.configure(image = self.delete_all_cols)
-
-            self.old_width = new_width
-            self.old_height = new_height
-
-
-
      def get_images(self):
            '''
            Images are stored in base64 code in the module 'images'.
            Here we get all the button icons that are used in the analyze_data.py
            frame page.
            '''
+          # self.size_icon, self.color_icon, self.label_icon, \
+           #				self.filter_icon, self.selection_icon, self.tooltip_icon  = images.get_slice_and_mark_images()
+
            self.size_icon, self.color_icon, self.label_icon, \
-           				self.filter_icon, self.selection_icon, self.tooltip_icon  = images.get_slice_and_mark_images()
+           				self.filter_icon, self.selection_icon, self.tooltip_icon  = images.get_slice_and_mark_images_norm()
 
-           self.size_icon_norm, self.color_icon_norm, self.label_icon_norm, \
-           				self.filter_icon_norm, self.selection_icon_norm, self.tooltip_icon_norm  = images.get_slice_and_mark_images_norm()
-
-           self.open_file_icon,self.save_session_icon,self.open_session_icon ,self.add_data_icon   = images.get_data_upload_and_session_images()
+           #self.open_file_icon,self.save_session_icon,self.open_session_icon ,self.add_data_icon   = images.get_data_upload_and_session_images()
 
            self.back_icon, self.center_align,self.left_align,self.right_align, \
-           					self.config_plot_icon, self.config_plot_icon_norm = images.get_utility_icons()
+           					_, self.config_plot_icon = images.get_utility_icons()
 
-           self.box_icon,self.barplot_icon,self.scatter_icon,self.swarm_icon,self.time_series_icon\
-           					,self.violin_icon,self.hclust_icon,self.corr_icon,self.point_plot_icon, \
-           					self.matrix_icon, self.dist_icon, self.add_swarm_icon_,self.remove_swarm_icon_,\
-           					self.setting_icon, self.line_icon  =   images.get_plot_options_icons()
+           #self.box_icon,self.barplot_icon,self.scatter_icon,self.swarm_icon,self.time_series_icon\
+           	#				,self.violin_icon,self.hclust_icon,self.corr_icon,self.point_plot_icon, \
+           	#				self.matrix_icon, self.dist_icon, self.add_swarm_icon_,self.remove_swarm_icon_,\
+           	#				self.setting_icon, self.line_icon  =   images.get_plot_options_icons()
 
-           self.box_icon_norm,self.barplot_icon_norm ,self.scatter_icon_norm ,self.swarm_icon_norm ,self.time_series_icon_norm \
-           					,self.violin_icon_norm ,self.hclust_icon_norm ,self.corr_icon_norm ,self.point_plot_icon_norm , \
-           					self.matrix_icon_norm , self.dist_icon_norm, self.add_swarm_icon_norm , self.remove_swarm_icon_norm, \
-           					self.setting_icon_norm, self.line_icon_norm    = images.get_plot_options_icons_norm()
+           self.box_icon,self.barplot_icon ,self.scatter_icon ,self.swarm_icon ,self.time_series_icon \
+           					,self.violin_icon ,self.hclust_icon ,self.corr_icon ,self.point_plot_icon , \
+           					self.matrix_icon , self.dist_icon, self.add_swarm_icon , self.remove_swarm_icon, \
+           					self.setting_icon, self.line_icon, self.choord_icon    = images.get_plot_options_icons_norm()
 
-           self.open_file_icon_norm,self.save_session_icon_norm,self.open_session_icon_norm,self.add_data_icon_norm =  images.get_norm_data_upload_and_session_images()
+           self.open_file_icon,self.save_session_icon,self.open_session_icon,self.add_data_icon =  images.get_norm_data_upload_and_session_images()
 
-           self.streteched_data ,self.streteched_data_norm  = images.get_data_images()
+           _ ,self.streteched_data  = images.get_data_images()
 
            self.delete_all_cols, self.delete_all_cols_norm, self.resortColumns = images.get_delete_cols_images()
 
@@ -5762,21 +5770,21 @@ class analyze_data(tk.Frame):
            self.mergeImages = {'right':self.right,'left':self.left,
 						'outer':self.outer,'inner':self.inner}
 
-           self.but_col_icon_, self.but_col_icon_norm, self.but_label_icon_, \
-        					self.but_label_icon_norm,  self.but_size_icon_,self.but_size_icon_norm, \
-           					self.but_stat_icon_, self.but_stat_icon_norm, self.but_tooltip_icon_, self.but_tooltip_icon_norm  =  images.get_drop_button_images()
+           _, self.but_col_icon, _, \
+        					self.but_label_icon,  _,self.but_size_icon, \
+           					_, self.but_stat_icon, _, self.but_tooltip_icon =  images.get_drop_button_images()
 
 
-           self.main_figure_icon, self.main_figure_icon_norm = images.get_main_figure_button_images()
-           self.workflow_icon, self.workflow_icon_norm = images.get_workflow_button_images()
+           _, self.main_figure_icon = images.get_main_figure_button_images()
+           _, self.workflow_icon = images.get_workflow_button_images()
 
-           self.but_col_icon = self.but_col_icon_
-           self.but_size_icon = self.but_size_icon_
-           self.but_tooltip_icon = self.but_tooltip_icon_
-           self.but_label_icon = self.but_label_icon_
-           self.but_stat_icon = self.but_stat_icon_
-           self.add_swarm_icon = self.add_swarm_icon_
-           self.remove_swarm_icon = self.remove_swarm_icon_
+           #self.but_col_icon = self.but_col_icon_
+           #self.but_size_icon = self.but_size_icon_
+           #self.but_tooltip_icon = self.but_tooltip_icon_
+           #self.but_label_icon = self.but_label_icon_
+           #self.but_stat_icon = self.but_stat_icon_
+           #self.add_swarm_icon = self.add_swarm_icon_
+           #self.remove_swarm_icon = self.remove_swarm_icon_
      
      def import_TDT(self,event = None):
      	
@@ -5960,7 +5968,7 @@ class analyze_data(tk.Frame):
 
 
            back_button = create_button(self,image = self.back_icon,
-           								command =  lambda: controller.show_frame(start_page.StartPage))
+           								command =  lambda: controller.show_frame())
 
            back_button.grid( in_=self,
                                          row=0,
@@ -5972,7 +5980,7 @@ class analyze_data(tk.Frame):
 
            chartTypes = ['line_plot','pointplot','scatter','time_series','scatter_matrix',
            		'density','barplot','boxplot','violinplot', 'swarm','add_swarm',
-           		'hclust','corrmatrix','configure']
+           		'hclust','corrmatrix','choord','configure']
            tooltip_info = tooltip_information_plotoptions
            # we are using the icon in desired order to create plot/chart options
            iconsForButtons = [
@@ -5988,6 +5996,7 @@ class analyze_data(tk.Frame):
                                     self.swarm_icon,
                                     self.add_swarm_icon,
                                     self.hclust_icon,
+                                    self.corr_icon,
                                     self.corr_icon,
                                     self.config_plot_icon]
            i = 0
@@ -6037,7 +6046,7 @@ class analyze_data(tk.Frame):
             	if columnPos == 1:
            			i += 1
            ttk.Separator(self.plotoptions_sideframe,orient=tk.HORIZONTAL).grid(columnspan=2,sticky=tk.EW+tk.N,pady=(7,0))
-           self.main_fig .grid(in_=self.plotoptions_sideframe,pady=(9,0))
+           self.main_fig.grid(in_=self.plotoptions_sideframe,pady=(9,0))
            CreateToolTip(self.main_fig,title_ = 'Main Figure Templates',
            								text = 'Felxible combination of multiple subplots.')
            								

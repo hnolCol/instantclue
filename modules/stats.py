@@ -55,7 +55,8 @@ dimensionalReductionMethods = OrderedDict([('Principal Component Analysis',PCA),
 								])
 #('PLS-DA - Partial Least Squares - Discrimant Analysis',PLS_DA)
 dic = {'t-distributed Stochastic Neighbor Embedding':{'init':'pca','perplexity':30,
-		'learning_rate':100,'method':'barnes_hut','early_exaggeration':3}}
+		'learning_rate':100,'method':'barnes_hut','early_exaggeration':3},
+		'Principal Component Analysis':{'whiten':False}}
 
 class dimensionReductionCollection(object):
 	'''
@@ -151,7 +152,7 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', o
 
 	kwargs = dic[method] if method in dic else {}
 	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps,**kwargs)
-	
+	print(dimReductionClass)
 	if method == 't-distributed Stochastic Neighbor Embedding':
 		drivers = dimReductionClass.fit_transform(data)
 	elif method == 'Linear Discriminant Analysis':
@@ -652,17 +653,19 @@ class interactiveStatistics(object):
 									numbCategoricalColumns = 1, numericalColumnForTest = None):
 		'''
 		'''
-		
+
 		for levelIndex in range(numSeparationsInPlot):
 				if levelIndex == 0:
 					allPossiblePositions = positionsInPlot
 				else:
-					addLevelPostions = allPossiblePositions + levelIndex
-					allPossiblePositions = np.append(allPossiblePositions,addLevelPostions)
-			
+					addLevelPositions = positionsInPlot + levelIndex
+					allPossiblePositions = np.append(allPossiblePositions,addLevelPositions)
+					print(addLevelPositions )
 		idxClick1, idxClick2 = \
 					find_nearest_index(allPossiblePositions,self.saveClickCoords['indexClick1']),\
 					find_nearest_index(allPossiblePositions,self.saveClickCoords['indexClick2'])
+		
+		
 		groupNameClick1, groupNameClick2 = tuple(possibleCombinations[idxClick1]), \
 											   tuple(possibleCombinations[idxClick2])
 		## overwrite exact xPosition to have algined singificance lines								   			

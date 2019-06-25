@@ -129,6 +129,7 @@ class _Plotter(object):
 		self.setup_basic_design()
 		self.set_hClust_settings()
 		
+		
 		#self.set_dist_settings()
 		self.set_style_collection_settings()
 		self.addSwarm = False
@@ -463,6 +464,7 @@ class _Plotter(object):
 	def set_scatter_point_properties(self,color = None,alpha = None,size = None):
 		'''
 		'''
+		
 		if size is not None:
 			self.sizeScatterPoints = size
 			self.settings_points['sizes'] = [size]
@@ -776,6 +778,10 @@ class _Plotter(object):
 		self.showCluster = True
 		self.corrMatrixCoeff = 'pearson'
 		
+		self.hclustLimitType = 'Raw data'
+		
+		self.numRows = 55
+		
 	def set_curveFitDisplay_settings(self,gridLayout,curveFitCollectionDict,
 					subplotDataIdxDict,equalYLimits,tightLayout,labelColumn):
 		'''
@@ -825,7 +831,12 @@ class _Plotter(object):
 		'''
 		return 	self.cmapClusterMap, self.cmapRowDendrogram, self.cmapColorColumn,\
 		self.metricRow, self.metricColumn, self.methodRow, self.methodColumn, self.circulizeDendrogram,\
-		self.showCluster
+		self.showCluster, self.numRows
+	
+	def get_hclust_limit_type(self):
+		'''
+		'''
+		return self.hclustLimitType
 
 	def remove_color_level(self):
 		
@@ -909,6 +920,8 @@ class _Plotter(object):
 		annLabel = ax.annotate(text,xy = coordAxes, xytext = xytext, xycoords = xycoords,
 					ha = ha, va= va, arrowprops=arrowprops, rotation = rotation) 
 		annLabel.draggable(state=True, use_blit =True)
+		
+		return annLabel
 	
 
 	def add_scatter_collection(self,ax,x,y, color = None, size=None,alpha = None,label=None,
@@ -1118,6 +1131,7 @@ class categoricalPlotter(object):
 
 		self.logAxes = self.plotter.logAxes.copy()
 		self.centerAxes = self.plotter.centerAxes.copy()
+		
 	
 	def get_data(self):
 				
@@ -1293,7 +1307,9 @@ class categoricalPlotter(object):
 				ax.set_xticklabels(namesCounts)
 				axisStyler(ax,ylabel='Counts',title = catColumn,
 							rotationXTicks=90, #yLabelFirstCol = True,
-							xLabelLastRow = True) 
+							xLabelLastRow = True) 			
+			
+		
 		
 		elif plotType == 'density':
 			groupedData = self.data.groupby(self.categoricalColumns, sort=False)
@@ -1339,7 +1355,6 @@ class categoricalPlotter(object):
 			
 			
 			if self.plotter.splitCategories == False:				
-				
 				for n,numColumn in enumerate(self.numericColumns):
 					
 					if onlySelectedAxis is not None:
@@ -1375,7 +1390,7 @@ class categoricalPlotter(object):
 											'leg_title':'Categorical Columns = +',}) 
 		
 			elif self.numbCategoricalColumns == 1:
-
+				
 				if onlySelectedAxis is not None:
 					ax = axisExport		
 				else:
@@ -1394,8 +1409,14 @@ class categoricalPlotter(object):
 				kwsLeg = {'leg_title':self.categoricalColumns[0]}
 		
 				if self.numbNumericColumns != 1:
-					
-					fill_axes_with_plot(ax=ax,x='Columns',y='Value',hue = self.categoricalColumns[0],
+					if False:#line plot for feature implementation
+						fill_axes_with_plot(ax=ax,x = self.numericColumns[0], y = self.numericColumns[1], 
+										hue = self.categoricalColumns[0],
+										plot_type = plotType, order = self.firstCategoryLevels,
+										data = self.data, cmap = self.colorMap, dodge=0,
+										error = self.error)								
+					else:
+						fill_axes_with_plot(ax=ax,x='Columns',y='Value',hue = self.categoricalColumns[0],
 									plot_type = plotType,cmap=self.colorMap,data=sourcePlotData,
 									order = self.numericColumns,dodge = 0, 
 									hue_order = sourcePlotData[self.categoricalColumns[0]].unique(),
@@ -1403,7 +1424,14 @@ class categoricalPlotter(object):
 					addLeg = True
 				
 				else:
-					fill_axes_with_plot(ax=ax,x = self.categoricalColumns[0], y = self.numericColumns[0], hue = None,
+					if False: #line plot for feature implementation
+						fill_axes_with_plot(ax=ax,x = self.numericColumns[0], y = self.numericColumns[1], 
+										hue = self.categoricalColumns[0],
+										plot_type = plotType, order = self.firstCategoryLevels,
+										data = self.data, cmap = self.colorMap, dodge=0,
+										error = self.error)					
+					else:
+						fill_axes_with_plot(ax=ax,x = self.categoricalColumns[0], y = self.numericColumns[0], hue = None,
 										plot_type = plotType, order = self.firstCategoryLevels,
 										data = self.data, cmap = self.colorMap, dodge=0,
 										error = self.error)

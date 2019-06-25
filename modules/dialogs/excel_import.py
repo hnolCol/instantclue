@@ -42,7 +42,7 @@ class ExcelImporter(object):
 		self.sheet_selected = tk.StringVar() 
 		self.sheet_selected.set(excel_sheets[0])
 		self.headerRow = tk.StringVar()
-		self.headerRow.set('1')
+		self.headerRow.set('0')
 		self.df_dimensions = tk.StringVar()
 		self.pt = None
 		
@@ -106,9 +106,7 @@ class ExcelImporter(object):
  		self.cont_widgets.grid_columnconfigure(1,weight=1)
  		self.create_preview_container() 
  		
- 		
- 		
-		## define widgets 
+ 		## define widgets 
  		labTitle = tk.Label(self.cont_widgets, text = 'Selected Excel file contains several sheets.\nYou can choose one or load all ...',
                                       font = LARGE_FONT, fg="#4C626F",bg = MAC_GREY, justify=tk.LEFT)  
  		labSheets = tk.Label(self.cont_widgets, text = 'Excel Sheets:', bg=MAC_GREY) 
@@ -198,29 +196,42 @@ class ExcelImporter(object):
 		If the user wants to skip set row as header in your file. 
 		'''
 		try:
-			row_ = int(float(self.headerRow.get())-1)	
+			rowId = int(float(self.headerRow.get())-1)	
 		except:
 			tk.messagebox.showinfo('Error..',
 							'Cannot convert entry string to integer.',
 							parent = self.toplevel)	
 			return
-		
-		columnList = self.evaluate_columns(self.data[self.current_sheet].iloc[row_,:])	
+		currentColumns = self.pt.model.df.columns.values.tolist()
+		print(currentColumns)
+		columnList = self.evaluate_columns(self.data[self.current_sheet].iloc[rowId,:])	
 		self.pt.model.df.columns =  columnList# sets new columns headers
 		self.pt.tablecolheader.redraw()
 		
 		## basically only needed because we cannot undo this. (maybe in the future..)
 		
 		quest_to_delete = tk.messagebox.askquestion(
-					'Delete ?','Would you like to delete this row from your data?',
+					'Delete ?','Would you like to delete the selected row: {} from the data?'.format(rowId),
 					parent = self.toplevel)
 		
 		if quest_to_delete == 'yes':
-			self.pt.model.deleteRows(rowlist = [row_])
-			self.pt.redraw()
+			self.pt.model.deleteRows(rowlist = [rowId])
+			
 			
 		else:
 			pass 
+		
+		quest_to_add_prevCols = tk.messagebox.askquestion(
+						'Remove header?',
+						'Would you like to discard previous column headers? If not, they will be appended to the df.'
+						)
+						
+		if quest_to_add_prevCols == 'yes':
+			pass
+		else:
+			idx = len(self.pt.model.df.index)
+			self.pt.model.df.loc[idx,:] = currentColumns
+		self.pt.redraw()
 		
 	def evaluate_columns(self,columnList):
 		'''

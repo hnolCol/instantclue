@@ -182,10 +182,32 @@ class scatterPlot(object):
 			self.background =  self.plotter.figure.canvas.copy_from_bbox(self.ax.bbox)
 				
 		self.plotter.figure.canvas.restore_region(self.background)
-		self.ax.draw_artist(self.hoverScatter[0])	
+		try:
+			self.ax.draw_artist(self.hoverScatter[0])	
+		except ValueError:
+			self.add_hover_point()
 		if self.toolTipsActive:
 			self.ax.draw_artist(self.tooltip)
 		self.plotter.figure.canvas.blit(self.ax.bbox)
+		
+	def get_numeric_color_data(self, numericColumn = None):
+		'''
+		'''
+		if numericColumn is None:
+			if 'change_color_by_numerical_column' in self.sizeStatsAndColorChanges:
+				numericColumn = self.sizeStatsAndColorChanges['change_color_by_numerical_column']
+			else:
+				return
+		if len(numericColumn) > 1:
+			# check for updated aggregation method
+			## merge columns 
+			if self.plotter.aggMethod == 'mean':
+				colorData = self.data[numericColumn].mean(axis=1)
+			else:
+				colorData = self.data[numericColumn].sum(axis=1)
+		else:
+			colorData = self.data[numericColumn[0]]
+		return scale_data_between_0_and_1(colorData) 
 		
 	def add_color_and_size_changes_to_dict(self,changeDescription,keywords):
 		'''
@@ -296,19 +318,9 @@ class scatterPlot(object):
 			self.clean_up_saved_size_and_color_changes('color')
 			
 		axCollection = ax.collections
-		if len(numericColumn) > 1:
-			# check for updated aggregation method
-			if specificAxis is None:
-				self.get_agg_method()
-			## merge columns 
-			if self.plotter.aggMethod == 'mean':
-				colorData = self.data[numericColumn].mean(axis=1)
-			else:
-				colorData = self.data[numericColumn].sum(axis=1)
-		else:
-			colorData = self.data[numericColumn[0]]
+		scaledData = self.get_numeric_color_data(numericColumn)
 			
-		scaledData = scale_data_between_0_and_1(colorData) 
+		
 		scaledColorData = cmap(scaledData)
 		axCollection[0].set_facecolors(scaledColorData )
 		self.scatterKwargs['color'] = scaledColorData 
@@ -417,6 +429,11 @@ class scatterPlot(object):
 		'''
 		
 		self.minSize, self.maxSize = self.plotter.get_size_interval()
+
+	def update_transparancy(self,alpha):
+		'''
+		'''
+		self.scatterKwargs['alpha'] = alpha
 		
 	def update_size_interval(self):
 		'''
@@ -556,8 +573,8 @@ class scatterPlot(object):
 		xList,yList,slope,intercept,rValue,pValue, stdErrorSlope = stats.get_linear_regression(self.data[self.numericColumns])
 		ax = self.ax if specificAxis is None else specificAxis
 		regressionLabel = 'Slope: {}\nIntercept: {}\nr: {}\np-val: {:.2e}'.format(round(slope,2),round(intercept,2),round(rValue,2),pValue)  	
-		self.plotter.add_annotationLabel_to_plot(ax,text=regressionLabel)
-		ax.plot(xList,yList,linewidth = 1, linestyle= 'dashed')
+		self.statAnnotText = self.plotter.add_annotationLabel_to_plot(ax,text=regressionLabel)
+		self.statLine = ax.plot(xList,yList,linewidth = 1, linestyle= 'dashed')
 		self.add_color_and_size_changes_to_dict('add_regression_line',None)
 			
 		
@@ -571,8 +588,16 @@ class scatterPlot(object):
 			self.lowessData = stats.get_lowess(self.data[self.numericColumns])		
 														  
 		ax = self.ax if specificAxis is None else specificAxis
-		ax.plot(self.lowessData[:,0],self.lowessData[:,1],linewidth = 1, linestyle= 'dashed',color="red")														  
+		self.statLine = ax.plot(self.lowessData[:,0],self.lowessData[:,1],linewidth = 1, linestyle= 'dashed',color="red")														  
 		self.add_color_and_size_changes_to_dict('add_lowess_line',None)	
+
+	def remove_stat_line(self):
+		'''
+		'''
+		if hasattr(self,'statLine'):
+			self.statLine[0].remove()
+		if hasattr(self,'statAnnotText'):
+			self.statAnnotText.remove()
 
 	def set_nan_color(self,newColor = None):
 		'''
@@ -580,6 +605,7 @@ class scatterPlot(object):
 		self.scatterKwargs['color'] = newColor
 		#self.nanScatterColor = self.scatterKwargs['color']
 		self.ax.collections[0].set_facecolor(self.scatterKwargs['color'])
+		
 		#self.ignoreYlimChange = ignoreYlimChange
 		
 		#self.define_variables()
@@ -592,6 +618,7 @@ class scatterPlot(object):
 		'''
 		nIdx = len(self.data.index)
 		self.data.loc[:,'size'] = [size] * nIdx 
+		self.scatterKwargs['s'] = [size] * nIdx 
 
 		
 	def __getstate__(self):

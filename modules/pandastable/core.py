@@ -51,7 +51,7 @@ import numpy as np
 import pandas as pd
 from .data import TableModel
 from .headers import ColumnHeader, RowHeader, IndexHeader
-from .plotting import MPLBaseOptions, PlotViewer
+#from .plotting import MPLBaseOptions, PlotViewer
 from .prefs import Preferences
 from .dialogs import ImportDialog
 from . import images, util

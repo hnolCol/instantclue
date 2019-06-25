@@ -67,8 +67,11 @@ class clippingMaskFilter(object):
 		'''
 		'''
 		self.dfClass.reset_clipping(self.dataID)
-		self.plotter.save_axis_limits()		
-		self.plotter.reinitiate_chart(updateData = True)			
+		try:
+			self.plotter.save_axis_limits()		
+			self.plotter.reinitiate_chart(updateData = True)
+		except:
+			pass			
 		self.toplevel.destroy() 
 		
 						

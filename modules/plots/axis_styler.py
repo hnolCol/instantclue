@@ -181,7 +181,7 @@ class axisStyler(object):
 			if index in newLabelIndexes:
 				return label
 			else:
-				return ''
+				return ' '
 		
 		if nTicksOnYAxis is not None:
 			if self.canvasHasBeenDrawn:
@@ -209,12 +209,11 @@ class axisStyler(object):
 				newXLabelsIndexes = [int(round(x,0)) for x in np.linspace(0,numbXAxisTickLabels-1, num = nTicksOnXAxis)]
 			
 				newxLabels = [getLabelOrEmptyString(label,i,newXLabelsIndexes) for i,label in enumerate(xAxisTickLabels)]
-			
 				self.ax.set_xticklabels(newxLabels, rotation = rotationXTicks)
 				
 			else:
 				
-				self.ax.xaxis.set_major_locator(mtick.MaxNLocator(nTicksOnXAxis)) 
+				#self.ax.xaxis.set_major_locator(mtick.MaxNLocator(nTicksOnXAxis)) 
 				self.rotate_axis_tick_labels(rotationXTicks)
 		
 		elif rotationXTicks is not None:

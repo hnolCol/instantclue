@@ -263,7 +263,8 @@ class findAndReplaceDialog(object):
 		searchString = self.searchString.get()
 		nonEmptyString = searchString != ''
 		lenSearchString = len(searchString)
-		
+		if len(self.pt.model.df.index) > 10000:
+			return
 		if self.dataType == 'object':
 			if lenSearchString < 3 and nonEmptyString and forceUpdate == False:
 				## to avoid massive searching when data are big
@@ -277,7 +278,7 @@ class findAndReplaceDialog(object):
 			if lenSearchString == lengthSaved + 1 and self.saveLastString != '':
 				dataToSearch = self.pt.model.df
 			elif lenSearchString + 1 == lengthSaved and self.saveLastString != '':
-				## avoid research on backspace
+				## avoid re-search on backspace
 				dataToSearch = self.pt.model.df
 			else:
 				dataToSearch = self.uniqueFlatSplitData
@@ -294,6 +295,7 @@ class findAndReplaceDialog(object):
 				boolIndicator = collectDf.sum(axis=1) >= 1
 			else:
 				boolIndicator = dataToSearch[self.columnForReplace].str.contains(regExp,case = True)
+			
 			subsetData = dataToSearch[boolIndicator]
 			self.saveLastString = searchString
 
@@ -336,7 +338,7 @@ class findAndReplaceDialog(object):
 			else:
 				regExp = regExp + baseString.format(category)
 				
-				
+		
 		if saveInList:
 			return listRegEx
 		else:		
@@ -358,12 +360,12 @@ class findAndReplaceDialog(object):
 		lenReplaceList = len(replaceList) 
 		
 		if 	lenSearchList == lenReplaceList:
-			return True, searchList, replaceList
+			return True, searchList, replaceList, False if lenReplaceList > 1 else True
 			
 		elif lenSearchList > lenReplaceList:
 			if lenReplaceList == 1:
 				replaceList = replaceList * lenSearchList
-				return True, searchList, replaceList
+				return True, searchList, replaceList, True
 			else:
 				tk.messagebox.showinfo('Error ..','Number strings for replacement does not match'+
 									   ' the number of values to be replaced. Please revisit.'+
@@ -374,7 +376,7 @@ class findAndReplaceDialog(object):
 									' of strings that should be used to replace them with. Please revisit.'+
 									' {} versus {}'.format(lenSearchList,lenReplaceList),
 									parent=self.toplevel)
-			return False, None, None
+			return False, None, None, False
 				
 	def transform_string_to_float_list(self,string):
 		'''
@@ -410,16 +412,22 @@ class findAndReplaceDialog(object):
 		if self.dataType == 'object':
 			
 			toReplaceList = self.extract_regExList(searchString)
+			
 			valueList = [row for row in csv.reader([replaceString], delimiter=',', quotechar='\"')][0]
-			proceedBool,toReplaceList,valueList = self.evaluate_input(toReplaceList,valueList)
+			proceedBool,toReplaceList,valueList, matchToOne = self.evaluate_input(toReplaceList,valueList)
 			if proceedBool == False:
 				return
-				
-			
+						
 			for column in self.columnForReplace:
-					self.dfClass.df[column].replace(toReplaceList,valueList,
-														   regex=True,inplace=True)
-		
+					if matchToOne:
+						self.dfClass.df[column] = self.dfClass.df[column].str.replace('|'.join(toReplaceList),
+														   					valueList[0],
+														   					)
+					else:
+						for toReplace, value in zip(toReplaceList,valueList):
+							self.dfClass.df[column] = self.dfClass.df[column].str.replace(toReplace,
+														   					value,
+														   					)
 		else:
 			searchList = self.transform_string_to_float_list(searchString)
 			replaceList = self.transform_string_to_float_list(replaceString)
@@ -480,6 +488,7 @@ class findAndReplaceDialog(object):
 				'Number of strings/values that should be replaced must match the number of "replaced with" strings',
 				parent=self.toplevel)
 			return
+		print(toReplaceList)
 		self.uniqueFlatSplitData['Column Names'].replace(toReplaceList,valueList,
 														   regex=True,inplace=True)
 		

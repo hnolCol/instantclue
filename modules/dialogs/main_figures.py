@@ -452,7 +452,7 @@ class mainFigureTemplateDialog(object):
 
 
 			for id,label in self.textsAdded.items():
-				if label.contains(event)[0]:
+				if label is not None and label.contains(event)[0]:
 					editedStyle = self.modify_text_items(label)
 					if editedStyle is not None:
 						editedStyle['x'], editedStyle['y'] = label.get_position()
@@ -488,7 +488,7 @@ class mainFigureTemplateDialog(object):
 		else:
 			toDelete = None
 			for id,label in self.textsAdded.items():
-				if label.contains(event)[0]:
+				if label is not None and label.contains(event)[0]:
 					if event.button == 1:
 						self.onMotionEvent = \
 						self.figure.canvas.mpl_connect('motion_notify_event', lambda event, setLabel=label:\
@@ -1079,10 +1079,11 @@ class mainFigureTemplateDialog(object):
 	def save_added_text(self,text):
 		'''
 		'''
-		id = len(self.textsAdded)
-		self.textsAdded[id] = text
-		self.textDict['x'], self.textDict['y'] = text.get_position()
-		self.mainFigureCollection.store_figure_text(self.figureId,id,self.textDict)
+		if text is not None:
+			id = len(self.textsAdded)
+			self.textsAdded[id] = text
+			self.textDict['x'], self.textDict['y'] = text.get_position()
+			self.mainFigureCollection.store_figure_text(self.figureId,id,self.textDict)
 
 
 	def disconnect_events(self):
