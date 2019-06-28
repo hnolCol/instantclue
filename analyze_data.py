@@ -5702,7 +5702,7 @@ class analyze_data(tk.Frame):
                     icon_list = [self.line_icon,self.point_plot_icon,self.scatter_icon,self.time_series_icon ,
                     			self.matrix_icon,self.dist_icon,self.barplot_icon,
                     			self.box_icon,self.violin_icon, self.swarm_icon ,self.add_swarm_icon,
-                    			self.hclust_icon,self.corr_icon,self.choord_icon,self.config_plot_icon]
+                    			self.hclust_icon,self.corr_icon,self.chord_icon,self.config_plot_icon]
                                  
                                  
                     for i, icon in enumerate(icon_list):
@@ -5758,7 +5758,7 @@ class analyze_data(tk.Frame):
            self.box_icon,self.barplot_icon ,self.scatter_icon ,self.swarm_icon ,self.time_series_icon \
            					,self.violin_icon ,self.hclust_icon ,self.corr_icon ,self.point_plot_icon , \
            					self.matrix_icon , self.dist_icon, self.add_swarm_icon , self.remove_swarm_icon, \
-           					self.setting_icon, self.line_icon, self.choord_icon    = images.get_plot_options_icons_norm()
+           					self.setting_icon, self.line_icon, self.chord_icon    = images.get_plot_options_icons_norm()
 
            self.open_file_icon,self.save_session_icon,self.open_session_icon,self.add_data_icon =  images.get_norm_data_upload_and_session_images()
 
@@ -5980,7 +5980,7 @@ class analyze_data(tk.Frame):
 
            chartTypes = ['line_plot','pointplot','scatter','time_series','scatter_matrix',
            		'density','barplot','boxplot','violinplot', 'swarm','add_swarm',
-           		'hclust','corrmatrix','choord','configure']
+           		'hclust','corrmatrix','chord','configure']
            tooltip_info = tooltip_information_plotoptions
            # we are using the icon in desired order to create plot/chart options
            iconsForButtons = [

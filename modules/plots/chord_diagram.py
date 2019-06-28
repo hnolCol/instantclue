@@ -300,7 +300,27 @@ class choordCoordinates(object):
         return 2*np.pi - np.abs(phi)
 
 
-  def connectChoordsInCartesian(self, inOutlines, nTimes = 100):
+
+  
+  def onMotion(self, event):
+  	""
+  	if event.inaxes:
+  		print(event)  
+  		for idx,c in self.chordPolys.items():
+  			print(c['artist'].contains(event))
+  		
+  		
+  		
+  def addBindings(self, figure):
+  	""
+  	#figure.canvas.mpl_connect("axes_enter_event",self.onEnter)
+  	self.motionBinding = figure.canvas.mpl_connect("motion_notify_event", self.onMotion)
+  	#figure.canvas.mpl_connect("axes_leave_event",self.onLeave)
+  	print("bindings done")
+  
+  
+  
+  def connectChoordsInCartesian(self, inOutlines, nTimes = 200):
     ""
     innerLine, outerLine = inOutlines
 
@@ -429,18 +449,25 @@ class choordCoordinates(object):
   	from matplotlib.patches import Polygon
   	self.idogramInCartesian()
   	data1 = OrderedDict([('xs',[]),('ys',[]),('fill_color',[]), ('Int',[]), ('Name',[]) ])
+  	
+  	self.chordPolys = OrderedDict()
+  	
   	for idx, (x,y) in self.idoCoords.items():
+  		print(idx)
   		data1['xs'].append(x)
   		data1['ys'].append(y)
   		df = pd.DataFrame(columns = ["x","y"])
   		df["x"] = x
   		df["y"] = y 
   		xy = df.values
-
-  		ax.add_artist(Polygon(xy, 
+  		
+  		chordPolygons = Polygon(xy, 
   					facecolor = self.colors[self.data.columns[idx]],
-  					edgecolor = "darkgrey"))
-      
+  					edgecolor = "darkgrey")
+  		self.chordPolys[idx] = dict(artist = chordPolygons,name=self.data.columns[idx])
+
+  		ax.add_artist(chordPolygons)
+    
   	data = OrderedDict([('xs',[]),('ys',[]),('fill_color',[]), ('Int',[]), ('Name',[]) ])
   	n = 0
   	for name, lineCoords in self.choords.items():
@@ -583,7 +610,9 @@ df = pd.DataFrame(np.array([#[16,3,28,0,18,2],
           index = ['Complexe I def.', 'Complexe II def.', 'AA starvation'],
           columns = ['Complexe I def.', 'Complexe II def.', 'AA starvation'])
 print(df)
-choordCoordinates(df).replot(ax)
+a = choordCoordinates(df)
+a.addBindings(fig)
+a.replot(ax)
 
 plt.show()
 #show(column(f1))

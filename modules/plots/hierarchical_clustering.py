@@ -585,10 +585,11 @@ class hierarchichalClustermapPlotter(object):
 	def update_colorMesh(self):
 		'''
 		'''
-		self.update_limits()
-		self.colorMesh.set_clim(self.meshKwargs['vmin'],self.meshKwargs['vmax'])
-		self.format_colorMap_ticks(self.axColormap)
-		self.plotter.redraw()
+		if hasattr(self,'colorMesh'):
+			self.update_limits()
+			self.colorMesh.set_clim(self.meshKwargs['vmin'],self.meshKwargs['vmax'])
+			self.format_colorMap_ticks(self.axColormap)
+			self.plotter.redraw()
 					
 		
 		
