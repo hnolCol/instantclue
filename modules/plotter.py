@@ -2587,7 +2587,28 @@ class nonCategoricalPlotter(object):
 		'''
 		if hasattr(self,'dimRedPlot'):	
 			self.dimRedPlot.hide_show_feature_names()
-
+	
+	def center_score_plot(self):
+	
+		'''
+		Handles scaling of score plot
+		'''
+		if hasattr(self,'dimRedPlot'):	
+			self.dimRedPlot.center_score_plot()
+		self.plotter.redraw()
+	
+	def add_ci_to_dimRed(self):
+	
+		'''
+		Handles scaling of score plot
+		'''
+		if hasattr(self,'dimRedPlot'):	
+			self.dimRedPlot.add_confidence_interval()
+		self.plotter.redraw()		
+		
+		
+		
+			
 	def remove_swarm(self):
 		'''
 		'''

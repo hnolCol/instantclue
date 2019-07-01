@@ -11,6 +11,7 @@ import numpy as np
 from modules.utils import *
 from collections import OrderedDict
 from modules.plots.scatter_plotter import scatterPlot
+import scipy
 
 class dimensionalReductionPlot(object):
 	
@@ -18,6 +19,7 @@ class dimensionalReductionPlot(object):
 		'''
 		'''
 		self.axisDict = dict()
+		self.orgAxLims = dict()
 		self.annotationClass = [None,None] 
 		self.colorMap = colorMap
 		self.categoricalColorDefinedByUser = OrderedDict()
@@ -113,8 +115,6 @@ class dimensionalReductionPlot(object):
 				data = components.T
 				data['experiments'] = data.index
 				
-				
-				
 				if specificAxis is None:					
 					self.pcaProjectionAnnotations[0] = annotateScatterPoints(Plotter = self.plotter,
 										ax = ax, data = data,
@@ -152,6 +152,63 @@ class dimensionalReductionPlot(object):
 		'''
 		self.data = self.plotter.dimRedResults['data']['Drivers']
 		self.numericColumns = self.data.columns.values.tolist()
+		
+		
+	def add_confidence_interval(self):
+		"""
+		Code Source ' https://stackoverflow.com/questions/46732075/python-pca-plot-using-hotellings-t2-for-a-confidence-interval'
+		"""
+		theta = np.concatenate((np.linspace(-np.pi, np.pi, 50), np.linspace(np.pi, -np.pi, 50)))
+		circle = np.array((np.cos(theta), np.sin(theta)))
+		ed = np.sqrt(scipy.stats.chi2.ppf(0.95, 2))
+		
+		for n,comb in enumerate([[0,1],[1,2]]):
+			idx1, idx2 = comb
+			sigma = np.cov(np.array((self.data[self.numericColumns[idx1]], self.data[self.numericColumns[idx2]])))
+			ell = np.transpose(circle).dot(np.linalg.cholesky(sigma) * ed)
+			a, b = np.max(ell[: ,0]), np.max(ell[: ,1]) #95% ellipse bounds
+			t = np.linspace(0, 2 * np.pi, 100)		
+			
+			self.axisDict[0 if n == 0 else 2].plot(a * np.cos(t), b * np.sin(t), color = 'maroon', linewidth = 0.5)
+		
+	
+	def center_score_plot(self):
+		'''
+		Center axis limits around 0
+		'''
+		
+		if len(self.orgAxLims) != 0:
+			
+			for n, lim in self.orgAxLims.items():
+				self.axisDict[n].set_xlim(lim['x'])
+				self.axisDict[n].set_ylim(lim['y'])
+				
+			self.orgAxLims.clear()
+		
+		else:
+			maxValueProj = self.plotter.dimRedResults['data']['Components'].abs().max().max()
+			maxValueProj = maxValueProj + 0.1 * maxValueProj
+			
+			maxValueLoadings = self.data.max().max()
+			maxValueLoadings = maxValueLoadings + 0.1 * maxValueLoadings
+			
+			
+			for n in range(3):
+				
+				if n in self.axisDict:
+					self.orgAxLims[n] = dict()
+					self.orgAxLims[n]['y'] = self.axisDict[n].get_ylim()
+					self.orgAxLims[n]['x'] = self.axisDict[n].get_xlim()
+				
+			for n in range(4):
+				if n in self.axisDict:	
+					if n in [1,3]:				
+						self.axisDict[n].set_xlim(-maxValueProj,maxValueProj)
+						self.axisDict[n].set_ylim(-maxValueProj,maxValueProj)
+					else:
+						self.axisDict[n].set_xlim(-maxValueLoadings,maxValueLoadings)
+						self.axisDict[n].set_ylim(-maxValueLoadings,maxValueLoadings)				
+					
 		
 		
 	def export_selection(self, specificAxis, id):	
@@ -207,7 +264,6 @@ class dimensionalReductionPlot(object):
 			else 'Component 3 ({}%)'.format(round(data[2] * 100,0))
 		
 		return xLabel, yLabel
-					
 	
 	def hide_show_feature_names(self):
 	

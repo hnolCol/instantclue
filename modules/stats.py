@@ -152,7 +152,6 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', o
 
 	kwargs = dic[method] if method in dic else {}
 	dimReductionClass = dimensionalReductionMethods[method](n_components = nComps,**kwargs)
-	print(dimReductionClass)
 	if method == 't-distributed Stochastic Neighbor Embedding':
 		drivers = dimReductionClass.fit_transform(data)
 	elif method == 'Linear Discriminant Analysis':
@@ -164,8 +163,7 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', o
 		outputDict['Components'] = pd.DataFrame(coeffs, columns = columnsNames,
 										index = ['Comp_'+str(i+1) for i in range(coeffs.shape[0])])
 		
-		#print(drivers.shape)
-		#print(dimReductionClass.predict_proba(data))
+
 		#components = dimReductionClass.components_
 		
 	else:

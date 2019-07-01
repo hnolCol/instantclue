@@ -586,7 +586,14 @@ class analyze_data(tk.Frame):
      				command = self.define_groups_in_dimRed)
      	self.menuCollection['PCA'].add_command(label='Remove/show feature names',
      				command = lambda : self.plt.nonCategoricalPlotter.hide_show_feature_names())
-     	self.menuCollection['PCA'].add_command(label='Export Scores',
+     				
+     	self.menuCollection['PCA'].add_command(label='Center plots',
+     				command = lambda : self.plt.nonCategoricalPlotter.center_score_plot())
+       	
+     	self.menuCollection['PCA'].add_command(label='Add Hotellings T^2 CI (95%)',
+     				command = lambda : self.plt.nonCategoricalPlotter.add_ci_to_dimRed())
+     				   				     						
+     	self.menuCollection['PCA'].add_command(label='Export Projections',
      				command = lambda :  self.export_dimRed_results('Export PCA Scores'))
      	self.menuCollection['PCA'].add_command(label='Export Loadings / Embedding',
      				command = lambda: self.export_dimRed_results('Export Loadings'))
