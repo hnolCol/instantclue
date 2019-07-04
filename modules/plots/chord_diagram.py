@@ -57,7 +57,7 @@ class choordCoordinates(object):
                opacityIdo = 0.5,
                opacityChord = 0.3,
                lineColor = "black",
-               gapFraction = 0.005,
+               gapFraction = 0.02,
                innerRadius = .93,
                choordRadius = 0.88,
                minTickLevels = 5,
@@ -71,6 +71,8 @@ class choordCoordinates(object):
     self.format = format
     self.gapFraction = gapFraction
 
+    #handling
+    self.keyShiftHold = False
 
     #inner and outer idogram limits
     self.outer = 1
@@ -132,7 +134,7 @@ class choordCoordinates(object):
 
       #get limits
         numInts =  self.data.loc[startName,name]
-        if numInts == 0:          	
+        if numInts == 0:
           pass
         else:
           fracInts = numInts/self.totalInts[startName]
@@ -143,12 +145,10 @@ class choordCoordinates(object):
             c = (x1Start,x1Start+fracOfSector)
           else:
             if startName in self.lastCoord:
-            	x1,x2 = self.lastCoord[startName] 
+            	x1,x2 = self.lastCoord[startName]
             else:
             	x2 = 0
 
-          	
-          		           	            
             c = (x2,x2+fracOfSector)
 
           self.lastCoord[startName] = c
@@ -300,26 +300,117 @@ class choordCoordinates(object):
         return 2*np.pi - np.abs(phi)
 
 
+  def markOutgoingCords(self, idName):
 
-  
+    ""
+    if idName in self.chordPolysGroups:
+      artistGroup = self.chordPolysGroups[idName]
+      for artistProps in artistGroup.values():
+        artistProps['artist'].set_facecolor("red")
+        artistProps['artist'].set_zorder(100)
+
+      self.resetColors(idName)
+
+
+  def resetColors(self, mode = "all"):
+    """
+    mode string is either -all- or a specific name (e.g. column header)
+    """
+    for name, artistGroup in self.chordPolysGroups.items():
+        if (mode != 'all' and name != mode) or mode == 'all':
+          for artistProps in artistGroup.values():
+            artistProps['artist'].set_facecolor(artistProps['facecolor'])
+            artistProps['artist'].set_zorder(3)
+
+
   def onMotion(self, event):
-  	""
-  	if event.inaxes:
-  		print(event)  
-  		for idx,c in self.chordPolys.items():
-  			print(c['artist'].contains(event))
-  		
-  		
-  		
+    ""
+    if event.inaxes:
+      if len(self.clickedChords) != 0:
+        return
+      eventOnIdo = False
+      for idx,c in self.idogramPolys.items():
+        if c['artist'].contains(event)[0]:
+           if self.currentIdoMarked  == c['artist']:
+            return
+
+           eventOnIdo = True
+           if self.currentIdoMarked  is None:
+             c['artist'].set_facecolor("red")
+             self.markOutgoingCords(c['name'])
+             self.currentIdoMarked  = c['artist']
+           else:
+              break
+        else:
+           c['artist'].set_facecolor(c['facecolor'])
+
+      if eventOnIdo == False:
+        self.resetColors()
+        self.currentIdoMarked = None
+
+      for name, c in self.chordPolys.items():
+        if c['artist'].contains(event)[0]:
+          c['artist'].set_zorder(100)
+          c['artist'].set_alpha(0.9)
+        else:
+          c['artist'].set_zorder(3)
+          c['artist'].set_alpha(0.65)
+
+
+    self.figure.canvas.draw()
+
+  def onKeyPress(self,event):
+
+    if event.key == "shift" and self.keyShiftHold == False:
+      self.keyShiftHold = True
+
+
+  def onKeyRelease(self,event):
+
+    self.keyShiftHold = False
+
+  def onClick(self,event):
+    ""
+    if event.inaxes:
+      if self.keyShiftHold:
+        pass
+      else:
+        self.clickedChords = []
+
+      for name, c in self.chordPolys.items():
+          if c['artist'].contains(event)[0] or c['artist'] in self.clickedChords:
+            c['artist'].set_zorder(100)
+            c['artist'].set_alpha(0.9)
+            c['artist'].set_facecolor(c['facecolor'])
+            self.clickedChords.append(c['artist'])
+          else:
+            c['artist'].set_zorder(3)
+            c['artist'].set_alpha(0.55)
+            c['artist'].set_facecolor("lightgrey")
+
+    self.figure.canvas.draw()
+
+
+
   def addBindings(self, figure):
   	""
+
   	#figure.canvas.mpl_connect("axes_enter_event",self.onEnter)
-  	self.motionBinding = figure.canvas.mpl_connect("motion_notify_event", self.onMotion)
-  	#figure.canvas.mpl_connect("axes_leave_event",self.onLeave)
+  	self.motionBinding = figure.canvas.mpl_connect("motion_notify_event",self.onMotion)
+  	figure.canvas.mpl_connect("button_press_event",self.onClick)
+  	figure.canvas.mpl_connect("key_press_event",self.onKeyPress)
+  	figure.canvas.mpl_connect("key_release_event",self.onKeyRelease)
+  	self.currentIdoMarked = None
+  	self.figure = figure
+  	self.clickedChords = []
+
+
+
+
   	print("bindings done")
-  
-  
-  
+
+
+
   def connectChoordsInCartesian(self, inOutlines, nTimes = 200):
     ""
     innerLine, outerLine = inOutlines
@@ -446,74 +537,79 @@ class choordCoordinates(object):
   	ax.set_xlim(-1.3,1.3)
   	ax.set_ylim(-1.3,1.3)
   	ax.set_aspect('equal')
+  	ax.axis('off')
   	from matplotlib.patches import Polygon
   	self.idogramInCartesian()
-  	data1 = OrderedDict([('xs',[]),('ys',[]),('fill_color',[]), ('Int',[]), ('Name',[]) ])
-  	
   	self.chordPolys = OrderedDict()
-  	
+  	self.idogramPolys = OrderedDict()
+  	self.chordPolysGroups = OrderedDict()
+
+
   	for idx, (x,y) in self.idoCoords.items():
-  		print(idx)
-  		data1['xs'].append(x)
-  		data1['ys'].append(y)
   		df = pd.DataFrame(columns = ["x","y"])
   		df["x"] = x
-  		df["y"] = y 
+  		df["y"] = y
   		xy = df.values
-  		
-  		chordPolygons = Polygon(xy, 
-  					facecolor = self.colors[self.data.columns[idx]],
-  					edgecolor = "darkgrey")
-  		self.chordPolys[idx] = dict(artist = chordPolygons,name=self.data.columns[idx])
 
-  		ax.add_artist(chordPolygons)
-    
-  	data = OrderedDict([('xs',[]),('ys',[]),('fill_color',[]), ('Int',[]), ('Name',[]) ])
-  	n = 0
+  		idoPolygons = Polygon(xy,
+  					facecolor = self.colors[self.data.columns[idx]],
+  					edgecolor = "darkgrey",
+            alpha = 0.65)
+
+  		self.idogramPolys[idx] = dict(artist = idoPolygons, facecolor = self.colors[self.data.columns[idx]],
+                                  name=self.data.columns[idx])
+
+  		ax.add_artist(idoPolygons)
+
+
+  	polyID = 0
+
   	for name, lineCoords in self.choords.items():
-  		n+=1
-  		for coods in lineCoords:
+
+  		for m,coods in enumerate(lineCoords):
+
   			x,y = self.connectChoordsInCartesian(coods)
-  			data['xs'].append(x)
+  			#data['xs'].append(x)
   			df = pd.DataFrame(columns = ["x","y"])
   			df["x"] = x
   			df["y"] = y
   			xy = df.values
-  			ax.add_artist(Polygon(xy, facecolor = self.colors[name], alpha  = 0.65, edgecolor = "darkgrey"))
-      
-      
-        
-        
+  			chordPoly = Polygon(xy, facecolor = self.colors[name], alpha  = 0.65, edgecolor = "darkgrey")
 
-            
-            
-           # data['ys'].append(y)
-           # data['fill_color'].append(self.colors[name])
-           # data['Int'].append(n)
-           # data['Name'].append(name)	
-	
-	
-    #data = OrderedDict([('xs',[]),('ys',[]),('fill_color',[]), ('Int',[]), ('Name',[]) ])
-    
-	
-	
-         
-         
-         ##data1['fill_color'].append(self.colors[self.data.columns[idx]])
-         #data1['Int'].append(1)
-         #data1['Name'].append(self.data.columns[idx])
-         
-		 
-		
-	
-     # rendsMain = figure.patches(xs="xs",ys="ys",fill_color="fill_color",fill_alpha = 0.7,
-      #               source = ColumnDataSource(data1),
-       #              line_color = "darkgrey", line_width = 0.6,
-        #             hover_fill_color="fill_color",
-         ##            hover_fill_alpha=0.8,
-           #          )
-	
-	
+  			ax.add_artist(chordPoly)
+  			if name not in self.chordPolysGroups:
+
+  			  self.chordPolysGroups[name] = dict()
+
+
+
+  			self.chordPolys[polyID] = dict(artist = chordPoly,facecolor = self.colors[name], sourceName = name, nID = m)
+
+  			self.chordPolysGroups[name][m] = dict(artist = chordPoly,facecolor = self.colors[name], sourceName = name)
+  			polyID += 1
+
+
+
+  	r = 1.05
+  	for name, coords in self.sectors.items():
+  		theta = np.mean(coords)
+  		a = self.getDegreeOfText(theta)
+  		x , y = r * np.cos(theta) , r * np.sin(theta)
+  		ax.text(x=x,y=y,s=name,ha=a)
+
+
+
+  def getDegreeOfText(self, theta):
+    ""
+    if theta < np.pi/2:
+      a = "left"
+    if theta > np.pi/2 and theta < 1.5 * np.pi:
+      a = "right"
+    else:
+      a = "left"
+
+    return a
+
 
 
 
@@ -574,7 +670,7 @@ class choordCoordinates(object):
     "transforms cartesian coords into polar"
 
     r = np.sqrt(x**2 + y**2)
-    theta = np.arctan2(y,x)
+    theta = np.arctan2abs(y,x)
     n = []
     for t in theta:
       if t > 0:
@@ -599,16 +695,16 @@ ax = fig.add_subplot(111)#, projection='polar')
 #f1 = figure(tools = [hover],plot_width=600, plot_height=600,background_fill_color = "#efefef")
 #f1.axis.visible = False
 #f1.grid.visible = False
-df = pd.DataFrame(np.array([#[16,3,28,0,18,2],
-                            #[18, 0, 12, 5],
-                           # [10, 40, 17, 27],
-                           # [19, 0, 35, 11],
-                           [5, 80,65],
-                           [40, 0,90],
-                           [20, 7,0]]
+df = pd.DataFrame(np.array([[16,3,28,0,18],
+                          [18, 0, 12, 5,5],
+                          [10, 40, 17, 27,2],
+                          [19, 0, 35, 11,55],
+                          # [5, 80,65,1,3,4],
+                          # [40, 0,90,5,8,9],
+                           [20, 7,0,77,2]]
                            ),
-          index = ['Complexe I def.', 'Complexe II def.', 'AA starvation'],
-          columns = ['Complexe I def.', 'Complexe II def.', 'AA starvation'])
+          index = ['Complexe I def.', 'Complexe II def.', 'AA starvation',"pablo","hendrik"],
+          columns = ['Complexe I def.', 'Complexe II def.', 'AA starvation',"pablo","hendrik"])
 print(df)
 a = choordCoordinates(df)
 a.addBindings(fig)
