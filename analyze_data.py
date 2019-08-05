@@ -5511,7 +5511,9 @@ class analyze_data(tk.Frame):
           """Upload file, extract data types and insert columns names into the source data tree"""
           
           if resetTreeEntries and len(self.sourceData.dfs) != 0:
-          		quest = tk.messagebox.askquestion('Note ..','This will remove all loaded data. Proceed? ')
+          		quest = tk.messagebox.askquestion('Note ..',
+          						'This will remove all loaded data. Proceed? ',
+          						icone = None)
           		if quest != 'yes':
           			return
           			
@@ -5889,7 +5891,7 @@ class analyze_data(tk.Frame):
            self.uploadFrameButtons = OrderedDict()
            
            imagesAndFunctionsUpload = OrderedDict([('upload', [self.open_file_icon,self.source_file_upload]),
-           						 ('addData',[self.add_data_icon,lambda: self.source_file_upload(resetTreeEntries = False)]),
+           						 ('addData',[self.add_data_icon,lambda: self.source_file_upload(resetTreeEntries = len(self.sourceData.dfs) == 0,)]),
            						 ('saveSession',[self.save_session_icon,self.save_current_session]),
            						 ('openSession',[self.open_session_icon,self.open_saved_session]),
            						 ])

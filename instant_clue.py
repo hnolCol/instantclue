@@ -21,7 +21,8 @@
 
 import sys
 import os
-
+import warnings
+warnings.filterwarnings("ignore")
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg#, NavigationToolbar2TkAgg
@@ -30,7 +31,7 @@ import urllib.request as urllibReq
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-
+from modules import images as img
 
 import multiprocessing
 
@@ -42,7 +43,7 @@ class instantClueApp(tk.Tk):
 
         if platform == 'WINDOWS':
             tk.Tk.iconbitmap(self, default=os.path.join(path_file,'icons','logo_ic.ico'))
-
+		
         tk.Tk.wm_title(self, "Interactive Data Analysis - CECAD Cologne")
         self.protocol("WM_DELETE_WINDOW", self.close_up)
 
@@ -179,8 +180,12 @@ if __name__ == "__main__":
      	app.bind_class("Menu", "<<MenuSelect>>", activate_cascade)
      	app.style  = ttk.Style()
      	app.style.theme_use("clam")
-
+	
+	 
      screen_width, screen_height = app.winfo_screenwidth(), app.winfo_screenheight()
+     
+     app.tk.call("wm", "iconphoto", app, "-default", img.get_main_icon())
+     
      w = 1690
      h = 1080
      appGeom = evaluate_screen(screen_width,screen_height,w,h)
