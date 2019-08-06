@@ -180,12 +180,10 @@ if __name__ == "__main__":
      	app.bind_class("Menu", "<<MenuSelect>>", activate_cascade)
      	app.style  = ttk.Style()
      	app.style.theme_use("clam")
+     elif platform == 'MAC':
+     	app.tk.call("wm", "iconphoto", app, "-default", img.get_main_icon())
 	
-	 
      screen_width, screen_height = app.winfo_screenwidth(), app.winfo_screenheight()
-     
-     app.tk.call("wm", "iconphoto", app, "-default", img.get_main_icon())
-     
      w = 1690
      h = 1080
      appGeom = evaluate_screen(screen_width,screen_height,w,h)
