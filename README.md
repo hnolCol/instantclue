@@ -1,16 +1,38 @@
-#License 
+# Instant Clue
+
+Python (>3.4) based application (GUI) based on Tkinter for data visualization and analysis.
+Binary files are available at at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
 
 
-InstantClue was licensed under the GPL3 clause.
+## Getting Started 
+
+Clone the repository, navigate to the folder and execute 
+
+```
+python instant_clue.py
+```
+
+The Graphical User Interface (GUI) will open. 
 
 
-
-#Tutorials 
+## Tutorials 
 
 
 PLease visit https://www.instantclue.uni-koeln.de for video tutorials.
 
-   
+## Citation
+
+Original article was published in [Scientific reports](https://www.nature.com/articles/s41598-018-31154-6)
+
+Nolte et al. Instant Clue: A Software Suite for Interactive Data Visualization and Analysis, Scientific reports 8, 12648 (2018) 
+
+## License 
+
+InstantClue was licensed under the GPL3 clause.
+
+## Versioning
+
+We use [SemVer](http://semver.org/) for versioning.
    
 ******************** IMPORTANT NOTE ********************
 
@@ -26,21 +48,21 @@ the function
             items = (items,)
         return self.tk.splitlist(self.tk.call(self._w, "selection", selop, items))
 
-#Dependencies (alphabetic order):
-    
-    -husl (color palettes)
-    -fastcluster
-    -matplotlib (https://matplotlib.org/users/license.html)
-    -numpy (BSD 3 - https://docs.scipy.org/doc/numpy-1.10.0/license.html)
-    -pandas (BSD 3)
-    -pandastable (GPL v3 - note: copied in source code, changes are indicated)
-    -scikit-learn (BSD 3)
-    -scipy (‎BSD-new license - https://www.scipy.org/scipylib/license.html)
-    -seaborn (BSD 3)
-    -statsmodels (BSD 3 https://github.com/statsmodels/statsmodels/blob/master/
-    -tslearn
-    
-"""
+## Dependencies:
+
+* [husl](https://pypi.org/project/husl/)
+* [fastcluster](https://pypi.org/project/fastcluster/)
+* [matplotlib](https://matplotlib.org/users/license.html)
+* [numpy](https://docs.scipy.org) 
+* [pandas](https://pandas.pydata.org)
+* [pandastable](https://github.com/dmnfarrell/pandastable)
+* [scipy](https://docs.scipy.org) 
+* [statsmodels](https://github.com/statsmodels/statsmodels/blob/master/)
+* [scikit-learn](https://scikit-learn.org/stable/)
+* [seaborn](http://seaborn.pydata.org)
+* [tslearn](https://github.com/rtavenar/tslearn)
+
+
 
 
 
