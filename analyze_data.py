@@ -41,6 +41,7 @@ from modules import save_and_load_sessions
 from modules import interactive_widget_helper
 from modules import workflow
 from modules import find_cat_overlap
+
 # internal dialog window imports
 from modules.dialogs import chart_configuration
 from modules.dialogs import size_configuration
@@ -4227,7 +4228,7 @@ class analyze_data(tk.Frame):
                                      									  dataSubset = dataSubset)
                                      if dialog.closed:
                                      	return
-
+								#OMG change this! 
                                  else:
                                     self.make_labels_selectable()
                          else:

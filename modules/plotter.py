@@ -767,7 +767,7 @@ class _Plotter(object):
 		Here we store the settings for hierarch clustering. That can be changed from
 		outside this class and will be used every time we plot a new hierarch cluster.
 		'''
-		self.cmapClusterMap = 'RdYlBu'
+		self.cmapClusterMap = 'RdBu_r'
 		self.cmapRowDendrogram = 'Paired'
 		self.cmapColorColumn = 'Blues'
 		
