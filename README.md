@@ -1,7 +1,7 @@
 # Instant Clue
 
 Python (>3.4) based application (GUI) based on Tkinter for data visualization and analysis.
-Binary files are available at at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
+Executable binary files are available at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
 
 
 ## Getting Started 
