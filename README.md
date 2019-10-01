@@ -34,7 +34,7 @@ InstantClue was licensed under the GPL3 clause.
 
 We use [SemVer](http://semver.org/) for versioning.
 
-## Import note
+## Important note
 
 To make the treeview work the function "section in the ttk.py file line 1392 (tkinter package folder) will have to be changed.
 
