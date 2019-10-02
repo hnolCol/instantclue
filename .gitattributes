@@ -1,2 +1,2 @@
-*.md
-*.html
+* linguist-vendored
+*.py linguist-vendored=false
