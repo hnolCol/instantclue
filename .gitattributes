@@ -1,2 +1,2 @@
-* linguist-vendored
-*.py linguist-vendored=false
+docs/* linguist-vendored
+*.* linguist-language=Python
