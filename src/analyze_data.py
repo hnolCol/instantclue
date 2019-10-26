@@ -364,7 +364,7 @@ class analyze_data(tk.Frame):
            menuDict = {}
            menus = ['main','column','dfformat','sort','split','replace','dataType','logCalc',\
            'rolling','smoothing','rowColCalc','multTest','curvefit','categories',\
-           'predict','transform','correlation','nanReplace','basicCalc','normalization',\
+           'predict','transform','correlation','nanReplace','basicCalc','colNormalization','rowNormalization',\
            'featureSelection','columnBasicDiv','columnBasicSub','aggRows','time_series',
            'compareGroups','featureSelection','classification','modelFeatSel','nanReplaceCol']
 
@@ -384,7 +384,7 @@ class analyze_data(tk.Frame):
            replace_options = ['0 -> NaN','NaN -> 0','NaN -> Constant','NaN -> Mean[col]','NaN -> Mean[row]',
            					  'NaN -> Median[col]','NaN -> Gauss Distribution']
 
-           normOptions = ['Standardize','Quantile (25,75)','0->1']
+           normOptions = ['Standardize (Z-Score)','Quantile (25,75)','0->1']
 
            rollingOptions = ['mean','median','quantile','sum','max','min','std']
 
@@ -478,10 +478,12 @@ class analyze_data(tk.Frame):
            menuDict['main'].add_cascade(label='Row & column calculations', menu = menuDict['rowColCalc'])
            menuDict['rowColCalc'].add_command(label='Summary Statistics', command = self.summarize)
            menuDict['rowColCalc'].add_cascade(label="Basic", menu = menuDict['basicCalc'])
-           menuDict['rowColCalc'].add_cascade(label="Row Normalization", menu = menuDict['normalization'])
-           menuDict['rowColCalc'].add_command(label="Quantile Normalization (col)", command = self.norm_quant_data)
-           menuDict['rowColCalc'].add_command(label="Scale to mean and unit variance (col)", command = self.scale_quant_data)
-           menuDict['rowColCalc'].add_command(label="Scale to mean (col)", command = lambda: self.scale_quant_data(withStd=False))
+           menuDict['rowColCalc'].add_cascade(label="Row Normalization", menu = menuDict['rowNormalization'])
+           menuDict['rowColCalc'].add_cascade(label="Column Normalization", menu = menuDict['colNormalization'])
+           columnNorm = [("Quantile",self.norm_quant_data),
+						 ("Mean and unit variance", self.scale_quant_data),
+						 ("Mean",lambda: self.scale_quant_data(withStd=False)),
+						 ("Z-Score",lambda transformation = 'Z-Score_col': self.transform_selected_columns(transformation))]
 
 
 
@@ -492,12 +494,16 @@ class analyze_data(tk.Frame):
                				command = lambda logType = logType : self.transform_selected_columns(logType))
            menuDict['rowColCalc'].add_command(label='Z-Score [row]',
            		command = lambda transformation = 'Z-Score_row': self.transform_selected_columns(transformation))
-           menuDict['rowColCalc'].add_command(label='Z-Score [columns]',
-           		command = lambda transformation = 'Z-Score_col': self.transform_selected_columns(transformation))
+           
 
            for metric in normOptions:
-                    menuDict['normalization'].add_command(label=metric,
+                    menuDict['rowNormalization'].add_command(label=metric,
                     	command = lambda metric = metric: self.normalize_data(metric))
+
+           for metric, func in columnNorm:
+                    menuDict['colNormalization'].add_command(label=metric,
+                    	command = func)
+
            for metric in rowColumnCalculations :
                     menuDict['basicCalc'].add_command(label=metric,
                     	command = lambda metric = metric: self.calculate_row_wise_metric(metric))
@@ -542,14 +548,9 @@ class analyze_data(tk.Frame):
            menuDict['time_series'].add_command(label='Add as error' ,command = self.add_error)
            menuDict['time_series'].add_command(label='Adjust starting point', command = self.shift_data)
 
-           #menuDict['main'].add_command(label ="Fit, Correlate and Predict..",state=tk.DISABLED,foreground='darkgrey')
            menuDict['main'].add_separator()
-           #menuDict['main'].add_cascade(label='Correlation',menu = menuDict['correlation'])
            menuDict['correlation'].add_command(label="Correlate rows to ..." , command = self.calculate_correlations)
-           #menuDict['correlation'].add_command(label="Display correlation analysis .." ,
-           #	command = lambda: tk.messagebox.showinfo('Under construction','Under construction ..',parent=self))
 
-          # for featureSel in ['Model','Variance']:#,'Recursive elimination']:
            menuDict['featureSelection'].add_command(label='Variance', command = lambda featureSel = 'Variance': self.select_features(featureSel))
            menuDict['featureSelection'].add_cascade(label='Model',menu = menuDict['modelFeatSel'])
            #for model in estimators.keys():
@@ -1068,6 +1069,9 @@ class analyze_data(tk.Frame):
      	'''
      	id = self.sourceData.get_next_available_id()
      	self.sourceData.add_data_frame(newDataFrame, id=id, fileName=fileName)
+     	self.sourceData.set_current_data_by_id(id)
+     	columnList = self.sourceData.get_categorical_columns_by_id(id=id)
+     	self.sourceData.fill_na_in_columnList(id=id,columnLabelList = columnList)
      	dict_ = self.sourceData.dfsDataTypesAndColumnNames
      	file_names = self.sourceData.fileNameByID
 
@@ -1114,12 +1118,12 @@ class analyze_data(tk.Frame):
 
      def aggregate_data(self, metric = 'mean'):
      	'''
-     	Aggregates n row using a user specific mean.
+     	Aggregates n row using a user specific metric.
      	'''
      	selectedColumns = self.selection_is_from_one_df(onlyNumeric = True)
      	if selectedColumns is not None:
 
-     		n = ts.askinteger('Defin n',
+     		n = ts.askinteger('Define n',
      			prompt = 'Please provide the number of rows to be used for aggregation.')
 
      		if n is not None:
@@ -1333,7 +1337,7 @@ class analyze_data(tk.Frame):
      										[';','median'],
      										[[';',',','//','_'],['mean','median','sum']],
      										'Annotation Module Settings',
-     										'Tis method will find unique categories in selected column'+
+     										'Tis method will find unique categories in the selected column'+
      										' and aggregate data by these categories. If a row is annotated'+
      										' by multiple categories it is inlcuded multiple times within the'
      										' aggregated data frame.')
@@ -1430,8 +1434,8 @@ class analyze_data(tk.Frame):
      	swarm plots you can estimate the distribution much better due to non
      	overlapping points.
      	'''
-     	help = self.plt.get_active_helper()
-     	help.add_swarm_to_plot()
+     	activeHelper = self.plt.get_active_helper()
+     	activeHelper.add_swarm_to_plot()
      	self.plt.redraw()
 
 
@@ -1967,7 +1971,7 @@ class analyze_data(tk.Frame):
              										workflow = self.workflow)
      def clip_data(self):
       	'''
-      	Let user define specific clipping mask to pot specific subsets.
+      	Let user define specific clipping mask to plot specific subsets.
       	'''
       	dialog = mask_filtering.clippingMaskFilter(self.plt,self.sourceData,self)
 
@@ -2596,11 +2600,16 @@ class analyze_data(tk.Frame):
 
      		columnsSelected = self.DataTreeview.columnsSelected
      		if metric == '0->1':
-     			scaler = dataNormalizer(metric,**{'feature_range':(0.01, 1)})
+     			scaler = dataNormalizer(metric)#,**{'feature_range':(0.01, 1)})
      		else:
      			scaler = dataNormalizer(metric)
 
-     		columnNames = self.sourceData.fit_transform(scaler,columnsSelected)
+     		columnNames = self.sourceData.fit_transform(
+				 				scaler,
+			 					columnsSelected,
+								dropnan=metric not in '0->1',
+								transpose=metric not in '0->1')
+
      		self.DataTreeview.add_list_of_columns_to_treeview(self.sourceData.currentDataFile,
      													'float64',columnNames)
      		tk.messagebox.showinfo('Done..','Calculations done. New columns added.')

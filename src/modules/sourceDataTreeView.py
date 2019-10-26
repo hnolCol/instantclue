@@ -409,7 +409,6 @@ class sourceDataTreeview(object):
 			idx = self.sourceDataTree.index(iid)
 			parent = self.sourceDataTree.parent(iid)
 			self.sourceDataTree.delete(iid)
-			#self.sourceDataTree.item(iid,iid=newIID,text=newNameList[n])
 			self.insert_entry_to_treeview(parent=parent,index=idx,iid=newIID,text=newNameList[n])
 			newIids.append(newIID)
 		return newIids

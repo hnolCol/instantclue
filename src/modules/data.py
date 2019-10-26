@@ -617,7 +617,7 @@ class DataCollection(object):
 			columnList = self.df_columns 
 		
 		if len(columnName) > maxLength-10:
-			columnName = columnName[:maxLength-30]+'___'+columnName[-30:]
+			columnName = columnName[:maxLength-30]+'__'+columnName[-30:]
 			
 		if useExact:
 			columnNameExists = [col for col in columnList if columnName == col]
@@ -648,6 +648,7 @@ class DataCollection(object):
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
 			dataTypeColumnRelationship[dataType] = columnHeaders
+				
 		self.dfsDataTypesAndColumnNames[id] = dataTypeColumnRelationship
 		
 	
@@ -701,7 +702,7 @@ class DataCollection(object):
 		self.df[columnLabelList] = \
 		self.df[columnLabelList].apply(lambda row: row.fillna(row.mean()), axis=1)
 	
-	def fill_na_in_columnList(self,columnLabelList,naFill = None):
+	def fill_na_in_columnList(self,columnLabelList,id = None, naFill = None):
 		'''
 		Replaces nan in certain columns by value
 		'''
@@ -734,38 +735,30 @@ class DataCollection(object):
 			newColumns = self.join_df_to_currently_selected_df(df,exportColumns = True)
 			return newColumns
 		
-	def fit_transform(self,obj,columns,namePrefix = 'Scaled'):
+	def fit_transform(self,obj,columns,namePrefix = 'Scaled', dropnan=True, transpose=True):
 		'''
 		Fit and transform data using an object from the scikit library.
 		'''
 		newColumnNames = [self.evaluate_column_name('{}{}'.format(namePrefix,column), useExact = True)
 						 	for column in columns]
 		
-		df, idx = self.row_scaling(obj,columns)
+		df, idx = self.row_scaling(obj,columns,dropnan,transpose)
 		df_ = pd.DataFrame(df,index = idx, columns = newColumnNames)
 		newColumnNames = self.join_df_to_currently_selected_df(df_, exportColumns = True)
 		return newColumnNames
-		#return
-		collectDF = pd.DataFrame()
-		for n,column in enumerate(columns):
-			X = self.df[column].dropna()
-			normX = getattr(obj,'fit_transform')(X.values.reshape(-1, 1))
-			df = pd.DataFrame(normX,index = X.index, columns = [newColumnNames[n]])
+	
 			
-			if len(collectDF.index) == 0:
-				collectDF = df
-			else:
-				collectDF = pd.concat([collectDF,df],axis=1)
-		newColumnNames = self.join_df_to_currently_selected_df(collectDF, exportColumns = True)
-		return newColumnNames
-		
-		#print(collectDF)
-			
-	def row_scaling(self,obj,columnNames):
+	def row_scaling(self,obj,columnNames,dropnan, transpose):
 		"""
 		"""
-		data = self.df[columnNames].dropna()
-		X = np.transpose(data.values)
+		if dropnan:
+			X = self.df[columnNames].dropna()
+		else:
+			X = self.df[columnNames]
+
+		if transpose:
+			X = np.transpose(data.values)
+
 		normX = getattr(obj,'fit_transform')(X)
 		return np.transpose(normX), data.index
 			

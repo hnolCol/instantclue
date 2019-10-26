@@ -38,6 +38,7 @@ class _HelperCurveFitter(object):
 						  			  ('A (1 - exp(-k * x))',self.exponential_fit_one_e),
 						  			  ('A exp(b*x) + C exp(d*x)',self.exponential_fit_2term),
 						  			  ('Michaelis Menten (Vmax*x)/(Km+x)',self.michaelis_menten),
+									  ('pSILAC half-live', self.pSILAC),
 						  			  ('Gaussian fit A exp(-(x-mu)^2/(2*sigma^2))',self.gaussian_fit),
 						  			  ('Weibull Dist. (a * b) x^(b-1)*exp(-a * x^b)',self.weibull_fit)])
 	
@@ -60,6 +61,9 @@ class _HelperCurveFitter(object):
 		b = Km + x
 		return (a) / (b)
 	
+	def pSILAC(self, x, t_cc):
+		
+		return 1 / x ** 2 - np.log(2) / t_cc
 
 	def exponential_fit_1term(self,x,a,b):
 		'''

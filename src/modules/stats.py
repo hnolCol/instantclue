@@ -38,7 +38,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from sklearn.decomposition import PCA, IncrementalPCA, NMF, TruncatedSVD, FactorAnalysis
 from sklearn.manifold import TSNE
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
+from sklearn.preprocessing import StandardScaler
 from collections import OrderedDict
 
 from modules.calculations.anova import Anova
@@ -141,8 +141,8 @@ def get_dimensionalReduction_results(dataFrame, nComps = None, method = 'PCA', o
 		if nComps is None:
 			nComps = len(columnsNames)
 		dataFrame.dropna(inplace=True) 
-		
 		data = dataFrame.as_matrix()
+
 	
 	if method == 'Latent Semantic Analysis':
 		if nComps is None:
