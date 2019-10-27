@@ -257,7 +257,8 @@ class scatterPlot(object):
 												self.nanScatterColor)
 		## update data if missing columns and add column 'color'
 		self.data  = self.plotter.attach_color_data(categoricalColumns, self.data, 
-													self.dataID, self.colorMapDict)											
+													self.dataID, self.colorMapDict)	
+		print(self.data)										
 		if updateColor == False:
 				self.clean_up_saved_size_and_color_changes('color')														
 		

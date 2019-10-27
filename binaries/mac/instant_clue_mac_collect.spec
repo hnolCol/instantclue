@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['instant_clue.py'],
-             pathex=['/Users/hnolte/Documents/GitHub/instantclue/'],
+a = Analysis(['/Users/hnolte/Documents/GitHub/instantclue/src/instant_clue.py'],
+             pathex=['/Users/hnolte/Documents/GitHub/instantclue/binaries/mac'],
              binaries=[('/System/Library/Frameworks/Tk.framework/Tk', 'tk'),
 		                   ('/System/Library/Frameworks/Tcl.framework/Tcl', 'tcl')],
              datas=[],
@@ -27,7 +27,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           name='Instant Clue',
-          icon = "/Users/hnolte/Documents/GitHub/instantclue/Logo.icns",
+          #icon = "/Users/hnolte/Documents/GitHub/instantclue/Logo.icns",
           debug=False,
           strip=False,
           clean=True,

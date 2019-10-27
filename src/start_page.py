@@ -12,7 +12,7 @@ from modules import images
 from modules.utils import *
 
 
-__VERSION__ = '0.5.3' #Date 22.11.2018
+__VERSION__ = '0.5.9' #Date 22.11.2018
 
 
 class StartPage(tk.Frame):
@@ -59,6 +59,7 @@ class StartPage(tk.Frame):
         
           self.sourceCodeButton = create_button(self,image=self.sourceCodeLogo , 
           								command = lambda: webbrowser.open(gitHubUrl))
+          								
           self.analyze_data_but = create_button(self, image= self.data_analysis_icon,
           								command=lambda: controller.show_frame(analyze_data.analyze_data))
     

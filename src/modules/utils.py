@@ -84,8 +84,7 @@ websiteUrlVideos = 'http://www.instantclue.uni-koeln.de/videos.html'
 webisteUrlTutorial = 'http://www.instantclue.uni-koeln.de/tutorials.html'
 gitHubUrl = 'http://github.com/hnolCol/InstantClue'
 paperUrl = 'http://www.nature.com/articles/s41598-018-31154-6'
-videoURLDict = dict()
-videoURLDict['main_figure'] = r'https://www.youtube.com/watch?v=5kSy53gpV5Y'
+videoURLDict = dict(main_figure = r'https://www.youtube.com/watch?v=5kSy53gpV5Y')
 
 
 path_file = os.path.dirname(sys.argv[0])
@@ -232,7 +231,8 @@ def evaluate_screen(screen_width,screen_height,w,h):
                      screen_width_ = screen_width - (screen_width*0.075)
                      screen_height_ = int(screen_width_ * (h/w))
 
-          geom_ = "{}x{}".format(int(screen_width_),int(screen_height_))
+          geom_ = "{}x{}".format(int(screen_width_),int(screen_height_ - 0.05  * screen_height_))
+          ## reduce height by 5% 
      else:
           geom_ = "{}x{}".format(w,h)
 

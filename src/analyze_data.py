@@ -553,8 +553,8 @@ class analyze_data(tk.Frame):
 
            menuDict['featureSelection'].add_command(label='Variance', command = lambda featureSel = 'Variance': self.select_features(featureSel))
            menuDict['featureSelection'].add_cascade(label='Model',menu = menuDict['modelFeatSel'])
-           #for model in estimators.keys():
-           	#menuDict['modelFeatSel'].add_command(label=model, command = lambda featureSel = model: self.select_features(featureSel))
+           for model in estimators.keys():
+           	menuDict['modelFeatSel'].add_command(label=model, command = lambda featureSel = model: self.select_features(featureSel))
 
 
            menuDict['main'].add_cascade(label='Feature selection by..', menu= menuDict['featureSelection'])
@@ -5776,13 +5776,6 @@ class analyze_data(tk.Frame):
            _, self.main_figure_icon = images.get_main_figure_button_images()
            _, self.workflow_icon = images.get_workflow_button_images()
 
-           #self.but_col_icon = self.but_col_icon_
-           #self.but_size_icon = self.but_size_icon_
-           #self.but_tooltip_icon = self.but_tooltip_icon_
-           #self.but_label_icon = self.but_label_icon_
-           #self.but_stat_icon = self.but_stat_icon_
-           #self.add_swarm_icon = self.add_swarm_icon_
-           #self.remove_swarm_icon = self.remove_swarm_icon_
 
      def import_TDT(self,event = None):
 
@@ -6128,7 +6121,7 @@ class analyze_data(tk.Frame):
            						image = self.streteched_data,
            						command = self.show_data)#
 
-           self.subset_data_label = tk.Label(self.data_button_frame, text = "Subset")
+           self.subset_data_label = tk.Label(self.data_button_frame, text = "")
 
 
            CreateToolTip(self.data_button,text='Opens a dialog window to inspect raw data. If multiple data frames were loaded into Instant Clue you will have to select the target data frame before by clicking on any item.')

@@ -352,7 +352,6 @@ class _Plotter(object):
 		'''
 		data = self.dfClass.join_missing_columns_to_other_df(data,id=dataID,
 																  definedColumnsList=categoricalColumn)	
-
 		if len(categoricalColumn) == 1:
 			data.loc[:,'color'] = data[categoricalColumn[0]].map(colorMapDict)
 		else:

@@ -1057,13 +1057,11 @@ class DataCollection(object):
 		self.set_current_data_by_id(saveId)
 				
 		
-	def join_missing_columns_to_other_df(self,otherDf, id, definedColumnsList = []):
+	def join_missing_columns_to_other_df(self, otherDf, id, definedColumnsList = []):
 		'''
 		'''
-		if id == self.currentDataFile:
-			storedData = self.df
-		else:
-			storedData = self.dfs[id]
+
+		storedData = self.dfs[id]
 		columnsJoinDf = otherDf.columns
 		
 		if len(definedColumnsList) == 0:
@@ -1075,8 +1073,10 @@ class DataCollection(object):
 			columnsMissing = [columnName for columnName in definedColumnsList if columnName \
 			not in columnsJoinDf and columnName in storedData.columns]
 		
+		storedData.index = storedData.index.astype(otherDf.index.dtype)
 		if len(columnsMissing) != 0: 
 			resultDataFrame = otherDf.join(storedData[columnsMissing])
+			print(resultDataFrame)
 			return resultDataFrame
 		else:
 			return otherDf
@@ -1299,7 +1299,7 @@ class DataCollection(object):
 		Save the current active df into the dictionary self.dfs
 		'''
 
-		self.dfs[self.currentDataFile] = self.df	
+		self.dfs[self.currentDataFile] = self.df
 	
 	def set_current_data_by_id(self,id = None):
 		'''

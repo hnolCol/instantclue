@@ -139,10 +139,12 @@ class instantClueApp(tk.Tk):
     		if quest == 'yes':
     			webbrowser.open('http://www.instantclue.uni-koeln.de/download/InstantClue_{}.zip'.format(platform.lower()))
 
-    def show_frame(self, cont):
+    def show_frame(self, cont = None):
         '''
         Raise frame.
         '''
+        if cont is None:
+        	cont = start_page.StartPage
         frame = self.frames[cont]
         frame.tkraise()
 
@@ -173,7 +175,7 @@ if __name__ == "__main__":
      import analyze_data
      import start_page
      from modules.utils import *
-     
+     print(sys.argv)
      app = instantClueApp()
      if platform == 'LINUX':
      	#enable cascade extension automatically on linux systems
