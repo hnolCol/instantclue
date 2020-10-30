@@ -1,0 +1,435 @@
+import re
+import pandas as pd 
+import numpy as np 
+import csv
+import re
+from itertools import chain
+
+#internal imports
+from .utils import buildRegex
+from ..utils.stringOperations import mergeListToString, getMessageProps, buildReplaceDict, combineStrings
+
+class CategoricalFilter(object):
+
+    def __init__(self,
+                sourceData,
+                minStringLength = 3, 
+                splitString = ";"):
+
+        self.splitString = splitString
+        self.minStringLength = minStringLength
+        self.sourceData = sourceData
+        self.replaceDict = {True : "+",
+                            False: self.sourceData.replaceObjectNan}
+
+
+    def annotateCategory(self,dataID,columnName,searchString, splitString = None, inputIsRegEx=False):
+        ""
+
+        boolIndicator = self.searchCategory(dataID,columnName,searchString,splitString,inputIsRegEx)
+        
+        #if searching the category gave an error, error message is a dict
+        if isinstance(boolIndicator,dict):
+            return boolIndicator
+        else:
+            #generate new columnName
+            columnStr = mergeListToString(searchString)
+            annotationColumnName = "{}:{}".format(columnStr,columnName)
+            #replace bool with string
+            annotationColumn = boolIndicator.map(self.replaceDict)
+            
+        return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
+
+    def buildRegex(self, stringList, withSeparator = True, splitString = None):
+        ""
+        return buildRegex(stringList, withSeparator, splitString)
+
+    def columnsContainString(self,dataID, columnNames, regExp, caseSensitive):
+        "Reutrns bool per row if string is is found in any column"
+        collectResults = pd.DataFrame()
+        #check each column if str is in row
+        for columnName in columnNames:
+            columnBoolIndicator = self.sourceData.dfs[dataID][columnName].str.contains(regExp, case = caseSensitive)
+            collectResults[columnName] = columnBoolIndicator
+        # get bool where in at leas 1 column the string was found
+        boolIndicator = collectResults.sum(axis=1) >= 1
+        return boolIndicator
+
+
+    def getGroupIndicator(self,dataID,columnName, regExp, flag=0):
+        ""
+        return self.sourceData.dfs[dataID][columnName].str.findall(regExp, flags = flag).astype(str)	
+
+    def getUniqueCategories(self, dataID, columnName, splitString = None):
+        ""
+            #if no splitString is given, take init param
+        if splitString is None:
+            splitString = self.splitString
+            
+        if dataID in self.sourceData.dfs:
+            if isinstance(columnName,str):
+                columnName = [columnName]
+            #take pandas daata for column, and split data on splitString
+            splitData = self.sourceData.getDataByColumnNames(dataID,columnName)["fnKwargs"]["data"][columnName[0]].astype("str").str.split(splitString).values
+            #get unique values 
+            flatSplitDataList = list(set(chain.from_iterable(splitData)))
+            #create data from unique categories.
+            flatSplitData = pd.DataFrame(flatSplitDataList,columns=columnName)
+            #return data
+            return flatSplitData
+        else:
+            return getMessageProps("Not found","DataID was not found.")
+       
+    def getRegExpFromSepSearchString(self,searchString,withSeparator = False, splitString = None):
+         # split search string according to "string1","string 2"
+        splitString = self.splitString if splitString is None else splitString
+        splitSearchString = [row for row in csv.reader([searchString], 
+                                        delimiter=',', quotechar='\"')][0]
+        # create reg expresion
+        regExp = buildRegex(splitSearchString,withSeparator,splitString)
+
+        return regExp, splitSearchString
+    
+    def getSplitString(self):
+        ""
+        return self.splitString
+
+
+    def searchCategory(self,dataID,columnName, searchString, splitString = None, inputIsRegEx = False):
+        ""
+
+        if dataID not in self.sourceData.dfs:
+            return getMessageProps("Not found","DataID was not found.")
+
+        if splitString is None:
+            splitString = self.splitString
+
+        if isinstance(searchString, str):
+            searchString = [searchString]
+        
+        if len(searchString) == 0:
+            
+            return np.ones(shape=self.sourceData.dfs[dataID].index.size,dtype=np.bool)
+
+        if not isinstance(searchString,list):
+            raise ValueError("serach string must be list or string!")
+
+        if columnName in self.sourceData.dfs[dataID].columns:
+
+            #create regeluar expression
+            if not inputIsRegEx:
+                regExp = buildRegex(searchString,withSeparator=True,splitString=splitString)
+            else:
+                regExp = searchString
+            boolIndicator = self.columnsContainString(dataID, [columnName], regExp, caseSensitive = True)
+            # check if filter worked or empty df resulted
+            if np.sum(boolIndicator) == 0:
+                
+                return getMessageProps("Empty","Data frame was empty after applying filter.")
+            
+            return boolIndicator
+
+    def searchString(self, dataID, columnNames, searchString, caseSensitive = True ,inputIsRegEx = False, annotateSearchString = False, firstMatch = False, searchStringIsList = False):
+        ""
+
+        if dataID not in self.sourceData.dfs:
+            return getMessageProps("Not found","DataID was not found.")
+
+        if isinstance(columnNames,str):
+            columnNames = [columnNames]
+
+        if inputIsRegEx:
+
+            regExp = searchString
+        else:
+
+            regExp, splitSearchString = self.getRegExpFromSepSearchString(searchString,withSeparator=False)
+        
+        if annotateSearchString:
+            #set up flags for search
+            flag = 0 if caseSensitive else re.IGNORECASE
+            collectResults = pd.DataFrame()
+			
+            if len(splitSearchString) > 1:
+                #check i user entered more than one search string
+                if firstMatch: 
+                    #annotate only first match
+                    for columnName in columnNames:
+                        #using find all for regexp
+                        groupIndicator  = self.getGroupIndicator(dataID,columnName,regExp,flag)					
+                        #get unique values
+                        uniqueValues = groupIndicator.unique()						
+                        #ceate a dict containing unique values of matches and search input
+                        replaceDict = buildReplaceDict(uniqueValues,splitSearchString)
+                        # replace groupIndicators with input (search string)
+                        annotationColumn = groupIndicator.map(replaceDict)				
+                        #save result
+                        collectResults[columnName] = annotationColumn
+                else:
+                    
+                    for columnName in columnNames:
+                        #extract combinations of searches
+                        groupIndicator  = self.sourceData.dfs[dataID][columnName].str.extract(regExp, flags = flag)
+                        annotationColumn = groupIndicator.fillna('').astype(str).sum(axis=1)
+                        collectResults[columnName] = annotationColumn
+
+                if len(columnNames) == 1:
+					# simply replaces annotation nan or empty strings with nan object string
+                    # case : single search column
+                    annotationColumn = \
+					annotationColumn.replace('',self.sourceData.replaceObjectNan).fillna(self.sourceData.replaceObjectNan)
+                else:
+                    # if string search was performed in multiple columns, combine strings
+                    collectResults['annotationColumn'] = \
+					    collectResults.apply(lambda x: combineStrings(x, nanObjectString = self.sourceData.replaceObjectNan), axis=1)
+                    annotationColumn = collectResults['annotationColumn']
+            else:
+                replaceDict = self.replaceDict.copy()
+                replaceDict[True] = splitSearchString[0]
+                for columnName in columnNames:
+                    columnBoolIndicator = self.sourceData.dfs[dataID][columnName].str.contains(regExp, case = caseSensitive)
+                    collectResults[columnName] = columnBoolIndicator
+                boolIndicator = collectResults.sum(axis=1) >= 1
+                annotationColumn = boolIndicator.map(replaceDict)	
+        else:
+
+            ## simply label rows that match by "+"
+            boolIndicator = self.columnsContainString(dataID,columnNames,regExp,caseSensitive)
+            #replace bool with string
+            annotationColumn = boolIndicator.map(self.replaceDict)
+		# generate new column name
+        annotationColumnName = """{}:""".format(searchString) + mergeListToString(columnNames, joinString = "_")
+        #replace " in column name
+        annotationColumnName = annotationColumnName.replace('"','')
+        #add column to source data and return output
+        return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
+
+    def setSplitString(self,splitString):
+        "Set SplitString."
+        if isinstance(splitString,str):
+            self.splitString = splitString
+        else:
+            self.splitString = str(splitString)
+
+    def setupLiveStringFilter(self,dataID,columnNames,splitString = None, filterType = "category", updateData = False):
+        ""
+        if hasattr(self,"liveSearchData") and not updateData:
+            return getMessageProps("Live filter found.","Another live filter active. Not allowed ...")
+
+        if dataID not in self.sourceData.dfs:
+            return getMessageProps("Not found","DataID was not found.")
+
+        # check if input is str, convert to list
+        if isinstance(columnNames,str):
+            columnNames = [columnNames]
+        elif isinstance(columnNames,pd.Series):
+            columnNames = columnNames.values.tolist()
+        # use class splitString if None given
+        if splitString is None:
+            splitString = self.splitString
+        if filterType not in ["category","string"]:
+            return getMessageProps("Error ..","Unknown filter type selected.")
+
+        #if more than one columnName is given, only string type filtering works
+        if len(columnNames) > 1 and filterType == "category":
+            filterType = "string"
+        
+        if filterType == "string":
+            
+            searchData = self.sourceData.dfs[dataID][columnNames]
+
+        else:
+            searchData = self.getUniqueCategories(dataID, columnNames, splitString)
+        # if error, get unique categories returns dict
+        if isinstance(searchData,dict):
+        
+            return searchData
+
+        else:
+            self.liveSearchData = searchData
+            self.filterProps = {"type":filterType,"dataID":dataID,"columnNames":columnNames,"splitString":splitString}
+            self.savedLastString = ''
+            return getMessageProps("Done ..","Live filter setup done.")
+
+    def liveStringSearch(self,searchString, updatedData = None,forceSearch = False, inputIsRegEx = False, caseSensitive = False):
+        ""
+        if hasattr(self,"liveSearchData"):
+            dataToSearch = pd.DataFrame()
+            resetDataInView = False
+            nonEmptyString = searchString != ''
+            #get length of search string
+            lenSearchString = len(searchString)
+            if not nonEmptyString and self.savedLastString != '':
+                forceSearch = True
+            if lenSearchString < self.minStringLength and nonEmptyString and not forceSearch:
+                ## to avoid massive searching
+                return
+            
+            if lenSearchString > 2:
+                ## to start a new String search
+                if searchString[-2:] == ',"':			
+                    self.savedLastString = ''
+
+            #get length of saved string
+            lengthSaved = len(self.savedLastString)
+            if updatedData is not None and self.savedLastString != '' and not forceSearch:
+                if abs(lenSearchString - lengthSaved) == 1:
+                    #if searchString is extended by user, use data from first search 
+                    #or when backspace is used
+                    dataToSearch = updatedData
+                    # if data is for some reason of length 0, use full data
+                    if len(dataToSearch.index) == 0:
+                        dataToSearch = self.liveSearchData
+                        resetDataInView = True
+                    else:
+                        resetDataInView = False
+               
+            else:
+                dataToSearch = self.liveSearchData
+                resetDataInView = True
+
+			
+            if inputIsRegEx:
+                regExp = re.escape(searchString)
+            else:
+                regExp, _ = self.getRegExpFromSepSearchString(searchString, 
+                                                            withSeparator = False)
+                                                            
+            collectDf = pd.DataFrame()
+            for columnName in dataToSearch.columns:
+               
+                collectDf.loc[:,columnName] = \
+					dataToSearch.loc[:,columnName].str.contains(regExp,
+													  case = caseSensitive,
+                                                      regex = True)
+                    
+            #if only one column is searched, bool indicator = first column
+            if len(collectDf.columns) == 1:
+                boolInd = collectDf.iloc[:,0].values
+            else:
+                boolInd = collectDf.sum(axis=1) >= 1	
+			
+            #save search string
+            self.savedLastString = searchString	
+            
+            return {"boolIndicator":boolInd,"resetData":resetDataInView}
+        return getMessageProps("Filter not initialized","Filter not yet init.")	
+			
+    def applyLiveFilter(self, searchString = None, caseSensitive = True, annotateSearchString = False, inputIsRegEx = False, firstMatch = True):
+        ""
+        try:
+            
+            if hasattr(self,"filterProps") and self.filterProps["type"] in ["category","string"]:
+                
+                if searchString is None:
+                    searchString = self.savedLastString
+                
+                if self.filterProps["type"] == "category":
+                    
+                    requestResponse = self.annotateCategory(
+                            searchString = searchString,
+                            dataID = self.filterProps["dataID"],
+                            columnName = self.filterProps["columnNames"][0],
+                            splitString = self.filterProps["splitString"])
+                else:
+                    requestResponse = self.searchString(
+                                    searchString = searchString,
+                                    dataID = self.filterProps["dataID"],
+                                    columnNames = self.filterProps["columnNames"],
+                                    caseSensitive = caseSensitive,
+                                    annotateSearchString = annotateSearchString,
+                                    inputIsRegEx = inputIsRegEx,
+                                    firstMatch = firstMatch)
+
+                return requestResponse
+        except Exception as e:
+            print(e)
+
+    def stopLiveFilter(self):
+        ""
+        if hasattr(self,"liveSearchData"):
+            del self.liveSearchData
+        if hasattr(self,"filterProps"):
+            del self.filterProps
+        self.savedLastString = ''
+
+
+    def subsetData(self,dataID = None ,columnName = None ,searchString = None, splitString = None, inputIsRegEx=False):
+        "Splits Dataset based on categroy in a certain column"
+        if searchString is None:
+            searchString = self.savedLastString 
+        if dataID is None:
+            dataID = self.filterProps["dataID"]
+        if columnName is None:
+            columnName = self.filterProps["columnNames"][0]
+
+        boolIndicator = self.searchCategory(dataID,columnName,searchString,splitString,inputIsRegEx)
+        #if searching the category gave an error, error message is a dict
+        if isinstance(boolIndicator,dict):
+            return boolIndicator
+        else:
+            #get original file name
+            fileName = self.sourceData.getFileNameByID(dataID)
+            #set up new file name
+            subsetName = '{}: {} in {}'.format(searchString,columnName,fileName)
+            #addDataFrame, returns dict with message
+            messageProps = self.sourceData.addDataFrame(self.sourceData.dfs[dataID][boolIndicator], fileName = subsetName)
+        return messageProps
+
+
+    def splitDataFrame(self,dataID,columnNames):
+        "Split data on each unique category"
+
+        if dataID in self.sourceData.dfs:
+            if isinstance(columnNames,str):
+                #input as str indicates single column, transform to lists
+                columnNames = [columnNames]
+            #get groupby object
+            groupedData = self.sourceData.getGroupsbByColumnList(dataID,columnNames)
+            if len(groupedData) == 1:
+                return getMessageProps("Error..","There was only one unique value. No splitting performed.")
+            if groupedData is None:
+                return getMessageProps("Error..","Could not split data set.")
+            #get file name
+            fileName = self.sourceData.getFileNameByID(dataID)
+            # join column names
+            columnNamesJoined = mergeListToString(columnNames, joinString = " ")
+            nIgnored = 0
+            for groupName, dataFrame in groupedData:
+                if groupName != self.sourceData.replaceObjectNan:
+                    #create file name
+                    subsetName = '{}({}): {}'.format(groupName,columnNamesJoined,fileName)
+                    #add to collection
+                    self.sourceData.addDataFrame(dataFrame,fileName=subsetName)
+                else:
+                    #save number of ignored data sets
+                    nIgnored += 1
+            
+            messageProps = getMessageProps("Split Data Frame","Data frame {} was split on column(s): {} ".format(fileName,columnNamesJoined)+
+                                           "In total {} dataframes added.".format(groupedData.ngroups - nIgnored))
+            #add dataframe names
+            messageProps["dfs"] = self.sourceData.fileNameByID
+            #do not select last df after update
+            messageProps["selectLastDf"] = False
+
+        else:
+
+            messageProps = getMessageProps("Not found","DataID was not found.")
+
+        return messageProps
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+

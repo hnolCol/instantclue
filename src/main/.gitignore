@@ -1,0 +1,9 @@
+src/main/python/build
+src/main/python/dist
+src/main/python/temp
+src/website
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.DS_Store

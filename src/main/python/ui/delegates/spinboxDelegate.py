@@ -1,0 +1,57 @@
+
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import QStyledItemDelegate, QSpinBox
+
+from ..utils import HOVER_COLOR
+import numpy as np
+
+class SpinBoxDelegate(QStyledItemDelegate):
+    
+    def __init__(self,*args,**kwargs):
+        super(SpinBoxDelegate, self).__init__(*args,**kwargs)
+    
+    def paint(self, painter, option, index):
+        ""
+        QStyledItemDelegate.paint(self, painter, option, index)
+        r = option.rect.height()/2.5
+        maxSize = self.parent().model().maxSize
+        minSize = self.parent().model().minSize
+    
+        value = index.model().data(index, Qt.EditRole)
+        if minSize == maxSize:
+            scaledR = r 
+        else:
+            scaledR = ((np.sqrt(value) - minSize) / (maxSize - minSize) * (0.95 - 0.4) + 0.4) * r
+        
+        pen = painter.pen()
+        painter.setRenderHint(QPainter.Antialiasing,True)
+        pen.setColor(QColor("darkgrey"))
+        pen.setWidthF(0.5)
+        painter.setPen(pen)    
+        brush = QBrush(QColor("#efefef"))  
+        painter.setBrush(brush)     
+        centerPoint = option.rect.center()
+        painter.drawEllipse(centerPoint,scaledR ,scaledR )
+
+    def createEditor(self, parent, option, index):
+        "Create Spinbox Editor"
+        editor = QSpinBox(parent)
+        editor.setFrame(False)
+        editor.setMinimum(2)
+        editor.setMaximum(1000)
+        return editor
+
+    def setEditorData(self, spinBox, index):
+        "Set the init data to the spinbox"
+        value = index.model().data(index, Qt.EditRole)
+        spinBox.setValue(value)
+
+    def setModelData(self, spinBox, model, index):
+        spinBox.interpretText()
+        value = spinBox.value()
+
+        model.setData(index, value, Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
