@@ -1,6 +1,6 @@
 
 
-<img src="/img/logo.png" height="15%" width="15%">
+<img src="/src/img/logo.png" height="15%" width="15%">
 
 # Instant Clue
 

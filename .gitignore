@@ -16,3 +16,4 @@ src/website/
 *.zip
 src/main/python/dist/
 src/main/python/build/
+src/main/python/env
