@@ -3,13 +3,14 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from ..custom.buttonDesigns import BigPlusButton, ResetButton, LabelLikeButton, ICStandardButton
-from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps
+from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps, createMenu
 from ..custom.utils import clearLayout
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 from ..custom.ICReceiverBox import ItemHolder, BoxItem
 from ..custom.warnMessage import WarningMessage
 from collections import OrderedDict
 import pandas as pd
+
 class ICGroupFrame(QFrame):
     def __init__(self,groupID,*args,**kwargs):
         ""
@@ -39,11 +40,7 @@ class ICGroupFrame(QFrame):
             self.parent().table.resetDragEvent()
         except Exception as e:
             print(e)
-     #   if self.callback is not None:
-      #      self.callback() 
-       # elif hasattr(self.parent(),"sendRequestToThread") and self.funcKey is not None:
-       #     funcProps = {"key":self.funcKey}
-       #     self.parent().sendRequestToThread(funcProps)
+    
 
 
 # Make a custom label widget (mostly for its mousePressEvent)
@@ -51,8 +48,8 @@ class BuddyLabel(QLabel):
     def __init__(self, buddy, parent = None):
         super(BuddyLabel, self).__init__(parent)
         self.buddy = buddy
+        # When it's clicked, hide itself and show its buddy
 
-    # When it's clicked, hide itself and show its buddy
     def mousePressEvent(self, event):
         self.hide()
         self.buddy.show()
@@ -70,10 +67,12 @@ class ICGrouper(QDialog):
         self.mC = mainController
         self.groupItems = OrderedDict()
         self.initNGroups = initNGroups
-        #self.acceptDrops() 
+        
+        self.__createMenu()
         self.__controls()
         self.__layout()
         self.__connectEvents()
+        
 
         for n in range(initNGroups):
             self.addGroupArea(groupID = "Group {}".format(n))
@@ -86,7 +85,7 @@ class ICGrouper(QDialog):
 
         dataID = self.mC.getDataID()
         numericColumns = self.mC.data.getNumericColumns(dataID)
-        self.table =  ResortTableWidget(parent = self)
+        self.table =  ResortTableWidget(parent = self, menu = self.menu)
         self.model = ResortTableModel(parent = self.table,
                                       inputLabels=numericColumns,
                                       title="Numeric Columns")
@@ -95,6 +94,12 @@ class ICGrouper(QDialog):
         self.okButton = ICStandardButton(itemName="Okay")
         self.cancelButton = ICStandardButton(itemName = "Cancel")
 
+    def __createMenu(self):
+        ""
+
+        self.menu = createMenu()
+        self.menu.addAction("Infer grouping")
+       
     
     def __layout(self):
         ""

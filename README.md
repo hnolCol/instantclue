@@ -1,7 +1,8 @@
 
 
-<img src="/img/workflow.png" height="25%" width="25%">
-#Instant Clue
+<img src="/img/logo.png" height="25%" width="25%">
+
+# Instant Clue
 
 ## About
 
@@ -9,9 +10,30 @@ Instant Clue is a Python (>3.7) based desktop application (GUI) based on PyQt5 f
 The tool was developed to equip researchers with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
 ## Get Started 
-
+### Executables
 Executable binary files are available at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
 We recommend using the development snapshots as they are equipped with more features and recent bug reports, but may contain non-functional widgets or context menu functions.
+
+### Source Code
+First download the code and extract it. Open terminal (mac) or command line tool (windows) and navigate to instantclue/src/main/python
+Then create a virtual environment using 
+
+```
+python3 -m venv env #mac 
+source env/bin/activate # activate env
+```
+or 
+```
+py -m venv env #windows
+.\env\Scripts\activate
+```
+Then use the requirements.txt file to install packages and finally start InstantClue.
+
+```
+pip install -r requirements.txt #install packages
+
+python3 main.py #starts InstantClue
+```
 
 ## Tutorials
 
@@ -19,7 +41,7 @@ Please visit https://www.instantclue.uni-koeln.de for video tutorials.
 
 ## Builds 
 
-From now on we are publishing development version builds to give faster acess to the users. Builds are available at [GitHub](https://github.com/hnolCol/instantclue/releases). The official website will only host the latest version.
+From now on we are publishing development version builds to give faster acess to the users. Builds are available at [instantclue.uni-koeln.de](http://www.instantclue.uni-koeln.de). The official website will only host the latest version.
 
 ## Citation
 

@@ -15,7 +15,7 @@ moon = ['#8c191e','#e3b20e','#967129','#85b0a5','#dfccab']
 acqua = ['#75a9b6','#4587a1','#daba31','#d19c17','#d42e16']
 ## standard repartoire of seabrn/matplotlib color palettes in Instant Clue                                 
 
-oneColorSeq = ['Greys','Blues','Greens','Purples','Reds']
+oneColorSeq = ['Greys','Blues','Blues_r','Greens','Purples','Reds']
 twoColorSeq = ['BuGn','PuBu','PuBuGn','BuPu','OrRd']
 diverging = ['BrBG','PuOr','Spectral','RdBu','RdBu_r',
 	'RdYlBu','RdYlGn','viridis','inferno','cubehelix']

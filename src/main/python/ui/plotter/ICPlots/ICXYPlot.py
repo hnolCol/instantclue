@@ -33,13 +33,17 @@ class ICXYPlot(ICChart):
         for l in self.hoverLines.values():
             l.set_visible(False)
 
-   
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
         ""
-        for n,ax in self.axisDict.items():
-            for l in self.data["lines"][n]:
-                ax.add_line(l)
+        if onlyForID is None and targetAx is None:
+            for n,ax in self.axisDict.items():
+                for l in self.data["lines"][n]:
+                    ax.add_line(l)
+        elif onlyForID in self.data["lines"]:
+            for m,l in enumerate(self.data["lines"][onlyForID]):
+                print(self.data["lineKwargs"][onlyForID])
+                targetAx.add_line(Line2D(**self.data["lineKwargs"][onlyForID][m]))
 
     def onDataLoad(self, data):
         ""
@@ -75,6 +79,9 @@ class ICXYPlot(ICChart):
         except Exception as e:
             print(e)
         
+
+  
+
 
     def setHoverData(self,dataIndex, showText = False):
         ""
@@ -119,5 +126,5 @@ class ICXYPlot(ICChart):
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
         
-        
-         
+        self.initXYPlot(onlyForID=axisID,targetAx=targetAx)
+        self.setAxisLabels({axisID:targetAx},self.data["axisLabels"],onlyForID=axisID)

@@ -1,6 +1,6 @@
 
 
-plotTypes = ["lineplot","pointplot","scatter","histogram","boxplot","barplot","violinplot","swarmplot","addSwarmplot","countplot","hclust","corrmatrix","x-ys-plot"]
+plotTypes = ["lineplot","pointplot","scatter","histogram","boxplot","barplot","violinplot","swarmplot","addSwarmplot","countplot","hclust","corrmatrix","x-ys-plot","dim-red-plot"]
 fallbackType = "boxplot"
 requiredProps = {
     "lineplot":{"numericalCols":2,"categoricalCols":0},
@@ -8,7 +8,7 @@ requiredProps = {
     "swarmplot":{"numericalCols":1,"categoricalCols":0},
     "addSwarmplot":{"numericalCols":1,"categoricalCols":0},
     "barplot":{"numericalCols":1,"categoricalCols":0},
-    "scatter":{"numericalCols":2,"categoricalCols":0},
+    "scatter":{"numericalCols":1,"categoricalCols":0},
     "pointplot":{"numericalCols":1,"categoricalCols":0},
     "histogram":{"numericalCols":1,"categoricalCols":0},
     "time_series":{"numericalCols":2,"categoricalCols":0},
@@ -16,7 +16,8 @@ requiredProps = {
     "corrmatrix":{"numericalCols":2,"categoricalCols":0},
     "violinplot":{"numericalCols":1,"categoricalCols":0},
     "countplot" : {"numericalCols":0,"categoricalCols":1},
-    "x-ys-plot" : {"numericalCols":2,"categoricalCols":0}
+    "x-ys-plot" : {"numericalCols":2,"categoricalCols":0},
+    "dim-red-plot": {"numericalCols":2,"categoricalCols":0}
 }
 
 
@@ -33,7 +34,8 @@ plotTypeTooltips = {
     "swarmplot":"Swarmplot. Plot a swarm plot of the data.",
     "countplot":"Countplot. Plots the categorical group sizes in combination of a barchart and a lineplot indicating groups.",
     "addSwarmplot":"Swarmplot. Adds datapoints to selected plot types. Compatible charts are: boxplot, violin and barplot.",
-    "x-ys-plot":"XYs Plot. Plots data of column vs column.\nYou can choose to have a common x-axis or to use every second column.\nOpen Settings to see more options."
+    "x-ys-plot":"XYs Plot. Plots data of column vs column.\nYou can choose to have a common x-axis or to use every second column.\nOpen Settings to see more options.",
+    "dim-red-plot" : "Dimensional reduction.\nAvailable methods: PCA"
 }
 
 gridPosition = {
@@ -50,7 +52,8 @@ gridPosition = {
         "addSwarmplot":(4,1),
         "hclust":(5,0),
         "corrmatrix":(5,1),
-        "countplot":(6,0)
+        "dim-red-plot" : (6,0),
+        "countplot":(7,0)
         }
 
 

@@ -325,7 +325,10 @@ class DataCollection(object):
 
 	def readDataFromClipboard(self):
 		""
-		data = pd.read_clipboard(**self.checkLoadProps(None))
+		try:
+			data = pd.read_clipboard(**self.checkLoadProps(None), low_memory=False)
+		except Exception as e:
+			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
 		localTime = time.localtime()
 		current_time = time.strftime("%H:%M:%S", localTime)
 		return self.addDataFrame(data, fileName = "pastedData({})".format(current_time),cleanObjectColumns = True)
@@ -597,6 +600,10 @@ class DataCollection(object):
 	def hasData(self):
 		""
 		return len(self.dfs) > 0
+
+	def hasTwoDataSets(self):
+		""
+		return len(self.dfs) > 1
 
 	def renameColumns(self,dataID,columnNameMapper):
 		""
@@ -973,7 +980,7 @@ class DataCollection(object):
 
 			for columnName in columnNames.values[1:]:
 				if columnName in self.dfs[dataID].columns:
-					combinedRowEntries.append(self.dfs[dataID][columnName].astype(str).values.tolist())
+					combinedRowEntries.append(self.dfs[dataID][columnName].astype(str))
 			combineColumnName = 'combined_({})'.format(mergeListToString(columnNames))
 
 			columnData = self.dfs[dataID][columnNames.values[0]].astype(str).str.cat(combinedRowEntries,sep=sep)
@@ -1183,6 +1190,16 @@ class DataCollection(object):
 		
 		return cleanedDf.columns.values.tolist()
 		
+	def countNaN(self,dataID, columnNames):
+		""
+		if dataID in self.dfs:
+
+			data = self.dfs[dataID][columnNames].isnull().sum(axis=1)
+			return self.addColumnData(dataID,"count(nan){}".format(mergeListToString(columnNames)),data)
+		else:
+			return getMessageProps("Error ..","DataID not found.")
+
+
 	def removeNaN(self, dataID, columnNames, how = "any", thresh = None):
 		""
 		if dataID in self.dfs:
@@ -1208,6 +1225,8 @@ class DataCollection(object):
 			return getMessageProps("Error ..","No useful value for attribute 'how'.")
 		else:
 			return errorMessage
+
+
 
 
 	def drop_rows_with_nan(self,columnLabelList,how,thresh=None):
@@ -1448,8 +1467,22 @@ class DataCollection(object):
 
 			except Exception as e:
 				print(e)
-			
-			
+		else:
+			return errorMessage
+
+
+	def summarizeGroups(self,dataID,grouping,metric,**kwargs):
+		""
+		if dataID in self.dfs:
+			for groupName, columnNames in grouping.items():
+
+				data = self.transformer.summarizeTransformation(dataID,columnNames,metric=metric,justValues = True)
+				columnName = "s:{}({})".format(metric,groupName)
+				self.addColumnData(dataID,columnName,data)
+
+			completeKwargs = getMessageProps("Done..","Groups summarized. Columns added.")
+			completeKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			return completeKwargs
 		else:
 			return errorMessage
 
@@ -1646,8 +1679,9 @@ class DataCollection(object):
 		Function that cannot be called from thread calling
 		'''
 		if dataID in self.dfs:
-			return self.dfsDataTypesAndColumnNames[dataID]['Numeric Floats']	
-		
+			return self.dfsDataTypesAndColumnNames[dataID]['Numeric Floats']
+
+		return []
 
 	def getMinMax(self,dataID,columnName):
 		""
@@ -1944,6 +1978,51 @@ class DataCollection(object):
 			return self.addDataFrame(meltedDataFrame, fileName=fileName)					
 		else:
 			return errorMessage
+
+
+
+	def mergeDfs(self,mergeParams, how = "left", indicator = True):
+		""
+
+		leftDataID = mergeParams["left"]["dataID"]
+		rightDataID = mergeParams["right"]["dataID"]
+
+		leftMergeColumn = mergeParams["left"]["mergeColumns"].values.tolist()
+		rightMergeColumn = mergeParams["right"]["mergeColumns"].values.tolist()
+		
+		if len(leftMergeColumn) != len(rightMergeColumn):
+
+			return getMessageProps("Error ..","Merge column selection of different size.")
+		
+		
+
+		leftSelectedColumnNames = mergeParams["left"]["columnNames"] if mergeParams["left"]["selectedColumns"].empty else mergeParams["left"]["selectedColumns"]
+		rightSelectedColumnNames = mergeParams["right"]["columnNames"] if mergeParams["right"]["selectedColumns"].empty else mergeParams["right"]["selectedColumns"]
+
+		leftKeepColumnNames = leftMergeColumn + [colName for colName in leftSelectedColumnNames.values if colName not in leftMergeColumn]
+		rightKeepColumnNames = rightMergeColumn + [colName for colName in rightSelectedColumnNames.values if colName not in rightMergeColumn]
+
+		if leftDataID in self.dfs and rightDataID in self.dfs:
+
+			leftDf = self.dfs[leftDataID][leftKeepColumnNames] #subset data by selection 
+			rightDf = self.dfs[rightDataID][rightKeepColumnNames] #subset data by selection 
+
+		
+			mergedDataFrames = leftDf.merge(rightDf,
+								how = how, 
+								left_on = leftMergeColumn, 
+								right_on = rightMergeColumn, 
+								indicator = indicator)
+
+			if "_merge" in mergedDataFrames.columns:
+				mergedDataFrames["_merge"] = mergedDataFrames["_merge"].astype(str)
+
+			return self.addDataFrame(
+							dataFrame = mergedDataFrames, 
+							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID])
+							)
+
+		return errorMessage
 
 
 	def melt_data_by_groups(self,columnGroups, id = None):

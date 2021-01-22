@@ -24,7 +24,8 @@ plotTypeGraph = {
                 "lineplot"      :       ICLineplot,
                 "histogram"     :       ICHistogram,
                 "countplot"     :       ICCountplot,
-                "x-ys-plot"     :       ICXYPlot
+                "x-ys-plot"     :       ICXYPlot,
+                "dim-red-plot"  :       ICBarplot,       
                 }
 
 additionToGraph = {

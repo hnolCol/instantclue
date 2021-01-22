@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import figure
 from collections import OrderedDict
 from ..custom.ICReceiverBox import ReceiverBox
-from ..plotter.plotter import Plotter
+#from ..plotter.plotter import Plotter
 from ..plotter.plotManager import ICPlotter
 import numpy as np 
 
@@ -34,7 +34,7 @@ class MatplotlibFigure(QWidget):
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.plotter = Plotter(self,sourceData ,self.figure)
+        #self.plotter = Plotter(self,sourceData ,self.figure)
         self.ICPlotter = ICPlotter(self.mC,self.figure)
         #self.ICPlotter.graph.setData()
 
@@ -49,7 +49,6 @@ class MatplotlibFigure(QWidget):
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
         self.layout().setContentsMargins(0,0,0,0)
-
 
 
     def initiateChart(self, *args, **kwargs):
@@ -305,15 +304,15 @@ class MatplotlibFigure(QWidget):
         ""
         self.recieverBoxItemsChanged()
 
-    def updateActivePlotterFn(self,fnName,fnKwargs, updatePlot = True):
-        ""
-        activePlotter = self.plotter.get_active_helper()
-        if activePlotter is not None and hasattr(activePlotter,fnName):
-            getattr(activePlotter,fnName)(**fnKwargs)
-            if updatePlot:
-                #check if a new plot was made by setting data
-                #then update quick select items
-                self.updateFigure()
+    # def updateActivePlotterFn(self,fnName,fnKwargs, updatePlot = True):
+    #     ""
+    #     activePlotter = self.plotter.get_active_helper()
+    #     if activePlotter is not None and hasattr(activePlotter,fnName):
+    #         getattr(activePlotter,fnName)(**fnKwargs)
+    #         if updatePlot:
+    #             #check if a new plot was made by setting data
+    #             #then update quick select items
+    #             self.updateFigure()
 
     def addLine(self,lineData):
         ""

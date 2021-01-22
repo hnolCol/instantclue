@@ -7,6 +7,9 @@ from matplotlib.patches import Patch, Circle
 from matplotlib.collections import PathCollection
 from matplotlib.pyplot import scatter
 from matplotlib.text import Text
+from matplotlib.offsetbox import AnchoredText
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
@@ -20,6 +23,7 @@ from ...custom.warnMessage import WarningMessage
 
 from .charts.scatter_plotter import scatterPlot
 
+import requests
 
 
 class ICChart(QObject):
@@ -63,6 +67,38 @@ class ICChart(QObject):
 		""
 		self.annotations = None
 
+	def addAxisWithTitle(self,
+						ax,
+						appendWhere = "top", 
+						title = "Axis title", 
+						axisSize = 0.25, 
+						axisPadding=0, 
+						textSize = 9,  
+						textRotation = 90):
+		"""
+		Source:
+		https://stackoverflow.com/questions/40796117/how-do-i-make-the-width-of-the-title-box-span-the-entire-plot
+		"""
+		divider = make_axes_locatable(ax)
+		cax = divider.append_axes(appendWhere, size=axisSize, pad=axisPadding)
+		cax.get_xaxis().set_visible(False)
+		cax.get_yaxis().set_visible(False)
+		cax.set_facecolor(self.getParam("axis.title.box.background"))
+		at = AnchoredText(
+							title, 
+							loc=10,
+							frameon = False,
+                  			prop=dict(
+									backgroundcolor=(0,0,0,0), #transparent backgroundcolor
+									size=textSize, 
+									color="black", 
+									rotation = textRotation,
+									multialignment = "center"
+									)
+						)
+
+		cax.add_artist(at)
+
 	def addHoverBinding(self):
 		""
 		if self.interactive:
@@ -73,12 +109,28 @@ class ICChart(QObject):
 		if self.interactive:
 			self.onPressEvent = self.p.f.canvas.mpl_connect('button_release_event', self.onPress)
 
-	def addTitles(self):
+	def addTitles(self, fancyTitle = True, onlyForID = None, targetAx = None, *args, **kwargs):
 		""
 		if "axisTitles" in self.data and len(self.data["axisTitles"]) > 0:
 			for n,ax in self.axisDict.items():
+				if onlyForID is not None and targetAx is not None:
+					if n == onlyForID:
+						ax = targetAx
+					else:
+						continue
 				if n in self.data["axisTitles"]:
-					self.setAxisTitle(ax,self.data["axisTitles"][n])
+					if isinstance(self.data["axisTitles"][n],dict):
+
+						self.addAxisWithTitle(ax,**self.data["axisTitles"][n])
+					
+					elif isinstance(self.data["axisTitles"][n],list):
+						for titleProps in self.data["axisTitles"][n]:
+							self.addAxisWithTitle(ax,**titleProps)
+
+					elif fancyTitle:
+						self.addAxisWithTitle(ax,title=self.data["axisTitles"][n],textRotation=0, *args, **kwargs)
+					else:
+						self.setAxisTitle(ax,self.data["axisTitles"][n], *args, **kwargs)
 
 
 	def annotateDataByIndex(self,dataIndex,annotationColumn):
@@ -86,9 +138,10 @@ class ICChart(QObject):
 		if isinstance(annotationColumn,str):
 			annotationColumn = pd.Series([annotationColumn])
 		self.addAnnotations(annotationColumn, self.mC.getDataID())
-		for annotationClass in self.annotations.values():
-			annotationClass.addAnnotations(dataIndex)
-		self.updateFigure.emit()
+		if self.annotations is not None and isinstance(self.annotations,dict):
+			for annotationClass in self.annotations.values():
+				annotationClass.addAnnotations(dataIndex)
+			self.updateFigure.emit()
 
 	def onPress(self,event):
 		""
@@ -103,6 +156,7 @@ class ICChart(QObject):
 				self.createAndShowMenu()
 			elif event.inaxes in list(self.axisDict.values()) and event.button == 1 and self.statTestEnabled and self.isBoxplotViolinBar():
 				axisID = self.getAxisID(event.inaxes)	
+				
 				#data are provided differently for boxplot, violin and barplot due to the matplotlib functions			
 				if self.isBoxplot():
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["positions"],event.xdata)
@@ -142,6 +196,7 @@ class ICChart(QObject):
 		menus = createSubMenu(subMenus=graphIndendentSubMenus + graphDepSubMenus)
 		
 		self.addMainFigActions(menus)
+		self.addAppActions(menus)
 		self.addMenuActions(menus)
 		self.addGraphSpecActions(menus)
 		pos = QCursor.pos()
@@ -167,11 +222,11 @@ class ICChart(QObject):
 		
 		elif "axisID" in self.statData and self.statData["axisID"] != axisID:
 			self.statData.clear() 
-			self.setStatIndicatorIvisible()
+			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			
 		elif "idx" in self.statData and self.statData["idx"] == dataIdx:
 			self.statData.clear() 
-			self.setStatIndicatorIvisible()
+			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			self.updateFigure.emit()
 			w = WarningMessage(infoText="Same data selected. Selection reset.")
 			w.exec_()
@@ -196,16 +251,17 @@ class ICChart(QObject):
 
 	def drawStatIndicator(self,ax,xdata,ydata):
 		""
-		if not hasattr(self,"statIndicatorLine"):
-			self.statIndicatorLine = ax.plot([xdata],[ydata],marker="x",markeredgewidth=2, markeredgecolor="red")[0]
+		if not hasattr(self,"statIndicatorLine") or ax not in self.statIndicatorLine:
+			self.statIndicatorLine = {}
+			self.statIndicatorLine[ax] = ax.plot([xdata],[ydata],marker="x",markeredgewidth=2, markeredgecolor="red")[0]
 		else:
-			self.statIndicatorLine.set_data([xdata],[ydata])
-			self.statIndicatorLine.set_visible(True)
+			self.statIndicatorLine[ax].set_data([xdata],[ydata])
+			self.statIndicatorLine[ax].set_visible(True)
 
-	def setStatIndicatorIvisible(self):
+	def setStatIndicatorIvisible(self,ax):
 		""
 		if hasattr(self,"statIndicatorLine"):
-			self.statIndicatorLine.set_visible(False)
+			self.statIndicatorLine[ax].set_visible(False)
 
 
 	def checkDublicateTests(self):
@@ -255,7 +311,7 @@ class ICChart(QObject):
 
 	def drawStats(self, ax, p , internalID, axisID):
 		""
-		self.setStatIndicatorIvisible()
+		self.setStatIndicatorIvisible(ax)
 		lineCoords, midXPoint, maxYPoint = self.getLineCoordsForStats(ax)
 		if lineCoords is not None:
 			#setup line
@@ -351,7 +407,7 @@ class ICChart(QObject):
 	
 	def getSubMenus(self):
 		""
-		return ["To main figure"]
+		return ["To main figure","To WebApp"]
 
 	def addMainFigActions(self,menu):
 		""
@@ -360,6 +416,28 @@ class ICChart(QObject):
 			 
 		except Exception as e:
 			print(e)
+
+	def addAppActions(self,menus):
+		""
+		loggedIn, userProjects = self.mC.getUserLoginInfo()
+		if loggedIn and "To WebApp" in menus:
+			for project in userProjects:
+				projectName = project["name"]
+				action = menus["To WebApp"].addAction(projectName)
+				action.triggered.connect(lambda chk, projectParams = project: self.sendToWebApp(projectParams))
+		else:
+			menus["To WebApp"].addAction("Login")
+
+	def sendToWebApp(self, projectParams):
+		""
+		print(projectParams)
+		self.mC.sendTextEntryToWebApp(projectParams["ID"],"# Start","## Q: I would like to answer the question of how mitoch. are regulated.")
+		# d = self.data.copy() 
+
+		
+		# URL = "http://127.0.0.1:5000/api/v1/projects"
+		# r = requests.post(URL,json=projectParams)
+		# print(r) 
 
 	def addMenuActions(self, menus):
 		""
@@ -454,10 +532,15 @@ class ICChart(QObject):
 	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
 		""
 		try:
+			if colorData.index.size > 200:
+				w = WarningMessage(title="To many items for legend.",
+								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
+				w.exec_()	
+				return			
 			if ignoreNaN:
 				idx = colorData["color"] != self.getParam("nanColor")
 				colorData = colorData.loc[idx]
-			if self.plotType in ["scatter","swarmplot"]:
+			if self.plotType in ["scatter","swarmplot","hclust"]:
 				scatterKwargs = self.getScatterKwargForLegend()
 
 				legendItems = [scatter([],[],
@@ -472,7 +555,10 @@ class ICChart(QObject):
 			if title is None and "colorCategoricalColumn" in self.data:
 				title = self.data["colorCategoricalColumn"]
 			if ax is None:
-				ax = self.axisDict[0]
+				if self.plotType and "axLabelColor" in self.axisDict:
+					ax = self.axisDict["axLabelColor"]
+				else:
+					ax = self.axisDict[0]
 			if not export and hasattr(self,"colorLegend"):
 				self.colorLegend.remove() 
 			legend = ax.legend(handles=legendItems, 
@@ -498,7 +584,12 @@ class ICChart(QObject):
 
 		if self.plotType in ["scatter","swarmplot"]:
 			scatterKwargs = self.getScatterKwargForLegend()
-			
+
+			if markerData.index.size > 200:
+				w = WarningMessage(title="To many items for legend.",
+								infoText = "More than 200 items for legend which is not supported.")
+				w.exec_()	
+				return			
 			if "marker" in scatterKwargs:
 				del scatterKwargs["marker"]
 				scatterKwargs["color"] = self.getParam("nanColor")
@@ -525,6 +616,40 @@ class ICChart(QObject):
 			if update:
 				self.updateFigure.emit() 
 			return legend
+
+	def addVerticalLines(self, onlyForID = None, targetAx = None):
+		""
+		if "verticalLines" in self.data:
+			for n,linesProps in self.data["verticalLines"].items():
+				if n in self.axisDict and onlyForID is None:
+					ax = self.axisDict[n]
+				elif onlyForID is not None and targetAx is not None:
+					if onlyForID == n:
+						ax = targetAx
+					else:
+						continue
+				inv = self.axisDict[n].transLimits.inverted() #using the original axis for
+				xOffset,yText = inv.transform((0.01, 0.99))
+				
+				for lineProps in linesProps:
+					ax.axvline(**lineProps)
+					ax.text(x=lineProps["x"] + xOffset, 
+							y=yText, 
+							s=lineProps["label"], 
+							fontproperties = self.getStdFontProps(),
+							horizontalalignment = "left" , 
+							verticalalignment = "top", 
+							rotation = 90, 
+							linespacing=1.1)
+
+	def addLineByArray(self,x,y):
+		""
+		for _,ax in self.axisDict.items():
+			l = Line2D(xdata = x, ydata = y, lw=0.75, color = INSTANT_CLUE_BLUE)
+			ax.add_artist(l)
+			lineID = getRandomString()
+			self.extraArtists[lineID] = {"artist":l,"color":INSTANT_CLUE_BLUE,"name":"Line({})".format(lineID)}
+		self.updateFigure.emit()
 
 	def addQuadrantLines(self, quadrantCoords):
 		""
@@ -556,6 +681,11 @@ class ICChart(QObject):
 
 			#if title is None and "colorCategoricalColumn" in self.data:
 			#	title = self.data["colorCategoricalColumn"]
+			if sizeData.index.size > 200:
+				w = WarningMessage(title="To many items for legend.",
+								infoText = "More than 200 items for legend which is not supported.")
+				w.exec_()	
+				return			
 			scatterKwargs = self.getScatterKwargForLegend(legendType="size")
 			legendItems = [scatter(
 							[], [],
@@ -1022,6 +1152,12 @@ class ICChart(QObject):
 					'visible':False,
 					'zorder':1e9}
 		return textProps
+	
+	def getStdFontProps(self):
+		"Returns standard font props"
+		return FontProperties(
+					family=self.getParam("annotationFontFamily"),
+					size = self.getParam("annotationFontSize"))
 
 	def getYlim(self,ax,offset = 0, mult = 1):
 		""

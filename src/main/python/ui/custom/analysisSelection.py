@@ -133,6 +133,35 @@ class AnalysisSelection(QWidget):
                     graph.addDiagonal()
                     graph.updateFigure.emit()
 
+            elif task in ["Line from file","Line from clipboard"]:
+
+                if exists:
+                    if task == "Line from clipboard":
+                        try:
+                            data = pd.read_clipboard()
+                        except:
+                            self.mC.sendMessageRequest({"title":"Error..","message":"No suitable data found in clipboard"})
+                    elif task == "Line from file":
+                        dlg = QFileDialog(caption="Select File for Line data",
+                                filter = "ICLoad Files (*.txt *.csv *tsv );;Text files (*.txt *.csv *tsv)")
+                        dlg.setFileMode(QFileDialog.ExistingFiles)
+                        if dlg.exec_():
+                            fileName = dlg.selectedFiles()[0]
+                            data = pd.read_csv(fileName,sep="\t")
+                        else:
+                            return 
+
+                    if data.shape[1] == 2 and data.shape[0] > 1:
+
+                        x = data.values[:,0]
+                        y = data.values[:,1]
+
+                        graph.addLineByArray(x,y)
+                    
+                    else:
+                        
+                        self.mC.sendMessageRequest({"title":"Error","message":"Data must have two columns and more than 1 row. Found data shape: {}:{}\nColumn headers are expected.".format(data.index.size,data.columns.size)})
+
             elif task in ["linear fit","lowess"]:
                
                 if exists and graph.hasScatters():

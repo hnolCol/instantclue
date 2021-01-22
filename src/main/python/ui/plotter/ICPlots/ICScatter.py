@@ -24,9 +24,14 @@ class ICScatterPlot(ICChart):
                 columnPair = self.data["columnPairs"][n]
               
                 numericColumns = pd.Series(list(columnPair))
-                columnNames = labelColumnNames.append(numericColumns,ignore_index=True)
+                #if columns present, no need to add them to the data.
+                labelColumnNamesNotInData = [colName for colName in labelColumnNames if colName not in labelColumnNames]
+                #columnNames = labelColumnNames.append(numericColumns,ignore_index=True)
+                if len(labelColumnNamesNotInData) > 0:
+                    data = self.mC.data.getDataByColumnNames(dataID,labelColumnNamesNotInData)["fnKwargs"]["data"]
+                    plotData = self.scatterPlots[columnPair].data
+                    data = plotData.join(data)
                
-                data = self.mC.data.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
                 self.annotations[columnPair] = ICScatterAnnotations(
                                 parent = self,
                                 plotter = self.p,
@@ -37,7 +42,7 @@ class ICScatterPlot(ICChart):
                                 scatterPlots = self.scatterPlots,
                                 labelInAllPlots = self.getParam("annotate.in.all.plots")
                                 )
-           
+          
             labelData = pd.DataFrame() 
             labelData["columnName"] = labelColumnNames
             self.setDataInLabelTable(labelData,title="Annotation Labels")
@@ -124,13 +129,19 @@ class ICScatterPlot(ICChart):
                         interactive = False
                         )
         
+        
     def onDataLoad(self, data):
         ""
         self.data = data
         self.initAxes(data["axisPositions"])
         self.initScatterPlots()
-        self.setAxisLabels(self.axisDict,self.data["axisLabels"])
-        
+
+        if "axisLabels" in self.data:
+            self.setAxisLabels(self.axisDict,self.data["axisLabels"])
+
+        if "axisTitles" in self.data:
+            self.addTitles(data["axisTitles"])
+
         qsData = self.getQuickSelectData()
         if qsData is not None:
             self.mC.quickSelectTrigger.emit()

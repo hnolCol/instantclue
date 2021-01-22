@@ -13,13 +13,105 @@ from ..dialogs.ICColorChooser import ColorChooserDialog
 from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings
 from ..dialogs.numericalFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage
-from ..utils import createSubMenu
+from ..utils import createSubMenu, createLabel
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR
-
+import seaborn as sns
 from backend.utils.stringOperations import mergeListToString
 #selection sqaure size in percentage of axis limits
 selectValueMatch = {"Single":0,"small (2%)":0.02,"middle (5%)":0.05,"huge (10%)":0.1,"extra huge (15%)":0.15}
 
+class ThreadCircle(QWidget):
+    def __init__(self, parent=None):
+        super(ThreadCircle, self).__init__(parent)
+        self.setFixedSize(QSize(30,30))
+        self._circleColor = 0
+        self._colors = sns.color_palette("RdYlBu",n_colors=60).as_hex()
+        self.animation = QPropertyAnimation(self, b"circleColor", self)
+        self.animation.setKeyValueAt(0,1)
+        self.animation.setKeyValueAt(0.5,59)
+        self.animation.setKeyValueAt(1,1)
+        #self.animation.setStartValue(0)
+        #self.animation.setEndValue(9)
+        self.animation.setLoopCount(-1)
+        self.animation.setDuration(8000)
+        self.animation.start()
+
+
+
+    @pyqtProperty(int)
+    def circleColor(self):
+        return self._circleColor
+
+    @circleColor.setter
+    def circleColor(self, value):
+        self._circleColor = value
+        self.update()
+
+    def paintEvent(self, ev=None):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing,True)
+        c = QColor(self._colors[self._circleColor])
+        painter.setBrush(c)
+        pen = QPen(QColor("black"))
+        pen.setWidthF(0.5)
+        painter.setPen(pen)
+        painter.drawEllipse(15,15,13,13)
+
+
+
+class ThreadWidget(QWidget):
+    def __init__(self, parent=None):
+        super(ThreadWidget, self).__init__(parent)
+
+
+        self.maxThreads = 1
+        self.activeThreads = dict() 
+        self.__controls()
+        self.__layout() 
+
+
+    def __controls(self):
+        ""
+        self.mainText = createLabel("Threads")
+
+    def __layout(self):
+        ""
+
+        self.setFixedHeight(80)
+        self.setLayout(QVBoxLayout())
+        
+        self.threadCircleLayout = QHBoxLayout()
+        self.threadCircleLayout.setContentsMargins(0,0,0,0)
+        self.layout().setAlignment(Qt.AlignLeft)
+        #self.layout().setVerticalSpacing(1)
+        self.layout().addWidget(self.mainText)
+        self.layout().addLayout(self.threadCircleLayout)
+        self.layout().addStretch()
+
+    def addActiveThread(self,ID, fnKey):
+        ""
+        self.activeThreads[ID] = ThreadCircle()
+        self.activeThreads[ID].setToolTip("Task: {}\nID: {}".format(fnKey,ID))
+        self.threadCircleLayout.addWidget(self.activeThreads[ID])
+        self.updateThreadText()
+        
+        
+    def setMaxThreadNumber(self,n):
+        ""
+        self.maxThreads = n
+        self.updateThreadText()
+    
+    def threadFinished(self, ID):
+        ""
+        self.layout().removeWidget(self.activeThreads[ID])
+        self.activeThreads[ID].deleteLater()
+        del self.activeThreads[ID]
+        self.updateThreadText()
+    
+    def updateThreadText(self):
+        ""
+        self.mainText.setText("Threads ({}/{})".format(len(self.activeThreads),self.maxThreads))
+        
 
 class SliceMarksFrame(QWidget):
     def __init__(self,parent=None, mainController = None):
@@ -85,6 +177,9 @@ class SliceMarksFrame(QWidget):
         self.statisticTable = ICStatisticTable(mainController=self.mC)
         self.markerTable = ICMarkerTable(mainController=self.mC)
 
+        self.threadWidget = ThreadWidget()
+        
+
     def __layout(self):
         ""
 
@@ -122,6 +217,9 @@ class SliceMarksFrame(QWidget):
         self.layout().addWidget(self.statisticTable)
         #self.layout().addStretch(1)
         self.layout().setAlignment(Qt.AlignTop)
+        self.layout().addStretch()
+        self.layout().addWidget(self.threadWidget)
+        #self.layout().addWidget(self.spinner)
 
     def __connectEvents(self):
         ""
@@ -201,6 +299,8 @@ class SliceMarksFrame(QWidget):
             fkey = "plotter:getScatterColorGroups"
         elif plotType == "hclust":
             fkey = "plotter:getHclustColorGroups"
+        elif plotType == "swarmplot":
+            fkey = "plotter:getSwarmColorGroups"
         else:
             return
         columnNames = self.mC.mainFrames["data"].getDragColumns()

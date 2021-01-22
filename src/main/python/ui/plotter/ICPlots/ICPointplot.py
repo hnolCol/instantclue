@@ -32,7 +32,6 @@ class ICPointplot(ICChart):
                         self.pointplotItems[internalID].append(line)
                         self.axisDict[n].add_artist(line)
         except Exception as e:
-            print("h?")
             print(e)
 
     def onDataLoad(self, data):

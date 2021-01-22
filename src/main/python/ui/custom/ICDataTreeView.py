@@ -23,28 +23,31 @@ dataTypeSubMenu = {
                 "Filter",
                 "Clustering",
                 "Model Fitting",
-                "Group Comparison"]),
-        ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction"]),
+                "Group Comparison",
+                ]),
+        ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize"]),
         ("Data Format Transformation",[]),
         ("Filter",["NaN Filter","Outlier"]),
         ("Clustering",["k-means"]),
         ("Smoothing",["Aggregate rows ..","Rolling window .."]),
         ("Density Estimation", ["Kernel Density"]),
-        ("Column operation ..", ["Change data type to ..","Replace NaN by .."]),
+        ("Column operation ..", ["Change data type to ..","Missing values (NaN)"]),
         ("Feature Selection", ["Model ..","Recursive Elimination .."]),
         ("Model Fitting",["Kinetic"]),
+        ("Missing values (NaN)",["Replace NaN by .."]),
         ("Replace NaN by ..",["Iterative Imputer"]),
-        ("Group Comparison",["Pairwise Tests"])
+        ("Group Comparison",["Pairwise Tests","Multiple Groups","Summarize Groups"])
         ],
     "Integers" : [
         ("main",["Column operation ..","Sorting"]),
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
-        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter"]),
+        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]),
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("String operation",["Split on .."]),
         ("Filter",["To QuickSelect .."]),
+        ("(Prote-)omics-toolkit", ["Match to db.."])
         ]
 }
 
@@ -71,11 +74,18 @@ menuBarItems = [
         "fnKwargs":{"test":"welch-test"}
     },
     {
-        "subM":"Group Comparison",
+        "subM":"Multiple Groups",
         "name":"1W-ANOVA",
         "funcKey": "compareGroups",
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"1W-ANOVA"}
+    },
+        {
+        "subM":"Multiple Groups",
+        "name":"2W-ANOVA",
+        "funcKey": "compareGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"test":"2W-ANOVA"}
     },
     {
         "subM":"Pairwise Tests",
@@ -84,6 +94,35 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"euclidean"}
     },
+    {
+        "subM":"Summarize Groups",
+        "name":"min",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"min"}
+    },
+    {
+        "subM":"Summarize Groups",
+        "name":"mean",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"mean"}
+    },
+    {
+        "subM":"Summarize Groups",
+        "name":"median",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"median"}
+    },
+    {
+        "subM":"Summarize Groups",
+        "name":"max",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"max"}
+    },
+    
     {
         "subM":"Logarithmic",
         "name":"ln",
@@ -118,6 +157,49 @@ menuBarItems = [
         "funcKey": "transformer::transformData",
         "dataType": "Numeric Floats",
         "fnKwargs":{"transformKey":"logarithmic","base":"-log10"}
+    },
+    
+    {
+        "subM":"Summarize",
+        "name":"max",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"max"}
+    },
+    {
+        "subM":"Summarize",
+        "name":"75% quantile",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"quantile","q":0.75}
+    },
+    {
+        "subM":"Summarize",
+        "name":"mean",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"mean"}
+    },
+    {
+        "subM":"Summarize",
+        "name":"50% quantile (median)",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"median"}
+    },
+    {
+        "subM":"Summarize",
+        "name":"25% quantile",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"quantile","q":0.25}
+    },
+    {
+        "subM":"Summarize",
+        "name":"min",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"min"}
     },
     {
         "subM":"Kernel Density",
@@ -298,7 +380,7 @@ menuBarItems = [
         "subM":"Change data type to ..",
         "name":"Categories",
         "funcKey": "data::changeDataType",
-        "fnKwargs": {"newDataType":"object"},
+        "fnKwargs": {"newDataType":"str"},
         "dataType": ["Numeric Floats","Integers"]
     },
     {
@@ -332,6 +414,13 @@ menuBarItems = [
         "funcKey": "data::factorizeColumns",
         "dataType": "Categories",
     },
+    {
+        "subM":"Missing values (NaN)",
+        "name":"Count",
+        "funcKey": "data::countNaN",
+        "dataType": "Numeric Floats",
+    },
+    
     {
         "subM":"NaN Filter",
         "name":"Any == NaN",
@@ -1005,7 +1094,9 @@ class DataTreeModel(QAbstractTableModel):
         if not index.isValid(): 
             return QVariant()
         elif role == Qt.DisplayRole and index.column() == 0: 
-            return str(self._labels.iloc[index.row()])
+            rowIndex = index.row() 
+            if rowIndex >= 0 and rowIndex < self._labels.index.size:
+                return str(self._labels.iloc[index.row()])
         elif role == Qt.FontRole and index.column() == 0:
             font = QFont()
             font.setFamily("Arial")
@@ -1381,7 +1472,7 @@ class DataTreeViewTable(QTableView):
         try:
             #print(test)
             #print(self.mC.grouping.groupingExists())
-            if not self.mC.grouping.groupingExists():
+            if False and not self.mC.grouping.groupingExists():
                 w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.")
                 w.exec_()
                 return
@@ -1390,6 +1481,22 @@ class DataTreeViewTable(QTableView):
                 dlg.exec_()
         except Exception as e:
             print(e)
+
+    def summarizeGroups(self,event=None, metric = "min"):
+        ""
+        if not self.mC.grouping.groupingExists():
+            w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.")
+            w.exec_()
+            return
+        print("summarize groups")
+        
+        funcProps = {"key":"data::summarizeGroups",
+                    "kwargs":{
+                        "metric":metric,
+                        "grouping":self.mC.grouping.getCurrentGrouping()}}
+        self.sendToThread(funcProps,addDataID = True)
+
+
 
     def createGroups(self, event=None,**kwargs):
         ""

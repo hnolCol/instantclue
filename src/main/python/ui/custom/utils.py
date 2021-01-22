@@ -2,11 +2,12 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont
+from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu
+from .buttonDesigns import LabelLikeButton
 import numpy as np
 
 INSTANT_CLUE_ANAYLSIS = [
-    {"Model":["Axes Diagonal","Line (slope=1)","Line (y = m*x + b)","Quadrant Lines","Line from file","lowess","linear fit"]},
+    {"Model":["Axes Diagonal","Line (slope=1)","Line (y = m*x + b)","Quadrant Lines","Line from file","Line from clipboard","lowess","linear fit"]},
     {"Compare two groups":["t-test","Welch-test","Wilcoxon","(Whitney-Mann) U-test"]},
     {"Compare multiple groups":["1W-ANOVA","1W-ANOVA (rep. measures)"]},
    # {"Dimensional Reduction":}
@@ -14,6 +15,13 @@ INSTANT_CLUE_ANAYLSIS = [
     {"Cluster Analysis":["k-means","DBSCAN","Birch","Affinity Propagation","Agglomerative Clustering"]}
 ]
 
+
+def clearLayout(layout):
+    "Clears all widgets from layout"
+    while layout.count():
+        child = layout.takeAt(0)
+        if child.widget():
+            child.widget().deleteLater()
 
 class QHLine(QFrame):
     def __init__(self,parent=None):
@@ -59,9 +67,7 @@ class QToggle(QPushButton):
         painter.drawEllipse(QRect(-width, -radius/2, radius, radius))
         
         sw_rect = QRect(-radius, -radius, width + radius, 2*radius)
-       # if not self.isChecked():
-        #    sw_rect.moveLeft(-width)
-       # painter.drawRoundedRect(sw_rect, radius, radius)
+      
         painter.setFont(getStandardFont())
         painter.drawText(sw_rect, Qt.AlignVCenter, label)
 
@@ -73,8 +79,7 @@ class PropertyChooser(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
         self.setLayout(QGridLayout())
         self.layout().setContentsMargins(2,1,2,1)
-       # self.layout().setAlignment(Qt.AlignLeft)
-
+      
     def addItem(self,boxItem):
         ""
         self.layout().addWidget(boxItem)
@@ -139,10 +144,35 @@ class PropertyChooser(QWidget):
                 p.updateAttrInParent()
 
 
+class LabelLikeCombo(LabelLikeButton):
+    selectionChanged = pyqtSignal(tuple)
+    def __init__(self,items, *args,**kwargs):
 
-def clearLayout(layout):
-    "Clears all widgets from layout"
-    while layout.count():
-        child = layout.takeAt(0)
-        if child.widget():
-            child.widget().deleteLater()
+        
+        super(LabelLikeCombo,self).__init__(*args,**kwargs)
+        self.items = items
+        self.addMenu()
+        self.clicked.connect(self.castMenu)
+    
+    def addMenu(self):
+        ""
+        self.menu = createMenu()
+        for itemID, itemName in self.items.items():
+                action = self.menu.addAction(itemName)
+                action.triggered.connect(lambda _, ID = itemID,text = itemName : self.emitSignal(ID,text))
+
+    def castMenu(self):
+        #reset button
+        self.mouseOver = False
+        #find menu position
+        senderGeom = self.geometry()
+        topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
+        #cast menu
+        self.menu.exec_(topLeft)
+           
+    def emitSignal(self,itemID,itemText):
+        ""
+        self.setText(itemText)
+        self.selectionChanged.emit((itemID,itemText))
+       
+      

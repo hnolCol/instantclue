@@ -65,7 +65,8 @@ class PandaTableDialog(QDialog):
 
     def __connectEvents(self):
         ""
-        self.closeButton.clicked.connect(self.close)
+        if hasattr(self,"closeButton"):
+            self.closeButton.clicked.connect(self.close)
 
     def sendMessage(self, messageProps):
         ""

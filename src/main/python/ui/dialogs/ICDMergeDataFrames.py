@@ -3,9 +3,10 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit, createMenu
+from ..custom.utils import LabelLikeCombo
 from .ICDSelectItems import ICDSelectItems
 from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
-
+from ..custom.warnMessage import WarningMessage
 import pandas as pd 
 from collections import OrderedDict
 
@@ -24,38 +25,6 @@ descriptionMerge = ['full outer: Use union of keys from both frames\n'+
                 'right out.: Use keys from right frame only']
 
 
-class LabelLikeCombo(LabelLikeButton):
-    selectionChanged = pyqtSignal(tuple)
-    def __init__(self,items, *args,**kwargs):
-
-        
-        super(LabelLikeCombo,self).__init__(*args,**kwargs)
-        self.items = items
-        self.addMenu()
-        self.clicked.connect(self.castMenu)
-    
-    def addMenu(self):
-        ""
-        self.menu = createMenu()
-        for itemID, itemName in self.items.items():
-                action = self.menu.addAction(itemName)
-                action.triggered.connect(lambda _, ID = itemID,text = itemName : self.emitSignal(ID,text))
-
-    def castMenu(self):
-        #reset button
-        self.mouseOver = False
-        #find menu position
-        senderGeom = self.geometry()
-        topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
-        #cast menu
-        self.menu.exec_(topLeft)
-           
-    def emitSignal(self,itemID,itemText):
-        ""
-        self.setText(itemText)
-        self.selectionChanged.emit((itemID,itemText))
-       
-      
 class ICDMergeDataFrames(QDialog):
     def __init__(self, mainController, *args, **kwargs):
         super(ICDMergeDataFrames, self).__init__(*args, **kwargs)
@@ -100,20 +69,28 @@ class ICDMergeDataFrames(QDialog):
        
     def __connectEvents(self):
         """Connect events to functions"""
-        
+        self.cancelButton.clicked.connect(self.close)
+        self.okButton.clicked.connect(self.merge)
         
     def addDataFrame(self, dfID = "left"):
         ""
         hbox = QHBoxLayout()
         #data frame selection widgets
-        dataFrameLabel = LabelLikeCombo(parent = self, items = self.mC.data.fileNameByID, text = "Data Frame 1", tooltipStr="Set Data Frame", itemBorder=5)
+        dataFrameLabel = LabelLikeCombo(parent = self, 
+                                        items = self.mC.data.fileNameByID, 
+                                        text = "Data Frame ({})".format(dfID), 
+                                        tooltipStr="Set Data Frame", 
+                                        itemBorder=5)
         dataFrameLabel.selectionChanged.connect(self.dfSelected)
 
         #index columns selection
-        mergeColumns = LabelLikeButton(parent = self, text = "Choose column(s)", tooltipStr="Choose column(s) used for merging", itemBorder=5)
+        mergeColumns = LabelLikeButton(parent = self, 
+                        text = "Choose key column(s)", 
+                        tooltipStr="Choose key column(s) used for merging\nValue must match in both data frames.", 
+                        itemBorder=5)
         mergeColumns.clicked.connect(lambda _,paramID = "mergeColumns": self.openColumnSelection(paramID=paramID))
         
-        columnsButton = ICStandardButton(itemName = "...", tooltipStr="Select columns to keep for merging.")
+        columnsButton = ICStandardButton(itemName = "...", tooltipStr="Select columns to keep for merging (default: keep all).")
         columnsButton.setFixedSize(15,15)    
         columnsButton.clicked.connect(lambda _,paramID = "selectedColumns": self.openColumnSelection(paramID=paramID))
         #FilterTypeMenu
@@ -135,15 +112,15 @@ class ICDMergeDataFrames(QDialog):
             grid = QGridLayout()
             paramTitle = createTitleLabel("Parameters",fontSize=11)
             howLabel = createLabel(text="How : ",tooltipText=descriptionMerge[0], fontSize = 12)
-            howButton = LabelLikeCombo(parent = self, items = mergeParameters["how"], text = "left", tooltipStr="Set data frame merge.", itemBorder=5)
+            self.howCombo = LabelLikeCombo(parent = self, items = mergeParameters["how"], text = "left", tooltipStr="Set data frame merge.", itemBorder=5)
             indicatorLabel = createLabel(text="Indicator : ",tooltipText="", fontSize = 12)
-            indicatorButton = LabelLikeCombo(parent = self, items = mergeParameters["indicator"], text = "True", tooltipStr="Adds an indicator for matches.", itemBorder=5)
+            self.indicatorCombo = LabelLikeCombo(parent = self, items = mergeParameters["indicator"], text = "True", tooltipStr="Adds an indicator for matches.", itemBorder=5)
             
             grid.addWidget(paramTitle,0,0,1,3,Qt.AlignLeft)
             grid.addWidget(howLabel,1,0,Qt.AlignRight)
-            grid.addWidget(howButton,1,1)
+            grid.addWidget(self.howCombo,1,1)
             grid.addWidget(indicatorLabel,2,0,Qt.AlignRight)
-            grid.addWidget(indicatorButton,2,1)
+            grid.addWidget(self.indicatorCombo,2,1)
 
         except Exception as e:
             print(e)
@@ -173,12 +150,27 @@ class ICDMergeDataFrames(QDialog):
                 dfID = "right"
             return dfID
 
+    def merge(self,e=None):
+        ""
+        
+        funcProps = {"key":"data::mergeDataFrames","kwargs":
+                            {
+                                "mergeParams":self.mergeParams,
+                                "how": self.howCombo.getText(),
+                                "indicator":self.indicatorCombo.getText() == "True"}
+                    }
+        self.mC.sendRequestToThread(funcProps)
+
     def openColumnSelection(self,event=None, paramID = None):
         ""
         try:
             dfID = self.getDfID(self.sender())
             if dfID in self.mergeParams:
                 dfProps = self.mergeParams[dfID]
+                if "columnNames" not in dfProps:
+                    w = WarningMessage(title = "No data frame.", infoText = "Please select a dataframe first.")
+                    w.exec_()
+                    return
                 selectableColumns = pd.DataFrame(dfProps["columnNames"])
                 preSelectionIdx = dfProps[paramID].index
             
@@ -194,6 +186,8 @@ class ICDMergeDataFrames(QDialog):
                 #handle result
                 if dlg.exec_():
                     selectedColumns = dlg.getSelection()
-                    self.mergeParams[dfID][paramID] = selectedColumns
+                    self.mergeParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0])
+           
+                
         except Exception as e:
             print(e)

@@ -228,12 +228,14 @@ class PushHoverButton(QPushButton):
                       funcKey = None, 
                       text = None,
                       callback = None, 
+                      txtColor = "black",
                       tooltipStr = None):
         super(PushHoverButton,self).__init__(parent)
 
         self.mouseOver = False
         self.funcKey = funcKey
         self.callback = callback
+        self.txtColor = txtColor
         self.getDragType = getDragType
         self.setAcceptDrops(acceptDrops)
         self.acceptedDragTypes = acceptedDragTypes
@@ -245,7 +247,7 @@ class PushHoverButton(QPushButton):
     def paintEvent(self,event):
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(self.txtColor))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)
@@ -359,6 +361,11 @@ class PushHoverButton(QPushButton):
         """
         self.mouseOver = False
         self.update()
+    
+    def setTxtColor(self,color):
+        ""
+        self.txtColor = color
+        self.update() 
 
 
 class LabelLikeButton(PushHoverButton):
@@ -397,12 +404,18 @@ class LabelLikeButton(PushHoverButton):
         font = self.getStandardFont(self.fontSize)    
         self.width = QFontMetrics(font).width(self.text) + 2 * self.itemBorder
         self.height = QFontMetrics(font).height() + self.itemBorder
+    
+    def getText(self):
+        ""
+        return self.text
 
     def setText(self,text):
         ""
         self.text = text
         self.updateSize()
         self.update()
+    
+    
 
  
 
@@ -1796,19 +1809,20 @@ class PlotTypeButton(PushHoverButton):
 
         super(PlotTypeButton,self).__init__(parent,**kwargs)
         self.plotType = plotType
-        self.funcKeyDict = {"scatter":self.drawScatterPoints,
-                            "boxplot":self.drawBoxes,
-                            "hclust":self.drawHeatmap,
-                            "countplot":self.drawCountPlot,
-                            "barplot":self.drawBars,
-                            "lineplot":self.drawLines,
-                            "pointplot":self.drawPoint,
-                            "histogram":self.drawHistogram,
-                            "swarmplot":self.drawSwarm,
-                            "corrmatrix":self.drawCorrMatrix,
-                            "countplot":self.drawCountPlot,
-                            "x-ys-plot":self.drawXYPlot,
-                            "addSwarmplot":self.drawSwarmAdd}
+        self.funcKeyDict = {"scatter"       :   self.drawScatterPoints,
+                            "boxplot"       :   self.drawBoxes,
+                            "hclust"        :   self.drawHeatmap,
+                            "countplot"     :   self.drawCountPlot,
+                            "barplot"       :   self.drawBars,
+                            "lineplot"      :   self.drawLines,
+                            "pointplot"     :   self.drawPoint,
+                            "histogram"     :   self.drawHistogram,
+                            "swarmplot"     :   self.drawSwarm,
+                            "corrmatrix"    :   self.drawCorrMatrix,
+                            "countplot"     :   self.drawCountPlot,
+                            "x-ys-plot"     :   self.drawXYPlot,
+                            "addSwarmplot"  :   self.drawSwarmAdd,
+                            "dim-red-plot"  :   self.drawDimRed}
 
     def paintEvent(self,event, noAxis = False):
         ""
@@ -2014,7 +2028,27 @@ class PlotTypeButton(PushHoverButton):
             pen = QPen(QColor(defaultColors[n]))
             qp.setPen(pen)
             qp.drawPath(path)
-                
+
+    def drawDimRed(self,qp, height, width, rectX, rectY):
+        ""
+        
+        w8 = width/8
+        points = [
+                    (rectX+w8,rectY+w8),
+                    (rectX+w8*1.2,rectY+w8*0.2),
+                    (rectX+w8,rectY+height-w8),
+                    (rectX+w8*1.2, rectY + height - w8*1.5),
+                    (rectX + width/1.2, rectY+height/2 - w8*0.2),
+                    (rectX+ width/1.1,rectY+height/2 + w8*0.5)
+
+                ]
+        colors = ["#A0D4CB","#A0D4CB",INSTANT_CLUE_BLUE,INSTANT_CLUE_BLUE,"white","white"]
+        for n, (x,y) in enumerate(points):
+            b = QBrush(QColor(colors[n]))
+            qp.setBrush(b)
+            xy = QPointF(x,y) 
+            qp.drawEllipse(xy,3,3)
+
 
     def drawScatterPoints(self,qp, height, width, rectX, rectY):
         b = QBrush(QColor("lightgrey"))

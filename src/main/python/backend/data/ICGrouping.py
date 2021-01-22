@@ -129,6 +129,11 @@ class ICGrouping(object):
     def getGroupings(self):
         "Get Grouping Names"
         return list(self.groups.keys())
+    
+    def getGrouping(self,groupingName):
+        ""
+        if groupingName in self.groups:
+            return self.groups[groupingName]
 
     def getGroupColors(self):
         ""

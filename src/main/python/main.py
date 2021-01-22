@@ -16,6 +16,7 @@ from backend.data.ICDataManager import ICDataManger
 from backend.filter.categoricalFilter import CategoricalFilter
 from backend.utils.funcControl import funcPropControl
 from backend.utils.misc import getTxtFilesFromDir
+from backend.utils.stringOperations import getRandomString
 from backend.config.config import Config
 from backend.saver.ICSessionHandler import ICSessionHandler
 
@@ -27,12 +28,13 @@ from ui.utils import removeFileExtension, areFilesSuitableToLoad
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
 from ui.custom.ICWelcomeScreen import ICWelcomeScreen
 
-
 import sys, os
 import numpy as np
 import pandas as pd
 import time
+from datetime import datetime
 import webbrowser
+import requests
 
 
 
@@ -126,11 +128,9 @@ class InstantClue(QMainWindow):
         self._setupTransformer()
         #plotter brain (calculates props for plos)
         self.plotterBrain = PlotterBrain(sourceData = self.data)
-
+        #split widget
         self.splitterWidget = MainWindowSplitter(self)
-        
-        
-
+        #set up notifcation handler
         self.notification = Notification()
 
         _widget = QWidget()
@@ -146,6 +146,8 @@ class InstantClue(QMainWindow):
         self._addMenu()
 
         self.threadpool = QThreadPool()
+        
+        self.mainFrames["sliceMarks"].threadWidget.setMaxThreadNumber(self.threadpool.maxThreadCount())
 
         self.resetGroupColorTable.connect(self.mainFrames["sliceMarks"].colorTable.reset)
         self.resetGroupSizeTable.connect(self.mainFrames["sliceMarks"].sizeTable.reset)
@@ -193,7 +195,7 @@ class InstantClue(QMainWindow):
     
     def _setPlotter(self):
 
-        self.data.setPlotter(self.mainFrames["middle"].plotter)
+        self.data.setPlotter(self.mainFrames["middle"].ICPlotter)
 
 
     def _addMenu(self):
@@ -239,6 +241,10 @@ class InstantClue(QMainWindow):
     def print_output(self, s):
         pass
 
+    def errorInThread(self, errorType, v, e):
+        print(errorType,v,e)
+        self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
+
     def _getObjFunc(self,fnProps):
         ""
         if fnProps["obj"] == "self":
@@ -254,6 +260,7 @@ class InstantClue(QMainWindow):
 
     def _threadComplete(self,resultDict):
         ""
+        
         #check if thread returns a dict or none
         if resultDict is None:
             return
@@ -284,6 +291,14 @@ class InstantClue(QMainWindow):
                 fn(**kwargs)
             except Exception as e:
                 print(e)
+    
+    def _threadFinished(self,threadID):
+        ""
+        self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
+    
+    def isPlottingThreadRunning(self):
+        ""
+        
 
     def sendRequest(self,funcProps):
         ""
@@ -354,12 +369,17 @@ class InstantClue(QMainWindow):
 
                 if all(reqKwarg in funcProps["kwargs"] for reqKwarg in fnRequest["requiredKwargs"]):
                     # Any other kwargs are passed to the run function
-                    worker = Worker(fn = fn, funcKey = funcKey, **funcProps["kwargs"]) 
-                    worker.signals.result.connect(self.print_output)
-                    worker.signals.finished.connect(self._threadComplete)
+                    threadID = getRandomString()
+                    worker = Worker(fn = fn, funcKey = funcKey, ID = threadID,**funcProps["kwargs"]) 
+                    worker.signals.result.connect(self._threadComplete)
+                    worker.signals.finished.connect(self._threadFinished)
                     worker.signals.progress.connect(self.progress_fn)
+                    worker.signals.error.connect(self.errorInThread)
                     
                     self.threadpool.start(worker)
+
+                    self.mainFrames["sliceMarks"].threadWidget.addActiveThread(threadID, funcKey)
+                    #Count.setText(str(self.threadpool.activeThreadCount()))
                 
                 else:
                     print("not all required kwargs found...")
@@ -379,6 +399,32 @@ class InstantClue(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def getUserLoginInfo(self):
+        ""
+        try:
+            URL = "http://127.0.0.1:5000/api/v1/projects"
+            r = requests.get(URL)
+            return True, r.json()
+        except:
+            return False, []
+
+    def sendTextEntryToWebApp(self, projectID = 1, title = "", text = "Hi", isMarkDown = True):
+        ""
+        URL = "http://127.0.0.1:5000/api/v1/projects/entries"
+        jsonData = {
+                "ID"            :   projectID,
+                "title"         :   title,
+                "text"          :   text,
+                "isMarkDown"    :   isMarkDown,
+                "time"          :   time.time(),
+                "timeFrmt"      :   datetime.now().strftime("%d-%m-%Y :: %H:%M:%S")
+                }
+
+        r = requests.post(URL, json = jsonData)
+
+        if r.ok:
+            self.sendMessageRequest({"title":"Done","message":"Text entry transfered to WebApp. "})
 
     def getDataID(self):
         ""

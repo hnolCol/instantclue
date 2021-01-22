@@ -22,12 +22,18 @@ class ICCompareGroups(QDialog):
         """Init widgets"""
         
         self.headerLabel = createTitleLabel("Compare groups using: {}".format(self.test),fontSize=15)
-        self.grouplabel = createLabel("Grouping:","Set grouping to compare. By default the currently selected grouping is shown.")
+        self.grouplabel = createLabel("1. Grouping:","Set grouping to compare. By default the currently selected grouping is shown.")
         self.groupCombo = createCombobox(self,self.mC.grouping.getGroupings())
         self.groupCombo.setCurrentText(self.mC.grouping.getCurrentGroupingName())
 
-        self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
-        self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
+        if self.test == "2W-ANOVA":
+            self.grouplabel2 = createLabel("2. Grouping:","Set grouping to compare. By default the currently selected grouping is shown.")
+            self.groupCombo2 = createCombobox(self,self.mC.grouping.getGroupings())
+            self.groupCombo2.setCurrentText("Select ..")
+
+        if self.test not in ["2W-ANOVA"]:
+            self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
+            self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
 
         
@@ -43,8 +49,12 @@ class ICCompareGroups(QDialog):
         groupGrid = QGridLayout()
         groupGrid.addWidget(self.grouplabel,0,0, Qt.AlignRight)
         groupGrid.addWidget(self.groupCombo,0,1)
-        groupGrid.addWidget(self.refLabel,2,0, Qt.AlignRight)
-        groupGrid.addWidget(self.referenceGroupCombo,2,1)
+        if self.test not in ["2W-ANOVA"]:
+            groupGrid.addWidget(self.refLabel,2,0, Qt.AlignRight)
+            groupGrid.addWidget(self.referenceGroupCombo,2,1)
+        else:
+            groupGrid.addWidget(self.grouplabel2,2,0, Qt.AlignRight)
+            groupGrid.addWidget(self.groupCombo2,2,1)
 
         groupGrid.setColumnStretch(0,0)
         groupGrid.setColumnStretch(1,1)
@@ -70,12 +80,26 @@ class ICCompareGroups(QDialog):
         """Start calculation by sending a request to thread."""
         self.mC.grouping.setCurrentGrouping(self.groupCombo.currentText())
 
+        referenceGroup = None
+        if hasattr(self,"referenceGroupCombo"):
+            if self.referenceGroupCombo.currentIndex() == 0:
+                referenceGroup = self.referenceGroupCombo.currentText()
+        if self.test == "2W-ANOVA":
+            groupName1 =  self.groupCombo.currentText()
+            groupName2 =  self.groupCombo2.currentText()
+            grouping = {"betweenGroupings"  :   [{"name":groupName1, "values": self.mC.grouping.getGrouping(groupName1)},
+                                                 {"name": groupName2, "values": self.mC.grouping.getGrouping(groupName2)}],
+                        "withinGroupings"    :   []}
+        else:
+            grouping = self.mC.grouping.getCurrentGrouping()
         funcProps = {"key":"stats::compareGroups",
                       "kwargs":
                       {
                       "dataID":self.mC.getDataID(),
-                      "grouping":self.mC.grouping.getCurrentGrouping(),
+                      "grouping":grouping,
                       "test":self.test,
-                      "referenceGroup":None if self.referenceGroupCombo.currentIndex() == 0 else self.referenceGroupCombo.currentText()}}
+                      "referenceGroup": referenceGroup
+                      }
+                    }
         
         self.mC.sendRequestToThread(funcProps)

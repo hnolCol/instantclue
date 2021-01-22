@@ -34,7 +34,7 @@ class PlotOptionFrame(QWidget):
         self._controls()
         self._layout()
         self._connectEvents()
-        self._createTypeSpecMenus()
+        self.updateTypeSpecMenus()
         self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Expanding)
         self.setMaximumWidth(100)
 
@@ -57,9 +57,9 @@ class PlotOptionFrame(QWidget):
         for b in self.buttons:
             nRow, nCol = gridPosition[b.plotType]
             self.layout().addWidget(b,nRow,nCol)
-        self.layout().setRowStretch(7,1)
-        self.layout().addWidget(self.mainFigureButton,8,0)
-        self.layout().addWidget(self.configButton,9,0)
+        self.layout().setRowStretch(8,1)
+        self.layout().addWidget(self.mainFigureButton,9,0)
+        self.layout().addWidget(self.configButton,10,0)
 
         self.layout().setAlignment(Qt.AlignTop)
 
@@ -73,7 +73,7 @@ class PlotOptionFrame(QWidget):
         self.mainFigureButton.clicked.connect(self.openMainFigure)
         self.configButton.clicked.connect(self.openConfig)
 
-    def _createTypeSpecMenus(self):
+    def updateTypeSpecMenus(self):
         ""
         self.typeMenus = {}
 
@@ -128,11 +128,28 @@ class PlotOptionFrame(QWidget):
         action = menu["main"].addAction("{} annotations in all subplots".format("Disable" if self.mC.config.getParam("annotate.in.all.plots") else "Enable"), self.toggleAnnotations)
         
         self.typeMenus["scatter"] = menu["main"]
+
+
+        #swarmplot menu 
+        menu = createSubMenu(subMenus=[])
+        for paramName,actionName in [("xy.plot.show.marker",{False:"Show markers",True:"Hide markers"}),
+                                     ("xy.plot.against.index",{False:"Against index",True:"Against column"})]:
+            currentState = self.mC.config.getParam(paramName)
+            action = menu["main"].addAction(actionName[currentState])
+            action.triggered.connect( lambda _, paramName = paramName,actionName = actionName: self.changeXYParams(paramName,actionName) )
+
+        self.typeMenus["x-ys-plot"] = menu["main"]
         #boxplot menu
+
+
 
         menu = createSubMenu(subMenus=["Outliers .. "])
         menu["Outliers .. "].addAction("Hide", self.hideOutliersInBoxplot)
-
+        currentParamState = self.mC.config.getParam("boxplot.split.data.on.category")
+        if currentParamState:
+            menu["main"].addAction("Disable split by category", self.handleSplitOfDataByCategory)
+        else:
+            menu["main"].addAction("Enable split by category", self.handleSplitOfDataByCategory)
         self.typeMenus["boxplot"] = menu["main"]
 
 
@@ -164,6 +181,26 @@ class PlotOptionFrame(QWidget):
 
 
         self.typeMenus["addSwarmplot"] = menu["main"]
+
+
+    def handleSplitOfDataByCategory(self):
+        ""
+        currentParamState = self.mC.config.getParam("boxplot.split.data.on.category")
+
+        if currentParamState:
+            self.sender().setText("Enable split by category")
+        else:
+            self.sender().setText("Disable split by category")
+        
+        self.mC.config.toggleParam("boxplot.split.data.on.category")
+
+
+
+    def changeXYParams(self,paramName,actionName):
+        ""
+        self.mC.config.toggleParam(paramName)
+        currentState = self.mC.config.getParam(paramName)
+        self.sender().setText(actionName[currentState])
 
     def addClusterLabel(self,event=None):
         "Add cluster ID to source data."

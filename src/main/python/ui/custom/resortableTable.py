@@ -70,9 +70,10 @@ class ResortableTable(QDialog):
         self.close()
    
 class ResortTableWidget(QTableView):
-    def __init__(self,*args,**kwargs):
+    def __init__(self, menu = None, *args,**kwargs):
         super(ResortTableWidget,self).__init__(*args,**kwargs)
-
+        self.rightClick = False
+        self.menu = menu
         #set drag and drop params
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
@@ -94,6 +95,7 @@ class ResortTableWidget(QTableView):
         p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
         p.setColor(QPalette.HighlightedText  ,QColor("black"))
         self.setPalette(p)
+       
     
     def dragEvent(self,event):
         ""
@@ -120,6 +122,23 @@ class ResortTableWidget(QTableView):
         row = self.rowAt(event.pos().y())
         column = self.columnAt(event.pos().x())
         return self.model().index(row,column)
+
+    def mouseReleaseEvent(self,event):
+        ""
+        if self.rightClick:
+            if self.menu is not None:
+                pos = self.mapToGlobal(event.pos())
+                self.menu.exec_(pos)
+
+    def mousePressEvent(self,event):
+        ""
+        if event.buttons() == Qt.RightButton:
+            self.rightClick = True
+        elif event.buttons() == Qt.LeftButton:
+            super(QTableView,self).mousePressEvent(event)
+            self.rightClick = False
+        else:
+            self.rightClick = False
 
     def hideDragLabels(self,event):
         

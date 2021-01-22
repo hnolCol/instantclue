@@ -7,6 +7,7 @@ from .ICCollapsableFrames import CollapsableFrames
 from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, LabelLikeButton, ICStandardButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDFindReplace import FindReplaceDialog
+from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
 from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
 from ..custom.warnMessage import WarningMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
@@ -317,10 +318,14 @@ class CollapsableDataTreeView(QWidget):
 
     def openMergeDialog(self,event=None):
         ""
-
         dlg = ICDMergeDataFrames(mainController = self.mC)
         dlg.exec_()
     
+    def openSGCCADialog(self,event=None):
+        ""
+        dlg = ICMultiBlockSGCCA(mainController = self.mC)
+        dlg.exec_()
+
     def showMenu(self,event=None):
         ""
         try:
@@ -329,7 +334,7 @@ class CollapsableDataTreeView(QWidget):
             if hasattr(sender,"mouseLostFocus"):
                 sender.mouseLostFocus()
 
-            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. "])
+            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. ","Multi block analysis .."])
             groupingNames = self.mC.grouping.getNames()
             groupSizes = self.mC.grouping.getSizes()
             if len(groupingNames) > 0:
@@ -346,7 +351,9 @@ class CollapsableDataTreeView(QWidget):
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)
 
-
+            if True:#self.mC.data.hasTwoDataSets():
+                action = menus["Multi block analysis .."].addAction("SGGCA",self.openSGCCADialog)
+                
             
             senderGeom = self.sender().geometry()
             bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())

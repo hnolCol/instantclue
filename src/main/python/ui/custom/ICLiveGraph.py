@@ -8,6 +8,8 @@ from matplotlib.figure import Figure
 
 from matplotlib.lines import Line2D
 
+from sklearn.preprocessing import scale
+
 from ..utils import WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createMenu, getMessageProps
 from .buttonDesigns import ResetButton, BigArrowButton, PushHoverButton
 
@@ -19,11 +21,12 @@ import pandas as pd
 TOOLTIP_STR = "Drag & drop numerical columns to view extra data.\nWorks in combination with hierarchical clustering and scatter plots."
 
 class LiveGraph(QWidget):
-    def __init__(self, parent=None, mainController=None, acceptedDragTypes = ["Numeric Floats"]):
+    def __init__(self, parent=None, mainController=None, acceptedDragTypes = ["Numeric Floats"], zScoreNorm = False):
         super(LiveGraph, self).__init__(parent)
         self.setAcceptDrops(True)
         self.acceptedDragTypes = acceptedDragTypes
         self.acceptDrop = False
+        self.zScoreNorm = zScoreNorm 
         
         #sourceData = mainController.data
 
@@ -53,6 +56,8 @@ class LiveGraph(QWidget):
         self.resetButton = ResetButton(tooltipStr="Reset live graph.")
         self.plotTypeButton = PushHoverButton(text = "...", tooltipStr="Change plot type between bar and line.")
         self.plotTypeButton.setFixedSize(15,15)
+        self.zScoreButton = PushHoverButton(text = "Z", tooltipStr="Show Z-Score")
+        self.zScoreButton.setFixedSize(15,15)
 
 
     def _layout(self):
@@ -60,6 +65,7 @@ class LiveGraph(QWidget):
         layout = QVBoxLayout()
         hbox = QHBoxLayout()
         hbox.addStretch(1)
+        hbox.addWidget(self.zScoreButton)
         hbox.addWidget(self.plotTypeButton)
         hbox.addWidget(self.saveButton)
         hbox.addWidget(self.resetButton)
@@ -77,6 +83,7 @@ class LiveGraph(QWidget):
         self.plotTypeButton.clicked.connect(self.choosePlotType)
         self.resetButton.clicked.connect(self.clearGraph)
         self.saveButton.clicked.connect(self.saveGraph)
+        self.zScoreButton.clicked.connect(self.toggleZScoreNorm)
     
 
     def choosePlotType(self,e = None):
@@ -105,6 +112,23 @@ class LiveGraph(QWidget):
             self.liveGraph.figure.savefig(fileName)
             self.mC.sendMessageRequest(getMessageProps("Saved..","File {} has been saved.".format(fileName)))
             
+    def toggleZScoreNorm(self,e=None):
+        ""
+        if self.zScoreButton.txtColor != INSTANT_CLUE_BLUE:
+            self.zScoreButton.setTxtColor(INSTANT_CLUE_BLUE)
+            self.zScoreNorm = True
+        else:
+            self.zScoreButton.setTxtColor("black")
+            self.zScoreNorm = False
+        
+        if self.hasData():
+            if not self.zScoreNorm:
+                data = self.data
+            else:
+                data = pd.DataFrame(scale(self.data.values,axis=1),index=self.data.index,columns=self.data.columns)
+                
+            self.addDataToLiveGraph(data,False)
+
     def dragEnterEvent(self,e):
         ""
         
@@ -133,14 +157,17 @@ class LiveGraph(QWidget):
         dataID = self.mC.mainFrames["data"].getDataID()
         columnNames = self.getDragColumns()
         data = self.mC.data.getDataByColumnNames(dataID = dataID, columnNames = columnNames)["fnKwargs"]["data"]
-       # self.groupColors = self.mC.grouping.getGroupColors()
-        try:
-            colorMapper = self.mC.grouping.getColorsForGroupMembers()
-            print(colorMapper)
-        except Exception as e:
-            print(e)
+        self.addDataToLiveGraph(data)
+    
+    def addDataToLiveGraph(self,data,storeData = True):
+        #try to find grouping
+        colorMapper = self.mC.grouping.getColorsForGroupMembers()
+        #init live graph
         self.liveGraph.setData(data,colorMapper)
+        if storeData:
+            self.data = data
         
+
     def getDragType(self):
         ""
         if not hasattr(self, "dataSelectionHandler"):
@@ -173,6 +200,7 @@ class BlitingLiveGraph(object):
         self.selectionIndex = None
         self.resized = False
         self.colorMapper = None
+        
 
     def addAxis(self):
         if not hasattr(self,"ax"):
@@ -213,7 +241,7 @@ class BlitingLiveGraph(object):
         self.hoverBoxplotLines =  [Line2D(xdata = [], 
                                             ydata = [],
                                             linewidth = 0.5,
-                                            color=INSTANT_CLUE_BLUE,
+                                            color= "black",
                                             linestyle="-",
                                             zorder = 1e5
                                             ) for _ in self.xTicks]
@@ -226,7 +254,7 @@ class BlitingLiveGraph(object):
                                 width = 0.8,
                                 align = "center",
                                 color = ["white"],
-                                edgecolor = INSTANT_CLUE_BLUE,
+                                edgecolor = "black",
                                 linewidth = 0.8,
                                 alpha = 0.85,
                                 zorder = 2e5)
@@ -234,7 +262,12 @@ class BlitingLiveGraph(object):
     def addLine(self):
         ""
         #crate line
-        self.hoverLine = self.ax.plot([],[], marker = "o", linewidth = 1.2, color = INSTANT_CLUE_BLUE)
+        self.hoverLine = self.ax.plot([],[], 
+                                        marker = "o", 
+                                        color = "black", 
+                                        linewidth = 0.8, 
+                                        markerfacecolor = "white", 
+                                        markeredgecolor="black")
         #hide line
         self.setInvisible()
 
@@ -317,14 +350,14 @@ class BlitingLiveGraph(object):
 
         self.ax.set_ylim(minValue,maxValue)
 
+       
     def setData(self, data = None, colorMapper = None):
         ""
         
-        #only test if calle
         if data is not None and isinstance(data,pd.DataFrame):
             if data.index.size == 0:
                 return
-            self.data = data.dropna(axis=1,how="all")
+            self.data = data.dropna(axis=1,how="all") #remove columns with only nan
             if self.data.empty:
                 return
             self.removeArtists()
@@ -339,9 +372,9 @@ class BlitingLiveGraph(object):
         except Exception as e:
             print(e)
         self.updateBackground()
-        #self.colorMapper = colorMapper
-        self.groupColors = [colorMapper[columnName] if colorMapper is not None and columnName in colorMapper else INSTANT_CLUE_BLUE if self.plotType != "Boxplot" else "white" for columnName in self.data.columns ]
-        
+        self.groupColors = [colorMapper[columnName] if colorMapper is not None and columnName in colorMapper else "white" for columnName in self.data.columns ] #
+        self.colorMapper = colorMapper
+
     def setInvisible(self,event = None):
         '''
         '''
@@ -368,7 +401,7 @@ class BlitingLiveGraph(object):
         ""
         if plotType in ["Line","Bar","Boxplot"]:
             self.plotType = plotType
-            self.setData(self.data)
+            self.setData(self.data,self.colorMapper)
 
     def setResizeTrigger(self,resized):
         ""

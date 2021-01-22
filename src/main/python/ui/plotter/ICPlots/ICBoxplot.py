@@ -40,14 +40,20 @@ class ICBoxplot(ICChart):
             self.initAxes(data["axisPositions"])
             
             self.initBoxplots()
-            
+          
             self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
+     
             for n,ax in self.axisDict.items():
                 if n in data["axisLimits"]:
                     self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
+     
             self.setAxisLabels(self.axisDict,data["axisLabels"])
+         
             self.addTitles()
             #self.setHoverItemGroups(hoverGroupItems)
+
+            self.addVerticalLines()
+                
             self.savePatches()
             if self.interactive:
                 for ax in self.axisDict.values():
@@ -59,7 +65,9 @@ class ICBoxplot(ICChart):
             if qsData is not None:
                 self.mC.quickSelectTrigger.emit()
                 return
+           
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
+            
             self.updateFigure.emit()
         except Exception as e:
             print("error plotting")
@@ -97,10 +105,12 @@ class ICBoxplot(ICChart):
         else:
             for n, boxprops in self.boxplotItems.items():
                 for artist, fc in zip(boxprops["boxes"],self.data["facecolors"][n]):
+                    
                     artist.set_facecolor(fc)
 
                     if colorGroupData is not None and hasattr(self,"groupColor"):
                         idx = colorGroupData.index[colorGroupData["color"] == fc]
+                       
                         intID = colorGroupData.loc[idx,"internalID"].iloc[0]
                         self.colorGroupArtists[intID].append(artist)
                         if intID not in self.groupColor:
@@ -182,11 +192,12 @@ class ICBoxplot(ICChart):
         data = self.data
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
     
-       # self.addTitles()
+        self.addTitles(onlyForID = axisID, targetAx = targetAx)
         self.initBoxplots(onlyForID=axisID,targetAx=targetAx)
         self.setFacecolors(onlyForID=axisID)
         self.mirrorStats(targetAx,axisID)
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)          
         self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
+        self.addVerticalLines(axisID,targetAx)
 
 

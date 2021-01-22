@@ -264,6 +264,19 @@ funcPropControl = {
             "completedRequest":
                     [sendMessageProps]
         },
+    "data::countNaN":
+        {
+            "threadRequest":{"obj":"data","fn":"countNaN","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                    refreshColumnView
+        },
+     "data::mergeDataFrames":
+        {
+            "threadRequest":{"obj":"data","fn":"mergeDfs","requiredKwargs":["mergeParams"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },   
+        
     "data::sortData":
         {
             "threadRequest":{"obj":"data","fn":"sortData","requiredKwargs":["dataID","columnNames"]},
@@ -282,6 +295,12 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"splitColumnsByString","requiredKwargs":["dataID","columnNames","splitString"]},
             "completedRequest":refreshColumnView
         },
+    "data::summarizeGroups":
+        {
+            "threadRequest":{"obj":"data","fn":"summarizeGroups","requiredKwargs":["dataID","grouping","metric"]},
+            "completedRequest":refreshColumnView
+        },
+    
     "data::exportHClustToExcel":
         {
             "threadRequest":{"obj":"data","fn":"exportHClustToExcel","requiredKwargs":["dataID","pathToExcel","clusteredData","colorArray","totalRows"]},
@@ -495,6 +514,16 @@ funcPropControl = {
             ]           
         },
     "plotter:getScatterColorGroups": 
+        {
+            "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsDataForScatter","requiredKwargs":["dataID"]},
+            "completedRequest":[
+                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
+                {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
+                sendMessageProps
+            ]           
+        },
+    "plotter:getSwarmColorGroups": 
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsDataForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[

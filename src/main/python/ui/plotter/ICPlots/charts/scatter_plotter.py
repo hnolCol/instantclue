@@ -6,13 +6,22 @@ import numpy as np
 #from .scatter_annotations import annotateScatterPoints
 from collections import OrderedDict
 from matplotlib.font_manager import FontProperties
-from ...plots.utils import styleHoverScat, defaultFont, get_elements_from_list_as_string, styleHoverScatter
+ 
+
 
 #matplotlib import 
 from matplotlib.patches import Rectangle
 import warnings
 warnings.simplefilter(action = "ignore", category = RuntimeWarning)
-#from modules import stats
+
+#define base style for hover
+styleHoverScat = dict(
+				visible=False, 
+				c = 'red', marker = 'o',
+				markeredgecolor = 'black',
+				markeredgewidth = 0.3
+				)
+				
 class scatterPlot(object):
 
 
@@ -148,14 +157,14 @@ class scatterPlot(object):
 			yMin = np.nanmin(self.data[self.numericColumns[1::2]].values)
 			yMax = np.nanmax(self.data[self.numericColumns[1::2]].values)
 		else:
-			xMin, yMin = self.data[self.numericColumns].min()
-			xMax, yMax = self.data[self.numericColumns].max()
+			nonNaNData = self.data[self.numericColumns].dropna()
+			xMin, yMin = nonNaNData[self.numericColumns].min()
+			xMax, yMax = nonNaNData[self.numericColumns].max()
 		xAdd = np.sqrt(xMin**2 + xMax**2) * 0.05
 		yAdd = np.sqrt(yMin**2 + yMax**2) * 0.05
 		if all(not np.isnan(x) for x in [xMin,xMax,yMin,yMax,yAdd,xAdd]):
 			self.ax.set_xlim(xMin-xAdd,xMax+xAdd)
 			self.ax.set_ylim(yMin-yAdd,yMax+yAdd)
-
 
 	def addSelectRectangle(self):
 		""
@@ -175,7 +184,6 @@ class scatterPlot(object):
 		if addCircle:
 			self.addSelectRectangle()
 		
-		#styleHoverScatter['s'] =  self.scatterKwargs['s']
 		self.hoverScatter = self.ax.scatter([],[],**self.hoverKwargs)
 		self.ax.callbacks.connect('ylim_changed', \
 					lambda event:self.updateBackground(redraw = True,updateProps=True))
@@ -569,7 +577,12 @@ class scatterPlot(object):
 		""
 		self.data.loc[self.data.index,"size"] = sizeData
 		if setSizeToCollection:
-			self.mainCollecion.set_sizes(self.data["size"].values)
+			if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
+					for markerName, markerData in self.data.groupby("marker"):
+						if markerName in self.mainCollecion:
+							self.mainCollecion[markerName].set_sizes(markerData["size"].values)
+			else:
+				self.mainCollecion.set_sizes(self.data["size"].values)
 
 	def replotCollection(self, updateLayer = True):
 		""

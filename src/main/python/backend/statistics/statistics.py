@@ -1,15 +1,18 @@
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
-from ..utils.stringOperations import getMessageProps
+from ..utils.stringOperations import getMessageProps, getRandomString
 
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
+
 from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
-
 from sklearn.cluster import KMeans
-
 from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
+#import pingouin as pg
+from pingouin import anova
+#from .anova.anova import Anova
+
 import hdbscan
 import umap
 import re
@@ -70,8 +73,8 @@ class StatisticCenter(object):
     def removeNan(self,X):
         ""
         if not isinstance(X, pd.DataFrame):
-            self.X = pd.DataFrame(X)
-        X = X.dropna()
+            self.X = pd.DataFrame(X, dtpye = np.float64)
+        X = X.astype(np.float64).dropna()
         return X
 
     def prepareData(self, dataID, columnNames):
@@ -90,10 +93,11 @@ class StatisticCenter(object):
         Calculates linear regression
         '''
         
-        data = self.getData(dataID,columnNames)
-        data.dropna(inplace=True)
-        x = data.iloc[:,0].values
-        y = data.iloc[:,1].values
+        X = self.getData(dataID,columnNames)
+        X = self.removeNan(X)
+       
+        x = X.iloc[:,0].values
+        y = X.iloc[:,1].values
 
         slope, intercept, r_value, p_value, std_err = linregress(x,y)
         x1, x2 = x.min(), x.max()
@@ -123,6 +127,66 @@ class StatisticCenter(object):
 
         return lowessLine
 
+    def runANOVA(self,dataID,betweenGroupings = [] ,withinGroupings = [], logPValues = True, subjectGrouping = []):
+        ""
+        print(dataID)
+
+        if len(betweenGroupings) == 0 and len(withinGroupings) == 0:
+            return getMessageProps("Error..","No grouping found.")
+        
+        combinedGroupings = betweenGroupings + withinGroupings
+        groupNames = [list(d["values"].values()) for d in combinedGroupings if d is not None]
+        uniqueColumnNames = np.unique(groupNames)
+        data = self.getData(dataID,uniqueColumnNames).dropna()
+
+        rowIdentifier = getRandomString()
+        data[rowIdentifier] = data.index
+        meltedData = pd.melt(data,value_vars=uniqueColumnNames, id_vars=[rowIdentifier])
+        for bGroup in betweenGroupings:
+            mapDict = {}
+            groupName = bGroup["name"]
+            groupItems = bGroup["values"]
+            for k,v in  groupItems.items(): #always length 1
+                for colName in v.values:
+                    mapDict[colName] = groupName + k 
+            meltedData[groupName] = meltedData["variable"].map(mapDict)
+
+        print(meltedData)
+
+        collectedData = None 
+        
+        for idx, idxData in meltedData.groupby(rowIdentifier):
+            idxData = idxData.dropna(subset=["value"])
+            idxData['Subject'] = np.arange(1,idxData.index.size+1)
+           # print(idxData)
+           # anova = Anova(
+            #            idxData,
+             #           dependentVariable = "value", 
+              #          wFactors = [k["name"] for k in withinGroupings],
+               #         bFactors = [k["name"] for k in betweenGroupings])
+           # res#ults = anova.getResults().set_index("Source")
+          #  print(results)
+            r = anova(data = idxData, dv = "value" ,between = [k["name"] for k in betweenGroupings], detailed=True)
+            results = r.set_index("Source")
+            if collectedData is None:
+                collectedData = pd.DataFrame(index=data.index, columns = ["p-value:{}".format(colName) for colName in results.index if colName != "Residual"])
+           # print(results)
+            for source in results.index:
+                if source != "Residual":
+                    colName = "p-value:{}".format(source)
+                    collectedData.loc[idx,colName] = results.loc[source,"p-unc"]
+           # print(collectedData)
+
+            
+           # intColName = " * ".join([k["name"] for k in betweenGroupings])
+            #print(intColName)
+           # collectedData.loc[idx,"p-value:interaction"] = np.float(results.loc[intColName,"p-value"])
+        collectedData = collectedData.astype(float)
+        return self.sourceData.joinDataFrame(dataID,collectedData)
+
+
+
+
 
     def runTSNE(self,dataID,columnNames,transformGraph = True, *args,**kwargs):
         ""
@@ -141,24 +205,24 @@ class StatisticCenter(object):
         except Exception as e:
             print(e)
 
-    def runCVAE(self,dataID,columnNames, transpose = False, *args,**kwargs):
-        "Runs a Variational Autoencoder Dimensional Reduction"
-        X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
-        if checkPassed:
+    # def runCVAE(self,dataID,columnNames, transpose = False, *args,**kwargs):
+    #     "Runs a Variational Autoencoder Dimensional Reduction"
+    #     X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
+    #     if checkPassed:
         
-            embedder = cvae.CompressionVAE(X.values,)
-            embedder.train() 
-            embeddings = embedder.embed(X.values)
-            compNames = ["Emb::CVAE_{:02d}".format(n) for n in range(2)]
-            df = pd.DataFrame(embeddings.astype(np.float64),index=dataIndex,columns = compNames)
-            msgProps = getMessageProps("Done..","CVAE (Variational Autoencoder) calculation performed.\nColumns were added to the tree view.")
+    #         embedder = cvae.CompressionVAE(X.values,)
+    #         embedder.train() 
+    #         embeddings = embedder.embed(X.values)
+    #         compNames = ["Emb::CVAE_{:02d}".format(n) for n in range(2)]
+    #         df = pd.DataFrame(embeddings.astype(np.float64),index=dataIndex,columns = compNames)
+    #         msgProps = getMessageProps("Done..","CVAE (Variational Autoencoder) calculation performed.\nColumns were added to the tree view.")
                         
-            result = {**self.sourceData.joinDataFrame(dataID,df),**msgProps}
+    #         result = {**self.sourceData.joinDataFrame(dataID,df),**msgProps}
     
-            return result
+    #         return result
 
-        else:
-                return getMessageProps("Error ..",errMsg)
+    #     else:
+    #             return getMessageProps("Error ..",errMsg)
 
     def runUMAP(self,dataID,columnNames, transpose = False, *args,**kwargs):
         
@@ -419,7 +483,10 @@ class StatisticCenter(object):
            
     def runComparison(self,dataID,grouping,test,referenceGroup=None, logPValues = True):
         """Compare groups."""
-
+        
+        if test == "2W-ANOVA":
+            return self.runANOVA(dataID, logPValues = logPValues, **grouping)
+            
         #print(grouping)
         #print(test)
         colNameStart = {"euclidean":"eclD:","t-test":"tt:","Welch-test":"wt"}
@@ -436,7 +503,9 @@ class StatisticCenter(object):
                 results["-log10-p-1WANOVA({})".format(groupingName)] = np.log10(p) * (-1)
             else:
                 results["p-1WANOVA({})".format(groupingName)] = p
-            
+        elif test == "2W-ANOVA":
+
+            self.runANOVA(dataID)
         else:
             resultColumnNames = [colNameStart[test] + "({})_({})".format(group1,group0) for group0,group1 in groupComps]
             for n,(group0, group1) in enumerate(groupComps):

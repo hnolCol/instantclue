@@ -12,15 +12,21 @@ from sklearn.preprocessing import scale
 funcKeys = {
         "logarithmic" : "logarithmicTransformation",
         "rolling": "rollingWindowTransformation",
-        "absolute" : "absoluteTransformation"
+        "absolute" : "absoluteTransformation",
+        "summarize": "summarizeTransformation"
          }
-
 logarithmicBase =  {'log2': np.log2,
 					'-log2':lambda x: np.log2(x)*(-1),
 					'log10':np.log10,
 					'-log10':lambda x: np.log10(x)*(-1),
 					'ln':np.log,
 					}	
+summarizeMetric = {"min"    :   np.nanmin, 
+                   "max"    :   np.nanmax,    
+                   "median" :   np.nanmedian,
+                   "mean"   :   np.nanmean,
+                   "quantile":  np.nanquantile
+                   }
 	
 class Transformer(object):
     ""
@@ -74,7 +80,28 @@ class Transformer(object):
         else:
             return getMessageProps("Error..","Unknown metric.")
 
-
+    def summarizeTransformation(self,dataID,columnNames, metric, justValues = False, **kwargs):
+        ""
+        
+        if metric in summarizeMetric:
+            if justValues:
+                return summarizeMetric[metric](self.sourceData.dfs[dataID][columnNames].values,axis=1, **kwargs)
+                
+            mergedColumns = mergeListToString(columnNames)
+            if len(kwargs) > 0:
+                kwargString = "".join(["-({}:{})".format(k,v) for k,v in kwargs.items()])
+                transformedColumnNames = ["s({}{}):{}".format(metric,kwargString,mergedColumns)] 
+            else:
+                transformedColumnNames = ["s({}):{}".format(metric,mergedColumns)] 
+            
+            transformedValues = pd.DataFrame(        
+                            summarizeMetric[metric](self.sourceData.dfs[dataID][columnNames].values,axis=1, **kwargs),
+                            index = self.sourceData.dfs[dataID].index,
+                            columns = transformedColumnNames
+                            )
+            return self.sourceData.joinDataFrame(dataID,transformedValues)
+        else:
+            return getMessageProps("Error..","Unknown metric.")
 	# def calculate_rolling_metric(self,numericColumns,windowSize,metric,quantile = 0.5):
 	# 	'''
 	# 	Calculates rolling windows and metrices (like mean, median etc). 

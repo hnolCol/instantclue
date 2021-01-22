@@ -4,7 +4,10 @@ import numpy as np
 from backend.color.data import colorParameterRange
 from matplotlib.pyplot import colorbar
 from matplotlib.cm import ScalarMappable
+from matplotlib.colors import ListedColormap
+import matplotlib.patches as patches
 import pandas as pd
+import seaborn as sns
 
 
 class ICClustermap(ICChart):
@@ -31,16 +34,17 @@ class ICClustermap(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        if self.data["clusterRectangles"][0].get_visible():
+        if "clusterRectangles" in self.data and len(self.data["clusterRectangles"]) != 0 and self.data["clusterRectangles"][0].get_visible():
             menus["main"].addAction("Remove Clusters", self.setClusterInvisible)
-        else:
+        elif "clusterRectangles" in self.data:
             menus["main"].addAction("Show Clusters", self.setClusterVisible)
         if hasattr(self, "labelData"):
             menus["main"].addAction("Show Labels", self.showLabels)
         for cMap in colorParameterRange:
             menus["Color Map (Cluster)"].addAction(cMap,self.updateColorMapOfClusterMesh)
         menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
-        menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
+        if self.plotType == "hclust":
+            menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
 
             
     def addTooltip(self, tooltipColumnNames,dataID):
@@ -81,7 +85,7 @@ class ICClustermap(ICChart):
         ""
         colorbar(*args,**kwargs)
 
-    def addColorMesh(self,ax,data, cmap = None, paramName = "twoColorMap", norm = None, addLineKwargs = True):
+    def addColorMesh(self,ax,data, cmap = None, paramName = "twoColorMap", norm = None, addLineKwargs = True, colorMeshLimits = None):
         ""
         ax.clear()
         if cmap is None:
@@ -102,10 +106,17 @@ class ICClustermap(ICChart):
         else:
             colorMeshLineKwargs = {}
 
+        if colorMeshLimits is not None:
+            vmin, vmax = colorMeshLimits
+            valueLimitKwargs = {"vmin":vmin,"vmax":vmax}
+            
+        else:
+            valueLimitKwargs = {}
+
         colorMesh = ax.pcolormesh(data, 
 					  cmap = cmap,
                       norm = norm,
-					  **colorMeshLineKwargs)
+					  **colorMeshLineKwargs, **valueLimitKwargs)
         return colorMesh
     
     def updateColorMesh(self,mesh,dataShape):
@@ -289,15 +300,20 @@ class ICClustermap(ICChart):
             #set all ticks off
             if "axColumnDendro" in self.axisDict:
                 self.setTicksOff(self.axisDict["axColumnDendro"])
-
+            
             #set all ticks off
             if "axLabelColor" in self.axisDict:
+                self.axisDict["axLabelColor"].set_xlim((0,10))
+                self.axisDict["axLabelColor"].set_axis_off()
                 self.setTicksOff(self.axisDict["axLabelColor"])
             #set xticks on cluster map
             numColumns = self.data["plotData"].values.shape[1]
-            self.setXTicks(ax = self.axisDict["axClusterMap"], 
+            if numColumns < 50:
+                self.setXTicks(ax = self.axisDict["axClusterMap"], 
                             ticks = np.linspace(0.5,numColumns-0.5,num=numColumns),
                             labels = self.data["columnNames"], rotation=90)
+            else:
+                self.setXTicks(self.axisDict["axClusterMap"], [], [])
             self.setYTicks(self.axisDict["axClusterMap"],[],[])
 
             #add colorbar
@@ -395,10 +411,22 @@ class ICClustermap(ICChart):
         self.updateColorMesh(self.colorMesh,
                             (currentYLim[1] - currentYLim[0],self.data["plotData"].values.shape[1]))
 
-        self.setAxisLimits(self.axisDict["axClusterMap"],xLimit = (0,len(self.data["columnNames"])))
+        if hasattr(self, "colorLabelMesh"):
+
+            self.updateColorMesh(self.colorLabelMesh,
+                            (currentYLim[1] - currentYLim[0],self.data["plotData"].values.shape[1]))
+        if hasattr(self, "labelColumnLimits"):
+            
+            axLabelXLimits = self.axisDict["axLabelColor"].set_xlim(self.labelColumnLimits)
+        else:
+            axLabelXLimits = None
+
+        if self.getParam("keep.cluster.xaxis.fixed"):
+            self.setAxisLimits(ax,xLimit = (0,len(self.data["columnNames"])))
+        
         if "axRowDendro" in self.axisDict:
             self.setAxisLimits(self.axisDict["axRowDendro"],yLimit=rowDendroYLim)
-        self.setAxisLimits(self.axisDict["axLabelColor"],yLimit=currentYLim)
+        self.setAxisLimits(self.axisDict["axLabelColor"],yLimit=currentYLim, xLimit=axLabelXLimits)
         self.updateLabels(int(currentYLim[0]),int(currentYLim[1] + 0.5))
         self.updateFigure.emit()
 
@@ -510,13 +538,22 @@ class ICClustermap(ICChart):
             else:
                 dataIdx = np.concatenate([v.values for v in self.colorCategoryIndexMatch.values()])
             idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIdx)
-            coords = self.getOffsets(idxPosition)
+            inv = self.axisDict["axLabelColor"].transLimits.inverted()
+            xOffset,_= inv.transform((0.02, 0.25))
+            
+            coords = self.getOffsets(idxPosition,xOffset)
             
             self.quickSelectScatter.set_offsets(coords)
             self.quickSelectScatter.set_visible(True)
             self.quickSelectScatter.set_facecolor(self.quickSelectProps.loc[dataIndexInClust,"color"])
             self.quickSelectScatter.set_sizes(self.quickSelectProps.loc[dataIndexInClust,"size"])
 
+            self.updateFigure.emit()
+        
+        else:
+    
+            cmap = ListedColormap(colorGroup["color"].values)
+            self.colorLabelMesh.set_cmap(cmap)
             self.updateFigure.emit()
 
     def setClims(self,vmin=None,vmax=None):
@@ -542,6 +579,9 @@ class ICClustermap(ICChart):
        # print(dataIndex)
        # if dataIndex in self.data["plotData"].index:
         self.p.f.canvas.restore_region(self.colorLabelBackground)
+        inv = self.axisDict["axLabelColor"].transLimits.inverted()
+        xOffsetText,_= inv.transform((0.04, 0.25))
+        xOffsetScatter,_= inv.transform((0.02, 0.25))
         idxPosition = [self.data["plotData"].index.get_loc(idx) + 0.5 for idx in dataIndex if idx in self.data["plotData"].index]
         if hasattr(self,"labelData"):
             if len(idxPosition) == 0:
@@ -549,7 +589,7 @@ class ICClustermap(ICChart):
                 self.hoverTextProps["text"] = ""
             else:
                 self.hoverTextProps["y"] = idxPosition[0]
-                self.hoverTextProps["x"] = 0.2
+                self.hoverTextProps["x"] = xOffsetText
                 self.hoverTextProps["visible"] = True
                 self.hoverTextProps["text"] = ";".join(self.labelData.loc[dataIndex].values[0,:])
                 self.hoverTextProps["va"] = "center"
@@ -557,9 +597,7 @@ class ICClustermap(ICChart):
             self.axisDict["axLabelColor"].draw_artist(self.hoverText)
         
         #create numpy array with scatter offsets
-        coords = np.zeros(shape=(len(idxPosition),2))
-        coords[:,1] = idxPosition
-        coords[:,0] += 0.05
+        coords = self.getOffsets(idxPosition, xOffsetScatter)
 
         self.setHoverScatterData(coords,self.axisDict["axLabelColor"])
 
@@ -569,13 +607,55 @@ class ICClustermap(ICChart):
         self.addColorMesh(self.axisDict["axLabelColor"],sizeData.loc[self.data["plotData"].index].values,paramName="hclustSizeColorMap")
         self.onClusterYLimChange()
 
-    def updateHclustColor(self,colorData, colorGroupData,cmap=None, title="",colorMaPParamName = "hclustSizeColorMap"):
+    def updateHclustColor(self,colorData, colorGroupData, cmap=None, title="",colorMaPParamName = "hclustLabelColorMap"):
         ""
-        self.addColorMesh(self.axisDict["axLabelColor"],colorData.loc[self.data["plotData"].index].values,cmap=cmap,paramName=colorMaPParamName)
+        #print(colorData.loc[self.data["plotData"].index].values)
+        colorColumnNames = colorData.columns.values
+        colorData = colorData.loc[self.data["plotData"].index].astype(np.float64).values
+        self.colorLabelMesh = self.addColorMesh(
+                        self.axisDict["axLabelColor"],
+                        colorData,
+                        cmap= cmap,
+                        paramName=colorMaPParamName
+                        )
+
         self.setDataInColorTable(colorGroupData, title = title)
+        self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
         self.onClusterYLimChange()
-      #  self.updateFigure.emit()
- 
+        
+        
+    def updateXlimForLabelColor(self,dataShape, labelColumnNames, addRectangleAndLabels = True):
+        "Updates the xlim of the label color in a way that it matches the width of the clustermap"
+
+        nColumns = self.axisDict["axClusterMap"].get_xlim()[1]
+        clusterAxisWidth = self.axisDict["axClusterMap"].get_window_extent().width
+        labelAxisWidth = self.axisDict["axLabelColor"].get_window_extent().width
+        widthPerColumn = clusterAxisWidth/nColumns
+        labelAxisColumns = labelAxisWidth/widthPerColumn
+        self.labelColumnLimits = (0,labelAxisColumns)
+        self.labeColumnNames = labelColumnNames
+        self.axisDict["axLabelColor"].set_xlim(self.labelColumnLimits)
+        self.axisDict["axLabelColor"].set_axis_off()
+
+        if addRectangleAndLabels:
+            # get 0.5% offset
+            yOffset = self.axisDict["axLabelColor"].get_ylim()[1] * 0.005
+            
+            for n, labelColumnName in enumerate(labelColumnNames):
+                self.axisDict["axLabelColor"].text(
+                            x = 0.5+n,
+                            y = dataShape[0] + yOffset, 
+                            s = labelColumnName, 
+                            rotation=90, 
+                            ha = "center",
+                            va = "bottom", 
+                            fontproperties = self.getStdFontProps())
+
+            for rN in range(dataShape[1]):
+                p = patches.Rectangle((rN,0),width=1,height=dataShape[0], edgecolor = "black", linewidth = 0.6, fill=False)
+                self.axisDict["axLabelColor"].add_patch(p)
+        
+        
     def updateBackgrounds(self):
         "Update Background for blitting"
         self.colorLabelBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axLabelColor"].bbox)	
@@ -595,8 +675,10 @@ class ICClustermap(ICChart):
             return
         if not hasattr(self,"quickSelectScatter"):
             self.quickSelectScatter = self.axisDict["axLabelColor"].scatter(x=[],y=[],**self.getScatterKwargs())
-
-        coords = self.getOffsets(idxPosition)
+        
+        inv = self.axisDict["axLabelColor"].transLimits.inverted()
+        xOffset,_= inv.transform((0.02, 0.25))
+        coords = self.getOffsets(idxPosition,xOffset)
         
         self.quickSelectScatter.set_offsets(coords)
         self.quickSelectScatter.set_visible(True)
@@ -615,14 +697,19 @@ class ICClustermap(ICChart):
         else:
             return [], []
 
-    def getOffsets(self,idxPosition):
+    def getOffsets(self,idxPosition,xOffset = -0.15):
         ""
         coords = np.zeros(shape=(len(idxPosition),2))
         coords[:,1] = idxPosition
-        coords[:,0] += 0.05
+        coords[:,0] += xOffset
         return coords
 
     def setNaNColor(self):
         ""
         self.axisDict["axLabelColor"].clear()
+        self.axisDict["axLabelColor"].set_xlim(0,10)
+        self.axisDict["axLabelColor"].set_axis_off()
+        # delete colorLabelMesh 
+        del self.colorLabelMesh
+
         self.updateFigure.emit()

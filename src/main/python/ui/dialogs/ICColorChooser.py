@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 
 from backend.color.colorHelper import ColorHelper
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR
-
+from ..custom.buttonDesigns import ResetButton
 
 import seaborn as sns
 
@@ -64,14 +64,13 @@ class ColorChooserDialog(QDialog):
         self.selectedAlpha = self.mC.data.colorManager.alpha
         self.colorMapCBs = dict()
 
+        self.__windowUpdate()
         self.__controls()
         self.__layout()
-        self.__windowUpdate()
         self.__connectEvents()
         
 
     def __windowUpdate(self):
-
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
         self.setWindowOpacity(0.98)
 
@@ -80,6 +79,7 @@ class ColorChooserDialog(QDialog):
     def __controls(self):
         """Init widgets"""
         self.titleLabel = createTitleLabel("Color palettes")
+        self.closeButton = ResetButton()
         
         
     def __layout(self):
@@ -87,8 +87,11 @@ class ColorChooserDialog(QDialog):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(10,10,10,10)
         self.layout().setSpacing(3)
-
-        self.layout().addWidget(self.titleLabel)
+        hboxTop = QHBoxLayout()
+        hboxTop.addWidget(self.titleLabel)
+        hboxTop.addStretch()
+        hboxTop.addWidget(self.closeButton)
+        self.layout().addLayout(hboxTop)
         hbox = QHBoxLayout() 
         try:
             for header, colorPalettes in self.colorHelper.getColorPalettes().items():
@@ -141,6 +144,7 @@ class ColorChooserDialog(QDialog):
 
     def __connectEvents(self):
         """Connect events to functions"""
+        self.closeButton.clicked.connect(self.close)
 
     def alphaChanged(self,event=None):
         

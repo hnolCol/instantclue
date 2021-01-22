@@ -89,7 +89,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "hclustSizeColorMap",
-    "value"         :   "Greys",
+    "value"         :   "Paired",
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
@@ -131,6 +131,16 @@ DEFAULT_PARAMETER = [
     "parent"        :   "colorManager",
     "parentType"    :   "Color Settings",
     "description"   :   "Color for nanValues, '-' or custom nanString in plots.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    },
+    {
+    "name"          :   "axis.title.box.background",
+    "value"         :   "#efefef",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Color Settings",
+    "description"   :   "Background color for title boxes.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
     {
@@ -377,7 +387,15 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Boxplot Settings",
     "description"   :   "Show outliers in boxplots.",
     },
-   
+    {
+    "name"          :   "boxplot.split.data.on.category",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "matplotlib",
+    "parentType"    :   "Boxplot Settings",
+    "description"   :   "Splits data based on values in the receiver box 'Categories'.\nIf disabled. the whole dataset will be plotted against the category setups, without splitting before.",
+    },
     {
     "name"          :   "boxplot.flierprops.markeredgewidth",
     "value"         :   0.5,
@@ -696,7 +714,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["euclidean","nanEuclidean","None"],
+    "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster Settings",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
@@ -705,7 +723,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "columnMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["euclidean","nanEuclidean","None"],
+    "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster Settings",
     "description"   :   "Define metric used for column dendrogram. If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
@@ -736,6 +754,15 @@ DEFAULT_PARAMETER = [
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster Settings",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
+    },
+    {
+    "name"          :   "keep.cluster.xaxis.fixed",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster Settings",
+    "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
     },
     {
     "name"          :   "colorMapLimits",
@@ -917,6 +944,16 @@ DEFAULT_PARAMETER = [
     "description"   :   "Colormap for cluster rectangles."
     }, 
     {
+    "name"          :   "hclustLabelColorMap",
+    "value"         :   "Paired",
+    "dtype"         :   str,
+    "range"         :   colorParameterRange,
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster Settings",
+    "description"   :   "Colormap for color labeling."
+    }, 
+   
+    {
     "name"          :   "barplotMetric",
     "value"         :   "mean",
     "dtype"         :   str,
@@ -1040,7 +1077,7 @@ DEFAULT_PARAMETER = [
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
     "parentType"    :   "Histogram Settings",
-    "description"   :   "Enable/Disable cumulative histogram."
+    "description"   :   "Enable/Disable density calculation insteat of frequency."
     }, 
     {
     "name"          :   "histogramHisttype",
@@ -1416,6 +1453,15 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "QuickSelect Settings",
     "description"   :   "Default separator used to identify unique categories.",
     },
+        {
+    "name"          :   "quick.select.case.sensitive",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "QuickSelect Settings",
+    "description"   :   "Upon loading saved selected lists and/or pasting a list of strings, quick select items are compare with or without case sensititivy.",
+    },
     {
     "name"          :   "xy.plot.separate.column.pairs",
     "value"         :   True,
@@ -1461,6 +1507,26 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "XYPlot Settings",
     "description"   :   "If enabled, each data point (row) is indicated by a marker.",
     },
+    {
+    "name"          :   "xy.plot.marker.size",
+    "value"         :   5,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "XYPlot Settings",
+    "description"   :   "Marker size.",
+    },
+    {
+    "name"          :   "xy.plot.marker.edge.width",
+    "value"         :   0.2,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "XYPlot Settings",
+    "description"   :   "Stroke width of markers.",
+    },
+
+    
     {
     "name"          :   "xy.plot.linewidth",
     "value"         :   0.5,

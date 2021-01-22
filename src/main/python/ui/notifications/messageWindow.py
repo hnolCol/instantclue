@@ -20,11 +20,11 @@ class Message(QFrame):
 
         self.titleLabel = QLabel(title, self)
         self.titleLabel.setStyleSheet(
-            "font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: bold; padding: 0; color:#1E5A8F")
+            "font-family: Arial; font-size: 12px; font-weight: bold; padding: 0; color:#1E5A8F")
 
         self.messageLabel = QLabel(message, self)
         self.messageLabel.setStyleSheet(
-            "font-family: 'Roboto', sans-serif; font-size: 11px; font-weight: normal; padding-left: 3;")
+            "font-family: Arial; font-size: 11px; font-weight: normal; padding-left: 3;")
 
         self.setStyleSheet("""background:#F2F2F2""")
         

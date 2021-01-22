@@ -37,6 +37,9 @@ class CollapsableFrames(QWidget):
         if hasattr(self,"frameProps"):
             currentWidthHeader = self.currentFrameWidth(0)
             for intFrameID in self.frameProps.keys():
+                if currentWidthHeader < 0:
+                    currentWidthHeader = 0
+
                 self.frameProps[intFrameID]["contentArea"].setMaximumWidth(currentWidthHeader)
                 self.frameProps[intFrameID]["contentArea"].setMinimumWidth(currentWidthHeader)
                
@@ -135,6 +138,8 @@ class CollapsableFrames(QWidget):
         for intFrameID in self.frameProps.keys():
             currentHeight = self.currentFrameHeight(intFrameID,"contentArea")
             currentWidthHeader = self.currentFrameWidth(0)
+            if currentWidthHeader < 0:
+                currentWidthHeader = 0
             self.frameProps[intFrameID]["contentArea"].setMaximumWidth(currentWidthHeader)
 
             endValue = 0 if self.frameProps[intFrameID]["open"] == False else frameHeights[intFrameID] 
@@ -187,7 +192,7 @@ class CollapsableFrames(QWidget):
             if props["fixedHeight"]:
                 calculatedHeights[frameID] = int(props["height"]) if props["open"] else 0
             else:
-                calculatedHeights[frameID] = int(heightPerFrame) if props["open"] else 0 
+                calculatedHeights[frameID] = int(heightPerFrame) if props["open"] or heightPerFrame < 0 else 0 
 
         return calculatedHeights
 

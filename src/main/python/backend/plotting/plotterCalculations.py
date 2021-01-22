@@ -20,7 +20,7 @@ import scipy.spatial.distance as scd
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Rectangle, Polygon
 from matplotlib.lines import Line2D
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, ListedColormap
 from matplotlib.colors import to_hex
 from matplotlib.pyplot import hist
 import matplotlib.cm as cm
@@ -53,7 +53,7 @@ plotFnDict = {
     "histogram":"getHistogramProps",
     "countplot":"getCountplotProps",
     "x-ys-plot":"getXYPlotProps",
-    "PCA":"getPCAProps"
+    "dim-red-plot":"getDimRedProps"
 }
 
 line_kwargs = dict(linewidths=.45, colors='k')
@@ -191,7 +191,10 @@ class PlotterBrain(object):
     def getBarplotProps(self, dataID, numericColumns, categoricalColumns):
         ""
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-
+        if len(categoricalColumns) > 3:
+            splitByCats = False
+        else:
+            splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
         plotData, \
         axisPositions, \
         boxPositions, \
@@ -200,7 +203,7 @@ class PlotterBrain(object):
         colorGroups, \
         faceColors, \
         colorCategoricalColumn, \
-        xWidth, axisLabels, axisLimits, axisTitles, groupNames = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns)
+        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns,splitByCategories= splitByCats)
             
 
         filteredData = OrderedDict()
@@ -233,6 +236,7 @@ class PlotterBrain(object):
                 "groupNames" : groupNames,
                 "dataColorGroups": colorGroups,
                 "subplotBorders":subplotBorders,
+                "verticalLines" : verticalLines,
                 "colorCategoricalColumn" : colorCategoricalColumn,
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
@@ -380,6 +384,7 @@ class PlotterBrain(object):
                                             bins=self.histogramBins, 
                                             density=self.histogramDensity)
                 width = 0.95 * (bins[1] - bins[0])
+                
                # center = (bins[:-1] + bins[1:]) / 2
                 if self.histogramCumulative:
                     hist = np.cumsum(hist)
@@ -536,6 +541,11 @@ class PlotterBrain(object):
         ""    
         # axisPostions = dict([(n,[1,1,n+1]) for n in range(1)])
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
+
+        if len(categoricalColumns) > 3:
+            splitByCats = False
+        else:
+            splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
         #data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         #colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
         plotData, \
@@ -546,7 +556,13 @@ class PlotterBrain(object):
         colorGroups, \
         faceColors, \
         colorCategoricalColumn, \
-        xWidth, axisLabels, axisLimits, axisTitles, groupNames = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns)            
+        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines = calculatePositions(
+                                                                                dataID,
+                                                                                self.sourceData,
+                                                                                numericColumns,
+                                                                                categoricalColumns,
+                                                                                self.maxColumns,
+                                                                                splitByCategories= splitByCats)        
         # xLabel = ""
 
         filteredData = OrderedDict()
@@ -592,6 +608,7 @@ class PlotterBrain(object):
                 "hoverData" : hoverData,
                 "dataColorGroups": colorGroups,
                 "subplotBorders":subplotBorders,
+                "verticalLines" : verticalLines,
                 "colorCategoricalColumn" : colorCategoricalColumn,
                 "dataID":dataID}}
 
@@ -599,9 +616,22 @@ class PlotterBrain(object):
         ""
         
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-        
-        plotCalcData, axisPositions, boxPositions, tickPositions, tickLabels, colorGroups, faceColors, colorCategoricalColumn, xWidth, axisLabels, axisLimits, axisTitles, groupNames = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns)
+        if len(categoricalColumns) > 3:
+            splitByCats = False
+        else:
+            splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
 
+        plotCalcData, axisPositions, boxPositions, tickPositions, tickLabels, colorGroups, \
+            faceColors, colorCategoricalColumn, xWidth, axisLabels, axisLimits, \
+                axisTitles, groupNames, verticalLines = calculatePositions(dataID,
+                                                                    self.sourceData,
+                                                                    numericColumns,
+                                                                    categoricalColumns,
+                                                                    self.maxColumns, 
+                                                                    splitByCategories = splitByCats)
+
+
+        
         filteredData = OrderedDict()
         for n,plotData in plotCalcData.items():
             plotData["widths"] = xWidth
@@ -627,6 +657,7 @@ class PlotterBrain(object):
                 "dataColorGroups": colorGroups,
                 "subplotBorders":subplotBorders,
                 "colorCategoricalColumn" : colorCategoricalColumn,
+                "verticalLines" : verticalLines,
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
         
@@ -1189,23 +1220,11 @@ class PlotterBrain(object):
                 rowClustNumber = self.getClusterNumber(rowLinkage,rowMaxD)
                 ytickPosition, ytickLabels, rectangles, clusterColorMap = self.getClusterRectangles(data,rowMaxD,rowClustNumber,Z_row)
                 data = data.iloc[Z_row['leaves']]
-                # annotationDf = pd.DataFrame(rowClustNumber,columns=['labels'],index = data.index)
-                # uniqueCluster = np.unique(annotationDf.loc[data.index]['labels'].values)
-                # valueCounts = annotationDf.loc[data.index]['labels'].value_counts()
-                # countsClust = [valueCounts.loc[clustLabel] for clustLabel in uniqueCluster]
-                # ytickPosition = [(sum(countsClust[0:n+1])-valueCounts.loc[x]/2)*10 for n,x in enumerate(uniqueCluster)]
-                # ytickLabels = ['C ({})'.format(cluster) for cluster in uniqueCluster]
-                # clusterColors = self.sourceData.colorManager.getNColorsByCurrentColorMap(uniqueCluster.size,"hclustClusterColorMap")
-                # #clusterColors = sns.color_palette(self.clusterColorMap,uniqueCluster.size)
-                # rectangles = [Rectangle(
-                #                 xy = (0,n if n == 0 else sum(countsClust[:n] * 10)),
-                #                 width = rowMaxD, 
-                #                 height = yLimit * 10,
-                #                 alpha = 0.75,
-                #                 facecolor = clusterColors[n]) for n, yLimit in enumerate(countsClust)]
+                
             else:
                 #print("deleting")
                 del axisDict["axRowDendro"]
+                Z_row = None
 
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
                 
@@ -1323,9 +1342,11 @@ class PlotterBrain(object):
         # emperically determined to give almost equal width independent of number of columns 
 			
         addFactorMainWidth =  -0.15+len(numericColumns) * 0.008 
-			
-        if width*0.4+addFactorMainWidth > 0.75:
-            addFactorMainWidth = width*0.35
+		
+        clusterMapWidth = width*multWidth+addFactorMainWidth
+        rowDendroWidth = width * 0.13
+        if clusterMapWidth > 0.75:
+            clusterMapWidth = 0.75
 				
         if corrMatrix:
             ## to produce a corr matrix in the topleft corner of the graph
@@ -1335,26 +1356,27 @@ class PlotterBrain(object):
             
         else:
             heightMain = height * 0.8 
-        
-      #  if corrMatrix:
-       #     height = width
-
             
         axisDict = dict() 
 
-        axisDict["axRowDendro"] = [x0,y0,width* 0.13,heightMain]
-        axisDict["axColumnDendro"] = [x0+ width*0.13,
+        axisDict["axRowDendro"] = [x0,
+                                    y0,
+                                    rowDendroWidth,
+                                    heightMain]
+                                    
+        axisDict["axColumnDendro"] = [x0 + rowDendroWidth, 
                                     y0+heightMain,
-                                    width*multWidth+addFactorMainWidth,
+                                    clusterMapWidth,
                                     (width* 0.13)*correctHeight]
+
         axisDict["axClusterMap"] = [x0+width*0.13,
                                     y0,
-                                    width*multWidth+addFactorMainWidth,
+                                    clusterMapWidth,
                                     heightMain]
         
-        axisDict["axLabelColor"] =  [x0+width*0.13+width*multWidth+addFactorMainWidth+width*0.02,
+        axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+width*0.02, #add margin
                                     y0,
-                                    width*0.1,
+                                    width-clusterMapWidth-rowDendroWidth,
                                     heightMain]		
         
         axisDict["axColormap"] =    [x0,
@@ -1364,6 +1386,9 @@ class PlotterBrain(object):
         
         return axisDict
 
+    def getDimRedProps(self,dataID,numericColumns,categoricalColumns):
+        ""
+        return {"data":{}}
 
     def getPCAProps(self,dataID,numericColumns,categoricalColumns):
         ""
@@ -1390,35 +1415,164 @@ class PlotterBrain(object):
         ""
         
         try:
-            data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
+            axisTitles = {} 
 
-            if not self.plotAgainstIndex:
-                numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
+            if len(categoricalColumns) == 0:
+                data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
+
+                if not self.plotAgainstIndex and len(numericColumns) > 1:
+                    numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
+
+                else:
+                    numericColumnPairs = [("Index ({:02d})".format(n+1),numColumn) for n,numColumn in enumerate(numericColumns)]
+                    for indexName, numColumn in numericColumnPairs:
+                    
+                        
+                        index = data.sort_values(by=numColumn, ascending = self.indexSort == "ascending").index
+                        data = data.join(pd.Series(np.arange(index.size),index=index, name = indexName))
+                        
+                nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
+                axisPositions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
+                axisLabels = dict([(n,{"x":x1,"y":x2}) for n, (x1,x2) in enumerate(numericColumnPairs)])
+                 # {0:{"x":xLabel,"y":"value"}}
 
             else:
-                numericColumnPairs = [("Index ({:02d})".format(n+1),numColumn) for n,numColumn in enumerate(numericColumns)]
-                for indexName, numColumn in numericColumnPairs:
                 
-                    
-                    index = data.sort_values(by=numColumn, ascending = self.indexSort == "ascending").index
-                    data = data.join(pd.Series(np.arange(index.size),index=index, name = indexName))
-                    
-            nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
-            axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
-            axisLabels = dict([(n,{"x":x1,"y":x2}) for n, (x1,x2) in enumerate(numericColumnPairs)]) # {0:{"x":xLabel,"y":"value"}}
-            colorGroupsData = pd.DataFrame() 
-            colorGroupsData["color"] = [self.sourceData.colorManager.nanColor]
-            colorGroupsData["group"] = [""]
+                subplotBorders = dict(wspace=0, hspace = 0.2, bottom=0.15,right=0.95,top=0.95)
+                data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
+                uniqueValuesCat1 = data[categoricalColumns[0]].unique() 
+                numUniqueCat = uniqueValuesCat1.size 
+                
+               
+                axisLabels = {}
+                firstAxisRow = True
+                axisID = 0
+                plotNumericPairs = []
 
-            sizeGroupsData = pd.DataFrame() 
-            sizeGroupsData["size"] = [self.scatterSize]
-            sizeGroupsData["group"] = [""]
+                if not self.plotAgainstIndex and len(numericColumns) > 1:
+                    numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
+
+                if len(categoricalColumns) == 1:
+                    numOfAxis = len(numericColumnPairs) * numUniqueCat
+                    axisPositions = getAxisPostistion(numOfAxis,maxCol=numUniqueCat)
+                    requiredColumns = []
+                    for numCols in numericColumnPairs:
+                        for uniqueValue in uniqueValuesCat1:
+                            requiredColumns.append("{}:{}:({})".format(uniqueValue,categoricalColumns[0],numCols[0]))
+                            requiredColumns.append("{}:{}:({})".format(uniqueValue,categoricalColumns[0],numCols[1]))
+
+                    plotData = pd.DataFrame(
+                                index=data.index, 
+                                columns = requiredColumns
+                                )
+                    
+                    
+                    for numCols in numericColumnPairs:
+                        for groupName, groupData in data.groupby(categoricalColumns[0]):
+
+                            if axisID == numUniqueCat:
+                                firstAxisRow = False
+                            elif firstAxisRow:
+                                axisTitles[axisID] = {"title":"{}\n{}".format(categoricalColumns[0],groupName),
+                                                                "appendWhere":"top",
+                                                                "textRotation" : 0}
+                            pair = []
+                            for columnName in numCols:
+                                columnKey = "{}:{}:({})".format(groupName,categoricalColumns[0],columnName)
+                                plotData.loc[groupData.index,columnKey] = groupData[columnName]
+                                pair.append(columnKey)
+                            plotNumericPairs.append(tuple(pair))
+
+                            axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
+                            axisID += 1  
+                    
+                   # axisPositions = getAxisPostistion(len(numericColumnPairs),nCols=numUniqueCat)
+                elif len(categoricalColumns) == 2:
+                    uniqueValuesCat2 = data[categoricalColumns[1]].unique() 
+                    numUniqueCat2 = uniqueValuesCat2.size
+
+                    numOfAxis = numUniqueCat * numUniqueCat2 * len(numericColumnPairs)
+                    axisPositions = getAxisPostistion(numOfAxis,maxCol=numUniqueCat)
+                    requiredColumns = []
+                    for numCols in numericColumnPairs:
+                        for uniqueValueCat2 in uniqueValuesCat2:
+                            for uniqueValueCat1 in uniqueValuesCat1:
+
+                                requiredColumns.append("{}:{}:{}:({})".format(uniqueValueCat1,
+                                                                            uniqueValueCat2,
+                                                                            categoricalColumns[0],
+                                                                            numCols[0]))
+                                requiredColumns.append("{}:{}:{}:({})".format(uniqueValueCat1,
+                                                                            uniqueValueCat2,
+                                                                            categoricalColumns[0],
+                                                                            numCols[1]))
+                    
+                    plotData = pd.DataFrame(
+                                index=data.index, 
+                                columns = requiredColumns
+                                )
+                    
+                    
+                    for numCols in numericColumnPairs:
+                        for uniqueValueCat2, cat2data in data.groupby(categoricalColumns[1],sort=False):
+                            
+                            for groupName, groupData in cat2data.groupby(categoricalColumns[0], sort=False):
+                                    if axisID == numUniqueCat:
+                                        firstAxisRow = False
+                                    elif firstAxisRow:
+                                        axisTitles[axisID] = {"title":"{}:{}".format(categoricalColumns[0],groupName),
+                                                                "appendWhere":"top",
+                                                                "textRotation" : 0}
+                                    if groupName == uniqueValueCat1[-1]:
+                                        titleProps = {
+                                                        "title":"{}:{}".format(categoricalColumns[1],uniqueValueCat2),
+                                                        "appendWhere":"right",
+                                                        "textRotation" : 90
+                                                    }
+                                                    
+                                        if axisID in axisTitles:
+                                            addTitles = [axisTitles[axisID],titleProps]
+                                            axisTitles[axisID] = addTitles
+                                        else:
+                                            axisTitles[axisID] = titleProps
+                                    
+                                    pair = []
+                                    for columnName in numCols:
+                                        columnKey = "{}:{}:{}:({})".format(groupName,uniqueValueCat2,categoricalColumns[0],columnName)
+                                        plotData.loc[groupData.index,columnKey] = groupData[columnName]
+                                        pair.append(columnKey)
+                                    plotNumericPairs.append(tuple(pair))
+
+                                    axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
+                                    axisID += 1  
+
+                print(plotData)
+                
+                numericColumnPairs = plotNumericPairs
+                print(numericColumnPairs)
+
+                print(axisTitles)
+                data = plotData
+                
+
+
 
         except Exception as e:
-            print(e)
+                print(e)
 
-        return {"data":{"plotData":data,
-            "axisPositions":axisPostions, 
+        
+        colorGroupsData = pd.DataFrame() 
+        colorGroupsData["color"] = [self.sourceData.colorManager.nanColor]
+        colorGroupsData["group"] = [""]
+
+        sizeGroupsData = pd.DataFrame() 
+        sizeGroupsData["size"] = [self.scatterSize]
+        sizeGroupsData["group"] = [""]
+
+        return {"data":{
+            "plotData":data,
+            "axisPositions":axisPositions, 
+            "axisTitles": axisTitles,
             "columnPairs":numericColumnPairs,
             "dataColorGroups": colorGroupsData,
             "dataSizeGroups" : sizeGroupsData,
@@ -1445,7 +1599,6 @@ class PlotterBrain(object):
                 rawMarkerData = rawData[markerColumnName]
             markerCategories = rawMarkerData.unique()
             
-            nCategories = markerCategories.size
             availableMarkers = ["o","^","D","s","P","v","p","+","."]
 
             markerMap = OrderedDict([(cat,availableMarkers[n % len(availableMarkers)]) for n,cat in enumerate(markerCategories)])
@@ -1565,32 +1718,6 @@ class PlotterBrain(object):
         
         return {"sizeGroupData":sizeGroupData,"propsData":propsData,"title":title,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"size"}
 
-#             colors, layerMap = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
-#             colorGroupData["group"] = colorCategories
-#             colorGroupData["color"] = [colors[k] for k in colorCategories]
-#              #map color data and save as df
-#             colorData = pd.DataFrame(rawData[colorColumnName].map(colors).values,
-#                                     columns=["color"],
-#                                     index=rawData.index)
-#             #add color layer props
-#             colorData["layer"] = colorData["color"].map(layerMap)
-#             colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
-#             categoryIndexMatch = {}
-#             categoryIndexMatch = dict([(intID,rawData[rawData.values == category].index) for category, intID in zip(colorGroupData["group"].values,
-#                                                                                                                         colorGroupData["internalID"].values)])
-        
-
-
-# if sizeMap is None:
-	# 		uniqueCategories = self.data[categoricalColumn].apply(tuple,axis=1).unique()			
-	# 		numberOfUuniqueCategories = uniqueCategories.size
-	# 		scaleSizes = np.linspace(0.3,1,num=numberOfUuniqueCategories,endpoint=True)
-	# 		sizeMap = dict(zip(uniqueCategories, scaleSizes))
-	# 		sizeMap = replace_key_in_dict('-',sizeMap,0.1)
-			
-	# 	scaledData = self.data[categoricalColumn].apply(tuple,axis=1).map(sizeMap)
-	# 	axCollection = ax.collections
-	# 	sizeData = (scaledData)*(self.maxSize-self.minSize) + self.minSize
 
     def getLinearRegression(self,dataID,numericColumnPairs):
         ""
@@ -1601,7 +1728,7 @@ class PlotterBrain(object):
             lineKwargs = {"xdata":xList,"ydata":yList}
             lineData[n] = lineKwargs
             
-        funcProps = getMessageProps("Done..","Lowess line added.")
+        funcProps = getMessageProps("Done..","Linear regression line added.")
         funcProps["lineData"] = lineData
         return funcProps
 
@@ -1643,6 +1770,7 @@ class PlotterBrain(object):
             else:
                 colorColumnType = "Categories"
                 rawData = rawData.astype(str)
+
         if colorColumnType == "Categories":
 
             if colorColumn.index.size > 1:
@@ -2116,44 +2244,35 @@ class PlotterBrain(object):
         colorColumnNames = colorColumn.values
 
         rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
-
+        #unique values. add nan value first -> by default light grey
         uniqueValuesList = self.sourceData.getUniqueValues(dataID,colorColumn.values.tolist(), forceListOutput=True)
-        uniqueValuesTotal = pd.Series(np.concatenate(uniqueValuesList)).unique() 
+        #aüüend replaceObjectNan - should be first item!
+        uniqueValuesTotal = pd.Series([self.sourceData.replaceObjectNan]).append(
+                            pd.Series(np.concatenate(uniqueValuesList)) , ignore_index=True).unique()
         
         factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
-        factorMapper[self.sourceData.replaceObjectNan] = -1
-        maxFactor = np.nanmax(list(factorMapper.values()))
+        
+        #ensure -1 is first in color chooser
+       # factorMapper = OrderedDict(sorted(factorMapper.items(), key=lambda x:x[1]))
+        
 
         colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
 
         for columnName in colorColumn.values:
-            colorData.loc[rawData.index,columnName] = rawData[columnName].map(factorMapper).fillna(-1)
+            colorData.loc[rawData.index,columnName] = rawData[columnName].map(factorMapper)
 
 
-
-        norm = Normalize(vmin=0, vmax=maxFactor)
-        twoColorMap = self.sourceData.colorManager.hclustSizeColorMap
-        cmap = self.sourceData.colorManager.get_max_colors_from_pallete(twoColorMap)
-        cmap.set_bad(self.sourceData.colorManager.nanColor)
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
-        
+        colorValues = sns.color_palette("Paired",len(factorMapper)).as_hex()
+        colorValues[0] = self.sourceData.colorManager.nanColor
+        cmap = ListedColormap(colorValues)
         colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
-        colorGroupData["color"] = [to_hex(m.to_rgba(x)) for x in factorMapper.values()]
+        colorGroupData["color"] = colorValues
         colorGroupData["group"] = list(factorMapper.keys())
         colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
 
-			# # get all unique values
-			# uniqueValuesPerColumn = self.dfClass.get_unique_values(colorColumnList, forceListOutput=True)
-			# uniqueValuesTotal = np.unique(np.concatenate(uniqueValuesPerColumn))
-			# self.factorDict = dict(zip(uniqueValuesTotal.tolist(),np.arange(0,uniqueValuesTotal.size)))
-			# self.factorDict['-'] = self.factorDict['nan'] = -1
-			# #self.colorData[colorColumnList] = self.df.replace(factorDict)	
-				
-			#for n,column in enumerate(colorColumnList):
-			#	self.colorData[column] = self.df[column].map(self.factorDict)
-			# adjust color column axis		
+	
 
-        return {"colorData":colorData,"colorGroupData":colorGroupData,"cmap":m,"title":mergeListToString(colorColumnNames,"\n")}
+        return {"colorData":colorData,"colorGroupData":colorGroupData,"cmap":cmap,"title":mergeListToString(colorColumnNames,"\n"),"isEditable":False}
         
 
     def getSizeQuadMeshForHeatmap(self,dataID,sizeColumn = None,sizeColumnType = None):
@@ -2252,28 +2371,36 @@ class PlotterBrain(object):
         colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(numericColumnPairs))
         #line2D 
         colorGroupsData["color"] = colorValues
-        colorGroupsData["group"] = ["{}:{}".format(*columnPair) for columnPair in numericColumnPairs]
+        colorGroupsData["group"] = ["{}:{}".format(*columnPair) if "ICIndex" not in columnPair[0] else "{}".format(columnPair[1]) for columnPair in numericColumnPairs]
         colorGroupsData["internalID"] = [getRandomString() for n in colorValues]
         #
         lines = {}
+        lineKwargs = {}
         for n,columnPair in enumerate(numericColumnPairs):
             internalID = colorGroupsData["internalID"].iloc[n]
-            l = Line2D(
+            lineProps = dict(
                     xdata = rawData[columnPair[0]].values,
                     ydata = rawData[columnPair[1]].values,
                     color = colorValues[n],
                     markeredgecolor = "darkgrey",
+                    markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
                     alpha = config.getParam("xy.plot.alpha"), 
-                    markersize = np.sqrt(config.getParam("scatterSize")),
+                    markersize = config.getParam("xy.plot.marker.size"),
                     linewidth = config.getParam("xy.plot.linewidth"), 
                     marker = config.getParam("xy.plot.marker") if config.getParam("xy.plot.show.marker") else "")
+
+            l = Line2D(**lineProps)
+            
             linesByInternalID[internalID] = l
             if not separatePairs:
                 if 0 not in lines:    
                     lines[0] = []
+                    lineKwargs[0] = []
                 lines[0].append(l)
+                lineKwargs[0].append(lineProps)
             else:
-                lines[n] = [l]      
+                lines[n] = [l]   
+                lineKwargs[n] = [lineProps]   
         
     
         if not separatePairs:
@@ -2283,8 +2410,10 @@ class PlotterBrain(object):
                                     Y  = rawData[yAxisColumns].values.flatten())
                 
             axisLimits[0] = {"xLimit": (xAxisMin,xAxisMax), "yLimit": (yAxisMin,yAxisMax)}
+            
+            yAxisLabel = numericColumnPairs[0][1] if not (config.getParam("xy.plot.against.index") or len(numericColumns) == 1) else "Index"
             axisLabels[0] = {"x":numericColumnPairs[0][0],
-                            "y":numericColumnPairs[0][1]} if len(numericColumnPairs) == 1 else {"x":"","y":""}
+                            "y":numericColumnPairs[0][1]} if len(numericColumnPairs) == 1 else {"x":"Index","y":"y-value"}
         else:
             
             for n, columnPair in enumerate(numericColumnPairs):
@@ -2292,12 +2421,13 @@ class PlotterBrain(object):
                 xAxisMin, xAxisMax, yAxisMin, yAxisMax = self._getXYLimits(
                                                     X = rawData[xColumn].values.flatten(),
                                                     Y  = rawData[yColumn].values.flatten())
-
+                xAxisLabel = xColumn if not (config.getParam("xy.plot.against.index") or len(numericColumns) == 1) else "Index"
                 axisLimits[n] = {"xLimit": (xAxisMin,xAxisMax), "yLimit": (yAxisMin,yAxisMax)}
-                axisLabels[n] = {"x":xColumn,"y":yColumn}
+                axisLabels[n] = {"x":xAxisLabel,"y":yColumn}
 
         return {"data":{
                     "lines":lines,
+                    "lineKwargs" : lineKwargs,
                     "axisLabels" : axisLabels,
                     "axisPositions":axisPostions,
                     "dataColorGroups": colorGroupsData,

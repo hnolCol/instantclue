@@ -41,6 +41,7 @@ class ICBarplot(ICChart):
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
         self.addTitles()
+        self.addVerticalLines()
         self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
         #hoverGroupItems = self.reorderBoxplotItemsForHover()
         #self.setHoverItemGroups(hoverGroupItems)
@@ -104,4 +105,5 @@ class ICBarplot(ICChart):
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
         self.initBarplots(targetAx=targetAx)
+        self.addVerticalLines(axisID,targetAx)
         self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)

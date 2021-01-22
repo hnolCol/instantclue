@@ -73,6 +73,7 @@ class ICViolinplot(ICChart):
             self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
             self.setAxisLabels(self.axisDict,data["axisLabels"])
             self.addTitles()
+            self.addVerticalLines()
             #set limits
             for n,ax in self.axisDict.items():
                 if n in data["axisLimits"]:
@@ -188,5 +189,6 @@ class ICViolinplot(ICChart):
         self.addMinMaxLine(onlyForID=axisID,targetAx=targetAx)
         #self.setFacecolors(onlyForID=axisID)
         self.mirrorStats(targetAx,axisID)
-        self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)          
+        self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)        
+        self.addVerticalLines(axisID,targetAx)  
         self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)

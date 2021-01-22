@@ -18,15 +18,9 @@ class ConfigDialog(QDialog):
 
         self.__controls()
         self.__layout()
-        #self.__windowUpdate()
+        
         self.__connectEvents()
         
-
-    def __windowUpdate(self):
-
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
-        self.setWindowOpacity(0.98)
-
     
     def __controls(self):
         """Init widgets"""
@@ -78,6 +72,7 @@ class ConfigDialog(QDialog):
         #save current parameter group
         setattr(self.mC.config,"lastConfigGroup",self.propCombo.currentText())
         self.updateParams()
+        self.mC.mainFrames["right"].updateTypeSpecMenus()
         event.accept()
     
     def updateParams(self,event=None):

@@ -186,7 +186,7 @@ class DataHandleFrame(QFrame):
 
     def askForFile(self):
         "Get File Names"
-        dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *xlsx);;Text files (*.txt *.csv);;Excel files (*.xlsx)")
+        dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *tsv *xlsx);;Text files (*.txt *.csv *tsv);;Excel files (*.xlsx)")
         dlg.setFileMode(QFileDialog.ExistingFiles)
 
         if dlg.exec_():

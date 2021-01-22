@@ -31,9 +31,7 @@ class ICHistogram(ICChart):
                 if n != onlyForID:
                     continue
                 else:
-                    print("here", n)
                     for pProps in patches:
-                        print(pProps)
                         p = self.getPatch(pProps)
                         targetAx.add_patch(p)
 
@@ -62,6 +60,12 @@ class ICHistogram(ICChart):
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax)
+                    
+            qsData = self.getQuickSelectData()
+            if qsData is not None:
+                self.mC.quickSelectTrigger.emit()
+                return
+
             self.updateFigure.emit()
         except Exception as e:
             print(e)
@@ -123,7 +127,7 @@ class ICHistogram(ICChart):
                     
                     self.setHoverScatterData(coords, ax)
     
-    def updateQuickSelectItems(self):
+    def updateQuickSelectItems(self, propsData = None):
         ""
        # print("updaing")
         colorData = self.getQuickSelectData()
@@ -136,7 +140,7 @@ class ICHistogram(ICChart):
             self.quickSelectScatter = dict()
         for ax in self.axisDict.values():
             if not ax in self.quickSelectScatter:
-                self.quickSelectScatter[ax] = ax.scatter(x=[],y=[],**self.getScatterKwargs())
+                self.quickSelectScatter[ax] = ax.scatter(x=[],y=[],**self.getScatterKwargs(), zorder=1e6)
         for n, ax in self.axisDict.items():
             if n in self.data["hoverData"]:
                 xValues = self.data["hoverData"][n].loc[self.data["hoverData"][n].index.intersection(dataIndex)]
@@ -150,7 +154,7 @@ class ICHistogram(ICChart):
                 self.quickSelectScatter[ax].set_offsets(coords)
                 self.quickSelectScatter[ax].set_visible(True)
                 self.quickSelectScatter[ax].set_facecolor(colorData.loc[xValues.index,"color"])
-
+                print("Done")
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
         data = self.data 

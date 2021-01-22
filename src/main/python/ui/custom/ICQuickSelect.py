@@ -48,11 +48,11 @@ class QuickSelect(QWidget):
 
         self.saveButton = BigArrowButton(self,
                             direction="down" ,
-                            tooltipStr="Save Selection.\nCan be applied to any dataset by matching values.",
+                            tooltipStr="Save Selection.\nCan be loaded and applied to any dataset by matching values.",
                             buttonSize=(15,15))
         self.loadButton = BigArrowButton(self,
                             direction="up" ,
-                            tooltipStr="Load saved selection.\nMatches will be performed by valut not by index.",
+                            tooltipStr="Load saved selection.\nMatches will be performed by string value not by index.\nThis means that if there are multiple matches, all with be selected.",
                             buttonSize=(15,15))
         self.checkedLabels = CheckButton(self,tooltipStr="Shows (un)checked items only.")
         self.resetButton = ResetButton(self,tooltipStr="Reset View")
@@ -61,7 +61,12 @@ class QuickSelect(QWidget):
     def __connectEvents(self):
     
         self.sortDescendingButton.clicked.connect(lambda e : self.model.sort(how="descending"))
+        self.sortDescendingButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sortDescendingButton.customContextMenuRequested.connect(lambda e: self.openSortMenu(sortHow="descending"))
+
         self.sortAscendingButton.clicked.connect(self.model.sort)
+        self.sortAscendingButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sortAscendingButton.customContextMenuRequested.connect(self.openSortMenu)
         self.resetButton.clicked.connect(self.resetView)
         self.checkedLabels.clicked.connect(self.showCheckedLabels)
         self.maskButton.clicked.connect(self.setMaskMode)
@@ -225,6 +230,7 @@ class QuickSelect(QWidget):
             return True
         except Exception as e:
             print(e)
+   
 
     def getAnnotateProps(self, ignoreUserSelection = False):
         ""
@@ -260,6 +266,20 @@ class QuickSelect(QWidget):
     def getQuickSelectColumn(self):
         ""
         return self.quickSelectProps["columnName"]
+
+
+    def openSortMenu(self,event=None, sortHow = "ascending"):
+        ""
+        print("here")
+        menu = createMenu()
+        menu.addAction("By color", lambda sortHow = sortHow:self.model.sortByColor(how=sortHow))
+        menu.addAction("By size")
+
+
+        senderGeom = self.sender().geometry()
+        topLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        menu.exec_(topLeft) 
+        self.sender().mouseLostFocus()
 
     def openColorMenu(self,event=None):
         ""
@@ -365,6 +385,7 @@ class QuickSelect(QWidget):
                 return   
             if selectionData is None: 
                 selectionData = self.model.getCompleteSelectionData()
+                selectionData = selectionData.dropna(subset=["checkedValues"])
 
             if selectionData["checkedValues"].index.size == 0:
                 self.mC.sendMessageRequest({"title":"Error ..","message":"No selection made in Quick Select"})
@@ -511,11 +532,7 @@ class QuickSelect(QWidget):
         ""
         #filterMode = self.quickSelectProps["filterProps"]["mode"]
         return self.model.checkedLabels.index[self.model.checkedLabels]
-        # if filterMode == "raw":
-            
-        # else:
-        #    # print(self.model.checkedLabels.index[self.model.checkedLabels])
-        #     return self.model.checkedLabels.index[self.model.checkedLabels]#self.hoverIdx
+      
 
 
     def hasData(self):
@@ -531,28 +548,27 @@ class QuickSelect(QWidget):
 
 class FavoriteSelectionCollection(object):
     def __init__(self):
-        self.pathToTemp = os.path.join(".","temp")
+        self.pathToTemp = os.path.join(".","quickSelectLists")
         if not os.path.exists(self.pathToTemp):
             os.mkdir(self.pathToTemp)
 
     def add(self,selectionData,selectionName):
         ""
         pathToFile = self.getPath(selectionName)
-        with open(pathToFile, 'wb') as file:
-            try:
-                pickle.dump(selectionData, file)
-                return True
-            except PermissionError:
-                return "Not saved. Permission Error" 
-            except:
-                return "Not saved Unknown Error"
+        try:
+            selectionData.to_csv(pathToFile, index=False,sep="\t")
+            return True
+        except PermissionError:
+            return "Not saved. Permission Error" 
+        except:
+            return "Not saved Unknown Error"
 
     def load(self,selectionName):
         ""
         pathToFile = self.getPath(selectionName)
         if os.path.exists(pathToFile):
-            with open(pathToFile, 'rb') as file:
-                selectionData = pickle.load(file)
+            selectionData = pd.read_table(pathToFile, sep="\t")
+           
             return selectionData
     
     def delete(self,selectionName):
@@ -571,12 +587,12 @@ class FavoriteSelectionCollection(object):
     def getSavedSelections(self):
         ""
         files = os.listdir(self.pathToTemp)
-        files = [f.rsplit(".",1)[0] for f in files if f.endswith(".pickle")]
+        files = [f.rsplit(".",1)[0] for f in files if f.endswith(".txt")]
         return files
 
     def getPath(self, selectionName):
         ""
-        return os.path.join(self.pathToTemp,"{}.pickle".format(selectionName))
+        return os.path.join(self.pathToTemp,"{}.txt".format(selectionName))
 
 
 class QuickSelectModel(QAbstractTableModel):
@@ -754,7 +770,7 @@ class QuickSelectModel(QAbstractTableModel):
         selectionData["checkedValues"] = self.getCheckedData()
         selectionData["checkedColors"] = self.checkedColors
         selectionData["userDefinedColors"] = self.userDefinedColors
-
+        selectionData = pd.DataFrame().from_dict(selectionData)
         return selectionData
     
     def getIndexForMatches(self,dataList):
@@ -763,17 +779,31 @@ class QuickSelectModel(QAbstractTableModel):
 
     def readFavoriteSelection(self, selectionData):
         ""
+        print(selectionData)
         if not self._inputLabels.empty:
             checkedData = selectionData["checkedValues"]
-            boolMatch = self._inputLabels.isin(checkedData.values)
-            dataMatched = self._inputLabels[boolMatch]
-            for index, value in  dataMatched.iteritems():
-                findSavedIndex = checkedData[checkedData.values == value].index.values[0]
-                self.setCheckStateByDataIndex(index,update=False)
-                
-                if selectionData["userDefinedColors"].index.size != 0 and findSavedIndex in selectionData["userDefinedColors"].index:
-                   
-                    self.setColor(index,selectionData["userDefinedColors"].loc[index],update=False)
+            caseSensitive = self.parent().mC.config.getParam("quick.select.case.sensitive")
+            if caseSensitive: #make each string lowercase and match then
+                lowerStrLabels = self._inputLabels.str.lower()
+                lowerStrSelectionData = selectionData["checkedValues"].str.lower()
+                boolMatch = lowerStrLabels.isin(lowerStrSelectionData)
+            else: #exact matching
+                boolMatch = self._inputLabels.isin(checkedData.values)
+            if np.any(boolMatch.values):
+                dataMatched = self._inputLabels[boolMatch]
+                print(dataMatched)
+                for index, value in  dataMatched.iteritems():
+                    if caseSensitive:
+                        lowerValue = lowerStrLabels.loc[index]
+                        findSavedIndex = lowerStrSelectionData[lowerStrSelectionData.values == lowerValue].index.values[0]
+                    else:
+                        findSavedIndex = checkedData[checkedData.values == value].index.values[0]
+                    if not self.getCheckStateByDataIndex(index):
+                        self.setCheckStateByDataIndex(index,update=False)
+                    print(selectionData.loc[findSavedIndex,"userDefinedColors"])
+                    if isinstance(selectionData.loc[findSavedIndex,"userDefinedColors"],str):
+                        print("doing this")
+                        self.setColor(index,selectionData.loc[findSavedIndex,"userDefinedColors"],update=False)
 
         self.completeDataChanged()
         self.parent().updateDataSelection()
@@ -895,6 +925,13 @@ class QuickSelectModel(QAbstractTableModel):
 
         self.completeDataChanged()
 
+    def sortByColor(self, e = None, how = "ascending"):
+        ""
+        sortedColors = self.checkedColors.replace(self.parent().mC.config.getParam("nanColor"),np.nan).sort_values(ascending = how == "ascending")
+        self._labels = self._inputLabels.loc[sortedColors.index]
+        self.completeDataChanged()
+
+
     def showHighlightIndex(self,dataIndex,updateData = False):
         ""
         if dataIndex is None:
@@ -935,6 +972,7 @@ class QuickSelectModel(QAbstractTableModel):
         ""
         self._labels = pd.Series()
         self._inputLabels = self._labels.copy()
+        self.initColorSeries()
         self.setCheckedSeries() 
         self.completeDataChanged()
 
@@ -993,6 +1031,11 @@ class QuickSelectTableView(QTableView):
         ""
         readType = self.sender().text()
         self.parent().readSelection(readType)
+    
+    @pyqtSlot()
+    def saveSelection(self):
+        ""
+        self.parent().saveSelection()
 
     def leaveEvent(self,event=None):
         ""
@@ -1018,6 +1061,14 @@ class QuickSelectTableView(QTableView):
         else:
             mC.sendMessageRequest({"title":"Not available..","message":"Annotations only works for filter mode 'raw'."})
             
+
+    def uncheckSelection(self):
+        "Sets check state to unchecked for all items"
+        self.model().setCheckedSeries() #resets check state
+        self.model().initColorSeries() #resets color
+        self.model().setSizeSeries() #resets size
+        self.model().completeDataChanged()
+
     def mouseReleaseEvent(self,e):
         "Handles Mouse Release Events"
         if not self.model().dataAvailable():
@@ -1040,7 +1091,9 @@ class QuickSelectTableView(QTableView):
 
                 for readType in ["Clipboard","Text/CSV file"]:
                     menus["Selection from .."].addAction(readType, self.readSelection)
+                menus["main"].addAction("Save selection", self.saveSelection)
                 menus["main"].addAction("Annotate selection", self.annotateSelection)
+                menus["main"].addAction("Uncheck all", self.uncheckSelection)
                 menus["main"].exec_(self.mapToGlobal(e.pos()))
                     
             except Exception as e:

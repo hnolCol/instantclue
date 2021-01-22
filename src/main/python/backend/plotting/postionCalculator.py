@@ -18,7 +18,7 @@ def getAxisPostistion(n,nRows = None, nCols = None, maxCol = 4):
 
 
 
-def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, maxColumns, **kwargs):
+def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, maxColumns, splitByCategories = False, **kwargs):
     """
     Return tickposition and axisPositions and colors
     """
@@ -27,8 +27,107 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     colorGroups  = pd.DataFrame()
     axisLimits = {}
     axisTitles = {}
+    verticalLines = {}
     data = sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-    if nCatCols == 0:
+
+    if not splitByCategories and nCatCols > 0:
+
+        axisPostions = getAxisPostistion(n = nNumCols, maxCol=2)
+
+        uniqueValueIndex = {}
+        tickPositionByUniqueValue = {}
+        tickPositions = {}
+        boxPositions = {} 
+        faceColors = {}
+        groupNames = {}
+        plotData = {}
+        #get unique values
+
+        replaceObjectNan = sourceData.replaceObjectNan
+
+        uniqueValuesByCatColumns = OrderedDict([(categoricalColumn,[cat for cat in data[categoricalColumn].unique() if cat != replaceObjectNan]) for categoricalColumn in categoricalColumns])
+        uniqueValuesForCatColumns = [uniqueValuesByCatColumns[categoricalColumn]  for categoricalColumn in categoricalColumns] 
+        uniqueValuesPerCatColumn = dict([(categoricalColumn,uniqueValuesForCatColumns[n]) for n,categoricalColumn in enumerate(categoricalColumns)])
+        #numUniqueValuesPerCatColumn = dict([(categoricalColumn,len(uniqueValuesForCatColumns[n])) for n,categoricalColumn in enumerate(categoricalColumns)])
+        
+        uniqueCategories = ["Complete"] + ["{}:({})".format(uniqueValue,k) for k,v in uniqueValuesByCatColumns.items() for uniqueValue in v]
+        colors,_ = sourceData.colorManager.createColorMapDict(uniqueCategories, as_hex=True)
+        flatUniqueValues = ["Complete"] + [uniqueValue for sublist in uniqueValuesForCatColumns for uniqueValue in sublist]
+        #drop "-"
+        totalNumUniqueValues = np.array(uniqueValuesForCatColumns).flatten().size
+        
+        widthBox = 1/(totalNumUniqueValues + 1)
+        border = widthBox/10
+       
+        colorGroups["color"] = colors.values()
+        colorGroups["group"] = uniqueCategories
+        colorGroups["internalID"] = [getRandomString() for n in colorGroups["color"].values]
+        
+        colorCategoricalColumn = "\n".join(categoricalColumns)
+        #get data bool index
+
+        
+        offset = 0 + border + widthBox/2
+        tickPositionByUniqueValue["Complete"] = offset
+
+        for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items(): 
+            uniqueValueIndex[categoricalColumn] = {}
+            offset += widthBox/2 #extra offset by categorical column
+            
+            for uniqueValue in uniqueValues:
+                offset += widthBox
+                idxBool = data[categoricalColumn] == uniqueValue
+                uniqueValueIndex[categoricalColumn][uniqueValue] = idxBool
+                tickPositionByUniqueValue["{}:({})".format(uniqueValue,categoricalColumn)] = offset
+                # if not uniqueValue == uniqueValues[-1]:
+                #     offset += widthBox/5
+        offset += border + widthBox/2
+        
+        for n,numericColumn in enumerate(numericColumns):
+            #init lists to stare props
+            filteredData = []
+            verticalLines[n] = []
+            boxPositions[n] = []
+            tickPositions[n] = []
+            faceColors[n] = []
+            groupNames[n] = []
+            # add complete data
+            filteredData.append(data[numericColumn].dropna())
+            boxPositions[n].append(tickPositionByUniqueValue["Complete"] )
+            tickPositions[n].append(tickPositionByUniqueValue["Complete"] )
+            faceColors[n].append(colors["Complete"])
+            groupNames[n].append("{}:Complete".format(numericColumn))
+            #iterate through unique values
+            for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items():
+                
+                for m,uniqueValue in enumerate(uniqueValues):
+                    
+                    colorKey ="{}:({})".format(uniqueValue,categoricalColumn)
+                    fc = colors[colorKey]
+                    idxBool = uniqueValueIndex[categoricalColumn][uniqueValue]
+                    uniqueValueFilteredData = data[numericColumn].loc[idxBool].dropna() 
+                    tickBoxPos = tickPositionByUniqueValue[colorKey]
+                    if m == 0:
+                        verticalLines[n].append({
+                            "label":categoricalColumn,
+                            "color": "darkgrey",
+                            "linewidth" : 0.5,
+                            "x":tickBoxPos - widthBox/2 - widthBox/4})
+                    if uniqueValueFilteredData.index.size > 0:
+                        filteredData.append(uniqueValueFilteredData)
+                        
+                        boxPositions[n].append(tickBoxPos)
+                        tickPositions[n].append(tickBoxPos)
+                        faceColors[n].append(fc)
+                        groupNames[n].append(colorKey)
+
+            plotData[n] = {"x":filteredData}
+
+       
+        tickLabels = dict([(n,flatUniqueValues) for n in range(nNumCols)])
+        axisLabels = dict([(n,{"x":"Categories","y":numericColumn}) for n,numericColumn in enumerate(numericColumns)])
+        axisLimits = dict([(n,{"xLimit" : (0,offset),"yLimit":None}) for n in range(nNumCols)])
+    elif nCatCols == 0:
 
         axisPostions = getAxisPostistion(n = 1, maxCol=maxColumns)# dict([(n,[1,1,n+1]) for n in range(1)])
         widthBox = 0.75
@@ -231,30 +330,6 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         catGroupby = data.groupby(categoricalColumns,sort=False)
         nAxis = -1
 
-# ###
-#          for n,numColumn in enumerate(numericColumns):
-
-#                 for nAxisCat, axisCat in enumerate(axisCategories):
-#                     nAxis +=1 
-#                     multiScatterKwargs[nAxis] = dict()
-#                     interalIDColumnPairs[nAxis] = dict() #nAxis = axis ID
-#                     catTickPositions = []
-#                     catTickLabels = []
-#                     columnNames = []
-
-#                     for nTickCat, tickCat in enumerate(tickCats):
-
-#                         startPos = nTickCat if nTickCat == 0 else nTickCat + (border * nTickCat) #add border
-#                         endPos = startPos + widthBox * nColorCats - widthBox
-#                         positions = np.linspace(startPos,endPos,num=nColorCats)
-#                         tickPos = np.median(positions)
-#                         catTickPositions.append(tickPos)
-#                         catTickLabels.append(tickCat)
-
-#                         for nColCat, colCat in enumerate(colorCategories):
-
-#                             ###
-
         for n,numColumn in enumerate(numericColumns):
                 
 
@@ -305,7 +380,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
 
     
     return plotData, axisPostions, boxPositions, tickPositions, \
-            tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames
+            tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines
 
 
 #    
