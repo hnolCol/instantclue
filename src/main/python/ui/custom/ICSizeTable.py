@@ -70,9 +70,10 @@ class ICSizeTable(ICColorSizeTableBase):
 
 class SizeTableModel(QAbstractTableModel):
     
-    def __init__(self, labels = pd.DataFrame(), parent=None):
+    def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
         super(SizeTableModel, self).__init__(parent)
         self.initData(labels)
+        self.isEditable = isEditable
 
     def initData(self,labels):
 
@@ -158,6 +159,7 @@ class SizeTableModel(QAbstractTableModel):
             
     def setData(self,index,value,role):
         ""
+        
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
         if role == Qt.UserRole:
@@ -168,6 +170,8 @@ class SizeTableModel(QAbstractTableModel):
             self.dataChanged.emit(index,indexBottomRight)
             return True
         elif role == Qt.EditRole:
+            if not self.isEditable:
+                return False
             #get value
             v = int(np.sqrt(value))
             
@@ -217,7 +221,10 @@ class SizeTableModel(QAbstractTableModel):
         elif role == Qt.ToolTipRole:
             dataIndex = self.getDataIndex(index.row())
             if index.column() == 0:
-                return "Current size: {}\nDouble click allows user-defined sizes.".format(self._labels.loc[dataIndex,"size"])
+                if self.isEditable:
+                    return "Current size: {}\nDouble click allows user-defined sizes.".format(self._labels.loc[dataIndex,"size"])
+                else:
+                    return "Current size: {}\nSize range for numeric values can only be changed in the settings dialog.".format(self._labels.loc[dataIndex,"size"])
             elif index.column() == 1:
                 return "Current size: {}\nSize encoded categorical or numeric values.".format(self._labels.loc[dataIndex,"size"])
 
@@ -226,7 +233,7 @@ class SizeTableModel(QAbstractTableModel):
             
     def flags(self, index):
         "Set Flags of Column"
-        if index.column() == 0:
+        if index.column() == 0 and self.isEditable:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable

@@ -59,6 +59,16 @@ class MainFigureRegistry(object):
 
         return self.mainFigureId
 
+    def checkID(self,figureId):
+        ""
+        if not hasattr(self,"mainFigures"):
+            self.mainFigures = {} 
+        
+        if figureId not in self.mainFigures:
+            self.mainFigures[figureId] = {}
+            self.mainFigureTemplates[figureId] = {}
+
+
     def store_export(self,axisID,figureId,plotCount,subplotNum,exportId,boxBool,gridBool):
         '''
         '''
@@ -80,6 +90,8 @@ class MainFigureRegistry(object):
         Store in different dict, since we cannot pickle the
         figure in a canvas.
         '''
+        if not hasattr(self,"mainFigures"):
+            self.mainFigures = {}
         self.mainFigures[self.mainFigureId]['figure'] = figure
         self.mainFigures[self.mainFigureId]['template'] = templateClass
 
@@ -103,6 +115,15 @@ class MainFigureRegistry(object):
     def getMainFigures(self):
         ""
         return [fig["figure"] for fig in self.mainFigures.values()]
+
+    def getMainFiguresByID(self):
+        ""
+        return OrderedDict([(ID,fig["figure"]) for ID,fig in self.mainFigures.items()])
+
+
+    def getMainFigureCurrentSettings(self):
+        ""
+        return OrderedDict([(ID,fig["template"].getAxisComboSettings()) for ID,fig in self.mainFigures.items()])
 
     def update_menus(self):
         '''
@@ -228,8 +249,14 @@ class MainFigure(QDialog):
         # a figure instance to plot on
         if mainFigure is None:
             self.figure = figure(figsize=self.figSize)
+            print(self.figure.get_size_inches())
+            print(self.figure.get_dpi())
         else:
             self.figure = mainFigure
+            print(self.figure.get_size_inches())
+            print(self.figure.get_dpi())
+            self.figure.set_dpi(100)
+            #print(self.figure.dpi)
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
@@ -325,9 +352,11 @@ class MainFigure(QDialog):
     def __defineVars(self, figureID = None):
         ""
         #initiate MainFigure Registry
-        
-        self.figureID = self.mainFigureCollection.initiate(figureID)
-        
+        if figureID is None:
+            self.figureID = self.mainFigureCollection.initiate(figureID)
+        else:
+            self.mainFigureCollection.checkID(figureID)
+            self.figureID = figureID
         #add axis props
         self.axisID = 0
         self.figureProps = OrderedDict() 
@@ -416,6 +445,23 @@ class MainFigure(QDialog):
             return 
         else:
             return legend	
+
+    def getAxisComboSettings(self):
+        ""
+        #self.axisPropsLabels[propLabel] = (l,cBox)
+        comboSettings = {}
+        for propLabel, widgets in self.axisPropsLabels.items():
+            _, cBox = widgets
+            comboSettings[propLabel] = cBox.currentText()
+        
+        return comboSettings
+    
+    def updateComboSettings(self,comboSettings):
+        ""
+        for propLabel, widgets in self.axisPropsLabels.items():
+            _, cBox = widgets
+            if propLabel in comboSettings:
+                cBox.setCurrentText(comboSettings[propLabel])
 
 
     def clearAxis(self,event=None):

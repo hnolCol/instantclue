@@ -299,15 +299,19 @@ class PlotOptionFrame(QWidget):
         ""
         self.mC.config.setParam("barplotError",self.sender().text())
       
-    def openMainFiguresForSession(self,mainFigures):
+    def openMainFiguresForSession(self,mainFigures,mainFigureRegistry, mainFigureComboSettings):
         ""
-        for fig in mainFigures:
-            self.openMainFigure(mainFigure=fig)
+        self.mainFigureRegistry = mainFigureRegistry
+        for ID,fig in mainFigures.items():
+            self.openMainFigure(mainFigure=fig, figureID = ID)
+            #mainFigure.updateComboSettings(mainFigureComboSettings[ID])
+            
 
-    def openMainFigure(self,event=None,mainFigure=None):
+    def openMainFigure(self,event=None,mainFigure=None, figureID = None):
         ""
-        mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure)
+        mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure, figureID = figureID)
         mainFigure.show()
+        return mainFigure
 
     def updateColorScaleInClustermap(self, scaleString = "Raw data"):
         ""

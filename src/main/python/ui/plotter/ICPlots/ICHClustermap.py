@@ -15,9 +15,12 @@ class ICClustermap(ICChart):
     def __init__(self,*args,**kwargs):
         ""
         super(ICClustermap,self).__init__(*args,**kwargs)
+
         self.meshGridKwargs = dict()
+        self.axisTextLabels = dict()
         self.movingMaxDLine = False
         self.forceLabels = False
+        self.numOfColorColumns = 0
 
 
     def addAnnotations(self, labelColumnNames,dataID):
@@ -416,7 +419,6 @@ class ICClustermap(ICChart):
             self.updateColorMesh(self.colorLabelMesh,
                             (currentYLim[1] - currentYLim[0],self.data["plotData"].values.shape[1]))
         if hasattr(self, "labelColumnLimits"):
-            
             axLabelXLimits = self.axisDict["axLabelColor"].set_xlim(self.labelColumnLimits)
         else:
             axLabelXLimits = None
@@ -439,15 +441,46 @@ class ICClustermap(ICChart):
                 idxMax = self.data["plotData"].index.size
             if self.forceLabels or idxMax - idxMin < self.getParam("cluster.label.limit"):
                 #set tick length to zero.
-                self.axisDict["axLabelColor"].tick_params(which='minor', length=0)
                 idxData = self.data["plotData"].index[idxMin:idxMax]
-                tickPositions = np.arange(idxMin,idxMax) + 0.5
+                idxPosition, _ = self.getPositionFromDataIndex(idxData.values)
+      
+                
                 tickLabels = [";".join(x) for x in self.labelData.loc[idxData].values]
-                self.setYTicks(self.axisDict["axLabelColor"],tickPositions,tickLabels)
+                
+                inv = self.axisDict["axLabelColor"].transLimits.inverted()
+                xOffset,_= inv.transform((0.02, 0.25))
+                coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
+                for n,(x,y) in enumerate(coords):
+                    labelStr = tickLabels[n]
+                    if idxPosition[n] in self.axisTextLabels:
+                        prevX, _ = self.axisTextLabels[idxPosition[n]].get_position()
+                        prevText = self.axisTextLabels[idxPosition[n]].get_text()
+                        if prevX != x or prevText != labelStr: #check if position changed (changing pos didnt work)
+                            self.axisTextLabels[idxPosition[n]].remove()
+                        else:
+                            #if text object is present - just set it visible
+                            self.axisTextLabels[idxPosition[n]].set_visible(True)
+                            continue
+                    t = self.axisDict["axLabelColor"].text(
+                                                        x = x, 
+                                                        y = y, 
+                                                        s = labelStr, 
+                                                        fontproperties = self.getStdFontProps(), 
+                                                        verticalalignment='center',
+                                                        zorder = 1e6)
+                    self.axisTextLabels[idxPosition[n]] = t
+                    
+
+                _ = [v.set_visible(False) for k,v in self.axisTextLabels.items() if k not in idxPosition]
+              
+              #  self.axisDict["axLabelColor"].tick_params(which='minor', length=0)
+                
+
+                #self.setYTicks(self.axisDict["axLabelColor"],tickPositions,tickLabels)
             else:
-                self.setYTicks(self.axisDict["axLabelColor"],[],[])
+                _ = [v.set_visible(False) for k,v in self.axisTextLabels.items()]
         else:
-            self.setYTicks(self.axisDict["axLabelColor"],[],[])
+            _ = [v.set_visible(False) for k,v in self.axisTextLabels.items()]
 
     def setRowClusterLineData(self, xPositions, ax):
         ""
@@ -541,7 +574,7 @@ class ICClustermap(ICChart):
             inv = self.axisDict["axLabelColor"].transLimits.inverted()
             xOffset,_= inv.transform((0.02, 0.25))
             
-            coords = self.getOffsets(idxPosition,xOffset)
+            coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
             
             self.quickSelectScatter.set_offsets(coords)
             self.quickSelectScatter.set_visible(True)
@@ -597,7 +630,7 @@ class ICClustermap(ICChart):
             self.axisDict["axLabelColor"].draw_artist(self.hoverText)
         
         #create numpy array with scatter offsets
-        coords = self.getOffsets(idxPosition, xOffsetScatter)
+        coords = self.getOffsets(idxPosition, xOffsetScatter + self.getColorMeshXOffset())
 
         self.setHoverScatterData(coords,self.axisDict["axLabelColor"])
 
@@ -618,7 +651,7 @@ class ICClustermap(ICChart):
                         cmap= cmap,
                         paramName=colorMaPParamName
                         )
-
+        self.numOfColorColumns = colorData.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
         self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
         self.onClusterYLimChange()
@@ -678,12 +711,19 @@ class ICClustermap(ICChart):
         
         inv = self.axisDict["axLabelColor"].transLimits.inverted()
         xOffset,_= inv.transform((0.02, 0.25))
-        coords = self.getOffsets(idxPosition,xOffset)
+        coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
         
         self.quickSelectScatter.set_offsets(coords)
         self.quickSelectScatter.set_visible(True)
         self.quickSelectScatter.set_facecolor(propsData.loc[dataIndexInClust,"color"])
         self.quickSelectScatter.set_sizes(propsData.loc[dataIndexInClust,"size"])
+
+    def getColorMeshXOffset(self):
+        ""
+        if not hasattr(self,"colorLabelMesh"):
+            return 0 
+        else:
+            return self.numOfColorColumns
 
 
     def getPositionFromDataIndex(self,dataIndex):
@@ -711,5 +751,6 @@ class ICClustermap(ICChart):
         self.axisDict["axLabelColor"].set_axis_off()
         # delete colorLabelMesh 
         del self.colorLabelMesh
-
+        self.numOfColorColumns = 0
+        self.mC.resetGroupColorTable.emit()
         self.updateFigure.emit()

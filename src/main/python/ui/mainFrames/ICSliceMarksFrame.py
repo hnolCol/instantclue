@@ -11,7 +11,7 @@ from ui.custom.ICMarkerTable import ICMarkerTable
 from ui.custom.ICStatisticTable import ICStatisticTable
 from ..dialogs.ICColorChooser import ColorChooserDialog
 from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings
-from ..dialogs.numericalFilter import NumericFilter
+from ..dialogs.ICNumericFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage
 from ..utils import createSubMenu, createLabel
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR
@@ -169,13 +169,21 @@ class SliceMarksFrame(QWidget):
 
         self.filterButton = FilterButton(self, callback=self.applyFilter, getDragType = self.getDragType ,acceptDrops=True ,tooltipStr=SLICE_MARKS_TOOLTIPSTR["filter"], acceptedDragTypes= ["Categories" , "Numeric Floats"])
         self.selectButton = SelectButton(self, tooltipStr=SLICE_MARKS_TOOLTIPSTR["select"])
-
+        self.tableScrollArea = QScrollArea(parent = self)
         self.colorTable = ICColorTable(mainController=self.mC)
         self.sizeTable = ICSizeTable(mainController=self.mC)
         self.labelTable = ICLabelTable(mainController=self.mC)
         self.tooltipTable = ICLabelTable(mainController=self.mC, header="Tooltip")
         self.statisticTable = ICStatisticTable(mainController=self.mC)
         self.markerTable = ICMarkerTable(mainController=self.mC)
+
+        self.scrollWidget = QWidget()
+
+        self.tableScrollArea.setWidget(self.scrollWidget)
+        self.tableScrollArea.setWidgetResizable(True)
+        self.tableScrollArea.setContentsMargins(0,0,0,0)
+        self.tableScrollArea.setFrameShape(QFrame.NoFrame)
+        
 
         self.threadWidget = ThreadWidget()
         
@@ -208,16 +216,25 @@ class SliceMarksFrame(QWidget):
         self.layout().addLayout(topGrid)
         self.layout().addWidget(QLabel("Marks"))
         self.layout().addLayout(bottomGrid)
+        self.layout().addWidget(self.tableScrollArea)
         
-        self.layout().addWidget(self.colorTable)
-        self.layout().addWidget(self.sizeTable)
-        self.layout().addWidget(self.markerTable)
-        self.layout().addWidget(self.labelTable)
-        self.layout().addWidget(self.tooltipTable)
-        self.layout().addWidget(self.statisticTable)
+        tableVBox = QVBoxLayout()
+
+        tableVBox.addWidget(self.colorTable)
+        tableVBox.addWidget(self.sizeTable)
+        tableVBox.addWidget(self.markerTable)
+        tableVBox.addWidget(self.labelTable)
+        tableVBox.addWidget(self.tooltipTable)
+        tableVBox.addWidget(self.statisticTable)
+        tableVBox.addStretch(1)
+        tableVBox.setContentsMargins(0,0,0,0)
+
+        self.scrollWidget.setLayout(tableVBox)
+       # self.scrollWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    
         #self.layout().addStretch(1)
         self.layout().setAlignment(Qt.AlignTop)
-        self.layout().addStretch()
+        #self.layout().addStretch(1)
         self.layout().addWidget(self.threadWidget)
         #self.layout().addWidget(self.spinner)
 
@@ -397,9 +414,10 @@ class SliceMarksFrame(QWidget):
         ""
         self.colorTable.setData(colorGroupData,title,isEditable)
 
-    def setSizeGroupData(self,sizeGroupData,title=""):
+    def setSizeGroupData(self,sizeGroupData,title="", isEditable = True):
         ""
-        self.sizeTable.setData(sizeGroupData,title)
+       
+        self.sizeTable.setData(sizeGroupData,title,isEditable)
 
     def setMarkerGroupData(self,markerGroupData,title=""):
         ""

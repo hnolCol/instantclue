@@ -364,7 +364,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
 
 
                     if not nAxisCat in axisTitles:   
-                        axisTitles[nAxisCat] = "{}\n{}".format(categoricalColumns[2],axisCat)
+                        axisTitles[nAxisCat] = "{}:{}".format(categoricalColumns[2],axisCat)
                     tickPositions[nAxis] = catTickPositions
                     faceColors[nAxis] = catFaceColors
                     groupNames[nAxis] = catGroupNames
@@ -383,14 +383,4 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
             tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines
 
 
-#    
-#             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-#             data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-#             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
-#             colors,_ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
-
-#             colorGroups  = pd.DataFrame()
-#             colorGroups["color"] = colors.values()
-#             colorGroups["group"] = colorCategories
-            
           

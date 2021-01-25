@@ -167,7 +167,7 @@ class ColorChooserDialog(QDialog):
             if newAlpha != self.selectedAlpha:
                 self.updateAlpha(newAlpha)
 
-        self.mC.mainFrames["middle"].plotter.update_scatter_point_properties()
+        #self.mC.mainFrames["middle"].plotter.update_scatter_point_properties()
     
     def createColorPalette(self, paletteName, checkboxState = False):
         ""

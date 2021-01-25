@@ -1705,18 +1705,19 @@ class PlotterBrain(object):
                             "NaN"]
 
             sizeGroupData["group"] = groupNames
-            sizeGroupData["size"] = [(x-minV)/(maxV-minV) * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize \
+            sizeGroupData["size"] = [round((x-minV)/(maxV-minV) * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize,1) \
                                                                             for x in  [maxV,q75,median,q25,minV,0]] #0.1 == Nan Size
-
+            
             sizeGroupData["internalID"] = [getRandomString() for n in sizeGroupData.index]
-            sizeGroupData.loc[sizeGroupData["group"] == "NaN","size"] = 0.1 * self.minScatterSize
+            
+            sizeGroupData.loc[sizeGroupData["group"] == "NaN","size"] = round(0.1 * self.minScatterSize,1)
            
 
         propsData = pd.DataFrame(sizeData,columns=["size"], index=rawData.index)
         title = mergeListToString(sizeColumn.values,"\n")                                                                   
 
         
-        return {"sizeGroupData":sizeGroupData,"propsData":propsData,"title":title,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"size"}
+        return {"sizeGroupData":sizeGroupData,"propsData":propsData,"title":title,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"size","isEditable":sizeColumnType == "Categories"}
 
 
     def getLinearRegression(self,dataID,numericColumnPairs):

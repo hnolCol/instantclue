@@ -36,9 +36,10 @@ from datetime import datetime
 import webbrowser
 import requests
 
-
-
 from multiprocessing import freeze_support
+
+__VERSION__ = "0.9.2"
+
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
@@ -66,6 +67,7 @@ menuBarItems = [
         "name":"Tutorial",
         "fn": lambda : webbrowser.open("http://www.instantclue.uni-koeln.de/download/InstantClue.pdf")
     },
+    
     {
         "subM":"Help",
         "name":"YouTube Videos",
@@ -74,13 +76,24 @@ menuBarItems = [
     {
         "subM":"Help",
         "name":"Bug Report",
+        "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/issues")
+    },
+    {
+        "subM":"About",
+        "name":"GitHub",
         "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue")
     },
     {
         "subM":"About",
-        "name":"Cite",
+        "name":"Cite us",
         "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
     },
+    {
+        "subM":"About",
+        "name":"v. {}".format(__VERSION__),
+        "fn" : lambda : print(__VERSION__)
+    },
+
     {
         "subM":"File",
         "name":"Load file(s)",
@@ -93,8 +106,18 @@ menuBarItems = [
     },
     {
         "subM":"File",
+        "name":"Save session",
+        "fn": {"obj":"self","fn":"saveSession","objName":"mainFrames","objKey":"data"}
+    },
+    {
+        "subM":"File",
         "name":"Load Examples",
         "fn": {"obj":"self","fn":"_createSubMenu"}
+    },
+    {
+        "subM":"Log",
+        "name":"Save log",
+        "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
     }
 ] + exampleFuncs 
 
@@ -201,7 +224,7 @@ class InstantClue(QMainWindow):
     def _addMenu(self):
         ""
         self.subMenus = {}
-        subMenus = ["File","Help","About"]
+        subMenus = ["File","Log","Help","About"]
         for subM in subMenus:
             self.subMenus[subM] = QMenu(subM,self)
             self.menuBar().addMenu(self.subMenus[subM])
@@ -241,7 +264,7 @@ class InstantClue(QMainWindow):
     def print_output(self, s):
         pass
 
-    def errorInThread(self, errorType, v, e):
+    def errorInThread(self, errorType = None, v = None, e = None):
         print(errorType,v,e)
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 

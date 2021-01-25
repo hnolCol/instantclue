@@ -12,7 +12,6 @@ from ..dialogs.ICModel import ICModelBase
 import pandas as pd
 import numpy as np
 
-
 dataTypeSubMenu = {
     "Numeric Floats": [
         ("main",["Column operation ..",

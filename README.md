@@ -9,6 +9,40 @@
 Instant Clue is a Python (>3.7) based desktop application (GUI) using the PyQt5 library for data visualization and analysis.
 The tool was developed to equip everyone with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
+## New Features (v. 0.9.2.240)
+
+Novel features incorporated into Instant Clue are listed below. Features that are under development are indicated.
+
+- [x] QuickSelect and LiveGraph Widgets (interact with the main graph and with each other)
+- [x] User definable settings
+- [x] Responsive User Interface
+- [x] Computational expensive task on Thread 
+- [x] Improved saving of session issues: [12](https://github.com/hnolCol/instantclue/issues/12)][5](https://github.com/hnolCol/instantclue/issues/5)]
+- [x] Categorica values can now be encoded by different markers in settings
+- [x] Categorical countplot. 
+- [x] Grouping of columns to perform row-wise statistical tests. Groups are highligted in dimensional reduction plots as well as correlation matrix plots.
+- [ ] Creating log (saving version and processing of data as well as creation of charts)
+
+
+### Quick Select and Live Graph Widget
+
+The two newly implemented widgets "QuickSelect" and "LiveGraph" intend to accelarete visual anlytics in InstantClue. An illustration of the functionality is shown below and [this video]() demonstrates usage. 
+
+<img src="/img/QuickSelectLiveGraph.png">
+
+
+## Issues
+
+Please report Issues and Bugs using the GitHub issue functionality.
+
+[![GitHub issues](https://img.shields.io/github/issues-closed/Naereen/StrapDown.js.svg)](https://github.com/hnolCol/instantclue/issues)
+
+Issues that are current taken care of:
+- [ ] 
+- [ ] 
+- [ ]
+
+
 ## Tutorials
 
 Please visit https://www.instantclue.uni-koeln.de for video tutorials. 
@@ -17,6 +51,7 @@ Please visit https://www.instantclue.uni-koeln.de for video tutorials.
 
 - [x] QuickSelect sorting using color and size values
 - [ ] Add MainFigure Icons
+- 
 
 ## Get Started 
 

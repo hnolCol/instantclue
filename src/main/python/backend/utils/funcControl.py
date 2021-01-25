@@ -537,7 +537,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getSizeGroupsForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
-                {"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title"]},
+                {"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title","isEditable"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                 sendMessageProps
@@ -622,7 +622,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"sessionManager","fn":"openSession","requiredKwargs":["sessionPath"]},
             "completedRequest":
-                    addDataAndRefresh + [{"obj":"self","fn":"openMainFiguresForSession","objKey":"right","objName":"mainFrames","requiredKwargs":["mainFigures"]}]
+                    addDataAndRefresh + [{"obj":"self","fn":"openMainFiguresForSession","objKey":"right","objName":"mainFrames","requiredKwargs":["mainFigures","mainFigureRegistry","mainFigureComboSettings"]}]
         },
     
     }
