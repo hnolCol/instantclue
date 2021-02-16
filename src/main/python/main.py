@@ -138,6 +138,7 @@ class InstantClue(QMainWindow):
         super(InstantClue, self).__init__(parent)
 
         self.mainPath = os.path.dirname(sys.argv[0])
+        self.setWindowIcon(QIcon(os.path.join(self.mainPath,"icons","instantClueLogo.png")))
         self.config = Config(mainController = self)
         #set up data collection
         self._setupData()
