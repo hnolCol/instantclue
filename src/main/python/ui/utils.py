@@ -32,7 +32,7 @@ def areFilesSuitableToLoad(filePaths):
 def getExtraLightFont(fontSize=12,font="Helvetica"):
     ""
     if isWindows():
-        fontSize -= 2
+        fontSize -= 3
     font = getStandardFont(fontSize,font)
     font.setLetterSpacing(QFont.AbsoluteSpacing, 3)
     font.setWeight(QFont.ExtraLight)
@@ -42,7 +42,7 @@ def getStandardFont(fontSize = 10, font="Helvetica"):
     ""
     font = QFont(font) 
     if isWindows():
-        fontSize -= 2
+        fontSize -= 3
     font.setPointSize(fontSize)
     return font
 
