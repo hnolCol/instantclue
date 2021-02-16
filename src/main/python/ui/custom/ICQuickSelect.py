@@ -23,7 +23,7 @@ class QuickSelect(QWidget):
 
         self.setAcceptDrops(True)
         self.sendToThreadFn = sendToThreadFn
-        #self.favSelection = FavoriteSelectionCollection()
+        self.favSelection = FavoriteSelectionCollection()
         self.mC = mainController
         self.quickSelectProps = {}
         self.hoverIdx = {}

@@ -1,0 +1,2 @@
+checkedValues	checkedColors	userDefinedColors
+PARL	#abcdde	

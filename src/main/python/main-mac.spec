@@ -1,3 +1,4 @@
+
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
@@ -31,7 +32,7 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='main',
+          name='InstantClue',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -44,9 +45,9 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='main')
+               name='InstantClue-mac')
 app = BUNDLE(coll,
-             name='main.app',
+             name='InstantClue.app',
              icon=None,
              bundle_identifier=None,
              info_plist={
