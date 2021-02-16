@@ -40,7 +40,7 @@ from multiprocessing import freeze_support
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
-__VERSION__ = "0.9.2"
+__VERSION__ = "0.9.240.20210216"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")

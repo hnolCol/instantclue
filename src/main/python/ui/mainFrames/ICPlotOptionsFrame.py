@@ -401,6 +401,7 @@ class PlotOptionFrame(QWidget):
             if exists:
                 colorArray = graph.getColorArray()
                 clusteredData = graph.getClusteredData()
+                quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
                 clusterLabels, clusterColors = graph.getClusterLabelsAndColor()
                 #print(clusterLabels, clusterColors)
                 dataID = self.mC.getDataID()
@@ -412,7 +413,9 @@ class PlotOptionFrame(QWidget):
                                         colorArray = colorArray,
                                         totalRows = clusteredData.index.size,
                                         clusterLabels = clusterLabels,
-                                        clusterColors = clusterColors)
+                                        clusterColors = clusterColors,
+                                        quickSelectData = quickSelectData
+                                        )
                 funcProps = {"key":fkey,"kwargs":kwargs}
                 #send to thread
                 self.mC.sendRequestToThread(funcProps)

@@ -303,7 +303,7 @@ funcPropControl = {
     
     "data::exportHClustToExcel":
         {
-            "threadRequest":{"obj":"data","fn":"exportHClustToExcel","requiredKwargs":["dataID","pathToExcel","clusteredData","colorArray","totalRows"]},
+            "threadRequest":{"obj":"data","fn":"exportHClustToExcel","requiredKwargs":["dataID","pathToExcel","clusteredData","colorArray","totalRows","quickSelectData"]},
             "completedRequest":
                 [sendMessageProps]
         },

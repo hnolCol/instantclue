@@ -14,6 +14,7 @@ plotTypes = ["lineplot",
             "corrmatrix",
             "x-ys-plot",
            # "dim-red-plot",
+           # "clusterplot"
             "forestplot",
             "wordcloud"]
             

@@ -120,6 +120,13 @@ class QuickSelect(QWidget):
         ""
         pass
 
+    def leaveEvent(self,event):
+        ""
+        exists, graph = self.mC.getGraph()
+        if exists:
+            graph.setHoverObjectsInvisible()
+            graph.updateFigure.emit()
+
     def dragEnterEvent(self,event):
         ""
         event.accept()

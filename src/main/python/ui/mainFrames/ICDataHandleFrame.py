@@ -232,7 +232,7 @@ class DataHandleFrame(QFrame):
         ""
         try:
             if any(f.endswith(".txt") for f in selectedFiles):
-                d = PlainTextImporter() 
+                d = PlainTextImporter(mainController = self.mC) 
                 d.exec_()
                 if d.result():
                     #set replace object
@@ -243,7 +243,7 @@ class DataHandleFrame(QFrame):
                     self.addTxtFiles(txtFiles,d.getSettings())
 
             if any(f.endswith(".xlsx") for f in selectedFiles):
-                d = ExcelImporter() 
+                d = ExcelImporter(mainController = self.mC) 
                 d.exec_()
                 if d.result():
                     #set replace object
@@ -338,7 +338,10 @@ class DataHandleFrame(QFrame):
             return
         try:
             dataID = self.getDataID()
-            dlg = PandaTableDialog(mainController = self.mC ,df = self.mC.data.dfs[dataID], parent=self)
+            columnNames = self.mC.data.getPlainColumnNames(dataID)
+            useClipping = self.mC.config.getParam("data.view.ignore.clipping")
+            dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
+            dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self)
             dlg.exec_()
         except Exception as e:
             print(e)
@@ -399,6 +402,7 @@ class DataHandleFrame(QFrame):
         if fileName is not None and fileName != "":
             
             self.mC.sessionManager.saveSession(fileName)
+            self.mC.sendMessageRequest({"title":"Saved ..","message":"Session saved."})
 
     def loadSession(self):
         ""
@@ -406,4 +410,4 @@ class DataHandleFrame(QFrame):
         fileName,_ = QFileDialog.getOpenFileName(self,"Load Instant Clue Session",workingDir,"Instant Clue File (*.ic)")
         if fileName is not None and fileName != "":
             self.mC.sendRequestToThread(funcProps = {"key":"session::load","kwargs":{"sessionPath":fileName}})
-        
+            self.mC.sendMessageRequest({"title":"Saved ..","message":"Session loaded."})

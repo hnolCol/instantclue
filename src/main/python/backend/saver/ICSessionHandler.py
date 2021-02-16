@@ -17,17 +17,18 @@ class ICSessionHandler(object):
         dataFrames = self.mC.data.dfs
         #names of data farmes
         dataFrameNames = self.mC.data.fileNameByID
+        currentDataFrameID = self.mC.data.dataFrameId
         if len(dataFrames) == 0:
             return False, "No data loaded."
 
         #get main figures
         mainFigures = self.mC.mainFrames["right"].mainFigureRegistry.getMainFiguresByID()
-        print(mainFigures)
+       # print(mainFigures)
         mainFigureRegistry = self.mC.mainFrames["right"].mainFigureRegistry
         comboSettings = []#self.mC.mainFrames["right"].mainFigureRegistry.getMainFigureCurrentSettings() 
-        print(mainFigureRegistry.mainFigureTemplates)
-        combinedObj = {"dfs":dataFrames,"dfsName":dataFrameNames,"mainFigures":mainFigures,"mainFigureRegistry":mainFigureRegistry,"mainFigureComboSettings":comboSettings}
-        print(combinedObj)
+       # print(mainFigureRegistry.mainFigureTemplates)
+        combinedObj = {"dfs":dataFrames,"dfID":currentDataFrameID,"dfsName":dataFrameNames,"mainFigures":mainFigures,"mainFigureRegistry":mainFigureRegistry,"mainFigureComboSettings":comboSettings}
+       # print(combinedObj)
         with open(sessionPath,"wb") as icSession:
             pickle.dump(combinedObj,icSession)
         
@@ -38,11 +39,13 @@ class ICSessionHandler(object):
         ""
         with open(sessionPath,"rb") as icSession:
             combinedObj = pickle.load(icSession)
-        print(combinedObj)
+      #  print(combinedObj)
+        
         for dataID, dataFrame in combinedObj["dfs"].items():
             response = self.mC.data.addDataFrame(dataFrame,dataID,fileName = combinedObj["dfsName"][dataID])
-        print(response)
+      #  print(response)
         #open mainf figures
+        self.mC.data.dataFrameId = combinedObj["dfID"]
         response["mainFigures"] = combinedObj["mainFigures"] #cannot be done from WorkingThread
         response["mainFigureRegistry"] = combinedObj["mainFigureRegistry"]
         response["mainFigureComboSettings"] = []#combinedObj["mainFigureComboSettings"]

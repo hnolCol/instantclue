@@ -376,7 +376,9 @@ class MatplotlibFigure(QWidget):
         ""
         if maskIndex is None:
             self.resetMask()
-        self.ICPlotter.graph.setMask(maskIndex)
+        exists, graph = self.mC.getGraph()
+        if exists:
+            self.ICPlotter.graph.setMask(maskIndex)
        
     def resetMask(self):
         ""

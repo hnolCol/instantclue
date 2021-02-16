@@ -38,7 +38,7 @@ class PandaTableDialog(QDialog):
 
     def sizeHint(self):
         ""
-        return QSize(550,500)
+        return QSize(650,600)
 
     def __control(self):
         ""

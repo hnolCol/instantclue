@@ -68,6 +68,7 @@ import itertools
 #from modules.dialogs.categorical_filter import categoricalFilter
 #from modules.utils import *
 import time
+from matplotlib.colors import to_hex
 
 def z_score(x):
 	mean = x.mean()
@@ -265,6 +266,16 @@ class DataCollection(object):
 		
 		return checkedColumnNames
 
+	def loadDefaultReadFileProps(self):
+		""
+		config = self.parent.config 
+		props = {
+			"encoding":config.getParam("load.file.encoding"),
+			"sep":config.getParam("load.file.column.separator"),
+			"thousands":config.getParam("load.file.float.thousands"),
+			"decimal": config.getParam("load.file.float.decimal"),
+			"skiprows": config.getParam("load.file.skiprows")}
+		return self.checkLoadProps(props)
 
 	def checkLoadProps(self,loadFileProps):
 		""
@@ -325,8 +336,10 @@ class DataCollection(object):
 	def readDataFromClipboard(self):
 		""
 		try:
-			data = pd.read_clipboard(**self.checkLoadProps(None), low_memory=False)
+			print(self.loadDefaultReadFileProps())
+			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
+			print(e)
 			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
 		localTime = time.localtime()
 		current_time = time.strftime("%H:%M:%S", localTime)
@@ -458,7 +471,7 @@ class DataCollection(object):
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
 	
-	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors):
+	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors,quickSelectData):
 		""
 
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
@@ -468,7 +481,10 @@ class DataCollection(object):
 		
 		rowIdx = clusteredData.index
 		extraData = self.getDataByColumnNames(dataID,extraDataColumns,rowIdx=rowIdx)["fnKwargs"]["data"]
-		
+		if quickSelectData is not None:
+			extraData["QuickSelect"] = np.full(extraData.index.size,"")
+			extraData.loc[quickSelectData[0]["dataIndexInClust"],"QuickSelect"] = [to_hex(c) for c in quickSelectData[1]]
+
 		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors)
 		exporter.export()
 		

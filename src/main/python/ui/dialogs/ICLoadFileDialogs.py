@@ -1,15 +1,22 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-
+from backend.config.data.params import encodingsCommonInPython, commonSepartor, decimalForFloats,thoursandsString, nanReplaceString
+from ..utils import createLabel, createCombobox
 from collections import OrderedDict
 
-encodingsCommonInPython = ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp']
-commonSepartor = ['tab',',','space',';','/','&','|','^','+','-']
-decimalForFloats = ['.',','] 
 compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
-nanReplaceString = ['-','None', 'nan','  ']
-thoursandsString = ['None',',','.']
+
+
+comboboxLabelToParam = dict([('Encoding:',"load.file.encoding"),
+                            ('Column Separator:',"load.file.column.separator"),
+                            ('Decimal Point String:',"load.file.float.decimal"),
+                            ('Thousand Separator:',"load.file.float.thousands"),
+                            ('Replace NaN in Object Columns:',"Object Replace String"),
+                            ('skip Rows:',"load.file.skiprows")])
+
+#ParamToComboLabel = dict([(v,k) for k,v in comboboxLabelToParam.items()])
+
 comboBoxToGetInputFromUser = OrderedDict([('Encoding:',encodingsCommonInPython),
 											('Column Separator:',commonSepartor),
 											('Decimal Point String:',decimalForFloats),
@@ -35,9 +42,10 @@ pandasInstantClueTranslate = {'Encoding:':'encoding',
 tooltips = {"Excel sheets:":"Provide names of excel sheets to load as: Sheet1;Sheet2.\nIf None - all excel sheets will be loaded.\nNote that a comma in the sheet name will result in unexpected file loading."}
 
 class ImporterBase(QDialog):
-    def __init__(self,*args,**kwargs):
+    def __init__(self,mainController,*args,**kwargs):
         ""
         super(ImporterBase,self).__init__(*args,**kwargs)
+        self.mC = mainController
     
     def _collectSettings(self):
         """Collects selection by user"""
@@ -47,6 +55,9 @@ class ImporterBase(QDialog):
             if propLabel in pandasInstantClueTranslate:
                 pandasKwarg = pandasInstantClueTranslate[propLabel]
                 comboText = propCombo.currentText()
+                if propLabel in comboboxLabelToParam:
+                    configName = comboboxLabelToParam[propLabel]
+                    self.mC.config.setParam(configName,comboText)
                 self.loadFileProps[pandasKwarg] = comboText if comboText != "None" else None
             elif propLabel == 'Replace NaN in Object Columns:':
                 self.replaceObjectNan = propCombo.currentText() 
@@ -83,10 +94,8 @@ class ExcelImporter(ImporterBase):
             if label in tooltips:
                 propLabel.setToolTip(tooltips[label])
 
-            propCombo = QComboBox()
-            
+            propCombo = createCombobox(items=options)
             propCombo.setEditable(True)
-            propCombo.addItems(options)
             
             self.widgetControl.append((propLabel,propCombo))
 
@@ -137,14 +146,17 @@ class PlainTextImporter(ImporterBase):
 
         self.widgetControl = []
         for label, options in comboBoxToGetInputFromUser.items():
-            propLabel = QLabel()
-            propLabel.setText(label)
+            propLabel = createLabel(label)
             propLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-            propCombo = QComboBox()
-            
+            propCombo = createCombobox(items=options)
             propCombo.setEditable(True)
-            propCombo.addItems(options)
+            if label in comboboxLabelToParam:
+                
+                defaultValue = self.mC.config.getParam(comboboxLabelToParam[label])
+                
+                propCombo.setCurrentText(defaultValue)
+            
             
             self.widgetControl.append((propLabel,propCombo))
 

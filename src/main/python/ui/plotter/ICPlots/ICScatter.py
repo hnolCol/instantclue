@@ -252,16 +252,22 @@ class ICScatterPlot(ICChart):
 
     def updateQuickSelectItems(self,propsData):
         ""
-        if self.isQuickSelectActive():
-            if self.isQuickSelectModeUnique():
-                dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
-            else:
-                dataIndex = self.getDataIndexOfQuickSelectSelection()
+        if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
+            if len(self.quickSelectCategoryIndexMatch) == 0:
+                return
+            dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+            intIDMatch = np.concatenate([np.full(idx.size,intID) for intID,idx in self.quickSelectCategoryIndexMatch.items()]).flatten()
+            
+        else:
+            dataIndex = self.getDataIndexOfQuickSelectSelection()
+            intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
 
-            for scatterPlot in self.scatterPlots.values():
-                if hasattr(scatterPlot,"quickSelectScatter"):
-                    scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
-                    self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+        for scatterPlot in self.scatterPlots.values():
+            if hasattr(scatterPlot,"quickSelectScatter"):
+                
+                scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
+                self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+                self.quickSelectScatterDataIdx[scatterPlot.ax] = {"idx":dataIndex,"coords":pd.DataFrame(intIDMatch,columns=["intID"])}
 
         self.updateFigure.emit()
             
@@ -272,7 +278,7 @@ class ICScatterPlot(ICChart):
             
             if self.isQuickSelectModeUnique():
 
-                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
+                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
 
             else:
                 if ax in self.quickSelectScatterDataIdx:

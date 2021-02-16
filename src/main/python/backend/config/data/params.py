@@ -12,8 +12,77 @@ arrowOptions = ["arc3","arc3,rad=0.","arc3,rad=0.3","arc3,rad=-0.3",
                 "bar,fraction=0.3",
                 "bar,fraction=-0.3",
                 "bar,angle=180,fraction=-0.2"]
+encodingsCommonInPython = ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp']
+commonSepartor = ['tab',',','space',';','/','&','|','^','+','-']
+decimalForFloats = ['.',','] 
+compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
+nanReplaceString = ['-','None', 'nan','  ']
+thoursandsString = ['None',',','.']
 
 DEFAULT_PARAMETER = [
+    {
+    "name"          :   "load.file.encoding",
+    "value"         :   "utf-8",
+    "dtype"         :   str,
+    "range"         :   encodingsCommonInPython,
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Encoding used to read files."
+    },
+    {
+    "name"          :   "load.file.skiprows",
+    "value"         :   0,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Number of rows to skip"
+    }, 
+    {
+    "name"          :   "load.file.column.separator",
+    "value"         :   "tab",
+    "dtype"         :   str,
+    "range"         :   commonSepartor,
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Separator to find columns in file."
+    },
+    {
+    "name"          :   "load.file.float.decimal",
+    "value"         :   ".",
+    "dtype"         :   str,
+    "range"         :   decimalForFloats,
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Decimal in numbers."
+    },
+    {
+    "name"          :   "load.file.float.thousands",
+    "value"         :   "None",
+    "dtype"         :   str,
+    "range"         :   thoursandsString,
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "None if no thousands separator is present."
+    },
+    {
+    "name"          :   "Object Replace String",
+    "value"         :   "-",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Missing categories will be replaced by this string."
+    }, 
+    {
+    "name"          :   "data.view.use.clipping",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Settings",
+    "description"   :   "If True, viewing the data will use clipping if QuickSelect widgets."
+    },
     {
     "name"          :   "colorMap",
     "value"         :   "RdYlBu",
@@ -754,7 +823,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -763,7 +832,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Define metric used for column dendrogram. If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -772,7 +841,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Data with nan might be clustered using the nanEuclidean distance metric. This parameter defines the minimum number of valid values that must exist.",
     },
     {
@@ -781,7 +850,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Define method used for row dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -790,7 +859,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -799,7 +868,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
     },
     {
@@ -808,7 +877,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["raw values","center 0","min = -1, max = 1","custom"],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Method how to calculate color map limits.",
     },
         {
@@ -817,7 +886,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Enabled if colorMapLimits is set to custom. Minimal value.",
     },
     {
@@ -826,7 +895,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Enabled if colorMapLimits is set to custom. Maximal value.",
     },
     {
@@ -835,7 +904,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["pearson","kendall","spearman"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Method how to calculate color map limits.",
     },
     {
@@ -844,7 +913,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "If less than given value of rows are visible in cluster, label will be added to the top right axis.",
     },
     {
@@ -853,7 +922,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "If less than given value of rows are visible in cluster. Lines will be drawn around rectangles.",
     },
     {
@@ -862,10 +931,47 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
     },
-
+    
+    {
+    "name"          :   "tsne.n.components",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Dimension of the embedded space."
+    },
+    {
+    "name"          :   "tsne.perplexity",
+    "value"         :   30,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   """The perplexity is related to the number of nearest neighbors that 
+                           is used in other manifold learning algorithms. Larger datasets usually 
+                           require a larger perplexity. Consider selecting a value between 5 and 50. 
+                           Different values can result in significantly different results."""
+    },
+    {
+    "name"          :   "tsne.early_exaggeration",
+    "value"         :   12,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   """Controls how tight natural clusters in the original space are
+                           in the embedded space and how much space will be between them. 
+                           For larger values, the space between natural clusters will be 
+                           larger in the embedded space. Again, the choice of this parameter 
+                           is not very critical. If the cost function increases during initial 
+                           optimization, the early exaggeration factor or the learning rate might 
+                           be too high."""
+    },
+    
     {
     "name"          :   "umap.n.neighbors",
     "value"         :   15,
@@ -971,14 +1077,13 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Loading Text Files",
     "description"   :   "Missing categories will be replaced by this string."
     }, 
-
     {
     "name"          :   "hclustClusterColorMap",
     "value"         :   "Paired",
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Colormap for cluster rectangles."
     }, 
     {
@@ -987,7 +1092,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "Cluster Settings",
+    "parentType"    :   "HClust Settings",
     "description"   :   "Colormap for color labeling."
     }, 
    

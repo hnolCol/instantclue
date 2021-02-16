@@ -6,7 +6,10 @@ import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
 from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
+
 from sklearn.cluster import KMeans
+from sklearn.manifold import TSNE
+
 from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
 #import pingouin as pg
@@ -129,7 +132,7 @@ class StatisticCenter(object):
 
     def runANOVA(self,dataID,betweenGroupings = [] ,withinGroupings = [], logPValues = True, subjectGrouping = []):
         ""
-        print(dataID)
+       # print(dataID)
 
         if len(betweenGroupings) == 0 and len(withinGroupings) == 0:
             return getMessageProps("Error..","No grouping found.")
@@ -151,7 +154,7 @@ class StatisticCenter(object):
                     mapDict[colName] = groupName + k 
             meltedData[groupName] = meltedData["variable"].map(mapDict)
 
-        print(meltedData)
+       # print(meltedData)
 
         collectedData = None 
         
@@ -191,19 +194,27 @@ class StatisticCenter(object):
     def runTSNE(self,dataID,columnNames,transformGraph = True, *args,**kwargs):
         ""
         try:
-            data, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
+            X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
             if checkPassed:
-                self.calcTSNE = TSNE_CALC(data.values,*args,**kwargs)
-                embedding = self.calcTSNE.run()
-            
+                nComp = self.sourceData.parent.config.getParam("tsne.n.components")
+                perplexity = self.sourceData.parent.config.getParam("tsne.perplexity")
+                early_exaggeration = self.sourceData.parent.config.getParam("tsne.early_exaggeration")
+                self.calcTSNE = TSNE(n_components=nComp,
+                                     perplexity=perplexity,
+                                     early_exaggeration = early_exaggeration,
+                                     *args,**kwargs)
+                embedding = self.calcTSNE.fit_transform(X)
+                compNames = ["Comp::TSNE_{:02d}".format(n) for n in range(nComp)]
 
-            if transformGraph:
-                df = pd.DataFrame(embedding,index=dataIndex,columns = ["TSNE_01","TSNE_02"])
-                completeKwargs = getMessageProps("Done..","TSNE calculated.")
-                result = self.sourceData.joinDataFrame(dataID,df)
+                df = pd.DataFrame(embedding.astype(np.float64),index=dataIndex, columns = compNames)
+                msgProps = getMessageProps("Done..","TSNE calculation performed.\nColumns were added to the tree view.")
+                            
+                result = {**self.sourceData.joinDataFrame(dataID,df),**msgProps}
                 return result
+            else:
+                return getMessageProps("Error..","Insufficient data for TSNE")
         except Exception as e:
-            print(e)
+            return getMessageProps("Error..","There was an unknown error")
 
     # def runCVAE(self,dataID,columnNames, transpose = False, *args,**kwargs):
     #     "Runs a Variational Autoencoder Dimensional Reduction"

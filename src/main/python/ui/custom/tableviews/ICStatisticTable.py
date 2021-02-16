@@ -6,6 +6,7 @@ from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
+from backend.utils.stringOperations import getReadableNumber
 import pandas as pd
 import numpy as np
 
@@ -26,8 +27,8 @@ class ICStatisticTable(ICColorSizeTableBase):
         self.table = StatisticTable(parent = self, mainController=self.mC)
         self.model = StatisticTableModel(parent=self.table)
         self.table.setModel(self.model)
-       # self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-       # self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        #self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
+        #self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
         #self.table.resizeColumns()
       
         
@@ -48,7 +49,7 @@ class ICStatisticTable(ICColorSizeTableBase):
         
     def updateStatsInGraph(self):
         ""
-        print("boom")
+        
 
     def toggleVisibility(self):
         ""
@@ -81,7 +82,7 @@ class StatisticTableModel(QAbstractTableModel):
 
     def columnCount(self, parent=QModelIndex()):
         
-        return 4
+        return 5
     
     def dataAvailable(self):
         ""
@@ -142,8 +143,6 @@ class StatisticTableModel(QAbstractTableModel):
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        
-
 
     def data(self, index, role=Qt.DisplayRole): 
         "Shows data"
@@ -152,8 +151,10 @@ class StatisticTableModel(QAbstractTableModel):
             return QVariant()
             
         elif role == Qt.DisplayRole: 
-
-            return str(self._labels.iloc[index.row(),index.column()])
+            if index.column() < 2:
+                return str(getReadableNumber(self._labels.iloc[index.row(),index.column()]))
+            else:
+                return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
 
@@ -170,7 +171,7 @@ class StatisticTableModel(QAbstractTableModel):
         elif role == Qt.ToolTipRole:
             
             if "Group1" and "Group2" in self._labels.columns:
-                return "Comparision:\n{}\nvs\n{}".format(self._labels["Group1"].iloc[index.row()],self._labels["Group2"].iloc[index.row()])
+                return "Comparision:\n{}\nvs\n{}\nColumn Headers: p-value, test-statistic, Test".format(self._labels["Group1"].iloc[index.row()],self._labels["Group2"].iloc[index.row()])
             return "This is a beatufil tooltip."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:

@@ -25,7 +25,9 @@ summarizeMetric = {"min"    :   np.nanmin,
                    "max"    :   np.nanmax,    
                    "median" :   np.nanmedian,
                    "mean"   :   np.nanmean,
-                   "quantile":  np.nanquantile
+                   "quantile":  np.nanquantile,
+                   "std"    :   np.nanstd,
+                   "var"    :   np.nanvar
                    }
 	
 class Transformer(object):

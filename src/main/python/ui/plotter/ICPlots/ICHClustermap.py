@@ -696,11 +696,15 @@ class ICClustermap(ICChart):
 
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+            intIDMatch = np.concatenate([np.full(idx.size,intID) for intID,idx in self.quickSelectCategoryIndexMatch.items()]).flatten()
         else:
             dataIndex = self.getDataIndexOfQuickSelectSelection()
+            intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
 
         idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIndex)
-       
+        #subset for indices that are actually in the clustering
+        intIDMatch = pd.DataFrame(intIDMatch,index=dataIndex, columns = ["intID"]).loc[dataIndexInClust,"intID"].values.flatten()
+        #print(dataIndexInClust,dataIndex)
         ax = self.axisDict["axLabelColor"]
         if len(idxPosition) == 0:
             return
@@ -716,28 +720,30 @@ class ICClustermap(ICChart):
         self.quickSelectScatter[ax].set_visible(True)
         self.quickSelectScatter[ax].set_facecolor(propsData.loc[dataIndexInClust,"color"])
         self.quickSelectScatter[ax].set_sizes(propsData.loc[dataIndexInClust,"size"])
-        self.quickSelectScatterDataIdx[ax] = {"idxPosition":idxPosition,"dataIndexInClust":dataIndexInClust}
+        df = pd.DataFrame(intIDMatch,columns=["intID"])
+        df["idx"] = dataIndexInClust
+        df["x"] = coords[:,0]
+        df["y"] = coords[:,1]
+        self.quickSelectScatterDataIdx[ax] = {"idxPosition":idxPosition,"dataIndexInClust":dataIndexInClust,"coords":df,"idx":dataIndexInClust}
+
+    def getQuickSelectDataIdxForExcelExport(self):
+        ""
+        ax = self.axisDict["axLabelColor"]
+        if hasattr(self,"quickSelectScatterDataIdx") and ax in self.quickSelectScatterDataIdx:
+            return [self.quickSelectScatterDataIdx[ax], self.quickSelectScatter[ax].get_facecolor()]
+        
+
 
     def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
         ""
         if hasattr(self,"quickSelectScatter"):
             
             ax = self.axisDict["axLabelColor"]
-            inv = self.axisDict["axLabelColor"].transLimits.inverted()
-            xOffset,_= inv.transform((0.02, 0.25))
-            if self.isQuickSelectModeUnique():
-                scatterSizes, scatterColors, dataIndices = self.getQuickSelectScatterProps(quickSelectGroup)
-                idxPosition, _ = self.getPositionFromDataIndex(dataIndices)
-                coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
-
-            else:
-
-                positionIdxDict = self.quickSelectScatterDataIdx[ax]
-                dataIdx = positionIdxDict["dataIndexInClust"]
-                scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]
-                scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
-                coords = self.getOffsets(positionIdxDict["idxPosition"],xOffset + self.getColorMeshXOffset())
-
+            
+            
+            coords = self.quickSelectScatterDataIdx[ax]["coords"][["x","y"]].values
+            scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
+            
             self.quickSelectScatter[ax].set_offsets(coords)
             self.quickSelectScatter[ax].set_sizes(scatterSizes)	
             self.quickSelectScatter[ax].set_facecolor(scatterColors)

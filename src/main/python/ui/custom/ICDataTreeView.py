@@ -79,13 +79,13 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"1W-ANOVA"}
     },
-        {
-        "subM":"Multiple Groups",
-        "name":"2W-ANOVA",
-        "funcKey": "compareGroups",
-        "dataType": "Numeric Floats",
-        "fnKwargs":{"test":"2W-ANOVA"}
-    },
+    # {
+    #     "subM":"Multiple Groups",
+    #     "name":"2W-ANOVA",
+    #     "funcKey": "compareGroups",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs":{"test":"2W-ANOVA"}
+    # },
     {
         "subM":"Pairwise Tests",
         "name":"Euclidean distance",
@@ -121,7 +121,20 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"metric":"max"}
     },
-    
+    {
+        "subM":"Summarize Groups",
+        "name":"stdev",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"std"}
+    },
+    {
+        "subM":"Summarize Groups",
+        "name":"variance",
+        "funcKey": "summarizeGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"metric":"var"}
+    },
     {
         "subM":"Logarithmic",
         "name":"ln",
@@ -199,6 +212,20 @@ menuBarItems = [
         "funcKey": "transformer::transformData",
         "dataType": "Numeric Floats",
         "fnKwargs":{"transformKey":"summarize","metric":"min"}
+    },
+    {
+        "subM":"Summarize",
+        "name":"stdev",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"std"}
+    },
+        {
+        "subM":"Summarize",
+        "name":"variance",
+        "funcKey": "transformer::transformData",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"transformKey":"summarize","metric":"var"}
     },
     {
         "subM":"Kernel Density",
@@ -1354,12 +1381,14 @@ class DataTreeViewTable(QTableView):
                             self.focusRow -= 1
                         self.model().rowRangeChange(self.focusRow,currentFocusRow)
     
-    def applyFilter(self,tableIndex = None,*args,**kwargs):
+    def applyFilter(self,tableIndex = None, **kwargs):
         "Apply filtering (numeric or categorical)"
         if tableIndex is None:
             
             tableIndex = self.model().index(self.focusRow,0)
-        self.mC.mainFrames["sliceMarks"].applyFilter(columnNames = self.getSelectedData([tableIndex]), dragType = self.tableID, *args,**kwargs)
+        if "columnNames" not in kwargs:
+            kwargs["columnNames"] = self.getSelectedData([tableIndex])
+        self.mC.mainFrames["sliceMarks"].applyFilter(dragType = self.tableID, **kwargs)
         
     def leaveEvent(self, event):
    
@@ -1471,7 +1500,7 @@ class DataTreeViewTable(QTableView):
         try:
             #print(test)
             #print(self.mC.grouping.groupingExists())
-            if False and not self.mC.grouping.groupingExists():
+            if not self.mC.grouping.groupingExists():
                 w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
                 w.exec_()
                 return
@@ -1487,8 +1516,7 @@ class DataTreeViewTable(QTableView):
             w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.")
             w.exec_()
             return
-        print("summarize groups")
-        
+                
         funcProps = {"key":"data::summarizeGroups",
                     "kwargs":{
                         "metric":metric,
