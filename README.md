@@ -9,26 +9,57 @@
 Instant Clue is a Python (>3.7) based desktop application (GUI) using the PyQt5 library for data visualization and analysis.
 The tool was developed to equip everyone with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
-## New Features (v. 0.9.2.240)
+### Status
+
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
+
+### New Features (v. 0.9.2.240) (Worklist)
 
 Novel features incorporated into Instant Clue are listed below. Features that are under development are indicated.
+This list provides an overview about upcoming features. Release specific features are document for each release separately (GitHub Release Page).
 
 - [x] QuickSelect and LiveGraph Widgets (interact with the main graph and with each other)
 - [x] User definable settings
-- [x] Responsive User Interface
-- [x] Computational expensive task on Thread 
-- [x] Improved saving of session issues: [12](https://github.com/hnolCol/instantclue/issues/12)][5](https://github.com/hnolCol/instantclue/issues/5)]
-- [x] Categorica values can now be encoded by different markers in settings
+- [x] Responsive and modern User Interface (UI)
+- [x] Computational expensive tasks are computed on Thread 
+- [x] Improved saving of session issues: [12](https://github.com/hnolCol/instantclue/issues/12),[5](https://github.com/hnolCol/instantclue/issues/5)]
+- [x] Categorical values can now be encoded by different markers
 - [x] Categorical countplot. 
 - [x] Grouping of columns to perform row-wise statistical tests. Groups are highligted in dimensional reduction plots as well as correlation matrix plots.
+- [x] Export to markdown friendly string format and json file format of datasets.
 - [ ] Creating log (saving version and processing of data as well as creation of charts)
+- [ ] MainFigure Icons Update (responsive)
 
+## New plot types
+
+There are several new plot types included in the new version of Instant Clue.
+
+#### Categorical Countplot
+
+The countplot can only be used with categorical columns (anythin that is not an integer or float). In case of a single categorical column, the countplot displays the occurance of each unique value. The countplot is particular useful, when using multiple categorical colums, each combination of unique values in all columns is considered and displayed. The combinations are indicated by connecting categorical values below the barplot (see example below). Of note, the QuickSelect (see below) works with the countplot in such way, that hovering over the connection lines, will show the underlying rows in the QuickSelect widget.
+An example is shown below using the TutorialData02.txt finding the overlap of mitochondrial proteins and proteins that were found to be significantly regulated. 
+
+<img src="/img/countplot.png" height="55%" width="55%">
+
+#### WordCloud
+
+The word cloud is generate based on the [wordcloud package](https://github.com/amueller/word_cloud). If you are using this type of chart, please acknowledge amueller's (Andreas Mueller) work. WordClouds have become less on-vogue but many users requested this type of chart. Input is a simple categorical column. You can find unique values by spliting the text in each row first using a specific string (customizable in the settings) or just merge the text to each other. 
+
+#### Fosterplot 
+
+The foster plot (blobbogram) is a widely used plot type in metanalysis. The [wikipedia](https://en.wikipedia.org/wiki/Forest_plot)] website hosts useful information.
+
+
+
+#### Dimensional Reduction Plot
+
+Coming soon - under development.
 
 ### Quick Select and Live Graph Widget
 
 The two newly implemented widgets "QuickSelect" and "LiveGraph" intend to accelarete visual anlytics in InstantClue. An illustration of the functionality is shown below and [this video]() demonstrates usage. 
 
-<img src="/img/QuickSelectLiveGraph.png">
+<img src="/img/QuickSelectLiveGraph.png" width="60%">
 
 
 ## Issues
@@ -37,7 +68,7 @@ Please report Issues and Bugs using the GitHub issue functionality.
 
 [![GitHub issues](https://img.shields.io/github/issues-closed/Naereen/StrapDown.js.svg)](https://github.com/hnolCol/instantclue/issues)
 
-Issues that are current taken care of:
+Issues that are currently taken care of:
 - [ ] 
 - [ ] 
 - [ ]
@@ -47,12 +78,6 @@ Issues that are current taken care of:
 
 Please visit https://www.instantclue.uni-koeln.de for video tutorials. 
 
-## Requested Features and their Progress
-
-- [x] QuickSelect sorting using color and size values
-- [ ] Add MainFigure Icons
-- 
-
 ## Get Started 
 
 Executable binary files are available at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
@@ -60,7 +85,7 @@ We recommend using the development snapshots as they are equipped with more feat
 
 ### Source Code
 First download the code and extract it. Open terminal (mac) or command line tool (windows) and navigate to instantclue/src/main/python
-Then create a virtual environment using 
+Then create a virtual environment to not mix up required package versions with your python installation using 
 
 ```
 python3 -m venv env #mac 
@@ -71,7 +96,7 @@ or
 py -m venv env #windows
 .\env\Scripts\activate
 ```
-Then use the requirements.txt file to install packages and finally start InstantClue.
+Then use the requirements.txt file to install required packages and finally start InstantClue.
 
 ```
 pip install -r requirements.txt #install packages

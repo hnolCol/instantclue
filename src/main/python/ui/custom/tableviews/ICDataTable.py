@@ -3,10 +3,10 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 #ui utils
-from ..utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps
-from ..custom.TableViews.ICVSelectableTable import PandaTable, PandaModel
+from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps
+from .ICVSelectableTable import PandaTable, PandaModel
+from ..warnMessage import AskQuestionMessage
 
-from .warnMessage import AskQuestionMessage
 #external imports
 import pandas as pd 
 import numpy as np
@@ -22,13 +22,15 @@ contextMenuData = OrderedDict([
 
 class PandaTableDialog(QDialog):
 
-    def __init__(self,df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, *args, **kwargs):
+    def __init__(self, mainController, df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, *args, **kwargs):
         super(PandaTableDialog,self).__init__(*args, **kwargs)
         
         self.headerLabelText = "{} ({} rows x {} columns)".format(headerLabel,*df.shape)
         self.addToMainDataOption = addToMainDataOption
         self.ignoreChanges = ignoreChanges
         self.df = df
+        self.mC = mainController
+
         self.__control()
         self.__layout()
         self.__connectEvents()
@@ -41,7 +43,7 @@ class PandaTableDialog(QDialog):
     def __control(self):
         ""
         self.headerLabel = createTitleLabel(self.headerLabelText, fontSize=12)
-        self.table = PandaTable(self) 
+        self.table = PandaTable(parent= self, mainController = self.mC) 
         self.model = PandaModel()
         self.table.setModel(self.model)
 

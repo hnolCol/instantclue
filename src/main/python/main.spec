@@ -11,28 +11,32 @@ a = Analysis(['main.py'],
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils',
              				'scipy._lib.messagestream','numpy.random.common',
                                    'numpy.random.bounded_integers','numpy.random.entropy','scipy.special.cython_special',
-                                   'sklearn.utils._cython_blas','openTSNE._matrix_mul','openTSNE._matrix_mul.matrix_mul'], #,'tensorflow_core.python'
-             hookspath=[], #'/Users/hnolte/Documents/GitHub/QTInstantClue/pyinstaller-hooks'
+                                   'sklearn.utils._cython_blas','openTSNE._matrix_mul','openTSNE._matrix_mul.matrix_mul'],
+             hookspath=[],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
+a.datas += Tree('./examples', prefix='examples')
+a.datas += Tree('./conf', prefix='conf')
+a.datas += Tree('./icons', prefix='icons')
+a.datas += Tree('./quickSelectLists', prefix='quickSelectLists')
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='InstantClue',
+          name='main',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          hide_console = False,
-          console=True)
-
+          console=True )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -40,9 +44,12 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='InstantClue')
-
+               name='main')
 app = BUNDLE(coll,
-             name='InstantClue.app',
+             name='main.app',
              icon=None,
-             bundle_identifier=None)
+             bundle_identifier=None,
+             info_plist={
+                'NSHighResolutionCapable': 'True'
+                }
+            )

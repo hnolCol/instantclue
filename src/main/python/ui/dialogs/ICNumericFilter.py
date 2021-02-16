@@ -242,7 +242,7 @@ class NumericFilter(QDialog):
                                     "max":float(filtProps["max"].text()) if filtProps["max"].text() != "" else np.inf,
                                     "filterType":filtProps["filterType"]}
         if len(funcProps) == 0:
-            warn = WarningMessage(infoText = "Please enter values to specifiy the numeric filter.")
+            warn = WarningMessage(infoText = "Please enter values to specifiy the numeric filter.",iconDir = self.mC.mainPath)
             warn.exec_()
             return
 

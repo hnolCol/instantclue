@@ -15,6 +15,10 @@ headerLabelStyleSheet = """
                     }
                     """
 
+def copyAttributes(obj2, obj1, attr_list):
+    for i_attribute  in attr_list:
+        getattr(obj2, 'set_' + i_attribute)( getattr(obj1, 'get_' + i_attribute)() )
+
 
 def areFilesSuitableToLoad(filePaths):
     ""
@@ -90,9 +94,9 @@ def removeFileExtension(fileName):
     else:
         return fileName
 
-def createMenu():
+def createMenu(*args,**kwargs):
     ""
-    menu = QMenu()
+    menu = QMenu(*args,**kwargs)
     menu = setStyleSheetForMenu(menu)
     
     return menu

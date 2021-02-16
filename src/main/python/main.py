@@ -3,7 +3,6 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
@@ -35,8 +34,11 @@ import time
 from datetime import datetime
 import webbrowser
 import requests
-
+import warnings
 from multiprocessing import freeze_support
+
+#ignore some warnings
+warnings.filterwarnings("ignore", 'This pattern has match groups')
 
 __VERSION__ = "0.9.2"
 
@@ -44,8 +46,7 @@ filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
 
-#global mainPath
-#mainPath = 
+
 
 for file in getTxtFilesFromDir(exampleDir):
     addExample =  {
@@ -64,8 +65,8 @@ menuBarItems = [
 
     {
         "subM":"Help",
-        "name":"Tutorial",
-        "fn": lambda : webbrowser.open("http://www.instantclue.uni-koeln.de/download/InstantClue.pdf")
+        "name":"Discussions (New Features)",
+        "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/discussions/13")
     },
     
     {
@@ -91,7 +92,6 @@ menuBarItems = [
     {
         "subM":"About",
         "name":"v. {}".format(__VERSION__),
-        "fn" : lambda : print(__VERSION__)
     },
 
     {
@@ -124,22 +124,21 @@ menuBarItems = [
 
 class InstantClue(QMainWindow):
     
+    #define signals to clear interactive TableViews
     resetGroupColorTable = pyqtSignal()
     resetGroupSizeTable = pyqtSignal()
+    resetQuickSelectTable = pyqtSignal()
     resetLabelTable = pyqtSignal()
     resetTooltipTable = pyqtSignal()
     resetStatisticTable = pyqtSignal() 
     resetMarkerTable = pyqtSignal()
-    
     quickSelectTrigger = pyqtSignal()
 
     def __init__(self, parent=None):
         super(InstantClue, self).__init__(parent)
-       # print(sys.argv)
+
         self.mainPath = os.path.dirname(sys.argv[0])
-        #self.setStyleSheet("""QMainWindow {background-color: #F6F6F6};""")
         self.config = Config(mainController = self)
-        #self.config.mainController = self
         #set up data collection
         self._setupData()
         #setup filter center
@@ -178,6 +177,7 @@ class InstantClue(QMainWindow):
         self.resetTooltipTable.connect(self.mainFrames["sliceMarks"].tooltipTable.reset)
         self.resetStatisticTable.connect(self.mainFrames["sliceMarks"].statisticTable.reset)
         self.resetMarkerTable.connect(self.mainFrames["sliceMarks"].markerTable.reset)
+        self.resetQuickSelectTable.connect(self.mainFrames["sliceMarks"].quickSelectTable.removeFromGraph)
         
         self.quickSelectTrigger.connect(self.mainFrames["data"].qS.updateDataSelection)
         self.setAcceptDrops(True)
@@ -230,24 +230,24 @@ class InstantClue(QMainWindow):
             self.menuBar().addMenu(self.subMenus[subM])
 
         for menuProps in menuBarItems:
-            if isinstance(menuProps["fn"],dict) and "fn" in menuProps["fn"] and menuProps["fn"]["fn"]== "_createSubMenu":
+            if "fn" in menuProps and isinstance(menuProps["fn"],dict) and "fn" in menuProps["fn"] and menuProps["fn"]["fn"]== "_createSubMenu":
                 self._createSubMenu(menuProps["name"],menuProps["subM"])
                 
             else:
                 subMenu = self.subMenus[menuProps["subM"]]
                 action = subMenu.addAction(menuProps["name"])
+                if "fn" in menuProps:
+                    if isinstance(menuProps["fn"],dict):
 
-                if isinstance(menuProps["fn"],dict):
-
-                    fn = self._getObjFunc(menuProps["fn"])
-                    if "kwargs" in menuProps["fn"]:
-                        action.triggered.connect(lambda bool, 
-                                        fn = fn, 
-                                        kwargs = menuProps["fn"]["kwargs"] : fn(**kwargs))
-                    else:                        
-                        action.triggered.connect(fn)
-                else:
-                    action.triggered.connect(menuProps["fn"])
+                        fn = self._getObjFunc(menuProps["fn"])
+                        if "kwargs" in menuProps["fn"]:
+                            action.triggered.connect(lambda bool, 
+                                            fn = fn, 
+                                            kwargs = menuProps["fn"]["kwargs"] : fn(**kwargs))
+                        else:                        
+                            action.triggered.connect(fn)
+                    else:
+                        action.triggered.connect(menuProps["fn"])
         
 
     def _createSubMenu(self,subMenuName,parentMenu):
@@ -259,13 +259,15 @@ class InstantClue(QMainWindow):
         
 
     def progress_fn(self, n):
+        ""
         pass
  
     def print_output(self, s):
+        ""
         pass
 
     def errorInThread(self, errorType = None, v = None, e = None):
-        print(errorType,v,e)
+        ""
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
     def _getObjFunc(self,fnProps):

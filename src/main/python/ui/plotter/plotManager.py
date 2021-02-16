@@ -11,6 +11,8 @@ from .ICPlots.ICLineplot import ICLineplot
 from .ICPlots.ICHistogram import ICHistogram
 from .ICPlots.ICCountplot import ICCountplot
 from .ICPlots.ICXYPlot import ICXYPlot
+from .ICPlots.ICForestplot import ICForestplot
+from .ICPlots.ICWordCloud import ICWordCloud
 
 plotTypeGraph = {
                 "scatter"       :       ICScatterPlot,
@@ -25,7 +27,9 @@ plotTypeGraph = {
                 "histogram"     :       ICHistogram,
                 "countplot"     :       ICCountplot,
                 "x-ys-plot"     :       ICXYPlot,
-                "dim-red-plot"  :       ICBarplot,       
+                "dim-red-plot"  :       ICBarplot,      
+                "forestplot"    :       ICForestplot,
+                "wordcloud"     :       ICWordCloud
                 }
 
 additionToGraph = {

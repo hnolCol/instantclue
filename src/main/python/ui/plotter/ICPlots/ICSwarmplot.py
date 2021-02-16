@@ -2,7 +2,7 @@
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from collections import OrderedDict
-
+import numpy as np 
 class ICSwarmplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
@@ -61,8 +61,6 @@ class ICSwarmplot(ICChart):
                         interactive = False
                         )
 
-
-
     def onDataLoad(self, data):
         ""
         try:
@@ -99,7 +97,43 @@ class ICSwarmplot(ICChart):
                 scatterPlot.setHoverData(dataIndex)
             elif sender != scatterPlot:
                 scatterPlot.setHoverData(dataIndex)
-    
+
+
+    def updateQuickSelectItems(self,propsData):
+        ""
+        if self.isQuickSelectActive():
+            if self.isQuickSelectModeUnique():
+                dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+            else:
+                dataIndex = self.getDataIndexOfQuickSelectSelection()
+
+            for scatterPlot in self.scatterPlots.values():
+                if hasattr(scatterPlot,"quickSelectScatter"):
+                    scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
+                    self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+
+        self.updateFigure.emit()
+
+
+    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+        ""
+        for scatterPlot in self.scatterPlots.values():
+            ax = scatterPlot.ax
+            
+            if self.isQuickSelectModeUnique():
+
+                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
+
+            else:
+                if ax in self.quickSelectScatterDataIdx:
+                    dataIdx = self.quickSelectScatterDataIdx[ax]
+                    scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
+                    scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+                
+            scatterPlot.updateQuickSelectScatter(scatterColors,scatterSizes)
+
+        self.updateFigure.emit()
+
     def updateBackgrounds(self, redraw = False):
         "Update backgrouns for hover / bit capabilities"
         for scatterPlot in self.scatterPlots.values():

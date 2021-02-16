@@ -66,6 +66,7 @@ class scatterPlot(object):
 		if self.interactive:
 			self.add_hover_point()
 			self.addBindings()
+			self.addQuickSelectScatter()
 
 		
 	def addBindings(self):
@@ -90,7 +91,61 @@ class scatterPlot(object):
 		if "size" in self.data.columns:
 			self.scatterKwargs["s"] = self.data["size"].values
 
+	def addQuickSelectScatter(self):
+		""
+		self.quickSelectScatter = self.ax.scatter([],[],**self.scatterKwargs)
 
+	def setQuickSelectScatterData(self,dataIndex,propsData):
+		"Update Quick Slect Data - called if new item was selected in QS"
+		if self.multiScatter:			
+		
+			selectedData = self.data.loc[self.data.index.intersection(dataIndex)]
+			coords = np.concatenate([selectedData[list(columnPair)].values for columnPair in self.multiScatterKwargs.keys()])
+			scatterColors = np.tile(propsData.loc[dataIndex,"color"].values,len(self.multiScatterKwargs))
+			scatterSizes = np.tile(propsData.loc[dataIndex,"size"].values,len(self.multiScatterKwargs))
+
+		else:
+			coords = self.data[self.numericColumns].loc[dataIndex].values
+			scatterColors = propsData["color"]
+			scatterSizes = propsData["size"]
+
+		self.quickSelectScatter.set_offsets(coords)
+		self.quickSelectScatter.set_zorder(1e10)
+		self.quickSelectScatter.set_sizes(scatterSizes)
+		self.quickSelectScatter.set_facecolor(scatterColors)
+		self.quickSelectScatter.set_visible(True)
+
+
+	def updateQuickSelectScatter(self,scatterColors,scatterSizes):
+		""
+		if hasattr(self,"quickSelectScatter"):
+			if self.multiScatter:
+				scatterColors = np.tile(scatterColors,len(self.multiScatterKwargs))
+				scatterSizes = np.tile(scatterSizes,len(self.multiScatterKwargs))
+			
+			self.quickSelectScatter.set_sizes(scatterSizes)
+			self.quickSelectScatter.set_facecolor(scatterColors)
+			self.quickSelectScatter.set_visible(True)
+
+	def setQuickSelectScatterInivisible(self):
+		""
+		if hasattr(self,"quickSelectScatter"):
+			self.quickSelectScatter.set_visible(False)
+	
+	def getQuickSelectScatterPropsForExport(self):
+		""
+		if hasattr(self,"quickSelectScatter"):
+
+			coords = self.quickSelectScatter.get_offsets()
+			scatterColors = self.quickSelectScatter.get_facecolors()
+			scatterSizes = self.quickSelectScatter.get_sizes()
+			return coords,scatterColors,scatterSizes
+
+		return [],[],[]
+
+	
+
+			
 	def adjustRectangleSize(self, axisPerc = None, updateCircle = False):
 		""
 		if axisPerc is None:
@@ -135,12 +190,16 @@ class scatterPlot(object):
 		#self.selectRectangle[0].set_visible(False)
 		if self.toolTipsActive:
 			self.setTooltipInvisible()
+		# if hasattr(self,"quickSelectScatter"):
+		# 	if self.quickSelectScatter.get_visible():
+		# 		self.quickSelectScatter.set_visible(False)
+
 		if self.hoverScatter.get_visible():
 			self.hoverScatter.set_visible(False)
 			#if self.toolTipsActive:
 			#	self.tooltip.set_visible(False)				
-			if update:
-				self.updateAxis()
+		if update:
+			self.updateAxis()
 
 	def setTooltipInvisible(self):
 		""
@@ -402,7 +461,9 @@ class scatterPlot(object):
 					self.hoverScatter.set_sizes(sizes)
 				
 				self.hoverScatter.set_offsets(X)
+
 			else:
+
 				self.hoverScatter.set_offsets(pointCoords)
 
 			if not self.hoverScatter.get_visible():
@@ -591,13 +652,8 @@ class scatterPlot(object):
 			#update maskIndex
 			self.maskIndex = self.data.index
 		self.updateDataWithProps()#why was th
-		#self.updateScatterCollection()
-		
-		
-		#self.replot(ax = self.ax, **self.scatterKwargs)
-		#self.updateScatterCollection()
+
 		## we need to replot this, otherwise the layer/order cannot be changed. 
-		
 		self.removeMainCollection()
 		if "marker" in self.data.columns:
 			self._plotMarkerSpecScatter()

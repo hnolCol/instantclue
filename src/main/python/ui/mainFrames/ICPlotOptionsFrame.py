@@ -13,7 +13,7 @@ from ..plotter.plotTypeManager import PlotTypeManager, plotTypeTooltips, gridPos
 from ..custom.buttonDesigns import PlotTypeButton, MainFigureButton, SettingsButton
 from ..custom.mainFigure import MainFigure, MainFigureRegistry
 from ..custom.warnMessage import WarningMessage
-from ..custom.ICDataTable import PandaTableDialog
+from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..dialogs.ICConfiguration import ConfigDialog
 from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import createSubMenu
@@ -57,9 +57,9 @@ class PlotOptionFrame(QWidget):
         for b in self.buttons:
             nRow, nCol = gridPosition[b.plotType]
             self.layout().addWidget(b,nRow,nCol)
-        self.layout().setRowStretch(8,1)
-        self.layout().addWidget(self.mainFigureButton,9,0)
-        self.layout().addWidget(self.configButton,10,0)
+        self.layout().setRowStretch(9,1)
+        self.layout().addWidget(self.mainFigureButton,10,0)
+        self.layout().addWidget(self.configButton,11,0)
 
         self.layout().setAlignment(Qt.AlignTop)
 
@@ -104,10 +104,6 @@ class PlotOptionFrame(QWidget):
             action.triggered.connect(lambda _,method = method : self.changeCorrMethod(method))
         for name, fn in [("View",self.showCorrResults)]:
             action = menu["Results"].addAction(name) 
-            action.triggered.connect(fn)
-        #set other options for corrmatrix
-        for name,fn in [("Enforce row label",self.setEnforceRowLabeling)]:
-            action = menu["main"].addAction(name)
             action.triggered.connect(fn)
 
         self.typeMenus["corrmatrix"] = menu["main"]
@@ -280,7 +276,7 @@ class PlotOptionFrame(QWidget):
             plotType = self.currentPlotType
 
         nNumCol, nCatCol = self.getReceiverBoxItemProps()
-        if nNumCol == 0 and nCatCol > 0:
+        if nNumCol == 0 and nCatCol > 0 and plotType not in ["wordcloud","countplot"]:
             plotType = "countplot"
             self.currentPlotType = plotType
         isValid, errorMsg = self.typeManager.isTypeValid(plotType,nNumCol,nCatCol)
@@ -331,31 +327,24 @@ class PlotOptionFrame(QWidget):
             except Exception as e:
                 print(e)
         else:
-            try:
-                self.mC.config.setParam("colorMapLimits",scaleString)
-                self.mC.mainFrames["middle"].ICPlotter.graph.updateClim()
-            except Exception as e:
-                print(e)
+            
+            self.mC.config.setParam("colorMapLimits",scaleString)
+            self.mC.mainFrames["middle"].ICPlotter.graph.updateClim()
+            
     
     def setEnforceRowLabeling(self,event=None):
-        "Enfore/Disable row Labeling"
-        plt = self.mC.mainFrames["middle"].plotter
-        currentValue = plt.numRows
-        if currentValue == np.inf:
-            updatedValue = plt.defaultNumRows 
-        else:
-            updatedValue = np.inf
+        "Enfore/Disable row Labeling in Hierarchical Clustering"
+        exists, graph = self.mC.getGraph() 
         
-        setattr(plt,"numRows",updatedValue)
-        #check if hclust is at the moment in use
-        if plt.currentPlotType in ['hclust','corrmatrix']:
-            plotterInUse = plt.nonCategoricalPlotter
-            #check if plotter is not none
-            if plotterInUse is not None:
-                setattr(plotterInUse._hclustPlotter, "numRows", updatedValue)
-                #update row labels
-                plotterInUse._hclustPlotter.on_ylim_change()
-    
+        if exists and graph.isHclust():
+
+            if not graph.showLabels():
+
+                w = WarningMessage(
+                        infoText = "No Labels found. Please Drag and drop a label column on the label button first.",
+                        iconDir = self.mC.mainPath)
+                w.exec_() 
+
     def setDodge(self,event=None):
         ""
         plt = self.mC.mainFrames["middle"].plotter
@@ -413,7 +402,7 @@ class PlotOptionFrame(QWidget):
                 colorArray = graph.getColorArray()
                 clusteredData = graph.getClusteredData()
                 clusterLabels, clusterColors = graph.getClusterLabelsAndColor()
-                print(clusterLabels, clusterColors)
+                #print(clusterLabels, clusterColors)
                 dataID = self.mC.getDataID()
 
                 fkey = "data::exportHClustToExcel"

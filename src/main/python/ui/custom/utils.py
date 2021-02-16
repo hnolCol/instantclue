@@ -9,10 +9,10 @@ import numpy as np
 INSTANT_CLUE_ANAYLSIS = [
     {"Model":["Axes Diagonal","Line (slope=1)","Line (y = m*x + b)","Quadrant Lines","Line from file","Line from clipboard","lowess","linear fit"]},
     {"Compare two groups":["t-test","Welch-test","Wilcoxon","(Whitney-Mann) U-test"]},
-    {"Compare multiple groups":["1W-ANOVA","1W-ANOVA (rep. measures)"]},
+    #{"Compare multiple groups":["1W-ANOVA","1W-ANOVA (rep. measures)"]},
    # {"Dimensional Reduction":}
-    {"Transformation":["TSNE","PCA"]},
-    {"Cluster Analysis":["k-means","DBSCAN","Birch","Affinity Propagation","Agglomerative Clustering"]}
+   # {"Transformation":["TSNE","PCA"]},
+    #{"Cluster Analysis":["k-means","DBSCAN","Birch","Affinity Propagation","Agglomerative Clustering"]}
 ]
 
 
@@ -138,8 +138,8 @@ class PropertyChooser(QWidget):
                     elif isinstance(p.getAttr("range"),str):
                         newValue = vInput.text() 
                 else:
-
                     newValue = np.int(np.float(vInput.text())) if p.getAttr("dtype") == int else np.float(vInput.text())
+                   
                 p.setAttr("value",newValue)
                 p.updateAttrInParent()
 
@@ -156,7 +156,7 @@ class LabelLikeCombo(LabelLikeButton):
     
     def addMenu(self):
         ""
-        self.menu = createMenu()
+        self.menu = createMenu(parent = self.parent())
         for itemID, itemName in self.items.items():
                 action = self.menu.addAction(itemName)
                 action.triggered.connect(lambda _, ID = itemID,text = itemName : self.emitSignal(ID,text))
@@ -168,7 +168,7 @@ class LabelLikeCombo(LabelLikeButton):
         senderGeom = self.geometry()
         topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
         #cast menu
-        self.menu.exec_(topLeft)
+        self.menu.popup(topLeft)
            
     def emitSignal(self,itemID,itemText):
         ""

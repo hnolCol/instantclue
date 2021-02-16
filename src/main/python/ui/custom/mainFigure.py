@@ -2,8 +2,8 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from ..utils import createTitleLabel, createLabel, createSubMenu, createMenus
-
+from ..utils import createMenu, createTitleLabel, createLabel, createSubMenu, createMenus
+from .buttonDesigns import BigPlusButton, ResetButton, RefreshButton
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.pyplot import figure
@@ -249,12 +249,9 @@ class MainFigure(QDialog):
         # a figure instance to plot on
         if mainFigure is None:
             self.figure = figure(figsize=self.figSize)
-            print(self.figure.get_size_inches())
-            print(self.figure.get_dpi())
+           
         else:
             self.figure = mainFigure
-            print(self.figure.get_size_inches())
-            print(self.figure.get_dpi())
             self.figure.set_dpi(100)
             #print(self.figure.dpi)
         # this is the Canvas Widget that displays the `figure`
@@ -302,10 +299,9 @@ class MainFigure(QDialog):
             cBox.addItems(self.axisRanges[propLabel])
             self.axisPropsLabels[propLabel] = (l,cBox)
         #add navigation buttons
-        self.addAxisButton = QPushButton("ADD")
-        self.deleteAxisButton = QPushButton("DEL")
-        self.clearFigureButton = QPushButton("CLEAR")
-
+        self.addAxisButton = BigPlusButton(self, tooltipStr="Adds a new axis at given position.", buttonSize=(40,40)) #QPushButton("ADD")
+        self.deleteAxisButton = ResetButton(self, tooltipStr="Deletes selected axis",buttonSize=(40,40))
+        self.clearFigureButton = RefreshButton(self, tooltipStr = "Refresh figure and start new", buttonSize = (40,40))
 
 
     def __layout(self):
@@ -331,6 +327,7 @@ class MainFigure(QDialog):
         hbox = QHBoxLayout()
         hbox.addWidget(self.addAxisButton)
         hbox.addWidget(self.deleteAxisButton)
+        hbox.addStretch(1)
         hbox.addWidget(self.clearFigureButton)
 
         layout.addLayout(hbox,5,0,1,10)
@@ -344,7 +341,7 @@ class MainFigure(QDialog):
         ""
         self.addAxisButton.clicked.connect(self.addAxis)
         self.clearFigureButton.clicked.connect(self.clearFigure)
-
+        self.deleteAxisButton.clicked.connect(self.openAxisMenu)
         #matplotlib eents
         self.canvas.mpl_connect('button_press_event', self.onPress)
 
@@ -391,7 +388,7 @@ class MainFigure(QDialog):
         gridRow, gridCol,posRow, posCol,rowSpan, colSpan, subplotLabel = axisParams
         
         if posRow-1 + rowSpan > gridRow or posCol -1 + colSpan > gridCol:
-            warn = WarningMessage(title = "Invalid Input",infoText='Axis specification out of grid.')
+            warn = WarningMessage(title = "Invalid Input",infoText='Axis specification out of grid.',iconDir = self.mC.mainPath)
             warn.exec_()
             return
 
@@ -440,7 +437,7 @@ class MainFigure(QDialog):
         "Checks for legend in axis"
         legend = ax.get_legend()
         if legend is None:
-            warn = WarningMessage(parent=self,infoText="No legend found.")
+            warn = WarningMessage(parent=self,infoText="No legend found.",iconDir = self.mC.mainPath)
             warn.exec_()
             return 
         else:
@@ -477,7 +474,7 @@ class MainFigure(QDialog):
         ""
         self.axisLabels.clear()
         self.figureProps.clear()
-        self.textsAdded.clear()
+        self.textsAdded.clear() 
         self.axisItems.clear()
 
     def clearFigure(self,event=None):
@@ -514,14 +511,13 @@ class MainFigure(QDialog):
 
         self.menu = menu["main"]
 
-    def deleteAxis(self,event=None):
+    def deleteAxis(self,event=None, axisID = None):
         '''
         Deletes axis by an event that has the attributes inaxes. This
         will be used to find the given ID (enumerated) and it will then
         delete all entries that were done in the main Figure Collection.
         '''
-        if self.inaxes is not None:
-            axisID = self.getAxisID(self.inaxes)
+        if axisID is not None and axisID in self.figureProps:
             #self.check_for_associations_and_remove(id)
             self.figure.delaxes(self.figureProps[axisID]['ax'])
             del self.figureProps[axisID]
@@ -557,7 +553,8 @@ class MainFigure(QDialog):
         try:
             propsIntegers = [int(float(item)) for item in propsStrings]  
         except:
-            WarningMessage(infoText="Axis properties could not be converted to integers. Invlid input.")
+            w = WarningMessage(infoText="Axis properties could not be converted to integers. Invlid input.",iconDir = self.mC.mainPath)
+            w.exec_()
             return None
         subplotLabel = self.axisPropsLabels["Axis label:"][1].currentText()
         #bind subplotlabel
@@ -586,6 +583,20 @@ class MainFigure(QDialog):
             self.menu.exec_(QCursor.pos())
 
         self.inaxes = None
+
+    def openAxisMenu(self,event=None):
+        ""
+        menu = createMenu(parent=self)
+        for axisID, aixsParams in self.figureProps.items():
+            action = menu.addAction("Axis id = {} label = {}".format(axisID,aixsParams['axisLabel']))
+            action.triggered.connect(lambda _,axisID = axisID: self.deleteAxis(axisID = axisID))
+        if hasattr(self.sender(),"mouseLostFocus"):
+            self.sender().mouseLostFocus()
+        senderGeom = self.sender().geometry()
+        bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        menu.popup(bottomLeft)
+        
+
 
     def update(self,event=None):
         ""
@@ -627,7 +638,7 @@ class MainFigure(QDialog):
                 try:
                     newValue = int(float(changedValue))
                 except:
-                    warn = WarningMessage(infoText="Could not convert to integer : {}".format(changedValue))
+                    warn = WarningMessage(infoText="Could not convert to integer : {}".format(changedValue),iconDir = self.mC.mainPath)
                     warn.exec_()
                 propRange = [str(i) for i in range(1,newValue+1)]
                 self.axisRanges[propLabel] = propRange

@@ -2,34 +2,36 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from .utils import clearLayout, getStandardFont
-from ..utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ..delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ..utils import clearLayout, getStandardFont
+from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 import pandas as pd
 import numpy as np
 
-class ICStatisticTable(ICColorSizeTableBase):
+class ICSizeTable(ICColorSizeTableBase):
     
     def __init__(self,*args,**kwargs):
 
-        super(ICStatisticTable,self).__init__(*args,**kwargs)
-        self.selectionChanged.connect(self.updateStatsInGraph)
+        super(ICSizeTable,self).__init__(*args,**kwargs)
+        self.selectionChanged.connect(self.updateSizeInGraph)
         
         self.__controls()
         self.__layout()
 
     def __controls(self):
         ""
-        self.mainHeader = createTitleLabel("Statistics",fontSize = 14)
+        self.mainHeader = createTitleLabel("Sizes",fontSize = 14)
         self.titleLabel = createLabel(text = self.title)
-        self.table = StatisticTable(parent = self, mainController=self.mC)
-        self.model = StatisticTableModel(parent=self.table)
+        self.table = SizeTable(parent = self, mainController=self.mC)
+        df = pd.DataFrame(np.array([[1,3],[2,5]]))
+        self.model = SizeTableModel(parent=self.table,labels=df)
         self.table.setModel(self.model)
-       # self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-       # self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
-        #self.table.resizeColumns()
-      
+
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        self.table.resizeColumns()
+        self.table.setItemDelegateForColumn(0,SpinBoxDelegate(self.table))
         
         
     def __layout(self):
@@ -46,46 +48,58 @@ class ICStatisticTable(ICColorSizeTableBase):
             graph.setHoverObjectsInvisible()
             graph.resetSize()
         
-    def updateStatsInGraph(self):
-        ""
-        print("boom")
 
-    def toggleVisibility(self):
+    def updateSizeInGraph(self):
         ""
-        exists, graph = self.mC.getGraph() 
-        internalID = self.table.model().getCurrentInternalID()
-        if exists:
-            graph.toggleStatVisibilityByInternalID(internalID)
-    
-    def removeStats(self):
+        exists, graph =  self.mC.getGraph()
+        try:
+            if exists:
+                graph.setHoverObjectsInvisible()
+                graph.updateGroupSizes(self.table.model().getLabels(),self.table.model().getItemChangedInternalID())
+        except Exception as e:
+            print(e)
+        
+    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
         ""
-        exists, graph = self.mC.getGraph() 
-        internalID = self.table.model().getCurrentInternalID()
+        exists, graph =  self.mC.getGraph()
         if exists:
-            graph.removeStatsArtistsByInternalID(internalID)
+            graph.setHoverObjectsInvisible()
+            graph.addSizeLegendToGraph(self.model._labels,ignoreNaN,title = self.title, legendKwargs = legendKwargs)
+            self.model.completeDataChanged()
 
-class StatisticTableModel(QAbstractTableModel):
+
+class SizeTableModel(QAbstractTableModel):
     
-    def __init__(self, labels = pd.DataFrame(), parent=None):
-        super(StatisticTableModel, self).__init__(parent)
+    def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
+        super(SizeTableModel, self).__init__(parent)
         self.initData(labels)
+        self.isEditable = isEditable
 
     def initData(self,labels):
 
         self._labels = labels
         self._inputLabels = labels.copy()
         
+        self.setDefaultSize()
+        self.maxSize = None
+        self.setRowHeights()
+        
+
     def rowCount(self, parent=QModelIndex()):
         
         return self._labels.index.size
 
     def columnCount(self, parent=QModelIndex()):
         
-        return 4
+        return 2
     
     def dataAvailable(self):
         ""
         return self._labels.index.size > 0 
+
+    def setDefaultSize(self,size=50):
+        ""
+        self.defaultSize = size
 
     def getDataIndex(self,row):
         ""
@@ -126,6 +140,17 @@ class StatisticTableModel(QAbstractTableModel):
         if mouseOverItem is not None and "internalID" in self._labels.columns: 
             return self._labels.iloc[mouseOverItem].loc["internalID"]
 
+    def getInternalIDByRowIndex(self,row):
+        ""
+        return self._labels.iloc[row].loc["internalID"]
+ 
+    def getGroupByInternalID(self,internalID):
+        ""
+        if "internalID" in self._labels.columns:
+            boolIdx = self._labels["internalID"] == internalID
+            if np.any(boolIdx):
+                return self._labels.loc[boolIdx,"group"].values[0]
+
     def getItemChangedInternalID(self):
         ""
         if self.parent().sizeChangedForItem is not None and "internalID" in self._labels.columns:
@@ -133,6 +158,7 @@ class StatisticTableModel(QAbstractTableModel):
             
     def setData(self,index,value,role):
         ""
+        
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
         if role == Qt.UserRole:
@@ -142,57 +168,82 @@ class StatisticTableModel(QAbstractTableModel):
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        
+        elif role == Qt.EditRole:
+            if not self.isEditable:
+                return False
+            #get value
+            v = int(np.sqrt(value))
+            
+            self._labels.iloc[index.row(),index.column()] = value
+            if v > self.maxSize:
+                self.setRowHeights()
+            elif v < self.minSize:
+                self.setRowHeights()
+            self.parent().sizeChangedForItem = index.row()
+            self.parent().parent().selectionChanged.emit()
 
+            if self._labels.index.size == 1:
+                rowHeight = v + self.parent().rowHeight
+                self.parent().setRowHeight(index.row(),rowHeight)
+                self.parent().setColumnWidth(0,rowHeight)
+            
+            self.completeDataChanged()
+            
+            return True
+
+    def setRowHeights(self):
+        ""
+        if "size" in self._labels.columns:
+            vs = np.sqrt(self._labels["size"].values)
+            self.maxSize = np.nanmax(vs)
+            self.minSize = np.nanmin(vs)
+           
 
     def data(self, index, role=Qt.DisplayRole): 
-        "Shows data"
+        ""
+        
         if not index.isValid(): 
 
             return QVariant()
-            
-        elif role == Qt.DisplayRole: 
 
+        elif role == Qt.EditRole:
+
+            return self._labels.iloc[index.row(),index.column()]
+            
+        elif role == Qt.DisplayRole and index.column() == 1: 
             return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
 
             return getStandardFont()
-        
-        elif role == Qt.ForegroundRole:
-            if "visible" in self._labels.columns:
-                if self._labels["visible"].iloc[index.row()]:
-                    return QColor("black")
-                else:
-                    return QColor("grey")                
-            return QColor("black")
 
         elif role == Qt.ToolTipRole:
-            
-            if "Group1" and "Group2" in self._labels.columns:
-                return "Comparision:\n{}\nvs\n{}".format(self._labels["Group1"].iloc[index.row()],self._labels["Group2"].iloc[index.row()])
-            return "This is a beatufil tooltip."
+            dataIndex = self.getDataIndex(index.row())
+            if index.column() == 0:
+                if self.isEditable:
+                    return "Current size: {}\nDouble click allows user-defined sizes.".format(self._labels.loc[dataIndex,"size"])
+                else:
+                    return "Current size: {}\nSize range for numeric values can only be changed in the settings dialog.".format(self._labels.loc[dataIndex,"size"])
+            elif index.column() == 1:
+                return "Current size: {}\nSize encoded categorical or numeric values.".format(self._labels.loc[dataIndex,"size"])
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
-
             
     def flags(self, index):
         "Set Flags of Column"
-        if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if index.column() == 0 and self.isEditable:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
-        
         self.initData(labels)
         self.completeDataChanged()
 
     def completeDataChanged(self):
         ""
-        
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
 
     def rowRangeChange(self,row1, row2):
@@ -211,11 +262,12 @@ class StatisticTableModel(QAbstractTableModel):
 
 
 
-class StatisticTable(QTableView):
+
+class SizeTable(QTableView):
 
     def __init__(self, parent=None, rowHeight = 22, mainController = None):
 
-        super(StatisticTable, self).__init__(parent)
+        super(SizeTable, self).__init__(parent)
        
         self.setMouseTracking(True)
         self.setShowGrid(True)
@@ -244,16 +296,20 @@ class StatisticTable(QTableView):
 
     def createMenu(self):
         ""
-        menu = createSubMenu(None,[])
-        menu["main"].addAction("Show/Hide", self.parent().toggleVisibility)
-        menu["main"].addAction("Remove", self.parent().removeStats)
-        menu["main"].addAction("Save to xlsx", self.parent().saveModelDataToExcel)
-       
+        legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
+        menu = createSubMenu(None,["Subset by ..","Add Legend at .."])
+        menu["main"].addAction("Remove",self.parent().resetSizeInGraph)
+        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
+        menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
+
+        for legendLoc in legendLocations:
+            menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
+        
         self.menu = menu["main"]
+
     
     def leaveEvent(self,event=None):
         ""
-        
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
             prevMouseOver = int(self.mouseOverItem)
             self.mouseOverItem = None
@@ -287,23 +343,21 @@ class StatisticTable(QTableView):
             if tableIndex is None:
                 return
             tableIndexCol = tableIndex.column()
-            if tableIndexCol == 0 and not self.rightClick: 
-                dataIndex = self.model().getDataIndex(tableIndex.row())
+            if tableIndexCol == 0:
+                #dataIndex = self.model().getDataIndex(tableIndex.row())
                 if not self.rightClick:
                     return
-
+                    #stdSize = self.parent().mC.config.getParam("scatterSize")
                 else:
                     return
 
                 self.sizeChangedForItem = tableIndex.row()
-                
                 self.parent().selectionChanged.emit()
                 self.model().rowDataChanged(tableIndex.row())
                 
-                
-            elif self.rightClick:
-                #idx = self.model().index(0,0)
-                self.menu.exec(QCursor.pos()+QPoint(2,2))
+            elif tableIndexCol == 1 and self.rightClick:
+                self.rightClickedRowIndex = tableIndex.row()
+                self.menu.exec(QCursor.pos())
                 
                 self.rightClick = False
             else:
@@ -311,6 +365,10 @@ class StatisticTable(QTableView):
 
         except Exception as e:
             print(e)
+
+    def getSize(self):
+        ""
+
 
     def mouseMoveEvent(self,event):
         

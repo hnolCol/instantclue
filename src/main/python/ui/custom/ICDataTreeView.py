@@ -1472,7 +1472,7 @@ class DataTreeViewTable(QTableView):
             #print(test)
             #print(self.mC.grouping.groupingExists())
             if False and not self.mC.grouping.groupingExists():
-                w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.")
+                w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
                 w.exec_()
                 return
             else: 

@@ -18,16 +18,32 @@ contextMenuData = OrderedDict([
         ])
 
  
+class HeaderViewFilter(QObject):
+    def __init__(self, parent, header, *args):
+        super(HeaderViewFilter, self).__init__(parent, *args)
+        self.header = header
+
+    def eventFilter(self, object, event):
+        if event.type() == QEvent.MouseMove:
+            logicalIndex = self.header.logicalIndexAt(event.pos())
+            print(logicalIndex)
+            # you could emit a signal here if you wanted
+            return True
+        return False
+
+
 
 class PandaTable(QTableView):
     
-    def __init__(self, parent=None, cornerButton = True):
+    def __init__(self, parent=None, mainController = None,  cornerButton = True):
         super(PandaTable, self).__init__(parent)
         self.highlightRow = None
         self.setMouseTracking(True)
         self.setShowGrid(True)
-        self.verticalHeader().setDefaultSectionSize(15)
 
+        self.mC = mainController
+        
+        self.verticalHeader().setDefaultSectionSize(15)
         self.verticalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
         self.verticalHeader().customContextMenuRequested.connect( self.showHeaderMenu )
         self.setItemDelegate(EditorDelegate(self))
@@ -45,10 +61,10 @@ class PandaTable(QTableView):
             """
             )
 
-
     def showHeaderMenu( self, point ):
-        """ """       
-        menus = createSubMenu(None,subMenus=["File .. "])
+        """ """  
+        menu = createMenu(parent=self)     
+        menus = createSubMenu(menu,subMenus=["File .. "])
         for k, v in contextMenuData.items():
             action = menus["File .. "].addAction(v["label"])
             fn = getattr(self,v["fn"])
@@ -119,6 +135,7 @@ class PandaTable(QTableView):
         ""
         if event.buttons() == Qt.LeftButton:         
             super(QTableView,self).mouseMoveEvent(event)
+            
         else:
             eventIndex = self.mouseEventToIndex(event)
             self.highlightRow  = eventIndex.row() 
@@ -135,6 +152,16 @@ class PandaTable(QTableView):
         if hasattr(self,"highlightRow"):
             self.highlightRow = None  
             self.model().completeDataChanged()
+
+    def selectionChanged(self,selected,deselected):
+        "Mark Datapoints in Selection"
+        selectedRows = np.unique([idx.row() for idx in selected.indexes()])
+        if self.mC is not None and hasattr(self.mC,"getGraph"):
+            exists,graph = self.mC.getGraph()
+            if exists:
+                selectedRows = self.getSelectedRows()
+                dataIndex = np.array([self.model().getRowDataIndexByTableIndex(idx) for idx in selectedRows])
+                graph.setHoverData(dataIndex)
 
 class EditorDelegate(QStyledItemDelegate):
 
@@ -221,15 +248,14 @@ class PandaModel(QAbstractTableModel):
     def getFont(self):
         ""
         font = QFont()
-        font.setFamily("Myriad Variable Concept")
+        font.setFamily("Arial")
         font.setWeight(300)
         font.setPointSize(9)
         return font
 
     def getRowDataIndexByTableIndex(self,index):
         ""
-        index = self.df.index[index.row()]
-        return index 
+        return self.df.index[index.row()]
 
     def updateData(self,value,index):
         ""

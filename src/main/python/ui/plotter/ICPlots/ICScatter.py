@@ -4,6 +4,7 @@ from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
 import pandas as pd
+import numpy as np
 
 class ICScatterPlot(ICChart):
     ""
@@ -11,6 +12,7 @@ class ICScatterPlot(ICChart):
         ""
         super(ICScatterPlot,self).__init__(*args,**kwargs)
         self.scatterPlots = dict()
+        self.requiredKwargs = ["columnPairs","axisPositions","dataColorGroups","dataSizeGroups"]
 
     def addAnnotations(self, labelColumnNames,dataID):
         ""
@@ -132,6 +134,9 @@ class ICScatterPlot(ICChart):
         
     def onDataLoad(self, data):
         ""
+        if not all(kwarg in data for kwarg in self.requiredKwargs):
+            return
+            
         self.data = data
         self.initAxes(data["axisPositions"])
         self.initScatterPlots()
@@ -143,6 +148,8 @@ class ICScatterPlot(ICChart):
             self.addTitles(data["axisTitles"])
 
         qsData = self.getQuickSelectData()
+        if self.getParam("scatter.equal.axis.limits"):
+            self.alignLimitsOfAllAxes(updateFigure=False)
         if qsData is not None:
             self.mC.quickSelectTrigger.emit()
         else:
@@ -243,6 +250,62 @@ class ICScatterPlot(ICChart):
                 
             self.updateFigure.emit()
 
+    def updateQuickSelectItems(self,propsData):
+        ""
+        if self.isQuickSelectActive():
+            if self.isQuickSelectModeUnique():
+                dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+            else:
+                dataIndex = self.getDataIndexOfQuickSelectSelection()
+
+            for scatterPlot in self.scatterPlots.values():
+                if hasattr(scatterPlot,"quickSelectScatter"):
+                    scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
+                    self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+
+        self.updateFigure.emit()
+            
+    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+        ""
+        for scatterPlot in self.scatterPlots.values():
+            ax = scatterPlot.ax
+            
+            if self.isQuickSelectModeUnique():
+
+                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
+
+            else:
+                if ax in self.quickSelectScatterDataIdx:
+                    dataIdx = self.quickSelectScatterDataIdx[ax]
+                    scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
+                    scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+                
+            scatterPlot.updateQuickSelectScatter(scatterColors,scatterSizes)
+
+        self.updateFigure.emit()
+    
+    def resetQuickSelectArtists(self):
+        ""
+        for scatterPlot in self.scatterPlots.values():
+            scatterPlot.setQuickSelectScatterInivisible()
+       
+
+    def mirrorQuickSelectArtists(self,axisID,targetAx):
+        ""
+        if axisID in self.axisDict:
+            sourceAx = self.axisDict[axisID]
+            for scatterPlot in self.scatterPlots.values():
+                ax = scatterPlot.ax
+                if ax == sourceAx:
+                    coords,scatterColors,scatterSizes = scatterPlot.getQuickSelectScatterPropsForExport()
+                    #add props to standard kwargs
+                    kwargs = self.getScatterKwargs()
+                    kwargs["zorder"] = 1e9
+                    kwargs["s"] = scatterSizes
+                    kwargs["color"] = scatterColors
+                    targetAx.scatter(x = coords[:,0], y = coords[:,1], **kwargs)
+
+            
     def setHoverObjectsInvisible(self):
         ""
         for scatterPlot in self.scatterPlots.values():

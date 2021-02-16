@@ -8,12 +8,13 @@ from ..utils import createTitleLabel
 
 class MessageBase(QDialog):
     ""
-    def __init__(self,parent=None,iconName = "warnIcon.svg", title = "Warning", infoText = "", *args,**kwargs):
+    def __init__(self,parent=None,iconName = "warnIcon.svg", title = "Warning", infoText = "", iconDir = ".", *args,**kwargs):
         super(MessageBase,self).__init__(parent,*args,**kwargs)
         
         self.iconName = iconName
         self.title = title
         self.infoText = infoText
+        self.iconDir = iconDir
         self.state = None
         self.setMinimumWidth(350)
         self.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Fixed)
@@ -28,14 +29,15 @@ class MessageBase(QDialog):
         #set up title label
         self.tLabel = createTitleLabel(self.title)
         self.tLabel.setAlignment(Qt.AlignHCenter)
-
-        #find instant clue logo
-        pathToSVG = os.path.join(".","icons","base",self.iconName)
-        pixmap = QPixmap(pathToSVG)
-       
         #set up logo label
         self.logoLabel = QLabel() 
-        self.logoLabel.setPixmap(pixmap)
+         #find instant clue logo
+        pathToSVG = os.path.join(self.iconDir,"icons","base",self.iconName)
+        if os.path.exists(pathToSVG):
+            pixmap = QPixmap(pathToSVG)
+            self.logoLabel.setPixmap(pixmap)
+        else:
+            self.logoLabel.setText("NoIconFound")
         self.logoLabel.setAlignment(Qt.AlignVCenter)
 
         #setup info label

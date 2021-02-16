@@ -5,6 +5,7 @@ from PyQt5.QtCore import *
 from ..utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
 import numpy as np
 import seaborn as sns
+import random
 from matplotlib.colors import ListedColormap
 
 
@@ -582,7 +583,7 @@ class BigPlusButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else INSTANT_CLUE_BLUE))
+        pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#397546"))
         pen.setWidthF(4)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)
@@ -1157,14 +1158,21 @@ class AcceptButton(PushHoverButton):
 
 
 
-class RefreshButton(PushHoverButton):
-    def __init__(self,parent=None):
-        super(RefreshButton,self).__init__(parent, acceptDrops=False)
-        self.setToolTip("Refresh filter.")
 
+class RefreshButton(PushHoverButton):
+    def __init__(self,parent=None, buttonSize = None, tooltipStr = "Refresh filter.", *args, **kwargs):
+        super(RefreshButton,self).__init__(parent, acceptDrops=False, tooltipStr = tooltipStr, *args, **kwargs)
+        
+        self.buttonSize = buttonSize
+        
     def sizeHint(self):
         ""
-        return QSize(25,25)
+        if self.buttonSize is not None:
+            w, h  = self.buttonSize
+            return QSize(w,h)
+        else:
+            return QSize(25,25)
+
         
     def paintEvent(self,event):
         #calculate rectangle props
@@ -1219,21 +1227,22 @@ class RefreshButton(PushHoverButton):
         #draw complete path
         painter.drawPath(path)
 
-
-
-
 #Reset Button for Quick Select
 class ResetButton(PushHoverButton):
-    def __init__(self, parent=None, penColor = "#B84D29", strokeWidth = 2,*args, **kwargs):
+    def __init__(self, parent=None, penColor = "#B84D29", strokeWidth = 2, buttonSize = None,*args, **kwargs):
         super(ResetButton, self).__init__(parent=parent, acceptDrops = False,*args, **kwargs)
 
         self.strokeWidth = strokeWidth
         self.penColor = penColor
-       
-    
+        self.buttonSize = buttonSize
+        
     def sizeHint(self):
         ""
-        return QSize(15,15)
+        if self.buttonSize is not None:
+            w, h  = self.buttonSize
+            return QSize(w,h)
+        else:
+            return QSize(15,15)
 
     def paintEvent(self, e):
 
@@ -1817,12 +1826,15 @@ class PlotTypeButton(PushHoverButton):
                             "lineplot"      :   self.drawLines,
                             "pointplot"     :   self.drawPoint,
                             "histogram"     :   self.drawHistogram,
+                            "violinplot"    :   self.drawViolinPlots,
                             "swarmplot"     :   self.drawSwarm,
                             "corrmatrix"    :   self.drawCorrMatrix,
                             "countplot"     :   self.drawCountPlot,
                             "x-ys-plot"     :   self.drawXYPlot,
                             "addSwarmplot"  :   self.drawSwarmAdd,
-                            "dim-red-plot"  :   self.drawDimRed}
+                            "dim-red-plot"  :   self.drawDimRed,
+                            "forestplot"    :   self.drawForestplot,
+                            "wordcloud"     :   self.drawWordcloud}
 
     def paintEvent(self,event, noAxis = False):
         ""
@@ -1945,6 +1957,68 @@ class PlotTypeButton(PushHoverButton):
         qp.setFont(self.getStandardFont())
         qp.drawText(width,height/3,"n")
 
+    def drawForestplot(self,qp, height, width, rectX, rectY, nForests = 3):
+        ""
+        defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546"]
+        margin = height/10
+        distForest = (width - margin) / (nForests) 
+        yValues = [rectY + margin + n * distForest for n in range(nForests)]
+        xValues = np.random.normal(loc = width/2 + margin, scale=4, size = nForests)
+        errorValues = np.abs(np.random.normal(loc = 0, scale=0.5, size = nForests) * width)
+        pen = QPen(QColor("black"))#
+        pen.setWidthF(0.2)
+        qp.setPen(pen)
+        for m in range(nForests):
+            brush = QBrush(QColor(defaultColors[m]))
+            qp.setBrush(brush)
+            qp.drawEllipse(QPointF(xValues[m], yValues[m]),3,3)
+            qp.drawLine(
+                
+                QPointF(xValues[m]-errorValues[m]/2,yValues[m]),
+                QPointF(xValues[m]+errorValues[m]/2,yValues[m]))
+
+
+
+
+    def drawViolinPlots(self, qp, height, width, rectX, rectY, nViolins = 3):
+        ""
+        defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546"]
+        margin = width/10
+        distBars = (width - margin) / (nViolins) 
+        xValues = [rectX + 1.75 * margin + n * distBars for n in range(nViolins)]
+        
+        pen = QPen(QColor("black"))#
+        pen.setWidthF(0.2)
+        qp.setPen(pen)
+        
+        for m in range(nViolins):
+
+            brush = QBrush(QColor(defaultColors[m]))
+            qp.setBrush(brush)
+
+            Y = np.random.normal(loc=0,scale=1,size=500)
+            
+            count, bins = np.histogram(Y, 50)
+            circleY = np.argmax(count)
+            normCount = count/np.max(count) 
+          
+            normHeight = height / normCount.size 
+            poly = QPolygonF()
+            
+            violinWidth = (width - margin) / nViolins
+            for n in range(normCount.size):
+                poly.append(QPointF(xValues[m] - normCount[n] * violinWidth / 2, normHeight * n + margin))
+
+            for n in reversed(range(normCount.size)):
+                poly.append(QPointF(xValues[m] + normCount[n] * violinWidth / 2, normHeight * n + margin))
+            
+            qp.drawPolygon(poly)
+            brush = QBrush(QColor("white"))
+            qp.setBrush(brush)
+            qp.drawEllipse(QPoint(xValues[m],normHeight * circleY + margin),2,2)
+        
+
+
 
     def drawSwarm(self,qp, height, width, rectX, rectY, nSwarms = 3, allWhite=False):
         ""
@@ -1974,6 +2048,20 @@ class PlotTypeButton(PushHoverButton):
         self.drawSwarm(qp, height, width, rectX, rectY, 3, True)
         qp.setFont(self.getStandardFont())
         qp.drawText(width,height/3,"+")
+
+
+    def drawWordcloud(self, qp, height, width, rectX, rectY):
+        ""
+        defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546","black"]
+        qp.setFont(self.getStandardFont())
+        
+        c1 = random.choice(defaultColors)
+        qp.setPen(QColor(c1))
+        qp.drawText(width/4.5,height/2,"Word")
+        
+        c2 = random.choice(defaultColors)
+        qp.setPen(QColor(c2))
+        qp.drawText(width/2.5,height/1.1,"Cloud")
 
 
     def drawHistogram(self,qp, height, width, rectX, rectY, nBars = 10):

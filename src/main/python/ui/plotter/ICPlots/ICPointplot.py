@@ -53,7 +53,12 @@ class ICPointplot(ICChart):
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
             #hoverGroupItems = self.reorderBoxplotItemsForHover()
             #self.setHoverItemGroups(hoverGroupItems)
-            self.updateFigure.emit()
+            if self.interactive:
+                self.addQuickSelectHoverScatter()
+                for ax in self.axisDict.values():
+                    self.addHoverScatter(ax) 
+                self.addHoverBinding()
+            self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
             print(e)
     
@@ -84,6 +89,84 @@ class ICPointplot(ICChart):
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
         self.updateFigure.emit()
+
+    def updateBackgrounds(self):
+        ""
+        if not hasattr(self,"backgrounds"):
+            self.backgrounds = {}
+        self.backgrounds.clear() 
+        for ax in self.axisDict.values():
+            self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
+
+    # def updateQuickSelectDat2a(self,quickSelectGroup,changedCategory=None):
+	# 	""
+	# 	for ax in self.axisDict.values():
+	# 		if self.isQuickSelectModeUnique():
+    #             return
+	# 			#scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
+
+	# 		elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
+
+	# 			dataIdx = self.quickSelectScatterDataIdx[ax]
+	# 			scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
+	# 			scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+
+	# 		else:
+				
+	# 			continue
+
+	# 		self.updateQuickSelectScatter(ax, scatterColors = scatterColors, scatterSizes = scatterSizes)
+    
+    def setHoverData(self,dataIndex):
+        ""
+        if hasattr(self,"backgrounds"):
+            for n, ax in self.axisDict.items():
+                if n in self.data["hoverData"] and ax in self.backgrounds:
+                    data = self.data["hoverData"][n]
+                    idx = data.index.intersection(dataIndex)
+                    data = data.loc[idx]
+                    if not data.empty:
+                            errorData = self.data["errorData"][n]
+                            xValues = np.array([errorData[m]["x"][0] for m in range(len(errorData))] * data.index.size).flatten()
+                            yValues = data.values.flatten() 
+                            coords = np.array([(xValues[n],yValues[n]) for n in range(len(xValues))])
+
+                    self.p.f.canvas.restore_region(self.backgrounds[ax])
+                    if coords.size > 0:
+                        
+                        self.setHoverScatterData(coords,ax)
+                    else:
+                        self.p.f.canvas.blit(ax.bbox)
+
+    def updateQuickSelectItems(self,propsData=None):
+               
+        if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
+            dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+        else:
+            dataIndex = self.getDataIndexOfQuickSelectSelection()
+
+        if not hasattr(self,"backgrounds"):
+            self.updateBackgrounds()
+        
+        if hasattr(self,"quickSelectScatter"):
+            try:
+                for n,ax in self.axisDict.items():
+                    if n in self.data["hoverData"] and ax in self.backgrounds and ax in self.quickSelectScatter:                        
+                        data = self.data["hoverData"][n]
+                        idx = data.index.intersection(dataIndex)
+                        data = data.loc[idx]
+                        if not data.empty:
+                            errorData = self.data["errorData"][n]
+                            xValues = np.array([errorData[m]["x"][0] for m in range(len(errorData))] * data.index.size).flatten()
+                            yValues = data.values.flatten() 
+                            coords = np.array([(xValues[n],yValues[n]) for n in range(len(xValues))]) #create numpy array for coords (x,y)
+                            scatterColors = np.repeat([propsData.loc[idx,"color"] for idx in dataIndex],data.shape[1])
+                            scatterSizes = np.repeat([propsData.loc[idx,"size"] for idx in dataIndex], data.shape[1])
+                            self.quickSelectScatterDataIdx[ax] = np.repeat(idx.values,data.shape[1])
+                            self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
+
+            except Exception as e:
+                print(e)
 
 
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):

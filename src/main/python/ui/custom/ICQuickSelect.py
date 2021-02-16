@@ -6,6 +6,7 @@ from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.quickSelectDialog import QuickSelectDialog
 from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR
+
 import os
 import pandas as pd
 import numpy as np
@@ -22,7 +23,7 @@ class QuickSelect(QWidget):
 
         self.setAcceptDrops(True)
         self.sendToThreadFn = sendToThreadFn
-        self.favSelection = FavoriteSelectionCollection()
+        #self.favSelection = FavoriteSelectionCollection()
         self.mC = mainController
         self.quickSelectProps = {}
         self.hoverIdx = {}
@@ -117,7 +118,7 @@ class QuickSelect(QWidget):
 
     def sortOptions(self,event=None):
         ""
-        print(event)
+        pass
 
     def dragEnterEvent(self,event):
         ""
@@ -139,9 +140,11 @@ class QuickSelect(QWidget):
 
         except Exception as e:
             print(e)
-
+   
     def updateQuickSelectData(self,columnName,filterProps,dataID = None,):
         ""
+        #rest quickSelect Table
+        self.mC.resetQuickSelectTable.emit()
         #create kwars/func for Thread
         funcProps = dict()
         if dataID is None:
@@ -211,6 +214,7 @@ class QuickSelect(QWidget):
 
     def updateDataSelection(self, checkedLabels = None):
         ""
+        
         if self.model._inputLabels.size == 0:
             return
         try:
@@ -226,7 +230,8 @@ class QuickSelect(QWidget):
 
                 funcProps = self.getAnnotateProps() 
             
-            self.sendToThreadFn(funcProps) 
+            self.sendToThreadFn(funcProps)
+            
             return True
         except Exception as e:
             print(e)
@@ -270,11 +275,10 @@ class QuickSelect(QWidget):
 
     def openSortMenu(self,event=None, sortHow = "ascending"):
         ""
-        print("here")
+        
         menu = createMenu()
         menu.addAction("By color", lambda sortHow = sortHow:self.model.sortByColor(how=sortHow))
         menu.addAction("By size")
-
 
         senderGeom = self.sender().geometry()
         topLeft = self.mapToGlobal(senderGeom.bottomLeft())
@@ -510,10 +514,17 @@ class QuickSelect(QWidget):
             if "dataID" in self.quickSelectProps and updatePlot:
                 self.resetClipping()
         #reset size and color tables
-        self.mC.resetGroupColorTable.emit()
-        self.mC.resetGroupSizeTable.emit()
-
+        
         self.quickSelectProps.clear()
+        self.resetGraphItems() 
+
+    def resetGraphItems(self):
+        ""
+        self.mC.resetQuickSelectTable.emit()
+        exists, graph = self.mC.getGraph()
+        if exists:
+            graph.resetQuickSelectArtists()
+        
 
     def getSizeAndColorData(self):
         ""
@@ -779,7 +790,6 @@ class QuickSelectModel(QAbstractTableModel):
 
     def readFavoriteSelection(self, selectionData):
         ""
-        print(selectionData)
         if not self._inputLabels.empty:
             checkedData = selectionData["checkedValues"]
             caseSensitive = self.parent().mC.config.getParam("quick.select.case.sensitive")
@@ -791,7 +801,6 @@ class QuickSelectModel(QAbstractTableModel):
                 boolMatch = self._inputLabels.isin(checkedData.values)
             if np.any(boolMatch.values):
                 dataMatched = self._inputLabels[boolMatch]
-                print(dataMatched)
                 for index, value in  dataMatched.iteritems():
                     if caseSensitive:
                         lowerValue = lowerStrLabels.loc[index]
@@ -800,9 +809,7 @@ class QuickSelectModel(QAbstractTableModel):
                         findSavedIndex = checkedData[checkedData.values == value].index.values[0]
                     if not self.getCheckStateByDataIndex(index):
                         self.setCheckStateByDataIndex(index,update=False)
-                    print(selectionData.loc[findSavedIndex,"userDefinedColors"])
                     if isinstance(selectionData.loc[findSavedIndex,"userDefinedColors"],str):
-                        print("doing this")
                         self.setColor(index,selectionData.loc[findSavedIndex,"userDefinedColors"],update=False)
 
         self.completeDataChanged()
@@ -896,7 +903,7 @@ class QuickSelectModel(QAbstractTableModel):
         if self._inputLabels.size == 0:
             return
         if len(searchString) > 0:
-            boolMask = self._inputLabels.str.contains(searchString,case=False,regex=False)
+            boolMask = self._inputLabels.astype(str).str.contains(searchString,case=False,regex=False)
             self._labels = self._inputLabels.loc[boolMask]
         else:
             self._labels = self._inputLabels.copy()
@@ -988,7 +995,43 @@ class QuickSelectTableView(QTableView):
         self.mouseOverItem = None
         self.setAcceptDrops(True)
         self.rightClick = False
- 
+
+        self.setArrowUpAction = QAction("Set arrow up", self, shortcut=Qt.Key_Up, triggered=self.setArrowUp)
+        self.addAction(self.setArrowUpAction)
+
+        self.setArrowDownAction = QAction("Set arrow up", self, shortcut=Qt.Key_Down, triggered=self.setArrowDown)
+        self.addAction(self.setArrowDownAction)
+
+    def setArrowDown(self):
+        ""
+        if not self.model().dataAvailable():
+            return
+        
+        if hasattr(self,"mouseOverItem") and isinstance(self.mouseOverItem,int):
+
+            self.mouseOverItem += 1
+
+            index = self.model().index(self.mouseOverItem,0)
+            dataIndex = self.model().getDataIndex(self.mouseOverItem)
+            
+            self.model().setData(index,self.mouseOverItem,Qt.UserRole)
+            self.parent().highlightDataInPlotter(dataIndex)
+
+    def setArrowUp(self):
+        ""
+        if not self.model().dataAvailable():
+            return
+        
+        if hasattr(self,"mouseOverItem") and isinstance(self.mouseOverItem,int):
+
+            self.mouseOverItem -= 1
+
+            index = self.model().index(self.mouseOverItem,0)
+            dataIndex = self.model().getDataIndex(self.mouseOverItem)
+            self.model().setData(index,self.mouseOverItem,Qt.UserRole)
+            
+            self.parent().highlightDataInPlotter(dataIndex)
+
     def resizeColumns(self):
         columnWidths = [(0,200),(1,35),(2,35)]
         for columnId,width in columnWidths:
@@ -1067,6 +1110,7 @@ class QuickSelectTableView(QTableView):
         self.model().setCheckedSeries() #resets check state
         self.model().initColorSeries() #resets color
         self.model().setSizeSeries() #resets size
+        self.parent().resetGraphItems()
         self.model().completeDataChanged()
 
     def mouseReleaseEvent(self,e):
@@ -1149,4 +1193,6 @@ class QuickSelectTableView(QTableView):
         return self.model().getDataByRow(self.mouseOverItem)
         
 
+        
+        
 

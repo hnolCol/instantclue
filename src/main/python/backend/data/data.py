@@ -229,7 +229,6 @@ class DataCollection(object):
 						#getUniqueCategroies returns a data frame, therefore index column 
 						#to get a pandas Series (QuickSelect Model works with series)
 						data = self.categoricalFilter.getUniqueCategories(dataID,columnName,splitString=sep)
-						print(data)
 						if isinstance(data,dict):
 							return data
 						elif isinstance(data,pd.DataFrame):
@@ -669,7 +668,8 @@ class DataCollection(object):
 		if dataID in self.dfs:
 				self.resetClipping(dataID)
 
-				colorData, quickSelectColor = self.colorManager.colorDataByMatch(dataID,columnName,
+				
+				colorData, quickSelectColor, idxByCheckedLabel = self.colorManager.colorDataByMatch(dataID,columnName,
 														colorMapName = "quickSelectColorMap",
 														checkedLabels = checkedLabels,
 														checkedDataIndex  = checkedDataIndex,
@@ -677,39 +677,46 @@ class DataCollection(object):
 														userColors = userColors,
 														splitString = filterProps["sep"] if "sep" in filterProps else None)
 
-				funcProps =  getMessageProps("Updated","Quick Selection Color Data Updated.")
+				funcProps =  {}#getMessageProps("Updated","Quick Selection Color Data Updated.")
 				funcProps["propsData"] = colorData
-
 				if filterProps["mode"] == "raw":
+					
 					funcProps["checkedColors"] = colorData["color"]
-
-					df = pd.DataFrame(checkedLabels).join(colorData["color"])
+				
+					df = pd.DataFrame(checkedLabels).join(colorData[["color","size"]])
+				
 					title = checkedLabels.name
-					df.columns = ["group","color"]
-					df = df[["color","group"]]
+					df.columns = ["group","color","size"]
+					df = df[["color","size","group"]] #order is important here.
 					df["internalID"] = [getRandomString() for n in df.index]
-					funcProps["colorGroupData"] = df
+					
+					funcProps["quickSelectData"] = df
 					funcProps["title"] = title 
 
-					funcProps["categoryIndexMatch"] = dict([(intID,[idx]) for  idx, intID in zip(checkedLabels.index,df["internalID"].values)])
+					funcProps["categoryIndexMatch"] = OrderedDict([(intID,[idx]) for  idx, intID in zip(checkedLabels.index,df["internalID"].values)])
+					
 				
 				elif filterProps["mode"] == "unique":
 					
 					checkedLabels.name = "group"
 					quickSelectColor.name = "color"
+					
 					df = pd.DataFrame(checkedLabels).join(quickSelectColor)
+					df["size"] = [colorData.loc[idx,"size"].values[0] for group,idx in idxByCheckedLabel.items()]
 					#df.columns = ["group","color"]
-					df = df[["color","group"]]
+					df = df[["color","size","group"]]
+					
 					df["internalID"] = [getRandomString() for n in df.index]
-					funcProps["colorGroupData"] = df
+					
+					funcProps["quickSelectData"] = df
 					funcProps["title"] = title = checkedLabels.name
 					funcProps["checkedColors"] = quickSelectColor
-					funcProps["categoryIndexMatch"] = dict([(intID,colorData.loc[colorData["color"] == uniqueColor].index) for  uniqueColor, intID in zip(quickSelectColor.values,df["internalID"].values)])
-					#funcProps["checkedColors"] = quickSelectColor
-
+					funcProps["categoryIndexMatch"] = OrderedDict([(intID,np.array(idxByCheckedLabel[checkedLabel])) for  checkedLabel, intID in df[["group","internalID"]].values])
+					
 				elif quickSelectColor is not None:
 					funcProps["checkedColors"] = quickSelectColor
-				
+
+				funcProps["categoryEncoded"] = "QuickSelect"
 				funcProps["ommitRedraw"] = useBlit
 				#print(funcProps["ommitRedraw"])
 				
@@ -1420,7 +1427,7 @@ class DataCollection(object):
 		
 	
 		
-	def exportData(self,dataID,path = 'exportData.txt', columnOrder = None):
+	def exportData(self,dataID,path = 'exportData.txt', columnOrder = None,fileFormat = "txt"):
 		""
 		if dataID in self.dfs:
 			#remove deleted columns/save as resorted df
@@ -1429,7 +1436,16 @@ class DataCollection(object):
 				for _ , columns in columnOrder.items():
 					newColumns.extend(columns.values)
 				self.dfs[dataID] = self.dfs[dataID][newColumns] 
-			self.dfs[dataID].to_csv(path, index=None, na_rep ='NaN', sep='\t')
+			if fileFormat == "txt":
+				self.dfs[dataID].to_csv(path, index=None, na_rep ='NaN', sep='\t')
+			elif fileFormat == "xlsx":
+				self.dfs[dataID].to_excel(path, index=False, sheet_name = "ICExport")
+			elif fileFormat == "json":
+				self.dfs[dataID].to_json(path, orient = self.parent.config.getParam("json.export.orient"), indent = 2)
+			elif fileFormat == "md":
+				self.dfs[dataID].to_markdown(path, tablefmt="grid")
+			else:
+				return getMessageProps("Error ..", "The used fileFormat unknown.")
 			return getMessageProps("Exported.","Data exported to path:\n{}".format(path))
 		else:
 			return errorMessage

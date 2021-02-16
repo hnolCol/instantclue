@@ -121,13 +121,12 @@ class ColorManager(object):
                 colorPalette = sns.color_palette(colorMap,nColors,desat=self.desat).as_hex()
 
                 if nColors == 0:
-                    return colorData, None
+                    return colorData, None, None
                 else:
                     #set all data first to nanColor
                     #this needs to be faster
                     colorData.loc[checkedData.index,"color"] = colorPalette
                     colorData.loc[checkedData.index,"layer"] = np.arange(1,checkedData.index.size+1)
-                    
 
                     if checkedSizes is not None:
                         checkSizeIdx = checkedSizes.index[checkedSizes.index.isin(colorData.index)]
@@ -137,12 +136,13 @@ class ColorManager(object):
                         userColIdx = userColors.index[userColors.index.isin(colorData.index)]
                         colorData.loc[userColIdx,"color"] = userColors.loc[userColIdx]
 
-                    return colorData, None
+                    return colorData, None, None
 
             elif checkedLabels is not None:
                 
                 nColors = checkedLabels.index.size
                 colorPalette = sns.color_palette(colorMap,nColors,desat=self.desat).as_hex()
+                idxByCheckedLabel = {}
                 #print(checkedLabels)
                 for n,idx in enumerate(checkedLabels.index):
                     if idx in userColors.index:
@@ -151,6 +151,9 @@ class ColorManager(object):
                     else:
                         color = rgbToHex(colorPalette[n])
                     boolIdx = self.sourceData.categoricalFilter.searchCategory(dataID,columnName,checkedLabels.loc[idx])
+                    
+                    idxByCheckedLabel[checkedLabels.loc[idx]] = [idx for idx in boolIdx.index if boolIdx.loc[idx]]
+                    
                     colorData.loc[boolIdx,"color"] = color
                     colorData.loc[boolIdx,"layer"] = n+1
                     if checkedSizes is None:
@@ -162,9 +165,9 @@ class ColorManager(object):
                         else:
                             colorData.loc[boolIdx,"size"] = self.defaultScatterSize 
 
-                return colorData, pd.Series(colorPalette,index = checkedLabels.index)
+                return colorData, pd.Series(colorPalette,index = checkedLabels.index), idxByCheckedLabel
 
-            return None, None
+            return None, None, None
 
     def createColorMapDict(self,uniqueCategories, nanString = None, addNaNLevels = [], as_hex = False):
         ""

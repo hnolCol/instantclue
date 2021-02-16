@@ -2,76 +2,100 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from .utils import clearLayout, getStandardFont
-from ..utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ..delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ..utils import clearLayout, getStandardFont
+from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 from .ICColorTable import ICColorSizeTableBase
+
+from ...delegates.quickSelectDelegates import DelegateColor #borrow delegate
+
 import pandas as pd
 import numpy as np
+import os
 
-class ICSizeTable(ICColorSizeTableBase):
-    
-    def __init__(self,*args,**kwargs):
 
-        super(ICSizeTable,self).__init__(*args,**kwargs)
-        self.selectionChanged.connect(self.updateSizeInGraph)
+class ICMarkerTable(ICColorSizeTableBase):
+   ## clorMapChanged = pyqtSignal() 
+    def __init__(self, *args,**kwargs):
+
+        super(ICMarkerTable,self).__init__(*args,**kwargs)
         
+        self.selectionChanged.connect(self.updateMarkerInGraph)
+      #  self.clorMapChanged.connect(self.updateColorsByColorMap)
         self.__controls()
         self.__layout()
+        
 
     def __controls(self):
         ""
-        self.mainHeader = createTitleLabel("Sizes",fontSize = 14)
+        self.mainHeader = createTitleLabel("Markers",fontSize = 14)
+        self.mainHeader.setWordWrap(True)
         self.titleLabel = createLabel(text = self.title)
-        self.table = SizeTable(parent = self, mainController=self.mC)
-        df = pd.DataFrame(np.array([[1,3],[2,5]]))
-        self.model = SizeTableModel(parent=self.table,labels=df)
+        self.table = MarkerTable(parent = self, mainController=self.mC)
+        self.model = MarkerTableModel(parent=self.table)
         self.table.setModel(self.model)
 
         self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
         self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
         self.table.resizeColumns()
-        self.table.setItemDelegateForColumn(0,SpinBoxDelegate(self.table))
-        
-        
+       # self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
+
     def __layout(self):
         ""
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.mainHeader)
         self.layout().addWidget(self.titleLabel)
-        self.layout().addWidget(self.table)
+        self.layout().addWidget(self.table)  
 
-    def resetSizeInGraph(self):
-        ""
-        exists, graph =  self.mC.getGraph()
-        if exists:
-            graph.setHoverObjectsInvisible()
-            graph.resetSize()
+    # @pyqtSlot()
+    # def updateColorsByColorMap(self):
+    #     ""
         
-
-    def updateSizeInGraph(self):
+    #     if self.model.rowCount() > 0:
+    #         self.table.createMenu()
+    #         if self.mC.getPlotType() == "scatter":
+    #             funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
+    #                 "colorColumn":None,
+    #                 "colorColumnType":None,
+    #                 "colorGroupData":self.model._labels}}
+            
+    #             self.mC.sendRequestToThread(funcProps)
+    #         else:
+    #             colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
+    #             self.model.updateColors(colorList)
+    
+    def updateMarkerInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
         try:
             if exists:
                 graph.setHoverObjectsInvisible()
-                graph.updateGroupSizes(self.table.model().getLabels(),self.table.model().getItemChangedInternalID())
+                graph.updateGroupColors(self.table.model().getLabels(),self.table.model().getItemChangedInternalID())
         except Exception as e:
-            print(e)
-        
+            print(e) 
+
     def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
         ""
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()
-            graph.addSizeLegendToGraph(self.model._labels,ignoreNaN,title = self.title, legendKwargs = legendKwargs)
+            graph.addMarkerLegend(self.model._labels,title = self.title, legendKwargs = legendKwargs)
             self.model.completeDataChanged()
 
+    def removeFromGraph(self):
+        ""
+        ""
+        exists, graph =  self.mC.getGraph()
+        if exists:
+            graph.setHoverObjectsInvisible()
+            graph.setLegendInvisible()
+            graph.setNaNColor()
+            self.model.completeDataChanged()
+       
 
-class SizeTableModel(QAbstractTableModel):
+class MarkerTableModel(QAbstractTableModel):
     
     def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
-        super(SizeTableModel, self).__init__(parent)
+        super(MarkerTableModel, self).__init__(parent)
         self.initData(labels)
         self.isEditable = isEditable
 
@@ -80,10 +104,9 @@ class SizeTableModel(QAbstractTableModel):
         self._labels = labels
         self._inputLabels = labels.copy()
         
+        self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
         self.setDefaultSize()
         self.lastSearchType = None
-        self.maxSize = None
-        self.setRowHeights()
         
 
     def rowCount(self, parent=QModelIndex()):
@@ -106,6 +129,31 @@ class SizeTableModel(QAbstractTableModel):
         ""
         if self.validDataIndex(row):
             return self._labels.index[row]
+        
+    def getColumnStateByDataIndex(self,dataIndex):
+        ""
+        return self.columnInGraph.loc[dataIndex] == 1
+
+    def getColumnStateByTableIndex(self,tableIndex):
+        ""
+        dataIndex = self.getDataIndex(tableIndex.row())
+        if dataIndex is not None:
+            return self.getColumnStateByDataIndex(dataIndex)
+
+    def setColumnState(self,tableIndex, newState = None):
+        ""
+        dataIndex = self.getDataIndex(tableIndex.row())
+        if dataIndex is not None:
+            if newState is None:
+                newState = not self.columnInGraph.loc[dataIndex]
+            self.columnInGraph.loc[dataIndex] = newState
+            return newState
+    
+    def setColumnStateByData(self,columnNames,newState):
+        ""
+        idx = self._labels[self._labels.isin(columnNames)].index
+        if not idx.empty:
+            self.columnInGraph[idx] = newState
 
     def updateData(self,value,index):
         ""
@@ -117,6 +165,21 @@ class SizeTableModel(QAbstractTableModel):
     def validDataIndex(self,row):
         ""
         return row <= self._labels.index.size - 1
+
+    def deleteEntriesByIndexList(self,indexList):
+        ""
+        dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
+        self._labels = self._labels.drop(dataIndices)
+        self._inputLabels = self._labels.copy()
+        self.completeDataChanged()
+
+    def deleteEntry(self,tableIndex):
+        ""
+        dataIndex = self.getDataIndex(tableIndex.row())
+        if dataIndex in self._inputLabels.index:
+            self._labels = self._labels.drop(dataIndex)
+            self._inputLabels = self._labels
+            self.completeDataChanged()
 
     def getLabels(self):
         ""
@@ -141,10 +204,6 @@ class SizeTableModel(QAbstractTableModel):
         if mouseOverItem is not None and "internalID" in self._labels.columns: 
             return self._labels.iloc[mouseOverItem].loc["internalID"]
 
-    def getInternalIDByRowIndex(self,row):
-        ""
-        return self._labels.iloc[row].loc["internalID"]
- 
     def getGroupByInternalID(self,internalID):
         ""
         if "internalID" in self._labels.columns:
@@ -152,14 +211,17 @@ class SizeTableModel(QAbstractTableModel):
             if np.any(boolIdx):
                 return self._labels.loc[boolIdx,"group"].values[0]
 
+    def getInternalIDByRowIndex(self,row):
+        ""
+        return self._labels.iloc[row].loc["internalID"]
+
     def getItemChangedInternalID(self):
         ""
-        if self.parent().sizeChangedForItem is not None and "internalID" in self._labels.columns:
-            return self._labels.iloc[self.parent().sizeChangedForItem ].loc["internalID"]
+        if self.parent().colorChangedForItem is not None and "internalID" in self._labels.columns:
+            return self._labels.iloc[self.parent().colorChangedForItem].loc["internalID"]
             
     def setData(self,index,value,role):
         ""
-        
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
         if role == Qt.UserRole:
@@ -172,33 +234,17 @@ class SizeTableModel(QAbstractTableModel):
         elif role == Qt.EditRole:
             if not self.isEditable:
                 return False
-            #get value
-            v = int(np.sqrt(value))
-            
-            self._labels.iloc[index.row(),index.column()] = value
-            if v > self.maxSize:
-                self.setRowHeights()
-            elif v < self.minSize:
-                self.setRowHeights()
-            self.parent().sizeChangedForItem = index.row()
-            self.parent().parent().selectionChanged.emit()
-
-            if self._labels.index.size == 1:
-                rowHeight = v + self.parent().rowHeight
-                self.parent().setRowHeight(index.row(),rowHeight)
-                self.parent().setColumnWidth(0,rowHeight)
-            
-            self.completeDataChanged()
-            
+            if index.column() != 0:
+                return False
+            newValue = str(value)
+            oldValue = str(self._labels.iloc[index.row()])
+            columnNameMapper = {oldValue:newValue}
+            if oldValue != newValue:
+                self.parent().renameColumn(columnNameMapper)
+                self.updateData(value,index)
+                self.dataChanged.emit(index,index)
             return True
-
-    def setRowHeights(self):
-        ""
-        if "size" in self._labels.columns:
-            vs = np.sqrt(self._labels["size"].values)
-            self.maxSize = np.nanmax(vs)
-            self.minSize = np.nanmin(vs)
-           
+        
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
@@ -206,12 +252,8 @@ class SizeTableModel(QAbstractTableModel):
         if not index.isValid(): 
 
             return QVariant()
-
-        elif role == Qt.EditRole:
-
-            return self._labels.iloc[index.row(),index.column()]
             
-        elif role == Qt.DisplayRole and index.column() == 1: 
+        elif role == Qt.DisplayRole: 
             return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
@@ -219,22 +261,16 @@ class SizeTableModel(QAbstractTableModel):
             return getStandardFont()
 
         elif role == Qt.ToolTipRole:
-            dataIndex = self.getDataIndex(index.row())
-            if index.column() == 0:
-                if self.isEditable:
-                    return "Current size: {}\nDouble click allows user-defined sizes.".format(self._labels.loc[dataIndex,"size"])
-                else:
-                    return "Current size: {}\nSize range for numeric values can only be changed in the settings dialog.".format(self._labels.loc[dataIndex,"size"])
-            elif index.column() == 1:
-                return "Current size: {}\nSize encoded categorical or numeric values.".format(self._labels.loc[dataIndex,"size"])
+
+            return "Markers are from matplotlib package."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
             
     def flags(self, index):
         "Set Flags of Column"
-        if index.column() == 0 and self.isEditable:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        if index.column() == 0:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled #| Qt.ItemIsEditable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
@@ -242,19 +278,7 @@ class SizeTableModel(QAbstractTableModel):
         ""
         self.initData(labels)
         self.completeDataChanged()
-
-    def search(self,searchString):
-        ""
-        if self._inputLabels.size == 0:
-            return
-        if len(searchString) > 0:
-      
-            boolMask = self._labels.str.contains(searchString,case=False,regex=False)
-            self._labels = self._labels.loc[boolMask]
-        else:
-            self._labels = self._inputLabels
-        self.completeDataChanged()
-
+    
     def completeDataChanged(self):
         ""
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
@@ -273,18 +297,14 @@ class SizeTableModel(QAbstractTableModel):
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 
-    def setInitColor(self,dataIndex):
-        ""
-        initColor = self._inputLabels.loc[dataIndex,"color"]
-        self.setColor(dataIndex,initColor)
 
 
 
-class SizeTable(QTableView):
+class MarkerTable(QTableView):
 
     def __init__(self, parent=None, rowHeight = 22, mainController = None):
 
-        super(SizeTable, self).__init__(parent)
+        super(MarkerTable, self).__init__(parent)
        
         self.setMouseTracking(True)
         self.setShowGrid(True)
@@ -292,16 +312,17 @@ class SizeTable(QTableView):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setVisible(False)
 
-        self.mainController = mainController
+        self.mC = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        
 
         self.createMenu()
 
         self.rowHeight      =   rowHeight
         self.rightClick     =   False
         self.mouseOverItem  =   None
-        self.sizeChangedForItem = None
+        self.colorChangedForItem = None
         
         p = self.palette()
         p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
@@ -310,20 +331,27 @@ class SizeTable(QTableView):
 
         self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
 
+    def colorChangedFromMenu(self,event=None, hexColor = ""):
+        ""
+        rowIndex = self.rightClickedRowIndex
+        
+        dataIndex = self.model().getDataIndex(rowIndex)
+        self.model().setColor(dataIndex,hexColor)
+        self.parent().selectionChanged.emit()
+        self.model().rowDataChanged(rowIndex)
 
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
         menu = createSubMenu(None,["Subset by ..","Add Legend at .."])
-        menu["main"].addAction("Remove",self.parent().resetSizeInGraph)
-        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
+        menu["main"].addAction("Remove", self.parent().removeFromGraph)
+        #menu["main"].addAction("Add to graph", self.parent().addLegendToGraph)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
+        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
 
         for legendLoc in legendLocations:
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
-        
         self.menu = menu["main"]
-
     
     def leaveEvent(self,event=None):
         ""
@@ -345,8 +373,6 @@ class SizeTable(QTableView):
             self.rightClick = True
         else:
             self.rightClick = False
-            
-            super().mousePressEvent(e)
     
     def mouseReleaseEvent(self,e):
         ""
@@ -360,31 +386,22 @@ class SizeTable(QTableView):
             if tableIndex is None:
                 return
             tableIndexCol = tableIndex.column()
-            if tableIndexCol == 0:
-                #dataIndex = self.model().getDataIndex(tableIndex.row())
-                if not self.rightClick:
-                    return
-                    #stdSize = self.parent().mC.config.getParam("scatterSize")
-                else:
-                    return
-
-                self.sizeChangedForItem = tableIndex.row()
+            if tableIndexCol == 0 and self.model().isEditable:
+                dataIndex = self.model().getDataIndex(tableIndex.row())
+                
                 self.parent().selectionChanged.emit()
                 self.model().rowDataChanged(tableIndex.row())
+
                 
             elif tableIndexCol == 1 and self.rightClick:
+               # idx = self.model().index(0,0)
                 self.rightClickedRowIndex = tableIndex.row()
-                self.menu.exec(QCursor.pos())
+                self.menu.exec(QCursor.pos() + QPoint(4,4))
                 
-                self.rightClick = False
-            else:
-                super().mouseReleaseEvent(e)
+                self.clickedRow = None 
 
         except Exception as e:
             print(e)
-
-    def getSize(self):
-        ""
 
 
     def mouseMoveEvent(self,event):
@@ -401,7 +418,7 @@ class SizeTable(QTableView):
  
     def resizeColumns(self):
         ""
-        columnWidths = [(0,40),(1,200)]
+        columnWidths = [(0,20),(1,200)]
         for columnId,width in columnWidths:
             self.setColumnWidth(columnId,width)
 

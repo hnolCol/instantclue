@@ -120,7 +120,7 @@ class FindReplaceDialog(QDialog):
             self.replaceString = ""
         if hasattr(self,"findString"):
             if len(self.findString) == 0:
-                w = WarningMessage(infoText = "Please enter a search string.")
+                w = WarningMessage(infoText = "Please enter a search string.",iconDir = self.mC.mainPath)
                 w.exec_()
                 return False
             else:

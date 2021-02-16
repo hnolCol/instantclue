@@ -4,11 +4,12 @@ from PyQt5.QtCore import *
 
 # internal imports
 from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton
-from ui.custom.ICColorTable import ICColorTable 
-from ui.custom.ICSizeTable import ICSizeTable
-from ui.custom.ICLabelTable import ICLabelTable
-from ui.custom.ICMarkerTable import ICMarkerTable
-from ui.custom.ICStatisticTable import ICStatisticTable
+from ui.custom.tableviews.ICColorTable import ICColorTable 
+from ui.custom.tableviews.ICSizeTable import ICSizeTable
+from ui.custom.tableviews.ICLabelTable import ICLabelTable
+from ui.custom.tableviews.ICMarkerTable import ICMarkerTable
+from ui.custom.tableviews.ICStatisticTable import ICStatisticTable
+from ui.custom.tableviews.ICQuickSelectTable import ICQuickSelectTable
 from ..dialogs.ICColorChooser import ColorChooserDialog
 from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings
 from ..dialogs.ICNumericFilter import NumericFilter
@@ -17,6 +18,7 @@ from ..utils import createSubMenu, createLabel
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR
 import seaborn as sns
 from backend.utils.stringOperations import mergeListToString
+
 #selection sqaure size in percentage of axis limits
 selectValueMatch = {"Single":0,"small (2%)":0.02,"middle (5%)":0.05,"huge (10%)":0.1,"extra huge (15%)":0.15}
 
@@ -171,6 +173,7 @@ class SliceMarksFrame(QWidget):
         self.selectButton = SelectButton(self, tooltipStr=SLICE_MARKS_TOOLTIPSTR["select"])
         self.tableScrollArea = QScrollArea(parent = self)
         self.colorTable = ICColorTable(mainController=self.mC)
+        self.quickSelectTable = ICQuickSelectTable(mainController=self.mC)
         self.sizeTable = ICSizeTable(mainController=self.mC)
         self.labelTable = ICLabelTable(mainController=self.mC)
         self.tooltipTable = ICLabelTable(mainController=self.mC, header="Tooltip")
@@ -221,6 +224,7 @@ class SliceMarksFrame(QWidget):
         tableVBox = QVBoxLayout()
 
         tableVBox.addWidget(self.colorTable)
+        tableVBox.addWidget(self.quickSelectTable)
         tableVBox.addWidget(self.sizeTable)
         tableVBox.addWidget(self.markerTable)
         tableVBox.addWidget(self.labelTable)
@@ -280,7 +284,7 @@ class SliceMarksFrame(QWidget):
         ""
         exists, graph = self.mC.getGraph()
         if not exists:
-            w = WarningMessage(infoText="Create a chart first.")
+            w = WarningMessage(infoText="Create a chart first.", iconDir = self.mC.mainPath)
             w.exec_() 
         return exists, graph
     
@@ -335,7 +339,7 @@ class SliceMarksFrame(QWidget):
             exists, graph = self.checkGraph()
             if exists:
                 if plotType not in ["scatter","hclust"]:
-                    w = WarningMessage(infoText="Labels can not be assigned to this plot type.")
+                    w = WarningMessage(infoText="Labels can not be assigned to this plot type.",iconDir = self.mC.mainPath)
                     w.exec_()
                 else:
                     graph.addAnnotations(columnNames,dataID)
@@ -377,11 +381,10 @@ class SliceMarksFrame(QWidget):
         exists, graph = self.checkGraph()
         if exists:
             if plotType not in ["scatter","hclust","swarmplot"]:
-                w = WarningMessage(infoText="Tooltips can not be assigned to this plot type.")
+                w = WarningMessage(infoText="Tooltips can not be assigned to this plot type.",iconDir = self.mC.mainPath)
                 w.exec_()
             else:
                 graph.addTooltip(columnNames,dataID)
-
 
     def updateFilter(self,boolIndicator,resetData=False):
         ""
@@ -399,16 +402,15 @@ class SliceMarksFrame(QWidget):
         return self.mC.mainFrames["data"].getDragType()
 
     def sendRequestToThread(self,funcProps, addDraggedColumns = True, addDataID = True):
-        try:
-            if "kwargs" not in funcProps:
-                funcProps["kwargs"] = dict()
-            if addDraggedColumns:
-                funcProps["kwargs"]["columnNames"] = self.mC.mainFrames["data"].getDragColumns()
-            if addDataID:
-                funcProps["kwargs"]["dataID"] = self.mC.mainFrames["data"].getDataID()
-            self.mC.sendRequestToThread(funcProps)
-        except Exception as e:
-            print(e)
+        
+        if "kwargs" not in funcProps:
+            funcProps["kwargs"] = dict()
+        if addDraggedColumns:
+            funcProps["kwargs"]["columnNames"] = self.mC.mainFrames["data"].getDragColumns()
+        if addDataID:
+            funcProps["kwargs"]["dataID"] = self.mC.mainFrames["data"].getDataID()
+        self.mC.sendRequestToThread(funcProps)
+    
   
     def setColorGroupData(self,colorGroupData,title="",isEditable = True):
         ""
@@ -416,8 +418,11 @@ class SliceMarksFrame(QWidget):
 
     def setSizeGroupData(self,sizeGroupData,title="", isEditable = True):
         ""
-       
         self.sizeTable.setData(sizeGroupData,title,isEditable)
+
+    def setQuickSelectData(self,quickSelectData,title="",isEditable=True):
+        ""
+        self.quickSelectTable.setData(quickSelectData,title,isEditable)
 
     def setMarkerGroupData(self,markerGroupData,title=""):
         ""

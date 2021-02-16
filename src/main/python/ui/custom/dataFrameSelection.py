@@ -38,6 +38,7 @@ class CollapsableDataTreeView(QWidget):
     
     def __init__(self, parent=None, sendToThreadFn = None, dfs = OrderedDict(), mainController = None):
         super(CollapsableDataTreeView, self).__init__(parent)
+
         self.sendToThreadFn = sendToThreadFn
         self.mC = mainController
         self.dfs = dfs #OrderedDict keys: dataID, values: names
@@ -64,7 +65,9 @@ class CollapsableDataTreeView(QWidget):
         self.hideSC.clicked.connect(self.hideShortCuts)
         #export 
         self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file.", buttonSize=(15,15))
+        self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
         self.exportButton.clicked.connect(self.exportData)
+        self.exportButton.customContextMenuRequested.connect(self.exportMenu)
         #set up delete button
         self.deleteButton = ResetButton(tooltipStr="Delete selected data.")
         self.deleteButton.clicked.connect(self.deleteData)
@@ -168,20 +171,34 @@ class CollapsableDataTreeView(QWidget):
                 "kwargs":{"dataID":dataID}}
             
             self.dataID = dataID
-            self.parent().parent().parent().parent().qS.resetView(updatePlot=False)
-            self.parent().parent().parent().parent().liveGraph.clearGraph()
+            self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
+            self.mC.mainFrames["data"].liveGraph.clearGraph()
             self.updateDataIDInTreeViews()
             self.sendToThreadFn(funcProps)
            
 
     def deleteData(self,e=None):
         ""
-        self.parent().parent().parent().parent().deleteData()
+        self.mC.mainFrames["data"].deleteData()
 
     def exportData(self,e=None):
         ""
-        self.parent().parent().parent().parent().exportData()
+        self.mC.mainFrames["data"].exportData()
         
+    def exportMenu(self,e=None):
+        ""
+        menu = createMenu()
+        
+        for fileFormat, actionName in [("txt","Tab del. txt"),
+                                        ("xlsx", "Excel file"),
+                                        ("json", "Json file"),
+                                        ("md","Markdown file")]:
+
+            action = menu.addAction(actionName)
+            action.triggered.connect(lambda _, txtFileFormat = fileFormat: self.mC.mainFrames["data"].exportData(txtFileFormat))
+        senderGeom = self.sender().geometry()
+        topLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        menu.exec_(topLeft) 
 
     def getDfId(self,comboIndex):
         "Return DataID from index selection"
@@ -250,7 +267,7 @@ class CollapsableDataTreeView(QWidget):
 
                     specificColumn = self.getSelectedColumns(dataType=dataType)
                     if len(specificColumn) == 0:
-                        w = WarningMessage(infoText = "No selected columns found in selected datat type: {}".format(dataType))
+                        w = WarningMessage(iconDir = self.mC.mainPath, infoText = "No selected columns found in selected datat type: {}".format(dataType))
                         w.exec_()
                         return
                     

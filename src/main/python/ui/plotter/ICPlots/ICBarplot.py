@@ -2,7 +2,7 @@
 from .ICChart import ICChart
 from collections import OrderedDict
 import numpy as np
-
+import pandas as pd
 class ICBarplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
@@ -40,12 +40,12 @@ class ICBarplot(ICChart):
         if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
+                self.addQuickSelectHoverScatter()
         self.addTitles()
         self.addVerticalLines()
         self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-        #hoverGroupItems = self.reorderBoxplotItemsForHover()
-        #self.setHoverItemGroups(hoverGroupItems)
-        self.updateFigure.emit()
+       
+        self.checkForQuickSelectDataAndUpdateFigure()
 
     def savePatches(self):
         ""
@@ -96,7 +96,40 @@ class ICBarplot(ICChart):
                     if coords.size > 0:
                         self.p.f.canvas.restore_region(self.backgrounds[ax])
                         self.setHoverScatterData(coords,ax)
-    
+
+
+    def updateQuickSelectItems(self,propsData=None):
+        ""
+        if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
+            dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+            intIDMatch = np.concatenate([np.full(idx.size,intID) for intID,idx in self.quickSelectCategoryIndexMatch.items()]).flatten()
+            
+        else:
+            dataIndex = self.getDataIndexOfQuickSelectSelection()
+            intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
+
+        if not hasattr(self,"backgrounds"):
+            self.updateBackgrounds()
+        if hasattr(self,"quickSelectScatter"):
+            try:
+                for n,ax in self.axisDict.items():
+                    if n in self.data["hoverData"] and ax in self.backgrounds and ax in self.quickSelectScatter:                        
+                        data = self.data["hoverData"][n]["x"]
+                    
+                        coords = [(self.data["plotData"][n]["x"][m], X.loc[dataIdx], intIDMatch[mIdx], dataIdx) for mIdx,dataIdx in enumerate(dataIndex) for m,X in enumerate(data) if dataIdx in X.index.values ]
+                        #idxPlotted = [idx for idx in dataIndex if idx in coords[:,2]] 
+                        coords = pd.DataFrame(coords, columns = ["x","y","intID","idx"])
+                        
+                        sortedDataIndex = coords["idx"].values
+                        scatterColors = [propsData.loc[idx,"color"] for idx in sortedDataIndex]
+                        scatterSizes = [propsData.loc[idx,"size"] for idx in sortedDataIndex]
+                        self.quickSelectScatterDataIdx[ax] = {"idx":sortedDataIndex,"coords":coords}
+
+                        self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
+
+            except Exception as e:
+                
+                print(e) 
 
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
@@ -107,3 +140,6 @@ class ICBarplot(ICChart):
         self.initBarplots(targetAx=targetAx)
         self.addVerticalLines(axisID,targetAx)
         self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
+
+
+   

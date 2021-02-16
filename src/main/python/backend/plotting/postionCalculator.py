@@ -127,11 +127,13 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickLabels = dict([(n,flatUniqueValues) for n in range(nNumCols)])
         axisLabels = dict([(n,{"x":"Categories","y":numericColumn}) for n,numericColumn in enumerate(numericColumns)])
         axisLimits = dict([(n,{"xLimit" : (0,offset),"yLimit":None}) for n in range(nNumCols)])
+    
     elif nCatCols == 0:
 
         axisPostions = getAxisPostistion(n = 1, maxCol=maxColumns)# dict([(n,[1,1,n+1]) for n in range(1)])
         widthBox = 0.75
-        tickPositions = {0:np.arange(nNumCols) + widthBox}
+        tickValues = np.arange(nNumCols) + widthBox
+        tickPositions = {0:tickValues}
         boxPositions = tickPositions.copy()
         colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
         
@@ -148,6 +150,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         }}
         axisLabels = {0:{"x":"","y":"value"}}
         colorCategoricalColumn = "Numeric Columns"
+        axisLimits[0] = {"xLimit" :  (tickValues[0]- widthBox,tickValues[-1] + widthBox), "yLimit" : None} 
 
     elif nCatCols == 1:
 
@@ -169,7 +172,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         for m, numericColumn in enumerate(numericColumns):
             numData = data.dropna(subset=[numericColumn])
             startPos = m if m == 0 else m + (widthBox/3 * m)
-            endPos = startPos + widthBox* (nColorCats-1)
+            endPos = startPos + widthBox * (nColorCats-1)
             positions = np.linspace(startPos,endPos,num=nColorCats)
             tickPos = np.median(positions)
             tickPositions.append(tickPos)
@@ -181,6 +184,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                     boxPositions.append(positions[n])
                     groupNames.append("({}:{})::({})".format(categoricalColumns[0],groupName,numericColumn))
                     
+        axisLimits[0] = {"xLimit" :  (boxPositions[0] - widthBox, boxPositions[-1] + widthBox), "yLimit" : None} 
         #overriding names, idiot. change!
         tickPositions = {0:tickPositions}
         boxPositions = {0:boxPositions}
@@ -194,6 +198,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                        # "capprops":{"linewidth":self.boxplotCapsLineWidth}}}
         axisLabels = {0:{"x":categoricalColumns[0],"y":"value"}}
         colorCategoricalColumn = categoricalColumns[0]
+        
     
     elif nCatCols == 2:
 
@@ -207,7 +212,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         
         axisPostions = getAxisPostistion(n = len(numericColumns))
         #first category splis data on x axis
-        xAxisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
+        #xAxisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
        # nXAxisCats = xAxisCategories.size
         #second category is color coded
         colorCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
@@ -374,11 +379,12 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                     plotData[nAxis] =  {
                                     "x":filteredData,
                                     }
-                    axisLimits[nAxis] = {"yLimit":[globalMin-yMargin,globalMax+yMargin],"xLimit":[0-widthBox/2-border,nXAxisCats+widthBox/2+border]}
+                    axisLimits[nAxis] = {
+                        "yLimit":(globalMin-yMargin,globalMax+yMargin),
+                        "xLimit":(catBoxPositions[0] - widthBox, catBoxPositions[-1] + widthBox)
+                        }
                     
-                    
-
-    
+                        
     return plotData, axisPostions, boxPositions, tickPositions, \
             tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines
 

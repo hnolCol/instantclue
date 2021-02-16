@@ -3,6 +3,7 @@
 from .ICChart import ICChart
 from collections import OrderedDict
 from matplotlib.lines import Line2D
+from matplotlib.collections import LineCollection
 import numpy as np
 
 class ICXYPlot(ICChart):
@@ -13,25 +14,17 @@ class ICXYPlot(ICChart):
 
         self.xyplotItems = dict() 
 
-    def addHoverLine(self):
-        ""
-        self.hoverLines = {}
-        for ax in self.axisDict.values():
-            hoverLine = ax.plot([],[],
-                            linewidth=self.getParam("linewidth.median"), 
-                            marker= self.getParam("marker.median"), 
-                            color = self.getParam("scatter.hover.color"),
-                            markeredgecolor = "black", 
-                            linestyle = "-",
-                            markeredgewidth = self.getParam("markeredgewidth.median"))
-            self.hoverLines[ax] = hoverLine[0]
 
-        self.setHoverLinesInivisble()
-
-    def setHoverLinesInivisble(self):
+    def getGraphSpecMenus(self):
         ""
-        for l in self.hoverLines.values():
-            l.set_visible(False)
+        return ["Axis limits .."]
+
+
+    def addGraphSpecActions(self,menus):
+        ""
+        menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
+        menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
+        menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
 
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
@@ -39,11 +32,26 @@ class ICXYPlot(ICChart):
         if onlyForID is None and targetAx is None:
             for n,ax in self.axisDict.items():
                 for l in self.data["lines"][n]:
-                    ax.add_line(l)
+                    if isinstance(l,Line2D):
+                        ax.add_line(l)
+                    elif isinstance(l,LineCollection):
+                        ax.add_collection(l)
+                if n in self.data["markerLines"]:
+                    for mLine in self.data["markerLines"][n]:
+                        if mLine is not None:
+                            ax.add_line(mLine)
+                
+        #handle export to main figure (onlyForID -> axis number)
         elif onlyForID in self.data["lines"]:
             for m,l in enumerate(self.data["lines"][onlyForID]):
-                print(self.data["lineKwargs"][onlyForID])
-                targetAx.add_line(Line2D(**self.data["lineKwargs"][onlyForID][m]))
+                if isinstance(l,Line2D):
+                    targetAx.add_line(Line2D(**self.data["lineKwargs"][onlyForID][m]["props"]))
+                elif isinstance(l,LineCollection):
+                    targetAx.add_collection(LineCollection(**self.data["lineKwargs"][onlyForID][m]["props"]))
+
+            if onlyForID in self.data["markerLines"]:
+                for markerKwrags in self.data["markerKwargs"][onlyForID]:
+                    targetAx.add_line(Line2D(**markerKwrags["props"]))
 
     def onDataLoad(self, data):
         ""
@@ -60,54 +68,80 @@ class ICXYPlot(ICChart):
                             self.data["axisLimits"][n]["yLimit"])
 
             if self.interactive:
-               self.addHoverLine()
-               self.addHoverBinding() 
+                for ax in self.axisDict.values():
+                        self.addHoverScatter(ax) 
+                self.addQuickSelectHoverScatter()
 
             #self.addTitles()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-            # self.setXTicksForAxes(self.axisDict,
-            #             data["tickPositions"],
-            #             data["tickLabels"],
-            #             rotation=90)
-            # qsData = self.getQuickSelectData()
-            # if qsData is not None:
-            #     self.mC.quickSelectTrigger.emit()
-            # else:
-            #     self.updateFigure.emit() 
-            self.updateFigure.emit()
+            
+            self.checkForQuickSelectDataAndUpdateFigure()
            
         except Exception as e:
             print(e)
         
 
-  
-
-
     def setHoverData(self,dataIndex, showText = False):
         ""
-       # print(dataIndex)
-       # if dataIndex in self.data["plotData"].index:
+        #find matching idx 
+        idx = self.data["hoverData"].index.intersection(dataIndex)
+        
+        if hasattr(self,"backgrounds"):
+            for n, ax in self.axisDict.items():
+                if ax in self.backgrounds:
+                    numericPair = self.data["numericColumnPairs"][n]
+                    coords = self.data["hoverData"].loc[idx,numericPair].values
+                    self.p.f.canvas.restore_region(self.backgrounds[ax])
+                    if coords.size > 0:
+                        self.setHoverScatterData(coords,ax)
+                    else:
+                        self.p.f.canvas.blit(ax.bbox)
+    
+    def updateQuickSelectItems(self,propsData=None):
+        
+       # colorData = self.getQuickSelectData()
+        dataIndex = self.getDataIndexOfQuickSelectSelection()
+        idx = self.data["hoverData"].index.intersection(dataIndex)
+        if not hasattr(self,"backgrounds"):
+            self.updateBackgrounds()
+        
+        if hasattr(self,"quickSelectScatter"):
+            try:
+                for n,ax in self.axisDict.items():
+                    if ax in self.backgrounds and ax in self.quickSelectScatter:                        
+                        numericPair = self.data["numericColumnPairs"][n]
+                        coords = self.data["hoverData"].loc[idx,numericPair].values
 
-
-    def setHoverObjectsInvisible(self):
-        ""
-        if hasattr(self,"hoverLines"):
-            for l in self.hoverLines.values():
-                l.set_visible(False)
-
-    def getInternalIDByColor(self, color):
-        ""
-        colorGroupData = self.data["dataColorGroups"]
-        boolIdx = colorGroupData["color"].values ==  color
-        if np.any(boolIdx):
-            return colorGroupData.loc[boolIdx,"internalID"].values[0]
+                        scatterColors = propsData.loc[idx,"color"]
+                        scatterSizes = propsData.loc[idx,"size"]
+                        self.quickSelectScatterDataIdx[ax] = idx
+                        self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
+            
+            except Exception as e:
+                print(e)
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         "changed category is encoded in a internalID"
         if "linesByInternalID" in self.data and changedCategory in self.data["linesByInternalID"]:
             l = self.data["linesByInternalID"][changedCategory]
             changedColor = colorGroup.loc[colorGroup["internalID"] == changedCategory]["color"].values[0]
-            l.set_color(changedColor)
+            if hasattr(l,"set_color"):
+                l.set_color(changedColor)
+            if isinstance(l,list):
+                for line in l:
+                    if hasattr(line,"set_markerfacecolor"):
+                        line.set_markerfacecolor(changedColor)
+                    line.set_color(changedColor)
+            #change color in props for export
+            for lineKwargs in self.data["lineKwargs"].values():
+                for kwg in lineKwargs:
+                    if kwg["ID"] == changedCategory:
+                        kwg["props"]["color"] = changedColor
+            
+            for markerKwargs in self.data["markerKwargs"].values():
+                for kwg in markerKwargs:
+                    if kwg["ID"] == changedCategory:
+                        kwg["props"]["markerfacecolor"] = changedColor
             
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
@@ -115,12 +149,11 @@ class ICXYPlot(ICChart):
 
     def updateBackgrounds(self):
         "Update Background for blitting"
-        self.axBackground = dict()
+        if not hasattr(self,"backgrounds"):
+            self.backgrounds = {}
+        self.backgrounds.clear() 
         for ax in self.axisDict.values():
-            self.axBackground[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)	
-    
-    def updateQuickSelectItems(self,propsData=None):
-        "Saves lines by idx id"
+            self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
 
     
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):

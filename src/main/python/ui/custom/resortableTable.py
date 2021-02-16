@@ -188,7 +188,7 @@ class ResortTableModel(QAbstractTableModel):
     def getFont(self):
         ""
         font = QFont()
-        font.setFamily("Myriad Variable Concept")
+        font.setFamily("Arial")
         font.setWeight(300)
         font.setPointSize(9)
         return font

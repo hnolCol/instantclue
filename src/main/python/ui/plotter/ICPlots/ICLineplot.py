@@ -3,6 +3,7 @@
 from .ICChart import ICChart
 from collections import OrderedDict
 from matplotlib.lines import Line2D
+from matplotlib.patches import Polygon
 import numpy as np
 
 class ICLineplot(ICChart):
@@ -11,7 +12,9 @@ class ICLineplot(ICChart):
         ""
         super(ICLineplot,self).__init__(*args,**kwargs)
 
-        self.pointplotItems = dict() 
+        self.quickSelectLineKwargs = {}
+        self.quickSelectPolygonKwargs = {}
+        self.quickSelectPolygon = {}
 
     def addHoverLine(self):
         ""
@@ -28,6 +31,22 @@ class ICLineplot(ICChart):
 
         self.setHoverLinesInivisble()
 
+    def addHoverArea(self):
+        ""
+        self.hoverAreas = {}
+        for ax in self.axisDict.values():
+            hoverArea  = Polygon([[0,0],[1,1]],visible=False,
+                            alpha=self.getParam("alpha.IQR"),
+                            facecolor=self.getParam("scatter.hover.color"),
+                            edgecolor="black",
+                            linewidth=0.1,
+                            fill=True, 
+                            closed=True)
+            
+            ax.add_patch(hoverArea)
+            self.hoverAreas[ax] = hoverArea
+        
+        
     def setHoverLinesInivisble(self):
         ""
         for l in self.hoverLines.values():
@@ -110,6 +129,7 @@ class ICLineplot(ICChart):
 
             if self.interactive:
                self.addHoverLine()
+               self.addHoverArea()
                self.addHoverBinding() 
 
             self.addTitles()
@@ -118,11 +138,7 @@ class ICLineplot(ICChart):
                         data["tickPositions"],
                         data["tickLabels"],
                         rotation=90)
-            qsData = self.getQuickSelectData()
-            if qsData is not None:
-                self.mC.quickSelectTrigger.emit()
-            else:
-                self.updateFigure.emit() 
+            self.checkForQuickSelectDataAndUpdateFigure()
            
            
         except Exception as e:
@@ -131,24 +147,38 @@ class ICLineplot(ICChart):
 
     def setHoverData(self,dataIndex, showText = False):
         ""
-       # print(dataIndex)
-       # if dataIndex in self.data["plotData"].index:
         
-        dataIndex = dataIndex[0]
+        #dataIndex = dataIndex[0]
+        for axB in self.axBackground.keys():
+            self.p.f.canvas.restore_region(self.axBackground[axB])
+
         for n,ax in self.axisDict.items():
-            if not dataIndex in self.data["hoverData"][n].index:
-                continue
-            else:
+
+            idx = self.data["hoverData"][n].index.intersection(dataIndex)
+            if not idx.empty:
                 
-                for axB in self.axBackground.keys():
-                    self.p.f.canvas.restore_region(self.axBackground[axB])
+                ys = self.data["hoverData"][n].loc[idx,self.data["numericColumns"]].values
+                if ys.shape[0] > 1:
                     
-                y = self.data["hoverData"][n].loc[dataIndex,self.data["numericColumns"]].values
-                x = np.arange(y.size)
+                    columnQuantiles = np.nanquantile(ys, q = [0.25,0.5,0.75],axis=0)
+                    ys = columnQuantiles[1,:]
+                    q25 = columnQuantiles[0,:]
+                    q75 = columnQuantiles[2,:]
+                    xs = np.arange(ys.size)
+                    polygonXY = np.array([(x,y) for x,y in zip(xs,q25)] + list(reversed([(x,y) for x,y in zip(xs,q75)])))
+                    
+                    self.hoverAreas[ax].set_xy(polygonXY)
+                    self.hoverAreas[ax].set_visible(True)
+                    ax.draw_artist(self.hoverAreas[ax])
+                else:
+                    xs = np.arange(ys.size)
+
                 self.hoverLines[ax].set_visible(True)
-                self.hoverLines[ax].set_data(x,y)
+                self.hoverLines[ax].set_data(xs,ys)
+                
+
                 ax.draw_artist(self.hoverLines[ax])
-                break 
+               
             
         #blit canvas
         self.p.f.canvas.blit(ax.bbox)
@@ -159,6 +189,9 @@ class ICLineplot(ICChart):
         if hasattr(self,"hoverLines"):
             for l in self.hoverLines.values():
                 l.set_visible(False)
+        if hasattr(self,"hoverAreas"):
+            for area in self.hoverAreas.values():
+                area.set_visible(False)
 
     def getInternalIDByColor(self, color):
         ""
@@ -208,21 +241,43 @@ class ICLineplot(ICChart):
         "Saves lines by idx id"
 
         colorData = self.getQuickSelectData()
-        dataIndex = self.getDataIndexOfQuickSelectSelection()
+        
         if not hasattr(self,"quickSelectLines"):
             self.quickSelectLines = dict() 
-        #dataIndexInClust = [idx for idx in dataIndex if idx in self.data["plotData"].index]
-        for n,ax in self.axisDict.items():
-            idxInAxSet = self.data["hoverData"][n].index.intersection(dataIndex)
-            if idxInAxSet.size > 0:
-                for idx in idxInAxSet.values:
 
-                    y = self.data["hoverData"][n].loc[idx,self.data["numericColumns"]].values.flatten()
+        if not hasattr(self,"quickSelectAreas"):
+            self.quickSelectAreas = dict() 
+
+        if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
+
+            dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+
+        else:
+
+            dataIndex = self.getDataIndexOfQuickSelectSelection() 
+
+        for intID, indics in self.quickSelectCategoryIndexMatch.items():
+            for n,ax in self.axisDict.items():
+
+                if ax not in self.quickSelectLines:
+                    self.quickSelectLines[ax] = {}
+                    self.quickSelectLineKwargs[ax] = {}
+                if ax not in self.quickSelectPolygon:
+                    self.quickSelectPolygonKwargs[ax] = {}
+                    self.quickSelectPolygon[ax] = {}
+                
+                if intID in self.quickSelectLines[ax]:
+                    continue
+
+                c = propsData.loc[indics,"color"].values[0]
+
+                idxInAxSet = self.data["hoverData"][n].index.intersection(indics)
+                if idxInAxSet.size == 1:
+                    y = self.data["hoverData"][n].loc[idxInAxSet,self.data["numericColumns"]].values.flatten()
                     x = np.arange(y.size)
-                    c = colorData.loc[idx,"color"]
-                    lines = ax.plot(
-                                    x,
-                                    y, 
+                    lineKwargs = dict(
+                                    xdata = x,
+                                    ydata = y, 
                                     marker = self.getParam("marker.quickSelect"), 
                                     markerfacecolor = c, 
                                     color = c, 
@@ -230,19 +285,111 @@ class ICLineplot(ICChart):
                                     markeredgecolor = "black", 
                                     markeredgewidth = self.getParam("markeredgewidth.quickSelect")
                                     )
-                    self.quickSelectLines[idx] = lines[0]
+                    line = Line2D(**lineKwargs)
+                    ax.add_line(line)
+                    
+                    self.quickSelectLineKwargs[ax][intID] = lineKwargs
+                    self.quickSelectLines[ax][intID] = line
+                
+                elif idxInAxSet.size > 1:
+
+                    ys = self.data["hoverData"][n].loc[idxInAxSet,self.data["numericColumns"]].values
+                    columnQuantiles = np.nanquantile(ys, q = [0.25,0.5,0.75],axis=0)
+
+                    ys = columnQuantiles[1,:]
+                    q25 = columnQuantiles[0,:]
+                    q75 = columnQuantiles[2,:]
+                    xs = np.arange(ys.size)
+                    polygonXY = np.array([(x,y) for x,y in zip(xs,q25)] + list(reversed([(x,y) for x,y in zip(xs,q75)])))
+                    
+                    
+                    x = np.arange(ys.size)
+                    lineKwargs = dict(
+                                    xdata = xs,
+                                    ydata = ys, 
+                                    marker = self.getParam("marker.quickSelect"), 
+                                    markerfacecolor = c, 
+                                    color = c, 
+                                    linewidth = self.getParam("linewidth.quickSelect"), 
+                                    markeredgecolor = "black", 
+                                    markeredgewidth = self.getParam("markeredgewidth.quickSelect")
+                                    )
+                    poylgonKwargs = dict(xy = polygonXY,
+                                        visible=True,
+                                        alpha=self.getParam("alpha.IQR"),
+                                        facecolor=c,
+                                        edgecolor="black",
+                                        linewidth=0.1,
+                                        fill=True, 
+                                        closed=True)
+
+                    line = Line2D(**lineKwargs)
+                    ax.add_line(line)
+
+                    poly = Polygon(**poylgonKwargs)
+                    ax.add_patch(poly)
+                    
+                    self.quickSelectPolygonKwargs[ax][intID] = poylgonKwargs
+                    self.quickSelectPolygon[ax][intID] = poly
+                    self.quickSelectLineKwargs[ax][intID] = lineKwargs
+                    self.quickSelectLines[ax][intID] = line
+
+
+                else:
+                    continue
+
+                self.quickSelectScatterDataIdx[ax] = idxInAxSet.values
     
+    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+        ""
+        c = quickSelectGroup.loc[quickSelectGroup["internalID"] == changedCategory]["color"].values[0]
+        for ax in self.axisDict.values():
+            if ax in self.quickSelectLines and changedCategory in self.quickSelectLines[ax]:
+                qSLine = self.quickSelectLines[ax][changedCategory]
+                qSLine.set_color(c)
+                qSLine.set_markerfacecolor(c)
+
+            if ax in self.quickSelectPolygon and changedCategory in self.quickSelectPolygon[ax]:
+
+                    poly = self.quickSelectPolygon[ax][changedCategory]
+                    poly.set_facecolor(c)
+
+        self.updateFigure.emit()
+    
+    def mirrorQuickSelectArtists(self,axisID,targetAx):
+        ""
+        if axisID in self.axisDict:
+            sourceAx = self.axisDict[axisID]
+            if sourceAx in self.quickSelectLineKwargs:
+                for lineKwargs in self.quickSelectLineKwargs[sourceAx].values():
+                    targetAx.add_line(Line2D(**lineKwargs))
+                for poylgonKwargs in self.quickSelectPolygonKwargs[sourceAx].values():
+                    targetAx.add_patch(Polygon(**poylgonKwargs))
+
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
         
         data = self.data
-        #self.setAxisLabels(self.axisDict,data["axisLabels"],onlyForID=axisID)
         self.initLineplot(axisID,targetAx)
         for n,ax in self.axisDict.items():
             if axisID == n and axisID in data["axisLimits"]:
                 self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
     
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)                         
- #self.data = data
            
-         
+
+    def resetQuickSelectArtists(self):
+        ""
+        for ax in self.axisDict.values():
+            if ax in self.quickSelectPolygon:
+                for poly in self.quickSelectPolygon[ax].values():
+                    poly.set_visible(False)
+            if ax in self.quickSelectLines:
+                for line in self.quickSelectLines[ax].values():
+                    line.set_visible(False)
+
+        self.quickSelectPolygonKwargs.clear()
+        self.quickSelectPolygon.clear()
+        self.quickSelectLineKwargs.clear()
+        self.quickSelectLines.clear()
+        self.updateFigure.emit()

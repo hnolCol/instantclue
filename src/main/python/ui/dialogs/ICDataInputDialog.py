@@ -78,6 +78,7 @@ class ICDataInput(QDialog):
             value = self.getValueType(valueName,edit.text())
             if value is None:
                 warn = WarningMessage(title="Warning",
+                    iconDir = self.mC.mainPath,
                     infoText = "Value for parameter {} could not be converted to requested type {}.".format(valueName,self.valueTypes[valueName]))
                 warn.exec_()
                 return False

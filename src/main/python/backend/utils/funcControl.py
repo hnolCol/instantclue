@@ -169,11 +169,11 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"getColorDictsByFilter","requiredKwargs":["dataID","filterProps","checkedLabels","columnName"]},
             "completedRequest":[
+                    {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                     {"obj":"self","fn":"updateColorAndSizeInQuickSelect","objKey":"data","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["checkedColors","checkedSizes"]},
                     {"obj":"self","fn":"updateQuickSelectSelectionInGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                     {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot","ommitRedraw"]},
-                    {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title"]},
-                    {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"]},
+                    {"obj":"self","fn":"setQuickSelectData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["quickSelectData"],"optionalKwargs":["title"]},
                     sendMessageProps]   
         },
     "data::getColorMapByCategoricalColumn":
@@ -509,6 +509,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getPlotProps","requiredKwargs":["dataID","numericColumns","categoricalColumns","plotType"]},
             "completedRequest":[
+                {"obj":"self","fn":"setGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["plotType"]},
                 {"obj":"self","fn":"setData","objKey":"middle","objName":"mainFrames","requiredKwargs":["data"]},
                 sendMessageProps
             ]           

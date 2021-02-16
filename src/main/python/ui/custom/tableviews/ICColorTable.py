@@ -2,42 +2,111 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from .utils import clearLayout, getStandardFont
-from ..utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from .ICColorTable import ICColorSizeTableBase
+from ..utils import clearLayout, getStandardFont
+from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 
-from ..delegates.quickSelectDelegates import DelegateColor #borrow delegate
+from ...delegates.quickSelectDelegates import DelegateColor #borrow delegate
 
 import pandas as pd
 import numpy as np
 import os
 
 
-class ICMarkerTable(ICColorSizeTableBase):
-   ## clorMapChanged = pyqtSignal() 
+class ICColorSizeTableBase(QWidget):
+    selectionChanged = pyqtSignal()
+
+    def __init__(self, mainController, *args,**kwargs):
+
+        super(ICColorSizeTableBase,self).__init__(*args,**kwargs)
+        self.mC = mainController
+        self.title = ""
+
+        self.setMaximumHeight(0)
+        self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+
+    def setTitle(self,title):
+        ""
+        if isinstance(title,str):
+            self.titleLabel.setText(title)
+            self.title = title
+    
+    def setData(self,data, title=None, isEditable = True):
+        "" 
+        if isinstance(data,pd.DataFrame):
+            self.setTitle(title)
+            self.table.model().layoutAboutToBeChanged.emit()
+            self.table.model().isEditable = isEditable
+            self.table.model().initData(data)
+            self.table.model().completeDataChanged()
+            self.table.model().layoutChanged.emit()
+            self.setWidgetHeight()
+            
+    def setWidgetHeight(self):
+        ""
+        rowCount = self.table.model().rowCount()
+        if rowCount == 0:
+            maxHeight = 0
+        else:
+            maxHeight = int(95 + rowCount * self.table.rowHeight)
+     
+        self.setMaximumHeight(maxHeight)
+    
+    def reset(self):
+        ""
+        self.table.model().layoutAboutToBeChanged.emit()
+        self.table.model().resetView()
+        self.table.model().layoutChanged.emit()
+        self.setWidgetHeight()
+
+
+    def subsetSelection(self):
+        ""
+        rowIndex = self.table.rightClickedRowIndex
+        internalID = self.table.model().getInternalIDByRowIndex(rowIndex)
+        groupName = self.table.model().getGroupByInternalID(internalID)
+        exists, graph =  self.mC.getGraph()
+        if exists and groupName is not None:
+            graph.subsetDataOnInternalID(internalID,groupName)
+           
+    def leaveEvent(self, event = None):
+        ""
+        if hasattr(self,"table"):
+            self.table.mouseOverItem = None
+
+    def saveModelDataToExcel(self):
+        ""
+        baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),"ICExport")
+        fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,
+                        "Excel files (*.xlsx)")
+                #if user cancels file selection, return function
+        if fname:
+            self.table.model()._labels.to_excel(fname,sheet_name="ICExport")
+
+class ICColorTable(ICColorSizeTableBase):
+    clorMapChanged = pyqtSignal() 
     def __init__(self, *args,**kwargs):
 
-        super(ICMarkerTable,self).__init__(*args,**kwargs)
+        super(ICColorTable,self).__init__(*args,**kwargs)
         
-        self.selectionChanged.connect(self.updateMarkerInGraph)
-      #  self.clorMapChanged.connect(self.updateColorsByColorMap)
+        self.selectionChanged.connect(self.updateColorInGraph)
+        self.clorMapChanged.connect(self.updateColorsByColorMap)
         self.__controls()
         self.__layout()
         
 
     def __controls(self):
         ""
-        self.mainHeader = createTitleLabel("Markers",fontSize = 14)
+        self.mainHeader = createTitleLabel("Colors",fontSize = 14)
         self.mainHeader.setWordWrap(True)
         self.titleLabel = createLabel(text = self.title)
-        self.table = MarkerTable(parent = self, mainController=self.mC)
-        self.model = MarkerTableModel(parent=self.table)
+        self.table = ColorTable(parent = self, mainController=self.mC)
+        self.model = ColorTableModel(parent=self.table)
         self.table.setModel(self.model)
 
         self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
         self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
         self.table.resizeColumns()
-       # self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
+        self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
 
     def __layout(self):
         ""
@@ -46,24 +115,24 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.table)  
 
-    # @pyqtSlot()
-    # def updateColorsByColorMap(self):
-    #     ""
+    @pyqtSlot()
+    def updateColorsByColorMap(self):
+        ""
         
-    #     if self.model.rowCount() > 0:
-    #         self.table.createMenu()
-    #         if self.mC.getPlotType() == "scatter":
-    #             funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
-    #                 "colorColumn":None,
-    #                 "colorColumnType":None,
-    #                 "colorGroupData":self.model._labels}}
+        if self.model.rowCount() > 0:
+            self.table.createMenu()
+            if self.mC.getPlotType() == "scatter":
+                funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
+                    "colorColumn":None,
+                    "colorColumnType":None,
+                    "colorGroupData":self.model._labels}}
             
-    #             self.mC.sendRequestToThread(funcProps)
-    #         else:
-    #             colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
-    #             self.model.updateColors(colorList)
+                self.mC.sendRequestToThread(funcProps)
+            else:
+                colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
+                self.model.updateColors(colorList)
     
-    def updateMarkerInGraph(self):
+    def updateColorInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
         try:
@@ -78,7 +147,11 @@ class ICMarkerTable(ICColorSizeTableBase):
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()
-            graph.addMarkerLegend(self.model._labels,title = self.title, legendKwargs = legendKwargs)
+            graph.addColorLegendToGraph(
+                            self.model._labels,
+                            ignoreNaN = ignoreNaN, 
+                            title = self.title, 
+                            legendKwargs = legendKwargs)
             self.model.completeDataChanged()
 
     def removeFromGraph(self):
@@ -92,10 +165,10 @@ class ICMarkerTable(ICColorSizeTableBase):
             self.model.completeDataChanged()
        
 
-class MarkerTableModel(QAbstractTableModel):
+class ColorTableModel(QAbstractTableModel):
     
     def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
-        super(MarkerTableModel, self).__init__(parent)
+        super(ColorTableModel, self).__init__(parent)
         self.initData(labels)
         self.isEditable = isEditable
 
@@ -103,10 +176,8 @@ class MarkerTableModel(QAbstractTableModel):
 
         self._labels = labels
         self._inputLabels = labels.copy()
-        
         self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
         self.setDefaultSize()
-        self.lastSearchType = None
         
 
     def rowCount(self, parent=QModelIndex()):
@@ -181,6 +252,11 @@ class MarkerTableModel(QAbstractTableModel):
             self._inputLabels = self._labels
             self.completeDataChanged()
 
+    def getColor(self, tableIndex):
+        ""
+        dataIndex = self.getDataIndex(tableIndex.row())
+        return self._labels.loc[dataIndex,"color"]
+
     def getLabels(self):
         ""
         return self._labels
@@ -244,6 +320,11 @@ class MarkerTableModel(QAbstractTableModel):
                 self.updateData(value,index)
                 self.dataChanged.emit(index,index)
             return True
+
+    def setColor(self, dataIndex, hexColor):
+        ""
+        
+        self._labels.loc[dataIndex,"color"] = hexColor
         
 
     def data(self, index, role=Qt.DisplayRole): 
@@ -253,7 +334,7 @@ class MarkerTableModel(QAbstractTableModel):
 
             return QVariant()
             
-        elif role == Qt.DisplayRole: 
+        elif role == Qt.DisplayRole and index.column() == 1: 
             return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
@@ -262,7 +343,10 @@ class MarkerTableModel(QAbstractTableModel):
 
         elif role == Qt.ToolTipRole:
 
-            return "Markers are from matplotlib package."
+            if index.column() == 0:
+                return "Set color. Left-click will cycle through the nan Color (settings) and default color.\nNot available for numeric scales."
+            elif index.column() == 1:
+                return "Color encoded categorical or numerical values."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
@@ -270,7 +354,7 @@ class MarkerTableModel(QAbstractTableModel):
     def flags(self, index):
         "Set Flags of Column"
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled #| Qt.ItemIsEditable
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
@@ -278,6 +362,19 @@ class MarkerTableModel(QAbstractTableModel):
         ""
         self.initData(labels)
         self.completeDataChanged()
+
+    def search(self,searchString):
+        ""
+        if self._inputLabels.size == 0:
+            return
+        if len(searchString) > 0:
+      
+            boolMask = self._labels.str.contains(searchString,case=False,regex=False)
+            self._labels = self._labels.loc[boolMask]
+        else:
+            self._labels = self._inputLabels
+        self.completeDataChanged()
+
     
     def completeDataChanged(self):
         ""
@@ -297,14 +394,44 @@ class MarkerTableModel(QAbstractTableModel):
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 
+    def getInitColor(self,dataIndex):
+        ""
+        return self._inputLabels.loc[dataIndex,"color"]
+
+    def setInitColor(self,dataIndex):
+        ""
+        initColor = self._inputLabels.loc[dataIndex,"color"]
+        self.setColor(dataIndex,initColor)
+    
+
+
+    def updateColors(self,colorList):
+        ""
+        
+        if len(colorList) == self._labels.index.size:
+
+            nanObject = self.parent().mC.config.getParam("replaceObjectNan")
+            nanColor = self.parent().mC.config.getParam("nanColor")
+            idxWithNaNColor = self._labels.index[self._labels["color"] == nanColor]
+            self._labels["color"] = colorList
+            self._labels.loc[idxWithNaNColor,"color"] = nanColor
+            self._inputLabels["color"] = colorList
+            for nanString in ["NaN",nanObject]:
+                if nanString in self._labels["group"].values:
+                    idx = self._labels.index[self._labels["group"] == nanString]
+                    self._labels.loc[idx,"color"] = nanColor 
+            
+            self.completeDataChanged()
+            #emi signal to widget to update colors in graph
+            self.parent().parent().selectionChanged.emit()
 
 
 
-class MarkerTable(QTableView):
+class ColorTable(QTableView):
 
     def __init__(self, parent=None, rowHeight = 22, mainController = None):
 
-        super(MarkerTable, self).__init__(parent)
+        super(ColorTable, self).__init__(parent)
        
         self.setMouseTracking(True)
         self.setShowGrid(True)
@@ -343,16 +470,31 @@ class MarkerTable(QTableView):
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
-        menu = createSubMenu(None,["Subset by ..","Add Legend at .."])
+        menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
         menu["main"].addAction("Remove", self.parent().removeFromGraph)
-        #menu["main"].addAction("Add to graph", self.parent().addLegendToGraph)
-        menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
-        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
 
+        if self.model() is not None and hasattr(self.model(),"isEditable") and self.model().isEditable: #if editable - add the option to choose color from palette
+            colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
+            for col in colors:
+                pixmap = QPixmap(20,20)
+                pq = QPainter(pixmap) 
+                pq.setBrush(QColor(col))
+                pq.drawRect(0,0,20,20)
+                action = menu["Color from palette"].addAction(col, lambda col = col: self.colorChangedFromMenu(hexColor = col))
+                i = QIcon() 
+                i.addPixmap(pixmap)
+                pq.end()
+                action.setIcon(i)
+                
         for legendLoc in legendLocations:
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
+            menu["Add Legend at (-NaN Color) .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(ignoreNaN = True,legendKwargs = {"loc":lloc}))
+        
+        menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
+        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
         self.menu = menu["main"]
     
+
     def leaveEvent(self,event=None):
         ""
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
@@ -388,10 +530,30 @@ class MarkerTable(QTableView):
             tableIndexCol = tableIndex.column()
             if tableIndexCol == 0 and self.model().isEditable:
                 dataIndex = self.model().getDataIndex(tableIndex.row())
-                
+                if not self.rightClick:
+                    nanColor = self.mC.config.getParam("nanColor")
+                    currentColor = self.model().getColor(tableIndex)
+                    
+                    if currentColor == nanColor: 
+                        #if current color is nan color , set init color, if init color is also nan, just dont do anything
+                        if self.model().getInitColor(dataIndex) == nanColor:
+                            return
+                        self.model().setInitColor(dataIndex)
+                    else:
+                        self.model().setColor(dataIndex,nanColor)
+                else:
+                    color = QColorDialog.getColor()
+                    if color.isValid():
+                        self.model().setColor(dataIndex,color.name())
+                    else:
+                        return
+                self.colorChangedForItem = tableIndex.row()
+                #emit change signal
                 self.parent().selectionChanged.emit()
                 self.model().rowDataChanged(tableIndex.row())
 
+                self.colorChangedForItem = None
+                
                 
             elif tableIndexCol == 1 and self.rightClick:
                # idx = self.model().index(0,0)

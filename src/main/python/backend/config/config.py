@@ -19,37 +19,40 @@ class Config(object):
         self.loadDefaults()
         self.saveParameters()
         self.lastConfigGroup = None
-
     
     def clearSettings(self):
         "Clears parameters"
         self.parameters.clear()
 
     def loadDefaults(self):
-        ""
+        "Resets default setting"
         self.clearSettings()
         savedDefaultParam = self.loadParameters()
         if savedDefaultParam is None:
+            print("falling back to default")
             savedDefaultParam = DEFAULT_PARAMETER
-            
-        for n,dictAttr in enumerate(savedDefaultParam):
-            param = Parameter(paramID=n, updateParamInParent = self.updateParamInParent)
-            param.readFromDict(dictAttr)
-            self.parameters[param.getAttr("name")] = param
-            param.updateAttrInParent()
+        
+        self.updateParamsFromProfile(savedDefaultParam)
     
-    def loadParameters(self,settingName = "default"):
+    def loadParameters(self,settingName = "current"):
         "Load Parameters from pickled file"
         configFolder = os.path.abspath(os.path.join(self.mC.mainPath,"conf"))
         if not os.path.exists(configFolder):
             os.mkdir(configFolder)
         fileName = '{}.ic'.format(settingName)
         filePath = os.path.join(configFolder,fileName)
+            
         if os.path.exists(filePath):
             with open(filePath, 'rb') as paramFle:
                 l = pickle.load(paramFle)
                 if isinstance(l,list):
                     return l
+    
+    def loadProfile(self,profileName):
+        ""
+        savedParams = self.loadParameters(profileName)
+        self.updateParamsFromProfile(savedParams)
+        self.saveParameters()
 
     def getParam(self,paramName):
         ""
@@ -71,6 +74,10 @@ class Config(object):
         else:
             return []
 
+    def getConfigPath(self):
+        ""
+        return os.path.abspath(os.path.join(self.mC.mainPath,"conf"))
+
     def getParentTypes(self):
         "Returns Parameters Parent Type"
 
@@ -85,17 +92,34 @@ class Config(object):
         "Get Parameters of a specific type"
         return [p for p in self.parameters.values() if p.getAttr("parentType") == parentType]
     
-    def saveParameters(self, settingName = "default", overwriteDefault = True):
+    def getSavedProfiles(self):
         ""
-        configFolder = os.path.abspath(os.path.join(self.mC.mainPath,"conf"))
+        savedProfiles = [x[:-3] for x in os.listdir(self.getConfigPath()) if x.endswith(".ic")]
+        return savedProfiles
+
+    def saveParameters(self, settingName = "current", overWriteCurrent = True):
+        ""
+        configFolder = self.getConfigPath()
         if not os.path.exists(configFolder):
             os.mkdir(configFolder)
         fileName = '{}.ic'.format(settingName)
         filePath = os.path.join(configFolder,fileName)
-        if overwriteDefault or not os.path.exists(filePath):
-            with open(filePath, 'wb') as paramFle:
+        
+        with open(filePath, 'wb') as paramFle:
                 pickle.dump([p.params for p in self.parameters.values()], paramFle)
-
+        if overWriteCurrent and settingName != "current":
+            self.overWriteCurrent()
+            
+    def overWriteCurrent(self):
+        ""
+        fileName = 'current.ic'
+        filePath = os.path.join(self.getConfigPath(),fileName)
+        with open(filePath, 'wb') as paramFle:
+            pickle.dump([p.params for p in self.parameters.values()], paramFle)
+            
+    def saveProfile(self,settingName, overWriteCurrent=True):
+        ""
+        self.saveParameters(settingName,overWriteCurrent)
 
     def setParam(self,paramName,value):
         ""
@@ -113,6 +137,13 @@ class Config(object):
         except Exception as e:
             print(e)
 
+    def resetFactoryDefaults(self):
+        ""
+        savedDefaultParam = DEFAULT_PARAMETER
+        self.updateParamsFromProfile(savedDefaultParam)
+        self.saveParameters()
+
+
     def updateParamInParent(self, objectName, paramName, paramValue):
         ""
 
@@ -124,4 +155,12 @@ class Config(object):
     def updateAllParamsInParent(self):
         ""
         for param in self.parameters.values():
+            param.updateAttrInParent()
+
+    def updateParamsFromProfile(self,savedParams):
+        ""
+        for n,dictAttr in enumerate(savedParams):
+            param = Parameter(paramID=n, updateParamInParent = self.updateParamInParent)
+            param.readFromDict(dictAttr)
+            self.parameters[param.getAttr("name")] = param
             param.updateAttrInParent()

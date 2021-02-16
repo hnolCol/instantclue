@@ -168,7 +168,7 @@ class ICDMergeDataFrames(QDialog):
             if dfID in self.mergeParams:
                 dfProps = self.mergeParams[dfID]
                 if "columnNames" not in dfProps:
-                    w = WarningMessage(title = "No data frame.", infoText = "Please select a dataframe first.")
+                    w = WarningMessage(title = "No data frame.", infoText = "Please select a dataframe first.",iconDir = self.mC.mainPath)
                     w.exec_()
                     return
                 selectableColumns = pd.DataFrame(dfProps["columnNames"])

@@ -49,9 +49,13 @@ class ICChart(QObject):
 		self.hoverChanged = False
 		self.colorCategoryIndexMatch = None
 		self.sizeCategoryIndexMatch = None
+		self.quickSelectCategoryIndexMatch = None
 		self.tooltipActive = False
 		self.statTestEnabled = False
 		self.statData = dict()
+		self.quickSelectScatterDataIdx = dict()
+		self.requiredKwargs = []
+		
 		self.saveStatTests = OrderedDict() 
 		self.preventQuickSelectCapture = False
 
@@ -138,9 +142,26 @@ class ICChart(QObject):
 		if isinstance(annotationColumn,str):
 			annotationColumn = pd.Series([annotationColumn])
 		self.addAnnotations(annotationColumn, self.mC.getDataID())
-		if self.annotations is not None and isinstance(self.annotations,dict):
+		if hasattr(self,"annotations") and self.annotations is not None and isinstance(self.annotations,dict):
 			for annotationClass in self.annotations.values():
 				annotationClass.addAnnotations(dataIndex)
+			self.updateFigure.emit()
+	
+	def restoreBackgrounds(self):
+		""
+		if hasattr(self,"backgrounds"):
+			for ax, background in self.backgrounds.items():
+				self.p.f.canvas.restore_region(background)
+			#self.p.f.canvas.blit(ax.bbox)
+
+
+	def checkForQuickSelectDataAndUpdateFigure(self):
+		""
+	
+		qsData = self.getQuickSelectData()
+		if qsData is not None:
+			self.mC.quickSelectTrigger.emit()
+		else:
 			self.updateFigure.emit()
 
 	def onPress(self,event):
@@ -228,7 +249,7 @@ class ICChart(QObject):
 			self.statData.clear() 
 			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			self.updateFigure.emit()
-			w = WarningMessage(infoText="Same data selected. Selection reset.")
+			w = WarningMessage(infoText="Same data selected. Selection reset.",iconDir = self.mC.mainPath)
 			w.exec_()
 			return
 			
@@ -275,7 +296,7 @@ class ICChart(QObject):
 			w.exec_()
 			return False
 		return True
-
+	
 	def saveStatResults(self,statValue, pValue, testType):
 		"saves data to statCollection"
 		if not hasattr(self,"statCollection"):
@@ -430,7 +451,7 @@ class ICChart(QObject):
 
 	def sendToWebApp(self, projectParams):
 		""
-		print(projectParams)
+		
 		self.mC.sendTextEntryToWebApp(projectParams["ID"],"# Start","## Q: I would like to answer the question of how mitoch. are regulated.")
 		# d = self.data.copy() 
 
@@ -565,14 +586,71 @@ class ICChart(QObject):
 								title = title, 
 								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
 								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = self.getParam("legend.label.spacing"),
+								borderpad  = self.getParam("legend.label.borderpad"),
 								**legendKwargs)
 			if not export:
 				self.colorLegend = legend
 				self.checkLegend(ax,attrName="sizeLegend")
 				self.checkLegend(ax,attrName="markerLegend")
+				self.checkLegend(ax,attrName="quickSelectLegend")
 				self.lastAddedLegend = legend
 				self.colorLegendKwargs = {"colorData":colorData,"ignoreNaN":ignoreNaN,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
 				
+			if update:
+				self.updateFigure.emit()
+			return legend
+		except Exception as e:
+			print(e)
+
+	def addQuickSelectLegendToGraph(self, colorSizeData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
+		""
+		try:
+			if colorSizeData.index.size > 200:
+				w = WarningMessage(title="To many items for legend.",
+								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
+				w.exec_()	
+				return			
+			if ignoreNaN:
+				idx = colorSizeData["color"] != self.getParam("nanColor")
+				colorSizeData = colorSizeData.loc[idx]
+			if self.plotType in ["scatter","swarmplot","hclust"]:
+				scatterKwargs = self.getScatterKwargForLegend(legendType="QuickSelect")
+				
+				legendItems = [scatter([],[],
+						color= colorSizeData.loc[idx,"color"],
+						s = colorSizeData.loc[idx,"size"],
+						label = colorSizeData.loc[idx,"group"], **scatterKwargs) for idx in colorSizeData.index]
+			else:
+				legendItems = [Patch(
+						facecolor=colorSizeData.loc[idx,"color"],
+						edgecolor="black",
+						label = colorSizeData.loc[idx,"group"]) for idx in colorSizeData.index]
+
+			
+			title = "QuickSelect Legend"
+
+			if ax is None:
+				if self.plotType == "hclust" and "axLabelColor" in self.axisDict:
+					ax = self.axisDict["axLabelColor"]
+				else:
+					ax = self.axisDict[0]
+			if not export and hasattr(self,"quickSelectLegend"):
+				self.quickSelectLegend.remove() 
+			legend = ax.legend(handles=legendItems, 
+								title = title, 
+								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
+								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = self.getParam("legend.label.spacing"),
+								borderpad  = self.getParam("legend.label.borderpad"),
+								**legendKwargs)
+			if not export:
+				self.quickSelectLegend = legend
+				self.checkLegend(ax,attrName="sizeLegend")
+				self.checkLegend(ax,attrName="markerLegend")
+				self.checkLegend(ax,attrName="colorLegend")
+				self.lastAddedLegend = legend
+				self.quickSelectLegendKwargs = {"colorSizeData":colorSizeData,"ignoreNaN":ignoreNaN,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
 			if update:
 				self.updateFigure.emit()
 			return legend
@@ -605,11 +683,14 @@ class ICChart(QObject):
 								title = title, 
 								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
 								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = self.getParam("legend.label.spacing"),
+								borderpad  = self.getParam("legend.label.borderpad"),
 								**legendKwargs)
 			if not export:
 				self.markerLegend = legend
 				self.checkLegend(ax,attrName="sizeLegend")
 				self.checkLegend(ax,attrName="colorLegend")
+				self.checkLegend(ax,attrName="quickSelectLegend")
 				self.lastAddedLegend = legend
 				self.markerLegendKwargs = {"markerData":markerData,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
 				
@@ -699,11 +780,14 @@ class ICChart(QObject):
 			legend = ax.legend(handles=legendItems, title = title, 
 								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
 								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = self.getParam("legend.label.spacing"),
+								borderpad  = self.getParam("legend.label.borderpad"),
 								**legendKwargs)
 			if not export:
 				self.sizeLegend = legend
 				self.checkLegend(ax,attrName="colorLegend")
 				self.checkLegend(ax,attrName="markerLegend")
+				self.checkLegend(ax,attrName="quickSelectLegend")
 				self.lastAddedLegend = legend
 				self.sizeLegendKwargs = {"sizeData":sizeData,"ignoreNaN":ignoreNaN,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
 				
@@ -840,7 +924,7 @@ class ICChart(QObject):
 		yLims = np.array([ax.get_ylim() for ax in axes])
 		return axes, xLims, yLims 
 
-	def alignLimitsOfAllAxes(self):
+	def alignLimitsOfAllAxes(self, updateFigure = True):
 		""
 		axes, xLims, yLims = self.getAxesWithLimits()
 		xMin, xMax = np.min(xLims[:,0]), np.max(xLims[:,1])
@@ -848,8 +932,8 @@ class ICChart(QObject):
 		
 		for ax in axes:
 			self.setAxisLimits(ax, xLimit=(xMin,xMax), yLimit=(yMin,yMax))
-
-		self.updateFigure.emit() 
+		if updateFigure:
+			self.updateFigure.emit() 
 
 	def alignLimitsOfXY(self):
 		""
@@ -944,6 +1028,7 @@ class ICChart(QObject):
 		self.determinePosition(x,y)
 		self.tooltip.update(self.textProps)
 	
+	
 	def drawTooltip(self,background):
 		""
 		self.p.f.canvas.restore_region(background)
@@ -1011,7 +1096,7 @@ class ICChart(QObject):
 	def mirrorAxis(self,targetAx, figID, sourceAx = None):
 		""
 		try:
-			markerLegend, sizeLegend, colorLegend = None, None, None
+			markerLegend, sizeLegend, colorLegend, quickSelectLegend = None, None, None, None
 			if sourceAx is None and hasattr(self,"menuClickedInAxis"):
 
 				sourceAx = self.menuClickedInAxis
@@ -1037,8 +1122,19 @@ class ICChart(QObject):
 				if sizeLegend is not None:
 					targetAx.add_artist(sizeLegend)
 
+			if hasattr(self,"quickSelectLegendKwargs"):
+				quickSelectLegend  = self.addQuickSelectLegendToGraph(**self.quickSelectLegendKwargs, ax = targetAx)
+				if colorLegend is not None:
+					targetAx.add_artist(colorLegend)
+				if sizeLegend is not None:
+					targetAx.add_artist(sizeLegend)
+				if markerLegend is not None:
+					targetAx.add_artist(markerLegend)
+
+			self.mirrorQuickSelectArtists(axisID,targetAx)
 			self.mirrorLimits(sourceAx,targetAx) #deal with user zoom
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
+
 		except Exception as e:
 			print(e)
 
@@ -1112,6 +1208,9 @@ class ICChart(QObject):
 			del scatterKwargs["color"]
 		elif legendType == "size":
 			del scatterKwargs["s"]
+		elif legendType == "QuickSelect":
+			del scatterKwargs["s"]
+			del scatterKwargs["color"]
 		return scatterKwargs
 
 	def getPlotData(self):
@@ -1125,6 +1224,16 @@ class ICChart(QObject):
 		if self.isQuickSelectActive():
 			data = self.mC.mainFrames["data"].qS.getSizeAndColorData()
 			return data
+
+	def getQuickSelectMode(self):
+		""
+		if self.isQuickSelectActive():
+			return self.mC.mainFrames["data"].qS.selectionMode
+
+	def isQuickSelectModeUnique(self):
+		""
+		return self.mC.mainFrames["data"].qS.quickSelectProps["filterProps"]["mode"] == "unique"
+
 
 	def getDataIndexOfQuickSelectSelection(self):
 		""
@@ -1271,6 +1380,10 @@ class ICChart(QObject):
 	def setSizeCategoryIndexMatch(self,categoryIndexMatch):
 		""
 		self.sizeCategoryIndexMatch = categoryIndexMatch
+
+	def setQuickSelectCategoryIndexMatch(self,categoryIndexMatch):
+		""
+		self.quickSelectCategoryIndexMatch = categoryIndexMatch
 	
 	def getDataInColorTable(self):
 		""
@@ -1318,7 +1431,23 @@ class ICChart(QObject):
 		if hasattr(self,"hoverScatter") and isinstance(self.hoverScatter,dict):
 			for scatter in self.hoverScatter.values():
 				scatter.set_visible(False)
+
+	def setQuickSelectScatterInvisible(self):
+		""
 		
+
+		if self.hasScatters():
+			for scatterPlot in self.scatterPlots.values():
+				scatterPlot.setQuickSelectScatterInivisible()
+				
+
+		if hasattr(self,"quickSelectScatter"):
+			if isinstance(self.quickSelectScatter,dict):
+				for _,qSScatter in self.quickSelectScatter.items():
+					if hasattr(qSScatter,"set_visible"):
+						qSScatter.set_visible(False)
+
+
 	def setTicksOff(self,ax):
 		""
 		ax.tick_params(axis='both',          
@@ -1334,6 +1463,13 @@ class ICChart(QObject):
 			if onlyForID is not None and n != onlyForID:
 				continue
 			self.setXTicks(ax,xTicks[n],xLabels[n],**kwargs)
+	
+	def setYTicksForAxes(self,axes,yTicks,xLabels,onlyForID = None,**kwargs):
+		""
+		for n, ax in axes.items():
+			if onlyForID is not None and n != onlyForID:
+				continue
+			self.setYTicks(ax,yTicks[n],xLabels[n],**kwargs)
 
 	def setXTicks(self,ax,ticks,labels,**kwargs):
 		""
@@ -1368,10 +1504,10 @@ class ICChart(QObject):
 	def updateData(self, data= None):
 		""
 	
-	def updateGroupColors(self,colorGroup,changedCategory=None):
+	def updateGroupColors(self,*args,**kwargs):
 		""
 
-	def updateGroupSizes(self,sizeGroup,changedCategory=None):
+	def updateGroupSizes(self,*args,**kwargs):
 		""
 
 	def updateScatterPropSection(self,idx,value,propName = "color"):
@@ -1385,10 +1521,94 @@ class ICChart(QObject):
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
 				self.addColorLegendToGraph(self.getDataInColorTable(),title=self.getTitleOfColorTable(),update=False)
-			#if hasattr(self,"sizeLegend"):
-			#	self.addSizeLegendToGraph() getDataInSizeTable
+			
 			for scatterPlot in self.scatterPlots.values():
 				scatterPlot.updateScatterProps(propsData)	
+
+	def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+		""
+		for ax in self.axisDict.values():
+			if self.isQuickSelectModeUnique():
+
+				scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
+				print(scatterSizes)
+
+			elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
+
+				dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
+				scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
+				scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+
+			else:
+				
+				continue
+
+			self.updateQuickSelectScatter(ax, scatterColors = scatterColors, scatterSizes = scatterSizes)
+			   
+                
+	def getQuickSelectScatterProps(self,ax,quickSelectGroup):
+		""
+		#internalIDs = quickSelectGroup["internalID"]
+		scatterSizes = []
+		scatterColors = []
+		dataIndicies = []
+		#get index
+		#dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+		intIDs = self.quickSelectScatterDataIdx[ax]["coords"]["intID"] 
+		colorMapper = dict([(intID,colorValue) for intID, colorValue in quickSelectGroup[["internalID","color"]].values])
+		sizeMapper = dict([(intID,sizeValue) for intID, sizeValue in quickSelectGroup[["internalID","size"]].values])
+		scatterColors = intIDs.map(colorMapper)
+		scatterSizes = intIDs.map(sizeMapper)
+		
+		return scatterSizes, scatterColors, self.quickSelectScatterDataIdx[ax]["idx"]
+
+		# print(intIDs)
+		# for intID, colorValue, sizeValue in quickSelectGroup[["internalID","color","size"]].values:
+		# #for intID, indics in self.quickSelectCategoryIndexMatch.items():
+		# 	indics = self.quickSelectCategoryIndexMatch[intID]
+		# 	#boolIdx = internalIDs == intID
+		# 	#colorValue, sizeValue = quickSelectGroup.loc[boolIdx,["color","size"]].values[0]
+		# 	scatterColors.extend([colorValue] * indics.size)
+		# 	scatterSizes.extend([sizeValue] * indics.size)
+		# 	dataIndicies.extend(indics.tolist())
+
+		# return scatterSizes,scatterColors,dataIndicies
+
+		
+	def updateQuickSelectScatter(self,ax,coords = None,scatterColors = None, scatterSizes = None):
+		"Testing if ax in backgrounds and quickSelectScatter should be performed before."
+		if not hasattr(self,"backgrounds") or not hasattr(self,"quickSelectScatter"):
+			return
+		self.p.f.canvas.restore_region(self.backgrounds[ax])
+		if coords is not None:
+			if isinstance(coords,pd.DataFrame):
+				coords = coords[["x","y"]].values
+			self.quickSelectScatter[ax].set_offsets(coords[:,0:2])
+		self.quickSelectScatter[ax].set_visible(True)
+		if scatterColors is not None:
+			self.quickSelectScatter[ax].set_facecolor(scatterColors)
+		if scatterSizes is not None:
+			self.quickSelectScatter[ax].set_sizes(scatterSizes)
+
+		ax.draw_artist(self.quickSelectScatter[ax])
+		self.p.f.canvas.blit(ax.bbox)
+
+
+	def mirrorQuickSelectArtists(self,axisID,targetAx):
+		""
+		if axisID in self.axisDict and hasattr(self,"quickSelectScatter"):
+			sourceAx = self.axisDict[axisID]
+			if sourceAx in self.quickSelectScatter:
+				coords = self.quickSelectScatter[sourceAx].get_offsets()
+				scatterColors = self.quickSelectScatter[sourceAx].get_facecolor()
+				scatterSizes = self.quickSelectScatter[sourceAx].get_sizes()
+				kwargs = self.getScatterKwargs()
+				
+				kwargs["zorder"] = 1e9
+				kwargs["s"] = scatterSizes
+				kwargs["color"] = scatterColors
+				targetAx.scatter(x = coords[:,0], y = coords[:,1], **kwargs)
+
 
 	def setNaNColor(self):
 		""
@@ -1417,6 +1637,14 @@ class ICChart(QObject):
 			subsetName = "chartSubset:({})_({})".format(groupName,self.mC.data.getFileNameByID(dataID))
 			funcProps = {"key":"data::subsetDataByIndex","kwargs":{"dataID":dataID,"filterIdx":idx,"subsetName":subsetName}}
 			self.mC.sendRequestToThread(funcProps)
+
+	def resetQuickSelectArtists(self):
+		""
+		if hasattr(self,"quickSelectScatter"):
+			for ax, qSScatter in self.quickSelectScatter.items():
+				qSScatter.set_visible(False)
+			
+			self.updateFigure.emit()
 
 class ICChartToolTip(object):
 
@@ -1477,7 +1705,9 @@ class ICChartToolTip(object):
 				artist.set_facecolor(color)
 		elif hasattr(artist,'set_color'):
 					artist.set_color(color)			
+
 	
+
 	def evaluateEvent(self,event):
 		'''
 		'''

@@ -65,8 +65,8 @@ class MatplotlibFigure(QWidget):
             funcKey = kwargs["dataProps"]["funcProps"]
             funcKey["key"] = "plotter:getData"
             funcKey["kwargs"]["plotType"] = plotType
-
-            self.ICPlotter.setGraph(plotType)
+            
+            
             self.mC.sendRequestToThread(funcKey)
             
            # self.plotter.initiateChart(*args,**kwargs)#
@@ -128,6 +128,11 @@ class MatplotlibFigure(QWidget):
         if hasattr(self.ICPlotter,"graph"):
             self.ICPlotter.graph.setData(data)
 
+    def setGraph(self,plotType):
+        ""
+        
+        if hasattr(self,"ICPlotter"):
+            self.ICPlotter.setGraph(plotType)
 
     def refreshQuickSelectSelection(self):
         ""
@@ -167,13 +172,9 @@ class MatplotlibFigure(QWidget):
             #raise ValueError("columnNameMapper must be a dict!")
         try:
             for itemName, newItemName in columnNameMapper.items():
-                #print(itemName)
                 for receiverBox in self.getReceiverBoxes():
-                #   print(receiverBox)
                     receiverBox.renameItem(itemName,newItemName)
-            #print("===")
             self.updateReceiverBoxItems() 
-            #print("===")
         except Exception as e:
             print(e)
             
@@ -181,7 +182,9 @@ class MatplotlibFigure(QWidget):
         ""
         exists, graph = self.mC.getGraph()
         if exists:
-            if categoryEncoded == "color":
+            if categoryEncoded == "QuickSelect":
+                graph.setQuickSelectCategoryIndexMatch(categoryIndexMatch)
+            elif categoryEncoded == "color":
                 graph.setColorCategoryIndexMatch(categoryIndexMatch)
             elif categoryEncoded == "size":
                 graph.setSizeCategoryIndexMatch(categoryIndexMatch)
@@ -213,12 +216,12 @@ class MatplotlibFigure(QWidget):
         ""
         exists, graph = self.mC.getGraph()
         if exists:
-            if graph.hasScatters():
-                graph.updateScatterProps(propsData)
-            elif hasattr(graph,"updateQuickSelectItems"):#graph.isHclust() or graph.isLinePlot() or graph.isBoxplotViolinBar():
-                graph.updateQuickSelectItems(propsData)
            
-            graph.updateFigure.emit()
+            if hasattr(graph,"updateQuickSelectItems"):#graph.isHclust() or graph.isLinePlot() or graph.isBoxplotViolinBar():
+                
+                graph.updateQuickSelectItems(propsData)
+                
+                graph.updateFigure.emit()
             
 
     def updateReceiverBoxItems(self):
@@ -362,11 +365,11 @@ class MatplotlibFigure(QWidget):
         if exists and graph.hasScatters():
             for scatterPlot in graph.scatterPlots.values():
                 scatterPlot.setHoverObjectsInvisible(leftWidget=True)
-    
+        
+
     def setIsPlotting(self,isPlotting):
         ""
         setattr(self,"isPlotting",isPlotting)
-
     
 
     def setMask(self,maskIndex):

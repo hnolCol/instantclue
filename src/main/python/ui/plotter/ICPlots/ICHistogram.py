@@ -154,7 +154,7 @@ class ICHistogram(ICChart):
                 self.quickSelectScatter[ax].set_offsets(coords)
                 self.quickSelectScatter[ax].set_visible(True)
                 self.quickSelectScatter[ax].set_facecolor(colorData.loc[xValues.index,"color"])
-                print("Done")
+
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
         data = self.data 

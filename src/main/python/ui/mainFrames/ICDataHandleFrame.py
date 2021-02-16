@@ -11,7 +11,7 @@ from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
 from ..custom.ICDataTreeView import DataTreeView
 from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, SubsetDataButton, ViewDataButton
-from ..custom.ICDataTable import PandaTableDialog
+from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
 from ..utils import removeFileExtension, areFilesSuitableToLoad, createLabel
@@ -129,10 +129,13 @@ class DataHandleFrame(QFrame):
         self.bigFrame.layout().addWidget(self.frames)
         
         vbox1 = QHBoxLayout()
-        loadDataButton = LoadButton(callback = self.addTxtFiles, direction="up", tooltipStr ="Load Data from file.\nThis will reset the view.")
+        loadDataButton = BigPlusButton(callback = self.addTxtFiles, tooltipStr ="Load Data from file.\nThis will reset the view.")
         
         #addDataButton = BigPlusButton()
         #addDataButton.clicked.connect(self.loadSession)
+
+        loadSessionButton = BigArrowButton(direction="up", tooltipStr="Load session.")
+        loadSessionButton.clicked.connect(self.loadSession)
 
         saveSessionButton = BigArrowButton(direction="down", tooltipStr="Saves session. Note: the current figure is not saved.")
         saveSessionButton.clicked.connect(self.saveSession)
@@ -147,8 +150,10 @@ class DataHandleFrame(QFrame):
         
         vbox1.addWidget(loadDataButton)
         #vbox1.addWidget(addDataButton)
-        vbox1.addWidget(saveSessionButton)
         vbox1.addStretch(1)
+        vbox1.addWidget(loadSessionButton)
+        vbox1.addWidget(saveSessionButton)
+        vbox1.addStretch(3)
         vbox1.addWidget(viewDataButton)
         vbox1.addWidget(subsetDataButton)
         #vbox1.addStretch(1)
@@ -169,8 +174,9 @@ class DataHandleFrame(QFrame):
         vbox5.setContentsMargins(3,3,3,3)
 
         
-        frameWidgets = [{"title":"Data","open":True,"fixedHeight":True,"height":50,"layout":vbox1},
-                {"title":"Source Data","open":True,"fixedHeight":False,"height":0.4,"layout":vbox2},
+        frameWidgets = [
+                {"title":"Load Data & Sessions","open":True,"fixedHeight":True,"height":50,"layout":vbox1},
+                {"title":"Data","open":True,"fixedHeight":False,"height":0.4,"layout":vbox2},
                 {"title":"Quick Select","open":False,"fixedHeight":False,"height":0.4,"layout":vbox3},
                 {"title":"Live Graph","open":False,"fixedHeight":False,"height":0.4,"layout":vbox4},
                 {"title":"Analysis","open":False,"fixedHeight":False,"height":150,"layout":vbox5}]
@@ -282,7 +288,6 @@ class DataHandleFrame(QFrame):
 
     def subsetData(self):
         ""
-        #retrieve drag and drop columns
         columnNames = self.getDragColumns()
         dataID = self.getDataID()
         funcProps = {"key":"filter::splitDataFrame","kwargs":{"dataID" : dataID,"columnNames":columnNames}}
@@ -296,35 +301,44 @@ class DataHandleFrame(QFrame):
         funcProps = {"key":"data::deleteData","kwargs":{"dataID" : dataID}}
         self.mC.sendRequestToThread(funcProps)
 
-    def exportData(self):
+    def exportData(self, exportDataFormat = "txt"):
         ""
         if not self.mC.data.hasData():
             return
         dataID = self.getDataID()
+
         if dataID is not None:
-            
             baseFileName = self.mC.data.getFileNameByID(dataID)
             baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),baseFileName)
-        
-            fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,
-                        "Text/CSV files (*.txt *.csv)")
+            if exportDataFormat == "txt":
+                fileDataFormat = "Text/CSV files (*.txt *.csv)"
+            elif exportDataFormat == "xlsx":
+                fileDataFormat = "Excel files (*.xlsx)"
+            elif exportDataFormat == "json":                            
+                fileDataFormat = "Json files (*.json)"
+            elif exportDataFormat == "md":
+                fileDataFormat = "Markdown files (*.md)"
                 #if user cancels file selection, return function
-            
+            else:
+                return
+
+            fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,fileDataFormat)
+
             if fname:
                 columnOrder = self.getColumns()
-                funcProps = {"key":"data::exportData","kwargs":{"dataID" : dataID,"path":fname, "columnOrder":columnOrder}}
+                funcProps = {"key":"data::exportData","kwargs":{"dataID" : dataID,"path":fname, "columnOrder":columnOrder, "fileFormat" : exportDataFormat}}
                 self.mC.sendRequestToThread(funcProps)
     
     def showData(self):
         ""
        
         if not self.mC.data.hasData():
-            warn  = WarningMessage(infoText="No data found. Please load data first.")
+            warn  = WarningMessage(infoText="No data found. Please load data first.",iconDir = self.mC.mainPath)
             warn.exec_()
             return
         try:
             dataID = self.getDataID()
-            dlg = PandaTableDialog(df = self.mC.data.dfs[dataID], parent=self)
+            dlg = PandaTableDialog(mainController = self.mC ,df = self.mC.data.dfs[dataID], parent=self)
             dlg.exec_()
         except Exception as e:
             print(e)
@@ -353,8 +367,10 @@ class DataHandleFrame(QFrame):
 
     def updateColorAndSizeInQuickSelect(self,checkedColors=None,checkedSizes=None):
         ""
+        
         self.qS.updateColorsAndSizes(checkedColors,checkedSizes)
-
+      
+      
     def sendToThread(self,funcProps):
         
         try:
@@ -388,6 +404,6 @@ class DataHandleFrame(QFrame):
         ""
         workingDir = self.mC.config.getParam("WorkingDirectory")
         fileName,_ = QFileDialog.getOpenFileName(self,"Load Instant Clue Session",workingDir,"Instant Clue File (*.ic)")
-        if fileName is not None:
+        if fileName is not None and fileName != "":
             self.mC.sendRequestToThread(funcProps = {"key":"session::load","kwargs":{"sessionPath":fileName}})
-            #self.mC.sessionManager.openSession(fileName)
+        

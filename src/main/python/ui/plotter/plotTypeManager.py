@@ -1,6 +1,22 @@
 
 
-plotTypes = ["lineplot","pointplot","scatter","histogram","boxplot","barplot","violinplot","swarmplot","addSwarmplot","countplot","hclust","corrmatrix","x-ys-plot","dim-red-plot"]
+plotTypes = ["lineplot",
+            "pointplot",
+            "scatter",
+            "histogram",
+            "boxplot",
+            "barplot",
+            "violinplot",
+            "swarmplot",
+            "addSwarmplot",
+            "countplot",
+            "hclust",
+            "corrmatrix",
+            "x-ys-plot",
+           # "dim-red-plot",
+            "forestplot",
+            "wordcloud"]
+            
 fallbackType = "boxplot"
 requiredProps = {
     "lineplot":{"numericalCols":2,"categoricalCols":0},
@@ -17,7 +33,9 @@ requiredProps = {
     "violinplot":{"numericalCols":1,"categoricalCols":0},
     "countplot" : {"numericalCols":0,"categoricalCols":1},
     "x-ys-plot" : {"numericalCols":2,"categoricalCols":0},
-    "dim-red-plot": {"numericalCols":2,"categoricalCols":0}
+    "dim-red-plot": {"numericalCols":2,"categoricalCols":0},
+    "forestplot" : {"numericalCols":1,"categoricalCols":1},
+    "wordcloud" : {"numericalCols":0,"categoricalCols":1}
 }
 
 
@@ -35,7 +53,9 @@ plotTypeTooltips = {
     "countplot":"Countplot. Plots the categorical group sizes in combination of a barchart and a lineplot indicating groups.",
     "addSwarmplot":"Swarmplot. Adds datapoints to selected plot types. Compatible charts are: boxplot, violin and barplot.",
     "x-ys-plot":"XYs Plot. Plots data of column vs column.\nYou can choose to have a common x-axis or to use every second column.\nOpen Settings to see more options.",
-    "dim-red-plot" : "Dimensional reduction.\nAvailable methods: PCA"
+    "dim-red-plot" : "Dimensional reduction.\nAvailable methods: PCA",
+    "forestplot"   : "Forest plot. Calculates odds ratios and confidence interval.",
+    "wordcloud"   : "Word Cloud - Use categorical column to create a word cloud."
 }
 
 gridPosition = {
@@ -50,10 +70,13 @@ gridPosition = {
         "violinplot":(3,1),
         "swarmplot":(4,0),
         "addSwarmplot":(4,1),
-        "hclust":(5,0),
-        "corrmatrix":(5,1),
-        "dim-red-plot" : (6,0),
-        "countplot":(7,0)
+        "forestplot": (5,0),
+        "hclust":(6,0),
+        "corrmatrix":(6,1),
+        "dim-red-plot" : (7,0),
+        "countplot":(8,0),
+        "wordcloud" : (8,1)
+        
         }
 
 

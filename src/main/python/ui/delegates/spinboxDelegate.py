@@ -17,7 +17,6 @@ class SpinBoxDelegate(QStyledItemDelegate):
         r = option.rect.height()/2.5
         maxSize = self.parent().model().maxSize
         minSize = self.parent().model().minSize
-    
         value = index.model().data(index, Qt.EditRole)
         if minSize == maxSize:
             scaledR = r 

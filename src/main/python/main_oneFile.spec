@@ -4,9 +4,9 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['/Users/hnolte/Documents/GitHub/QTInstantClue/src/main/python'],
+             pathex=['/Users/hnolte/Documents/GitHub/instantclue/src/main/python'],
              binaries=[],
-             datas=[],
+             datas=[('/Users/hnolte/Documents/GitHub/instantclue/src/main/python/env/lib/python3.7/site-packages/wordcloud/STOPWORDS','/Users/hnolte/Documents/GitHub/instantclue/src/main/python/env/lib/python3.7/site-packages/wordcloud/STOPWORDS')],
              hiddenimports=['pynndescent','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils',
              				'scipy._lib.messagestream','numpy.random.common',

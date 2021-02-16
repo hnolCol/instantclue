@@ -2,36 +2,34 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from .utils import clearLayout, getStandardFont
-from ..utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ..delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ..utils import clearLayout, getStandardFont
+from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 import pandas as pd
 import numpy as np
 
-class ICLabelTable(ICColorSizeTableBase):
+class ICStatisticTable(ICColorSizeTableBase):
     
-    def __init__(self,header = "Labels", *args,**kwargs):
+    def __init__(self,*args,**kwargs):
 
-        super(ICLabelTable,self).__init__(*args,**kwargs)
-        self.selectionChanged.connect(self.updateLabelInGraph)
-        self.header = header
+        super(ICStatisticTable,self).__init__(*args,**kwargs)
+        self.selectionChanged.connect(self.updateStatsInGraph)
+        
         self.__controls()
         self.__layout()
 
     def __controls(self):
         ""
-        self.mainHeader = createTitleLabel(self.header,fontSize = 14)
+        self.mainHeader = createTitleLabel("Statistics",fontSize = 14)
         self.titleLabel = createLabel(text = self.title)
-        self.table = LabelTable(parent = self, mainController=self.mC)
-        df = pd.DataFrame(np.array([[1,3],[2,5]]))
-        self.model = LabelTableModel(parent=self.table,labels=df)
+        self.table = StatisticTable(parent = self, mainController=self.mC)
+        self.model = StatisticTableModel(parent=self.table)
         self.table.setModel(self.model)
-
-        #self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
-        self.table.resizeColumns()
-        #self.table.setItemDelegateForColumn(0,SpinBoxDelegate(self.table))
+       # self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
+       # self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        #self.table.resizeColumns()
+      
         
         
     def __layout(self):
@@ -41,82 +39,53 @@ class ICLabelTable(ICColorSizeTableBase):
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.table)
 
-    def hideLabel(self):
+    def resetSizeInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
         if exists:
-            columnName = self.model.getCurrentGroup()
-            graph.removeColumnNameFromTooltip(columnName)
-
-    def removeLabelsFromGraph(self):
+            graph.setHoverObjectsInvisible()
+            graph.resetSize()
+        
+    def updateStatsInGraph(self):
         ""
-        exists, graph =  self.mC.getGraph()
+        print("boom")
+
+    def toggleVisibility(self):
+        ""
+        exists, graph = self.mC.getGraph() 
+        internalID = self.table.model().getCurrentInternalID()
         if exists:
-           # columnName = self.model.getCurrentGroup()
-        #    print(columnName)
-            graph.removeAnnotationsFromGraph()
-            
-
-
-    def updateLabelInGraph(self):
+            graph.toggleStatVisibilityByInternalID(internalID)
+    
+    def removeStats(self):
         ""
-        exists, graph =  self.mC.getGraph()
-        try:
-            if exists:
-                print("upadintg this blody graph?")
-        except Exception as e:
-            print(e)
+        exists, graph = self.mC.getGraph() 
+        internalID = self.table.model().getCurrentInternalID()
+        if exists:
+            graph.removeStatsArtistsByInternalID(internalID)
 
-    def setLabelInAllPlots(self):
-        ""
-        exists, graph =  self.mC.getGraph()
-        try:
-            if exists:
-                graph.setLabelInAllPlots()
-        except Exception as e:
-            print(e)
-
-    def removeFromGraph(self):
-        ""
-        exists, graph =  self.mC.getGraph()
-        try:
-            if exists:
-                if self.header == "Labels":
-                    graph.removeLabels()
-                elif self.header == "Tooltip":
-                    graph.removeTooltip()
-                self.reset()
-        except Exception as e:
-            print(e)
-
-
-class LabelTableModel(QAbstractTableModel):
+class StatisticTableModel(QAbstractTableModel):
     
     def __init__(self, labels = pd.DataFrame(), parent=None):
-        super(LabelTableModel, self).__init__(parent)
+        super(StatisticTableModel, self).__init__(parent)
         self.initData(labels)
 
     def initData(self,labels):
-        
+
         self._labels = labels
         self._inputLabels = labels.copy()
-        self.setDefaultSize()
-
+        
     def rowCount(self, parent=QModelIndex()):
         
         return self._labels.index.size
 
     def columnCount(self, parent=QModelIndex()):
         
-        return 1
+        return 4
     
     def dataAvailable(self):
         ""
         return self._labels.index.size > 0 
-
-    def setDefaultSize(self,size=50):
-        ""
-        self.defaultSize = size
 
     def getDataIndex(self,row):
         ""
@@ -146,17 +115,16 @@ class LabelTableModel(QAbstractTableModel):
     def getCurrentGroup(self):
         ""
         mouseOverItem = self.parent().mouseOverItem
-       
-        
+     
         if mouseOverItem is not None:
-            return self._labels.iloc[mouseOverItem].loc["columnName"]
+            
+            return self._labels.iloc[mouseOverItem].loc["group"]
 
     def getCurrentInternalID(self):
         ""
         mouseOverItem = self.parent().mouseOverItem
         if mouseOverItem is not None and "internalID" in self._labels.columns: 
             return self._labels.iloc[mouseOverItem].loc["internalID"]
-
 
     def getItemChangedInternalID(self):
         ""
@@ -165,8 +133,7 @@ class LabelTableModel(QAbstractTableModel):
             
     def setData(self,index,value,role):
         ""
-        row = index.row()
-
+        row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
         if role == Qt.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
@@ -175,48 +142,57 @@ class LabelTableModel(QAbstractTableModel):
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
+        
+
 
     def data(self, index, role=Qt.DisplayRole): 
-        ""
-       
+        "Shows data"
         if not index.isValid(): 
 
             return QVariant()
-
-        elif role == Qt.EditRole:
-            return self._labels.iloc[index.row(),index.column()]
             
-        elif role == Qt.DisplayRole and index.column() == 0: 
+        elif role == Qt.DisplayRole: 
+
             return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
 
             return getStandardFont()
+        
+        elif role == Qt.ForegroundRole:
+            if "visible" in self._labels.columns:
+                if self._labels["visible"].iloc[index.row()]:
+                    return QColor("black")
+                else:
+                    return QColor("grey")                
+            return QColor("black")
 
         elif role == Qt.ToolTipRole:
-            dataIndex = self.getDataIndex(index.row())
-            if index.column() == 0:
-                return str(self._labels.iloc[index.row(),index.column()])
-            elif index.column() == 1:
-                return "kk"
+            
+            if "Group1" and "Group2" in self._labels.columns:
+                return "Comparision:\n{}\nvs\n{}".format(self._labels["Group1"].iloc[index.row()],self._labels["Group2"].iloc[index.row()])
+            return "This is a beatufil tooltip."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
-        
+
+            
     def flags(self, index):
         "Set Flags of Column"
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled 
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
+        
         self.initData(labels)
         self.completeDataChanged()
 
     def completeDataChanged(self):
         ""
+        
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
 
     def rowRangeChange(self,row1, row2):
@@ -235,11 +211,11 @@ class LabelTableModel(QAbstractTableModel):
 
 
 
-class LabelTable(QTableView):
+class StatisticTable(QTableView):
 
     def __init__(self, parent=None, rowHeight = 22, mainController = None):
 
-        super(LabelTable, self).__init__(parent)
+        super(StatisticTable, self).__init__(parent)
        
         self.setMouseTracking(True)
         self.setShowGrid(True)
@@ -247,11 +223,11 @@ class LabelTable(QTableView):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setVisible(False)
 
-        self.mC = mainController
+        self.mainController = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
 
-        
+        self.createMenu()
 
         self.rowHeight      =   rowHeight
         self.rightClick     =   False
@@ -269,23 +245,15 @@ class LabelTable(QTableView):
     def createMenu(self):
         ""
         menu = createSubMenu(None,[])
-        
-        menu["main"].addAction("Disable",self.parent().removeFromGraph)
-        
-        if self.parent().header == "Labels":
-            _, graph = self.mC.getGraph()
-            enabled = graph.isAnnotationInAllPlotsEnabled()
-            menu["main"].addAction("{} annotations in all subplots".format("Disable" if enabled else "Enable"),self.parent().setLabelInAllPlots)
-            menu["main"].addAction("Remove Labels",self.parent().removeLabelsFromGraph)
-            menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
-        else:
-            menu["main"].addAction("Hide selected label",self.parent().hideLabel)
-            
-
+        menu["main"].addAction("Show/Hide", self.parent().toggleVisibility)
+        menu["main"].addAction("Remove", self.parent().removeStats)
+        menu["main"].addAction("Save to xlsx", self.parent().saveModelDataToExcel)
+       
         self.menu = menu["main"]
     
     def leaveEvent(self,event=None):
         ""
+        
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
             prevMouseOver = int(self.mouseOverItem)
             self.mouseOverItem = None
@@ -319,14 +287,23 @@ class LabelTable(QTableView):
             if tableIndex is None:
                 return
             tableIndexCol = tableIndex.column()
+            if tableIndexCol == 0 and not self.rightClick: 
+                dataIndex = self.model().getDataIndex(tableIndex.row())
+                if not self.rightClick:
+                    return
+
+                else:
+                    return
+
+                self.sizeChangedForItem = tableIndex.row()
+                
+                self.parent().selectionChanged.emit()
+                self.model().rowDataChanged(tableIndex.row())
                 
                 
-            if tableIndexCol == 0 and self.rightClick:
+            elif self.rightClick:
                 #idx = self.model().index(0,0)
-                pos = QCursor.pos()
-                pos += QPoint(3,3)
-                self.createMenu()
-                self.menu.exec(pos)
+                self.menu.exec(QCursor.pos()+QPoint(2,2))
                 
                 self.rightClick = False
             else:
@@ -335,21 +312,17 @@ class LabelTable(QTableView):
         except Exception as e:
             print(e)
 
-    def getSize(self):
-        ""
-
     def mouseMoveEvent(self,event):
         
         ""
         if not self.model().dataAvailable():
             return
         rowAtEvent = self.rowAt(event.pos().y())
-
         if rowAtEvent == -1:
             self.mouseOverItem = None
         else:
             self.mouseOverItem = rowAtEvent
-        self.model().completeDataChanged()
+        self.model().rowDataChanged(rowAtEvent)
  
     def resizeColumns(self):
         ""

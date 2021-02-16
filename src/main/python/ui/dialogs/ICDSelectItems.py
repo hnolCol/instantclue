@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit
-from ..custom.TableViews.ICVSelectableTable import SelectablePandaModel, PandaTable
+from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
 from ..custom.buttonDesigns import ResetButton, AcceptButton, CheckButton
 import pandas as pd
 

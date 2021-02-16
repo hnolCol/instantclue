@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt5.QtCore import QRectF
 from PyQt5.QtGui import QColor, QBrush
 from matplotlib.colors import to_hex
-from matplotlib.pyplot import boxplot
+from matplotlib.pyplot import boxplot, stem
 #backend imports
 from backend.utils.stringOperations import getReadableNumber
 from ..utils.stringOperations import getMessageProps, getReadableNumber, getRandomString, mergeListToString
@@ -12,7 +12,7 @@ from ..utils.misc import scaleBetween, replaceKeyInDict
 from .postionCalculator import calculatePositions, getAxisPostistion
 
 from threadpoolctl import threadpool_limits
-
+from statsmodels.stats.contingency_tables import Table2x2
 #cluster
 import fastcluster
 import scipy.cluster.hierarchy as sch
@@ -31,6 +31,8 @@ import time
 import seaborn as sns 
 
 import numpy as np, scipy.stats as st
+
+from wordcloud import WordCloud
 
 def CI(a, ci = 0.95):
     a = a[~np.isnan(a)]
@@ -53,7 +55,9 @@ plotFnDict = {
     "histogram":"getHistogramProps",
     "countplot":"getCountplotProps",
     "x-ys-plot":"getXYPlotProps",
-    "dim-red-plot":"getDimRedProps"
+    "dim-red-plot":"getDimRedProps",
+    "forestplot" : "getForestplotProps",
+    "wordcloud"  : "getWordCloud"
 }
 
 line_kwargs = dict(linewidths=.45, colors='k')
@@ -109,8 +113,9 @@ class PlotterBrain(object):
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
         with threadpool_limits(limits=1, user_api='blas'): 
-            return getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
-
+            graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
+            graphData["plotType"] = plotType
+            return graphData
 
     def getCountplotProps(self,dataID, numericColumns, categoricalColumns):
         ""
@@ -677,6 +682,7 @@ class PlotterBrain(object):
         tickLabels = {}
         tickPositions = {}
         axisLabels = {}
+        hoverData = {}
         #
         lineKwargs = OrderedDict()
         errorKwargs = OrderedDict()
@@ -689,6 +695,8 @@ class PlotterBrain(object):
             axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
             colorList = self.sourceData.colorManager.getNColorsByCurrentColorMap(N=len(numericColumns))
             
+            hoverData[0] = rawData
+
             for n in axisPositions.keys():
                 columnMeans = rawData[numericColumns].mean().values
                 errorValues = [CI(rawData[columnName].dropna()) for columnName in numericColumns]
@@ -745,6 +753,7 @@ class PlotterBrain(object):
             colorGroups["internalID"] = [getRandomString() for n in range(nColorCats)]
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns)
             colorCategoricalColumn = categoricalColumns[0]
+            hoverData[0] = rawData 
             for n in axisPositions.keys():
                 columnMeans = [data[numericColumns[0]].mean() for groupName, data in groupByCatColumn]
                 errorValues = [CI(data[numericColumns[0]].dropna()) for groupName, data in groupByCatColumn]
@@ -806,6 +815,8 @@ class PlotterBrain(object):
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
 
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
+            hoverData[0] = rawData
+
             if np.isnan(maxErrorValue):
                 maxErrorValue = 0.05*maxValue
             colorCategoricalColumn = categoricalColumns[0]
@@ -928,6 +939,7 @@ class PlotterBrain(object):
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
                 axisLabels[n] = {"x":categoricalColumns[0],"y":numColumn}
+                hoverData[n] = rawData[numColumn]
             colorCategoricalColumn = categoricalColumns[1]
 
 
@@ -963,7 +975,7 @@ class PlotterBrain(object):
             
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
-            print(meanErrorData)
+            
             if np.isnan(maxErrorValue):
                 maxErrorValue = 0.05*maxValue
         
@@ -987,6 +999,7 @@ class PlotterBrain(object):
                     tickPositions[n] = tickPos
                     minX, maxX = np.min(tickPos), np.max(tickPos)
                     distance = np.sqrt(minX**2 + maxX**2) * 0.05
+                    hoverData[nAxis] = axisCatData
                     
                     axisLimits[nAxis] = {
                         "xLimit": (minX-distance,maxX+distance),
@@ -1058,6 +1071,7 @@ class PlotterBrain(object):
                 "dataColorGroups": colorGroups,
                 "subplotBorders":subplotBorders,
                 "colorCategoricalColumn" : colorCategoricalColumn,
+                "hoverData" : hoverData,
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
 
@@ -1390,6 +1404,138 @@ class PlotterBrain(object):
         ""
         return {"data":{}}
 
+
+    def getForestplotProps(self,dataID,numericColumns,categoricalColumns):
+        ""
+        tickLabels = {}
+        tickPositions = {}
+        axisLabels = {}
+        axisLimits = {}
+
+        axisLabelConverter = {
+                            "oddsRatio":"Odds ratio",
+                            "logOddsRatio":"log (Odds ratio)",
+                            "riskRatio": "Risk ratio"
+                            }
+
+        if not (len(numericColumns) > 0 and len(categoricalColumns) > 0):
+            return getMessageProps("Error ..","")
+        data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
+        plotData = OrderedDict() 
+
+        faceColors = dict()
+        useColorMap = self.sourceData.parent.config.getParam("forest.plot.use.colormap")
+        defaultColor = self.sourceData.parent.config.getParam("forest.plot.marker.color")
+        colorGroupsData = pd.DataFrame()
+        internalIDs = []
+
+        if  self.sourceData.parent.config.getParam("forest.plot.calculated.data"):
+            axisPositions = getAxisPostistion(1) 
+            #categorical columns -> names of variables -> yticks
+            categoricalData = data[categoricalColumns[0]].values.flatten()
+            colors, _ = self.sourceData.colorManager.createColorMapDict(categoricalData, as_hex=True)
+            
+            if useColorMap:
+                colorGroupsData["color"] = colors.values()
+            else:
+                colorGroupsData["color"] = [defaultColor] * categoricalData.size
+            colorGroupsData["group"] = categoricalData
+            tickLabels[0] = categoricalData
+            tickPositions[0] = np.arange(categoricalData.size)
+            axisLimits[0] = {"yLimit":[-0.5,categoricalData.size-0.5],"xLimit": None}
+            axisLabels[0] = {
+                        "x":numericColumns[0],
+                        "y":"Variables"
+                        }
+            
+            faceColors[0] = {}
+            if len(numericColumns) == 3:
+                    meanColumName,ci_lowerColumName, ci_upperColumName = numericColumns
+            else:
+                    meanColumName = numericColumns[0]
+                    ci_lowerColumName = None
+                    ci_upperColumName = None
+
+            plotData[0] = OrderedDict() 
+            for m,idx in enumerate(data.index):
+                
+                meanValue = data.loc[idx,meanColumName]  
+                rowName = categoricalData[m]
+                ci_lower = data.loc[idx,ci_lowerColumName]  if ci_lowerColumName is not None else np.nan
+                ci_upper = data.loc[idx,ci_upperColumName] if ci_upperColumName is not None else np.nan
+                internalID = getRandomString()
+                plotData[0][rowName] = {
+                            "ratio"  :   meanValue,
+                            "ratioCI":   (ci_lower, ci_upper),
+                            "yPosition":  m,
+                            "internalID" : internalID
+                        }
+                internalIDs.append(internalID)
+                if not useColorMap:
+                    faceColors[0][rowName] = defaultColor
+                else:
+                    faceColors[0][rowName] = colors[rowName]
+        else:
+
+            axisPositions = getAxisPostistion(len(numericColumns))
+            
+            colors, layer = self.sourceData.colorManager.createColorMapDict(categoricalColumns, as_hex=True)
+            if useColorMap:
+                colorGroupsData["color"] = colors.values()
+            else:
+                colorGroupsData["color"] = [defaultColor] * len(categoricalColumns)
+            colorGroupsData["group"] = categoricalColumns
+            for n,numericColumn in enumerate(numericColumns):
+                plotData[n] = OrderedDict()
+                for m,categoricalColumn in enumerate(categoricalColumns):
+
+                    ct=pd.crosstab(data[numericColumn],data[categoricalColumn])
+                    table = Table2x2(ct.values)
+                    internalID = getRandomString()
+                    
+                    plotData[n][categoricalColumn] = {
+                                        "oddsRatio"          :   table.oddsratio,
+                                        "oddsRatioCI"        :   table.oddsratio_confint(),
+                                        "oddsRatioPValue"    :   table.oddsratio_pvalue(),
+                                        "logOddsRatio"       :   table.log_oddsratio,
+                                        "logOddsRatioCI"     :   table.log_oddsratio_confint(),
+                                        "logOddsRatioP"      :   table.log_oddsratio_pvalue(),
+                                        "riskRatio"          :   table.riskratio,
+                                        "riskRatioCI"        :   table.riskratio_confint(),
+                                        "yPosition"          :   m,
+                                        "internalID"         :   internalID
+                                        }
+                    internalIDs.append(internalID)
+                tickLabels[n] = categoricalColumns
+                axisLabels[n] = {
+                        "x":axisLabelConverter[self.sourceData.parent.config.getParam("forest.plot.cont.table.ratio")],
+                        "y":"Variables"
+                        }
+                tickPositions[n] = np.arange(len(categoricalColumns))
+                axisLimits[n] = {"yLimit":[-0.5,len(categoricalColumns)-0.5],"xLimit": None}
+                
+                if not useColorMap:
+                    faceColors[n][categoricalColumn] = defaultColor
+                else:
+                    faceColors[n][categoricalColumn] = colors[rowName]
+
+        colorGroupsData["internalID"] = internalIDs
+
+            
+    
+        return {"data":{
+                    "plotData" : plotData,
+                    "axisPositions" : axisPositions,
+                    "tickLabels"    : tickLabels,
+                    "axisLabels"    : axisLabels,
+                    "tickPositions" : tickPositions,
+                    "axisLimits"    : axisLimits,
+                    "faceColors"    : faceColors,
+                    "dataColorGroups": colorGroupsData
+                    }
+                }
+        
+
     def getPCAProps(self,dataID,numericColumns,categoricalColumns):
         ""
         subplotBorders = dict(wspace=0.30, hspace = 0.30,bottom=0.15,right=0.95,top=0.95)
@@ -1448,6 +1594,8 @@ class PlotterBrain(object):
                 firstAxisRow = True
                 axisID = 0
                 plotNumericPairs = []
+
+                
 
                 if not self.plotAgainstIndex and len(numericColumns) > 1:
                     numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
@@ -1545,13 +1693,10 @@ class PlotterBrain(object):
 
                                     axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
                                     axisID += 1  
-
-                print(plotData)
+                else:
+                    return getMessageProps("Error ..","For Scatter plots only two categorical columns are considered. You can use color, size and marker highlights.")
                 
                 numericColumnPairs = plotNumericPairs
-                print(numericColumnPairs)
-
-                print(axisTitles)
                 data = plotData
                 
 
@@ -2347,16 +2492,68 @@ class PlotterBrain(object):
         
         return completeKwargs
 
+    def getWordCloud(self,dataID,numericColumns,categoricalColumns):
+        ""
+        
+        axisPostions = getAxisPostistion(1)
+        rawData = self.sourceData.getDataByColumnNames(dataID,categoricalColumns)["fnKwargs"]["data"]
+        config =  self.sourceData.parent.config
+        splitString = config.getParam("word.cloud.split_string")
+        cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
+        
+        #countedValues = rawData[categoricalColumns[0]].value_counts(normalize=True).to_dict()
+        #print(splitData)
+        
+        #print(countedValues)
+        
+        wc = WordCloud(
+            font_path = "Arial",
+            max_font_size = config.getParam("word.cloud.max_font_size"),
+            min_font_size = config.getParam("word.cloud.min_font_size"),
+            normalize_plurals = config.getParam("word.cloud.normalize_plurals"),
+            max_words = config.getParam("word.cloud.max_words"),
+            colormap = cmap, 
+            include_numbers = config.getParam("word.cloud.include_numbers"),
+            background_color = config.getParam("word.cloud.background_color"),
+            width = 1600, 
+            height = 800)
+
+        if config.getParam("word.cloud.categories_to_frequencies"):
+            
+            splitData = rawData[categoricalColumns[0]].astype("str").str.split(splitString, expand=True).values.flatten()
+            countedValues = pd.Series(splitData).value_counts(normalize=True).to_dict()
+            wordcloud = wc.generate_from_frequencies(countedValues)
+        else:
+            textInput = " ".join(rawData[categoricalColumns].values.flatten().astype(str))
+            wordcloud = wc.generate(textInput)
+
+        return {"data":{
+                "cloud":wordcloud,
+                "axisPositions":axisPostions}
+                }
+
     def getXYPlotProps(self,dataID,numericColumns,categoricalColumns):
         "Returns plot properties for a XY plot"
         colorGroupsData = pd.DataFrame() 
         axisLabels = {}
         axisLimits = {}
         linesByInternalID = {}
+        #
+        lines = {}
+        lineKwargs = {}
+        markerLines = {}
+        markerKwargs = {}
+        #
+        markerLine = None
+        markerProps = {}
 
+        #get raw data
         rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         config =  self.sourceData.parent.config
         
+
+        if config.getParam("xy.plot.stem.mode"):
+            stemBottom = config.getParam("xy.plot.bottom.stem")
         
         if config.getParam("xy.plot.against.index") or len(numericColumns) == 1:
             idxColumnName = "ICIndex_{}".format(getRandomString())#ensures that there are no duplicates
@@ -2366,6 +2563,7 @@ class PlotterBrain(object):
             numericColumnPairs = [(numericColumns[0],columnName) for columnName in numericColumns[1:]]
         else:
             numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
+        
         separatePairs = config.getParam("xy.plot.separate.column.pairs")
         axisPostions = getAxisPostistion(1 if not separatePairs else len(numericColumnPairs))
 
@@ -2374,34 +2572,74 @@ class PlotterBrain(object):
         colorGroupsData["color"] = colorValues
         colorGroupsData["group"] = ["{}:{}".format(*columnPair) if "ICIndex" not in columnPair[0] else "{}".format(columnPair[1]) for columnPair in numericColumnPairs]
         colorGroupsData["internalID"] = [getRandomString() for n in colorValues]
-        #
-        lines = {}
-        lineKwargs = {}
+        
         for n,columnPair in enumerate(numericColumnPairs):
             internalID = colorGroupsData["internalID"].iloc[n]
-            lineProps = dict(
-                    xdata = rawData[columnPair[0]].values,
-                    ydata = rawData[columnPair[1]].values,
-                    color = colorValues[n],
-                    markeredgecolor = "darkgrey",
-                    markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
-                    alpha = config.getParam("xy.plot.alpha"), 
-                    markersize = config.getParam("xy.plot.marker.size"),
-                    linewidth = config.getParam("xy.plot.linewidth"), 
-                    marker = config.getParam("xy.plot.marker") if config.getParam("xy.plot.show.marker") else "")
+            if config.getParam("xy.plot.stem.mode"):
+                
 
-            l = Line2D(**lineProps)
+                 #create LineCollections 
+                lineSegments = [[(x,stemBottom),(x,y)] for x,y in rawData[list(columnPair)].values]
+                lineProps = dict(
+                        linestyle = config.getParam("xy.plot.line.style"),
+                        segments = lineSegments, 
+                        color = colorValues[n],
+                        linewidth = config.getParam("xy.plot.linewidth"))
+
+                l = LineCollection(**lineProps)
+                if config.getParam("xy.plot.show.marker"):
+
+                    markerProps = dict(
+                        xdata = rawData[columnPair[0]].values,
+                        ydata = rawData[columnPair[1]].values,
+                        color = "None",
+                        markeredgecolor = "darkgrey",
+                        markerfacecolor = colorValues[n],
+                        markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
+                        alpha = config.getParam("xy.plot.alpha"), 
+                        markersize = config.getParam("xy.plot.marker.size"),
+                        linewidth = 0, 
+                        marker = config.getParam("xy.plot.marker"))
+
+                    markerLine = Line2D(**markerProps)
+                 #markerline, stemlines, baseline = stem(rawData[columnPair[0]].values,rawData[columnPair[1]].values, use_line_collection = True)
+
+            else:
+
+                lineProps = dict(
+                        xdata = rawData[columnPair[0]].values,
+                        ydata = rawData[columnPair[1]].values,
+                        color = colorValues[n],
+                        markeredgecolor = "darkgrey",
+                        markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
+                        alpha = config.getParam("xy.plot.alpha"), 
+                        markersize = config.getParam("xy.plot.marker.size"),
+                        linewidth = config.getParam("xy.plot.linewidth"), 
+                        marker = config.getParam("xy.plot.marker") if config.getParam("xy.plot.show.marker") else "")
+
+                l = Line2D(**lineProps)
+           
             
-            linesByInternalID[internalID] = l
+            if markerLine is not None:
+                linesByInternalID[internalID] = [l,markerLine]
+            else:
+                linesByInternalID[internalID] = l
             if not separatePairs:
                 if 0 not in lines:    
                     lines[0] = []
                     lineKwargs[0] = []
+                    markerLines[0] = []
+                    markerKwargs[0] = []
                 lines[0].append(l)
-                lineKwargs[0].append(lineProps)
+                lineKwargs[0].append({"ID":internalID,"props":lineProps})
+                markerLines[0].append(markerLine)
+                markerKwargs[0].append({"ID":internalID,"props":markerProps})
             else:
                 lines[n] = [l]   
-                lineKwargs[n] = [lineProps]   
+                lineKwargs[n] = [{"ID":internalID,"props":lineProps}]
+                markerKwargs[n] = [{"ID":internalID,"props":markerProps}]
+                markerLines[n] = [markerLine]
+
         
     
         if not separatePairs:
@@ -2412,9 +2650,8 @@ class PlotterBrain(object):
                 
             axisLimits[0] = {"xLimit": (xAxisMin,xAxisMax), "yLimit": (yAxisMin,yAxisMax)}
             
-            yAxisLabel = numericColumnPairs[0][1] if not (config.getParam("xy.plot.against.index") or len(numericColumns) == 1) else "Index"
             axisLabels[0] = {"x":numericColumnPairs[0][0],
-                            "y":numericColumnPairs[0][1]} if len(numericColumnPairs) == 1 else {"x":"Index","y":"y-value"}
+                            "y":numericColumnPairs[0][1]} if len(numericColumnPairs) == 1 else {"x":"Index","y":"Y-value"}
         else:
             
             for n, columnPair in enumerate(numericColumnPairs):
@@ -2435,7 +2672,11 @@ class PlotterBrain(object):
                     "colorCategoricalColumn": "Lines",
                     "axisLimits" : axisLimits,
                     "dataID" : dataID,
-                    "linesByInternalID": linesByInternalID
+                    "linesByInternalID": linesByInternalID,
+                    "markerKwargs": markerKwargs,
+                    "markerLines": markerLines,
+                    "numericColumnPairs" : numericColumnPairs,
+                    "hoverData" : rawData
                     }}
         
     def _getXYLimits(self,X,Y,marginFrac = 0.02):
@@ -2448,6 +2689,7 @@ class PlotterBrain(object):
         marginY = np.sqrt(maxY**2 + minY**2)
         yAxisMin,  yAxisMax = minY - marginY * marginFrac , maxY + marginY * marginFrac
         return xAxisMin, xAxisMax, yAxisMin, yAxisMax
+
 #  return {"data":{"plotData":plotData,
 #             "axisPositions":axisPostions, 
 #             "columnPairs":numericColumnPairs,

@@ -22,8 +22,9 @@ class BoxItem(PushHoverButton):
     def getWidthAndHeight(self):
         #get size
         font = self.getStandardFont()
-        self.width = QFontMetrics(font).width(self.itemName) + self.itemBorder
-        self.height = QFontMetrics(font).height() + self.itemBorder
+        fontMetric = QFontMetrics(font)
+        self.width = fontMetric.width(self.itemName) + self.itemBorder
+        self.height = fontMetric.height() + self.itemBorder
 
     def getRectProps(self,event):
         ""
