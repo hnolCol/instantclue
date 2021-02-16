@@ -1,9 +1,0 @@
-theme: jekyll-theme-minimal
-title: Instant Clue Docs
-description: Interactive Data Analysis and Visualization
-show_downloads: True
-navigation:
-  - title: Home
-    url: /
-  - title: Setup
-    url: setup

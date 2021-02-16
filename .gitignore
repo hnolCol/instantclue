@@ -1,3 +1,19 @@
 
-*.pyc
-/binaries
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.DS_Store
+
+pyinstaller-hooks
+
+build/
+dist/
+src/main/python/temp/
+src/website/
+*.tcl
+*.tcl
+*.zip
+src/main/python/dist/
+src/main/python/build/
+src/main/python/env
