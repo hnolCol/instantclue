@@ -724,7 +724,11 @@ class ICClustermap(ICChart):
         df["idx"] = dataIndexInClust
         df["x"] = coords[:,0]
         df["y"] = coords[:,1]
-        self.quickSelectScatterDataIdx[ax] = {"idxPosition":idxPosition,"dataIndexInClust":dataIndexInClust,"coords":df,"idx":dataIndexInClust}
+        self.quickSelectScatterDataIdx[ax] = {
+                                            "idxPosition":idxPosition,
+                                            "dataIndexInClust":dataIndexInClust,
+                                            "coords":df,
+                                            "idx":dataIndexInClust}
 
     def getQuickSelectDataIdxForExcelExport(self):
         ""

@@ -340,8 +340,8 @@ class CollapsableDataTreeView(QWidget):
     
     def openSGCCADialog(self,event=None):
         ""
-        dlg = ICMultiBlockSGCCA(mainController = self.mC)
-        dlg.exec_()
+        # dlg = ICMultiBlockSGCCA(mainController = self.mC)
+        # dlg.exec_()
 
     def showMenu(self,event=None):
         ""
@@ -351,7 +351,7 @@ class CollapsableDataTreeView(QWidget):
             if hasattr(sender,"mouseLostFocus"):
                 sender.mouseLostFocus()
 
-            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. ","Multi block analysis .."])
+            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. "])#,"Multi block analysis .."
             groupingNames = self.mC.grouping.getNames()
             groupSizes = self.mC.grouping.getSizes()
             if len(groupingNames) > 0:
@@ -368,7 +368,7 @@ class CollapsableDataTreeView(QWidget):
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)
 
-            if True:#self.mC.data.hasTwoDataSets():
+            if False:#self.mC.data.hasTwoDataSets():
                 action = menus["Multi block analysis .."].addAction("SGGCA",self.openSGCCADialog)
                 
             

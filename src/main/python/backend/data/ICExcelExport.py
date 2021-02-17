@@ -28,7 +28,7 @@ class ICHClustExporter(object):
        
             self.clusteredData = self.clusteredData.iloc[::-1]
             self.extraData = self.extraData.iloc[::-1]
-            self.columnHeaders.extend(["IC Cluster Index","IC Data Index","QuickSelect"])
+            self.columnHeaders.extend(["IC Cluster Index","IC Data Index"])
             if self.clusterLabels is not None:
                 self.clusterLabels = self.clusterLabels.loc[self.clusteredData.index]
             #reshape color array to fit.
@@ -62,9 +62,9 @@ class ICHClustExporter(object):
                         worksheet.write_number(nRow+1,nCol, self.clusteredData.index.values[nRow])
                     elif self.columnHeaders[nCol] == "IC Cluster Index":
                         worksheet.write_number(nRow+1,nCol,nRow)
-                    
                     elif self.columnHeaders[nCol] == "QuickSelect":
                         colorValue = self.extraData[self.columnHeaders[nCol]].iloc[nRow]
+                        
                         if colorValue != "":
                             worksheet.write_string(nRow+1,nCol,"+",workbook.add_format({"bg_color":colorValue}))
 

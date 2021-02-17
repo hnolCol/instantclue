@@ -11,7 +11,6 @@ from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
 from backend.data.ICGrouping import ICGrouping
-from backend.data.ICDataManager import ICDataManger
 from backend.filter.categoricalFilter import CategoricalFilter
 from backend.utils.funcControl import funcPropControl
 from backend.utils.misc import getTxtFilesFromDir

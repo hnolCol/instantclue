@@ -484,7 +484,7 @@ class DataCollection(object):
 		if quickSelectData is not None:
 			extraData["QuickSelect"] = np.full(extraData.index.size,"")
 			extraData.loc[quickSelectData[0]["dataIndexInClust"],"QuickSelect"] = [to_hex(c) for c in quickSelectData[1]]
-
+			columnHeaders.append("QuickSelect")
 		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors)
 		exporter.export()
 		

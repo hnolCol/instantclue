@@ -309,7 +309,7 @@ class DataHandleFrame(QFrame):
 
         if dataID is not None:
             baseFileName = self.mC.data.getFileNameByID(dataID)
-            baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),baseFileName)
+            
             if exportDataFormat == "txt":
                 fileDataFormat = "Text/CSV files (*.txt *.csv)"
             elif exportDataFormat == "xlsx":
@@ -321,7 +321,10 @@ class DataHandleFrame(QFrame):
                 #if user cancels file selection, return function
             else:
                 return
+            if not baseFileName.endswith(fileDataFormat):
+                baseFileName = "{}.{}".format(baseFileName,exportDataFormat)
 
+            baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),baseFileName)
             fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,fileDataFormat)
 
             if fname:

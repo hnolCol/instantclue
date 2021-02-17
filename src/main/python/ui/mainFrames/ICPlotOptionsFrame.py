@@ -402,6 +402,7 @@ class PlotOptionFrame(QWidget):
                 colorArray = graph.getColorArray()
                 clusteredData = graph.getClusteredData()
                 quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
+                
                 clusterLabels, clusterColors = graph.getClusterLabelsAndColor()
                 #print(clusterLabels, clusterColors)
                 dataID = self.mC.getDataID()

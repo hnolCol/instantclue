@@ -23,7 +23,7 @@ class QuickSelect(QWidget):
 
         self.setAcceptDrops(True)
         self.sendToThreadFn = sendToThreadFn
-        self.favSelection = FavoriteSelectionCollection()
+        self.favSelection = FavoriteSelectionCollection(mainController)
         self.mC = mainController
         self.quickSelectProps = {}
         self.hoverIdx = {}
@@ -318,7 +318,7 @@ class QuickSelect(QWidget):
     
     def colorLabelsByCluster(self,event=None):
         ""
-        print("cluuuuustering")
+        pass
 
     def colorLabelsByCategoricalColumn(self,event=None,categoricalColumn = None):
         #print("cat column")
@@ -565,8 +565,9 @@ class QuickSelect(QWidget):
 
 
 class FavoriteSelectionCollection(object):
-    def __init__(self):
-        self.pathToTemp = os.path.join(".","quickSelectLists")
+    def __init__(self, mainController):
+        self.mC = mainController
+        self.pathToTemp = os.path.join(self.mC.mainPath,"quickSelectLists")
         if not os.path.exists(self.pathToTemp):
             os.mkdir(self.pathToTemp)
 

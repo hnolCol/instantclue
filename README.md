@@ -17,18 +17,25 @@ The tool was developed to equip everyone with a tool that enables analysis and v
 
 Novel features incorporated into Instant Clue are listed below. Features that are under development are indicated.
 This list provides an overview about upcoming features. Release specific features are document for each release separately (GitHub Release Page).
+Please use the [discussion forum](https://github.com/hnolCol/instantclue/discussions) to suggest new features and/or discuss new plot types.
 
 - [x] QuickSelect and LiveGraph Widgets (interact with the main graph and with each other)
 - [x] User definable settings
 - [x] Responsive and modern User Interface (UI)
 - [x] Computational expensive tasks are computed on Thread 
-- [x] Improved saving of session issues: [12](https://github.com/hnolCol/instantclue/issues/12),[5](https://github.com/hnolCol/instantclue/issues/5)]
+- [x] Improved saving of session issues: [12](https://github.com/hnolCol/instantclue/issues/12),[5](https://github.com/hnolCol/instantclue/issues/5)
 - [x] Categorical values can now be encoded by different markers
 - [x] Categorical countplot. 
 - [x] Grouping of columns to perform row-wise statistical tests. Groups are highligted in dimensional reduction plots as well as correlation matrix plots.
-- [x] Export to markdown friendly string format and json file format of datasets.
+- [ ] Export to markdown friendly string format and json file format of datasets.
 - [ ] Creating log (saving version and processing of data as well as creation of charts)
-- [ ] MainFigure Icons Update (responsive)
+- [x] MainFigure Icons Update (responsive)
+
+## Quick Select and Live Graph Widget
+
+The two newly implemented widgets "QuickSelect" and "LiveGraph" intend to accelarete visual anlytics in InstantClue. An illustration of the functionality is shown below and [this video]() demonstrates usage. 
+
+<img src="/img/QuickSelectLiveGraph.png" width="60%">
 
 ## New plot types
 
@@ -37,29 +44,29 @@ There are several new plot types included in the new version of Instant Clue.
 #### Categorical Countplot
 
 The countplot can only be used with categorical columns (anythin that is not an integer or float). In case of a single categorical column, the countplot displays the occurance of each unique value. The countplot is particular useful, when using multiple categorical colums, each combination of unique values in all columns is considered and displayed. The combinations are indicated by connecting categorical values below the barplot (see example below). Of note, the QuickSelect (see below) works with the countplot in such way, that hovering over the connection lines, will show the underlying rows in the QuickSelect widget.
-An example is shown below using the TutorialData02.txt finding the overlap of mitochondrial proteins and proteins that were found to be significantly regulated. 
+An example is shown below using the TutorialData02.txt finding the overlap of mitochondrial proteins and proteins that were found to be significantly regulated. To find the mitochondrial proteins, drag & drop the column header "GOCC name" to the filter icon, and type "mitochondrion" into the search field. Select the GO term and click the check button. A new columns is created assigning rows containing the category "mitochondrion" by a "+" sign. Drag & Drop the columns "t-test SignificantS277A_CTRL" and "mitochondrion:GOCC name" to the reviever box (Catgerories) and the countplot shown below appears.
 
-<img src="/img/countplot.png" height="55%" width="55%">
+<img src="/img/countplot.png" width="30%">
 
 #### WordCloud
 
-The word cloud is generate based on the [wordcloud package](https://github.com/amueller/word_cloud). If you are using this type of chart, please acknowledge amueller's (Andreas Mueller) work. WordClouds have become less on-vogue but many users requested this type of chart. Input is a simple categorical column. You can find unique values by spliting the text in each row first using a specific string (customizable in the settings) or just merge the text to each other. 
+The word cloud is generate based on the [wordcloud package](https://github.com/amueller/word_cloud). If you are using this type of chart, please acknowledge amueller's (Andreas Mueller) work. WordClouds have become less on-vogue but many users requested this type of chart. Input is a simple categorical column. You can find unique values by spliting the text in each row first using a specific string (customizable in the settings) or just merge the text to each other. An idea would be to visualize occurance of GO terms (but any other text like data can be used) as shown below. 
+
+<img src="/img/wordcloud.png" width="30%">
 
 #### Fosterplot 
 
 The foster plot (blobbogram) is a widely used plot type in metanalysis. The [wikipedia](https://en.wikipedia.org/wiki/Forest_plot)] website hosts useful information.
 
 
-
 #### Dimensional Reduction Plot
 
 Coming soon - under development.
 
-### Quick Select and Live Graph Widget
 
-The two newly implemented widgets "QuickSelect" and "LiveGraph" intend to accelarete visual anlytics in InstantClue. An illustration of the functionality is shown below and [this video]() demonstrates usage. 
+#### Cluster plot 
 
-<img src="/img/QuickSelectLiveGraph.png" width="60%">
+Coming soon - under development. 
 
 
 ## Issues
@@ -69,9 +76,7 @@ Please report Issues and Bugs using the GitHub issue functionality.
 [![GitHub issues](https://img.shields.io/github/issues-closed/Naereen/StrapDown.js.svg)](https://github.com/hnolCol/instantclue/issues)
 
 Issues that are currently taken care of:
-- [ ] 
-- [ ] 
-- [ ]
+- []
 
 
 ## Tutorials

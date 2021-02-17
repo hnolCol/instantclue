@@ -186,12 +186,20 @@ class MainFigureRegistry(object):
         for figID, axes in self.mainFigureTemplates.items():
             for axisID,axisProps in axes.items():
                 action = menus["F{}".format(figID)].addAction("axis({}:{})".format(axisID,axisProps["axisLabel"]))
-                action.triggered.connect(lambda _,ax = axisProps["ax"],figID = figID : actionFn(ax,figID)) 
+                action.triggered.connect(lambda _,ax = axisProps["ax"],figID = figID , exportAxisID = axisID: actionFn(ax,figID,exportAxisID=exportAxisID)) 
         return menus
         
     def updateFigure(self, figID):
         if figID in self.mainFigures:
             self.mainFigures[figID]['template'].updateFigure.emit()
+
+    def replotLabel(self, figID, axisID):
+        ""
+        if figID in self.mainFigures:
+            
+            ax = self.mainFigureTemplates[figID][axisID]["ax"]
+            label = self.mainFigureTemplates[figID][axisID]["axisLabel"]
+            self.mainFigures[figID]['template'].addAxisLabel(ax,axisID,label)
 
     #def getMenu(self):
             
@@ -467,7 +475,7 @@ class MainFigure(QDialog):
         self.mainFigureCollection.update_params(self.figureID,axisID = axisID, how='clear')
         self.checkForAssociationsAndRemove((axisID))
         self.figureProps[axisID]['ax'].clear()
-        self.clear_axis(self.figureProps[axisID]['ax'])
+       # self.clear_axis(self.figureProps[axisID]['ax'])
         self.updateFigure.emit()
 
     def clearDicts(self):
@@ -496,10 +504,10 @@ class MainFigure(QDialog):
 
     def createMenu(self):
         ""
-        actionNameFn = [("Clear",self.clearAxis),("Delete",self.deleteAxis)]
+        actionNameFn = [("Clear",self.clearAxis)] #,("Delete",self.deleteAxis)
         actionNameFnLegend = [("Delete",self.removeLegend)]
 
-        menu = createSubMenu(subMenus=["Legend","Axis Limits","Transfer to.."])
+        menu = createSubMenu(subMenus=["Legend"])#,"Axis Limits","Transfer to.."
         menu["main"].addMenu(menu["Legend"])
 
         for name, fn in actionNameFnLegend:
@@ -588,15 +596,13 @@ class MainFigure(QDialog):
         ""
         menu = createMenu(parent=self)
         for axisID, aixsParams in self.figureProps.items():
-            action = menu.addAction("Axis id = {} label = {}".format(axisID,aixsParams['axisLabel']))
+            action = menu.addAction("AxisID = {} Label = {}".format(axisID,aixsParams['axisLabel']))
             action.triggered.connect(lambda _,axisID = axisID: self.deleteAxis(axisID = axisID))
         if hasattr(self.sender(),"mouseLostFocus"):
             self.sender().mouseLostFocus()
         senderGeom = self.sender().geometry()
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
         menu.popup(bottomLeft)
-        
-
 
     def update(self,event=None):
         ""

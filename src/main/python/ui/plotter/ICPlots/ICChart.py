@@ -1093,13 +1093,14 @@ class ICChart(QObject):
 		""
 		return self.mC.mainFrames["data"].qS.hasData()
 
-	def mirrorAxis(self,targetAx, figID, sourceAx = None):
+	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
 		try:
 			markerLegend, sizeLegend, colorLegend, quickSelectLegend = None, None, None, None
 			if sourceAx is None and hasattr(self,"menuClickedInAxis"):
 
 				sourceAx = self.menuClickedInAxis
+			
 			axisID = self.getAxisID(sourceAx)
 			targetAx.clear() 
 
@@ -1133,6 +1134,7 @@ class ICChart(QObject):
 
 			self.mirrorQuickSelectArtists(axisID,targetAx)
 			self.mirrorLimits(sourceAx,targetAx) #deal with user zoom
+			self.mC.mainFrames["right"].mainFigureRegistry.replotLabel(figID,exportAxisID)
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
 
 		except Exception as e:
