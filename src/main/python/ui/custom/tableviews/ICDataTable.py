@@ -44,7 +44,7 @@ class PandaTableDialog(QDialog):
         ""
         self.headerLabel = createTitleLabel(self.headerLabelText, fontSize=12)
         self.table = PandaTable(parent= self, mainController = self.mC) 
-        self.model = PandaModel()
+        self.model = PandaModel()#PandaModel()
         self.table.setModel(self.model)
 
         if self.addToMainDataOption:

@@ -16,6 +16,8 @@ from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
 from ..utils import removeFileExtension, areFilesSuitableToLoad, createLabel
 from ..custom.warnMessage import WarningMessage
+
+
 import os
 import pandas as pd
 import numpy as np
@@ -115,8 +117,6 @@ class DataHandleFrame(QFrame):
         self.setMidLineWidth(2)
         
 
-       # self.setStyleSheet("""QFrame {background-color: #E8E8E8;margin:1px; border:1px solid black}""")
-
     def __controls(self):
         self.bigFrame = QFrame(self)
         self.bigFrame.setLayout(QVBoxLayout())
@@ -146,7 +146,11 @@ class DataHandleFrame(QFrame):
             callback = self.subsetData,
             getDragType= self.getDragType,
             acceptDrops= True,
-            tooltipStr = "Drop categorical columns to split data on unique values.\nNaN Object String ('-') will be ignored.")
+            tooltipStr = """Drop categorical columns to split data on unique values.
+                            NaN Object String ('-') will be ignored by default."\n
+                            Can be controlled using the parameter 'data.quick.subset.ignore.nanString' in 'Data Settings'"""
+            )
+
         
         vbox1.addWidget(loadDataButton)
         #vbox1.addWidget(addDataButton)

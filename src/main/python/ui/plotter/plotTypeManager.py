@@ -42,7 +42,7 @@ requiredProps = {
 
 plotTypeTooltips = {
     "lineplot":"Profile plot. Plots column data versus the row index.\nData are represented by the median (line with markers) and the first (0.25) and third (0.75) quantiles displayed as an area.",
-    "pointplot":"Plots a pointplot showing the covidence interval by default. The error bar calculation can be defined in the context menu.",
+    "pointplot":"Plots a pointplot showing the confidence interval by default. The error bar calculation can be defined in the context menu.",
     "scatter":"Scatter plot. Requires at least 2 numerical columns.",
     "histogram":"Density plot showing the distribution of numerical columns.\nAdding categorical columns will split the distributions. Several configuration options are available (Configuration)",
     "boxplot":"Plots a boxplot. Whiskers indicate min/max ignorng outliers.\nOutliers are ommitted if more than 20 boxes have to be plotted.",

@@ -11,7 +11,6 @@ class ICDSelectItems(QDialog):
     def __init__(self, data = pd.DataFrame(), *args, **kwargs):
         super(ICDSelectItems, self).__init__(*args, **kwargs)
     
-        
         self.data = data
         self.__windowUpdate()
         self.__controls()

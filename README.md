@@ -46,13 +46,13 @@ There are several new plot types included in the new version of Instant Clue.
 The countplot can only be used with categorical columns (anythin that is not an integer or float). In case of a single categorical column, the countplot displays the occurance of each unique value. The countplot is particular useful, when using multiple categorical colums, each combination of unique values in all columns is considered and displayed. The combinations are indicated by connecting categorical values below the barplot (see example below). Of note, the QuickSelect (see below) works with the countplot in such way, that hovering over the connection lines, will show the underlying rows in the QuickSelect widget.
 An example is shown below using the TutorialData02.txt finding the overlap of mitochondrial proteins and proteins that were found to be significantly regulated. To find the mitochondrial proteins, drag & drop the column header "GOCC name" to the filter icon, and type "mitochondrion" into the search field. Select the GO term and click the check button. A new columns is created assigning rows containing the category "mitochondrion" by a "+" sign. Drag & Drop the columns "t-test SignificantS277A_CTRL" and "mitochondrion:GOCC name" to the reviever box (Catgerories) and the countplot shown below appears.
 
-<img src="/img/countplot.png" width="30%">
+<img src="/img/countplot.png" width="50%">
 
 #### WordCloud
 
 The word cloud is generate based on the [wordcloud package](https://github.com/amueller/word_cloud). If you are using this type of chart, please acknowledge amueller's (Andreas Mueller) work. WordClouds have become less on-vogue but many users requested this type of chart. Input is a simple categorical column. You can find unique values by spliting the text in each row first using a specific string (customizable in the settings) or just merge the text to each other. An idea would be to visualize occurance of GO terms (but any other text like data can be used) as shown below. 
 
-<img src="/img/wordcloud.png" width="30%">
+<img src="/img/wordcloud.png" width="50%">
 
 #### Fosterplot 
 

@@ -562,9 +562,10 @@ class BigPlusButton(PushHoverButton):
     The PushHoverButton Class provides Function 
     for style such as the Font for mainLabel.
     """
-    def __init__(self,parent=None,buttonSize=None,**kwargs):
+    def __init__(self,parent=None,buttonSize=None,strokeWidth = 4,**kwargs):
         super(BigPlusButton,self).__init__(parent, acceptDrops = False,**kwargs)
         self.buttonSize = buttonSize
+        self.strokeWidth = strokeWidth
         
     def sizeHint(self):
         ""
@@ -584,7 +585,7 @@ class BigPlusButton(PushHoverButton):
         
         painter = QPainter(self)
         pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#397546"))
-        pen.setWidthF(4)
+        pen.setWidthF(self.strokeWidth)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)
 
@@ -1037,19 +1038,17 @@ class LabelButton(PushHoverButton):
         super().paintEvent(event)
         painter = QPainter(self)
         pen = QPen(QColor("black"))
-        font = QFont("Arial")
-        font.setPointSize(8)
+
         #font.setCapitalization(QFont.SmallCaps)
-        painter.setFont(font)
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)
         
         b = QBrush(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#2776BC"))
-
+        painter.setFont(self.getStandardFont(fontSize=8))
+        #painter.setFont(self.getStd
         #draw sublabel
         painter.drawText(QPointF(x0+0.5*r,y0-h/5),"text")
-
         #draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
@@ -1829,7 +1828,6 @@ class PlotTypeButton(PushHoverButton):
                             "violinplot"    :   self.drawViolinPlots,
                             "swarmplot"     :   self.drawSwarm,
                             "corrmatrix"    :   self.drawCorrMatrix,
-                            "countplot"     :   self.drawCountPlot,
                             "x-ys-plot"     :   self.drawXYPlot,
                             "addSwarmplot"  :   self.drawSwarmAdd,
                             "dim-red-plot"  :   self.drawDimRed,

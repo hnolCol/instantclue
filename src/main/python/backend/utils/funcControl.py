@@ -264,6 +264,13 @@ funcPropControl = {
             "completedRequest":
                     [sendMessageProps]
         },
+    "data::rowWiseCalculations":
+        {
+            "threadRequest":{"obj":"data","fn":"rowWiseCalculations","requiredKwargs":["dataID","calculationProps"]},
+            "completedRequest":
+                    refreshColumnView
+        },
+        
     "data::countNaN":
         {
             "threadRequest":{"obj":"data","fn":"countNaN","requiredKwargs":["dataID","columnNames"]},
@@ -347,7 +354,13 @@ funcPropControl = {
                 refreshColumnView
         },
 
-        
+    "filter::subsetShortcut":
+        {
+            "threadRequest":{"obj":"categoricalFilter","fn":"subsetDataOnShortcut","requiredKwargs":["dataID","columnNames","how","stringValue"]},
+            "completedRequest":[
+                {"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"],"optionalKwargs":["selectLastDf"]},
+                sendMessageProps]
+        },
 
     "filter::splitDataFrame":
         {
@@ -587,7 +600,12 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView 
         },
-        
+     "stats::multipleTesting":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runMultipleTestingCorrection","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                    refreshColumnView 
+        },   
     "stats::runKMeans":
         {
             "threadRequest":{"obj":"statCenter","fn":"runKMeans","requiredKwargs":["dataID","columnNames"]},

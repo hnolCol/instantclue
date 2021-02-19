@@ -17,20 +17,6 @@ contextMenuData = OrderedDict([
             ("copyData",{"label":"Copy Data Frame","fn":"copyDf"})
         ])
 
- 
-class HeaderViewFilter(QObject):
-    def __init__(self, parent, header, *args):
-        super(HeaderViewFilter, self).__init__(parent, *args)
-        self.header = header
-
-    def eventFilter(self, object, event):
-        if event.type() == QEvent.MouseMove:
-            logicalIndex = self.header.logicalIndexAt(event.pos())
-            print(logicalIndex)
-            # you could emit a signal here if you wanted
-            return True
-        return False
-
 
 
 class PandaTable(QTableView):
@@ -250,7 +236,7 @@ class PandaModel(QAbstractTableModel):
         font = QFont()
         font.setFamily("Arial")
         font.setWeight(300)
-        font.setPointSize(9)
+        font.setPointSize(7)
         return font
 
     def getRowDataIndexByTableIndex(self,index):
@@ -389,6 +375,125 @@ class SelectablePandaModel(PandaModel):
             return Qt.ItemIsUserCheckable | Qt.ItemIsEnabled #|  Qt.ItemIsEnabled |  
         else:
             return Qt.ItemIsEnabled #| Qt.ItemIsSelectable
+
+    def updateDataByBool(self, boolIndicator,resetData):
+        ""
+        if resetData:
+            self.df = self._df
+        if self.df.index.size == boolIndicator.size:
+            self.df = self.df[boolIndicator]
+            self.completeDataChanged()
+
+
+
+class MultiColumnSelectablePandaModel(PandaModel):
+
+    def __init__(self, *args, **kwargs):
+
+        super(MultiColumnSelectablePandaModel,self).__init__(*args, **kwargs)
+        self.setCheckedSeries()
+    
+    def initData(self,df):
+        self.df = df
+        self._df = self.df.copy()
+
+    def data(self, index, role=Qt.DisplayRole): 
+        ""
+        # use default display and font role for consistedn look
+        if not index.isValid(): 
+            return QVariant()
+        elif role == Qt.DisplayRole:
+            if pd.isna(self.df.iloc[index.row(),index.column()]):
+                return QVariant()
+            else:
+                return str(self.df.iloc[index.row(),index.column()])
+        
+        elif role == Qt.FontRole:
+            return self.getFont()
+        
+        elif role == Qt.CheckStateRole:
+            if pd.isna(self.df.iloc[index.row(),index.column()]):
+                return QVariant()
+            if self.getCheckStateByTableIndex(index):
+                return Qt.Checked
+            else:
+                return Qt.Unchecked
+        elif role == Qt.BackgroundRole:
+            if self.getCheckStateByTableIndex(index) or \
+                (self.parent() is not None and self.parent().highlightRow is not None and self.parent().highlightRow == index.row()):
+
+                return QBrush(QColor(HOVER_COLOR))
+            else:
+                return QBrush(QColor("white"))
+       
+    def setData(self,index,value,role):
+
+        if role != Qt.CheckStateRole:
+            #use default setData
+            return super().setData(index,role)
+
+        if role == Qt.CheckStateRole:
+            #this model uses first column to check complet row
+            indexBottomRight = self.index(index.row(),self.columnCount())
+            self.setCheckState(index)
+            self.dataChanged.emit(index,indexBottomRight)
+            return True
+
+    def getCheckStateByDataIndex(self,dataIndex,columnName):
+        "Returns current check state by data row index"
+        return self.checkedLabels[columnName].loc[dataIndex] == 1
+
+    def getCheckStateByTableIndex(self,tableIndex):
+        "Returns current check state by table index"
+        dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
+        columnName = self.getColumnNameByTableIndex(tableIndex)
+        return self.getCheckStateByDataIndex(dataIndex,columnName)
+
+    def getCheckedData(self):
+        "Returns checked values"
+        checkedValues = OrderedDict() 
+        for columnName in self.df.columns:
+            boolInd = self.checkedLabels[columnName] == 1
+            if np.any(boolInd):
+                checkedValues[columnName] = self._df.loc[boolInd,columnName].values.flatten()
+        return checkedValues
+
+    def setCheckState(self,tableIndex):
+        "Sets check state by table index."
+        dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
+        columnName = self.getColumnNameByTableIndex(tableIndex)
+        newState = not self.checkedLabels[columnName].loc[dataIndex]
+        self.checkedLabels.loc[dataIndex,columnName] = newState
+        return newState
+
+    def setCheckStateByDataIndex(self,dataIndex):
+        ""
+        matchedIdx = dataIndex.intersection(self.checkedLabels.index)
+        self.checkedLabels.loc[matchedIdx] = 1 
+
+    def setCheckedSeries(self):
+        ""
+        if self.rowCount() == 0:
+            self.checkedLabels = pd.DataFrame()
+        else:
+            self.checkedLabels = pd.DataFrame(np.zeros(shape=(self.rowCount(),self.columnCount())), index=self._df.index, columns=self._df.columns)
+            self.checkedLabels = self.checkedLabels.astype(bool)
+
+    def setAllCheckStates(self,newState):
+        ""
+        if newState:
+            self.checkedLabels = pd.DataFrame(np.ones(shape=(self.rowCount(),self.columnCount())), index=self._df.index, columns=self._df.columns)
+            self.checkedLabels = self.checkedLabels.astype(bool)
+        else:
+            self.setCheckedSeries()
+
+
+    def flags(self,index):
+        if pd.isna(self.df.iloc[index.row(),index.column()]):
+            return Qt.ItemIsEnabled
+        else:
+            return Qt.ItemIsUserCheckable | Qt.ItemIsEnabled #|  Qt.ItemIsEnabled |  
+        
 
     def updateDataByBool(self, boolIndicator,resetData):
         ""

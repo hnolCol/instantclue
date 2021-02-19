@@ -13,7 +13,9 @@ OPERATOR_OPTIONS = ["and","or"]
 funcFilter = {"Between":"findBetweenIndicies",
               "Not between":"findNotBetweenIndicies",
               "Greater than": "findGreaterThanIndicies",
+              "Greater Equal than" : "findGreaterThanIndicies",
               "Smaller than": "findSmallerThanIndicies",
+              "Smaller Equal than": "findSmallerThanIndicies",
               "n largest": "findNLargestIndices",
               "n smallest": "findNSmallestIndices"}
 
@@ -71,13 +73,19 @@ class NumericFilter(object):
     def findGreaterThanIndicies(self,data,props):
         ""
         value = props["max"]
-        boolIdx = data > value
+        if "Equal" in props["filterType"]:
+            boolIdx = data >= value
+        else:
+            boolIdx = data > value
         return data.index[boolIdx]
 
     def findSmallerThanIndicies(self,data,props):
         ""
         value = props["min"]
-        boolIdx = data < value
+        if "Equal" in props["filterType"]:
+            boolIdx = data <= value
+        else:
+            boolIdx = data < value
         return data.index[boolIdx]
 
     def getOperator(self):

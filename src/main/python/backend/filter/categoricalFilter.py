@@ -23,6 +23,26 @@ class CategoricalFilter(object):
                             False: self.sourceData.replaceObjectNan}
 
 
+    def annotateCategories(self,dataID,columnNames,searchString, operator = "and", splitString = None, inputIsRegEx=False):
+        ""
+        #search string is a dict (columnName -> categories)
+        resultsCollection = pd.DataFrame(columns = columnNames)
+        for columnName in columnNames:
+            
+            boolIndicator = self.searchCategory(dataID,columnName,searchString[columnName],splitString,inputIsRegEx)
+            resultsCollection[columnName] = boolIndicator
+
+        if operator == "and":
+            boolIdx = np.sum(resultsCollection.values,axis=1) == len(columnNames)
+        else:
+            boolIdx = np.sum(resultsCollection.values,axis=1) > 0
+
+        annotationColumn = pd.Series(boolIdx).map(self.replaceDict)
+        #generate new columnName
+        columnStr = mergeListToString([mergeListToString(v,",") for v in searchString.values()])
+        annotationColumnName = "{}:({}):({})".format(columnStr,operator,mergeListToString(columnNames))
+        return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
+
     def annotateCategory(self,dataID,columnName,searchString, splitString = None, inputIsRegEx=False):
         ""
 
@@ -106,6 +126,9 @@ class CategoricalFilter(object):
 
         if isinstance(searchString, str):
             searchString = [searchString]
+
+        if isinstance(searchString,np.ndarray):
+            searchString = searchString.tolist()
         
         if len(searchString) == 0:
             
@@ -227,19 +250,25 @@ class CategoricalFilter(object):
         # use class splitString if None given
         if splitString is None:
             splitString = self.splitString
-        if filterType not in ["category","string"]:
+        if filterType not in ["category","string","multiColumnCategory"]:
             return getMessageProps("Error ..","Unknown filter type selected.")
 
         #if more than one columnName is given, only string type filtering works
         if len(columnNames) > 1 and filterType == "category":
-            filterType = "string"
+            filterType = "multiColumnCategory"
         
         if filterType == "string":
             
             searchData = self.sourceData.dfs[dataID][columnNames]
 
-        else:
+        elif filterType == "multiColumnCategory":
+            uniqueCategoriesPerColumn = [self.getUniqueCategories(dataID, columnName, splitString).reset_index(drop=True) for columnName in columnNames]
+            searchData = pd.concat(uniqueCategoriesPerColumn,ignore_index=True,axis=1)
+            searchData.columns = columnNames
+           
+        elif filterType == "category":
             searchData = self.getUniqueCategories(dataID, columnNames, splitString)
+
         # if error, get unique categories returns dict
         if isinstance(searchData,dict):
         
@@ -249,7 +278,8 @@ class CategoricalFilter(object):
             self.liveSearchData = searchData
             self.filterProps = {"type":filterType,"dataID":dataID,"columnNames":columnNames,"splitString":splitString}
             self.savedLastString = ''
-            return getMessageProps("Done ..","Live filter setup done.")
+            return filterType
+            
 
     def liveStringSearch(self,searchString, updatedData = None,forceSearch = False, inputIsRegEx = False, caseSensitive = False):
         ""
@@ -315,16 +345,24 @@ class CategoricalFilter(object):
             return {"boolIndicator":boolInd,"resetData":resetDataInView}
         return getMessageProps("Filter not initialized","Filter not yet init.")	
 			
-    def applyLiveFilter(self, searchString = None, caseSensitive = True, annotateSearchString = False, inputIsRegEx = False, firstMatch = True):
+    def applyLiveFilter(self, searchString = None, caseSensitive = True, annotateSearchString = False, inputIsRegEx = False, firstMatch = True, operator = "and"):
         ""
         try:
             
-            if hasattr(self,"filterProps") and self.filterProps["type"] in ["category","string"]:
+            if hasattr(self,"filterProps") and self.filterProps["type"] in ["category","string","multiColumnCategory"]:
                 
                 if searchString is None:
                     searchString = self.savedLastString
-                
-                if self.filterProps["type"] == "category":
+
+                if self.filterProps["type"] == "multiColumnCategory":
+                    requestResponse = self.annotateCategories(
+                            searchString = searchString,
+                            dataID = self.filterProps["dataID"],
+                            columnNames = self.filterProps["columnNames"],
+                            splitString = self.filterProps["splitString"],
+                            operator = operator)
+
+                elif self.filterProps["type"] == "category":
                     
                     requestResponse = self.annotateCategory(
                             searchString = searchString,
@@ -353,16 +391,82 @@ class CategoricalFilter(object):
             del self.filterProps
         self.savedLastString = ''
 
+    def subsetDataOnShortcut(self,dataID,columnNames,how="keep",stringValue=""):
+        ""
+        config = self.sourceData.parent.config
+        if dataID in self.sourceData.dfs:
+            data = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
+            operator =  config.getParam("data.shortcut.subset.operator")
+            #find bool matches
+            boolIdx = data == stringValue
+            boolSum = np.sum(boolIdx,axis=1)
+            #handle multiple columns
+            if data.columns.size == 1:
+                #ignore operatre of column  == 1
+                boolCombined = boolSum == 1
+            elif operator == "and":
+                boolCombined = boolSum == data.columns.size
+            elif operator == "or":
+                boolCombined = boolSum > 0
+            #handle how parameter, if how == remove, reverse bools
+            if how == "keep":
+                idx = data.loc[boolCombined].index
+            else:
+                idx = data.loc[~boolCombined].index
+            #get original file name
+            fileName = self.sourceData.getFileNameByID(dataID)
+            subsetName = "{}({}):({})".format(stringValue,how,fileName)
+            return self.sourceData.subsetDataByIndex(dataID,idx,subsetName)
+        else:
+            return getMessageProps("Error..","DataID not found.")
+#search string is a dict (columnName -> categories)
 
-    def subsetData(self,dataID = None ,columnName = None ,searchString = None, splitString = None, inputIsRegEx=False):
-        "Splits Dataset based on categroy in a certain column"
+    def subsetDataOnMultiCategory(self,dataID = None, columnNames = None ,searchString = None, splitString = None, operator = "and"):
+        
+        if dataID is None:
+            dataID = self.filterProps["dataID"]
+
+        if columnNames is None:
+            columnNames = self.filterProps["columnNames"]
+        #find categories in respective columns
+        columnNames = [colName for colName in columnNames if colName in searchString]
+        if len(columnNames) == 0:
+            return getMessageProps("Error..","Do not know what to do.")
+        resultsCollection = pd.DataFrame(columns = columnNames)
+
+        for columnName in columnNames:
+            boolIndicator = self.searchCategory(dataID,columnName,searchString[columnName],splitString,False)
+            if not isinstance(boolIndicator,dict): #would indicate an error
+                resultsCollection[columnName] = boolIndicator
+
+        if operator == "and":
+            boolIdx = np.sum(resultsCollection.values,axis=1) == len(columnNames)
+        else:
+            boolIdx = np.sum(resultsCollection.values,axis=1) > 0
+
+        #generate new subset name
+        fileName = self.sourceData.getFileNameByID(dataID)
+        columnStr = mergeListToString([mergeListToString(v,",") for v in searchString.values()])
+        subsetName = "{}:({}):({})::{}".format(columnStr,operator,mergeListToString(columnNames),fileName)
+        
+        return self.sourceData.addDataFrame(self.sourceData.dfs[dataID][boolIdx], fileName = subsetName)
+
+      # return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
+
+    def subsetData(self,dataID = None ,columnName = None ,searchString = None, splitString = None, inputIsRegEx=False, operator = "and", filterType = ""):
+        "Splits Dataset based on category in a certain column"
+
+        if filterType == "multiColumnCategory":
+            return self.subsetDataOnMultiCategory(dataID,columnName,searchString,splitString,operator)
+
         if searchString is None:
             searchString = self.savedLastString 
         if dataID is None:
             dataID = self.filterProps["dataID"]
+
         if columnName is None:
             columnName = self.filterProps["columnNames"][0]
-
+    
         boolIndicator = self.searchCategory(dataID,columnName,searchString,splitString,inputIsRegEx)
         #if searching the category gave an error, error message is a dict
         if isinstance(boolIndicator,dict):
@@ -379,7 +483,7 @@ class CategoricalFilter(object):
 
     def splitDataFrame(self,dataID,columnNames):
         "Split data on each unique category"
-
+        config = self.sourceData.parent.config
         if dataID in self.sourceData.dfs:
             if isinstance(columnNames,str):
                 #input as str indicates single column, transform to lists
@@ -396,15 +500,16 @@ class CategoricalFilter(object):
             columnNamesJoined = mergeListToString(columnNames, joinString = " ")
             nIgnored = 0
             for groupName, dataFrame in groupedData:
-                if groupName != self.sourceData.replaceObjectNan:
-                    #create file name
-                    subsetName = '{}({}): {}'.format(groupName,columnNamesJoined,fileName)
-                    #add to collection
-                    self.sourceData.addDataFrame(dataFrame,fileName=subsetName)
-                else:
-                    #save number of ignored data sets
+                #create name
+                subsetName = '{}({}): {}'.format(groupName,columnNamesJoined,fileName)
+                if config.getParam("data.quick.subset.ignore.nanString") and groupName == self.sourceData.replaceObjectNan:
+                    #count ignore files
                     nIgnored += 1
-            
+                    continue
+                #add to collection
+                self.sourceData.addDataFrame(dataFrame,fileName=subsetName)
+                
+                
             messageProps = getMessageProps("Split Data Frame","Data frame {} was split on column(s): {} ".format(fileName,columnNamesJoined)+
                                            "In total {} dataframes added.".format(groupedData.ngroups - nIgnored))
             #add dataframe names

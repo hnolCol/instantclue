@@ -35,7 +35,10 @@ class ICCompareGroups(QDialog):
             self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
             self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
-
+        self.logPValuesCB = QCheckBox("-logp10 p-value")
+        self.logPValuesCB.setTristate(False)
+        self.logPValuesCB.setCheckState(True)
+        self.logPValuesCB.setChecked(True)
         
         self.okayButton = ICStandardButton("Okay")
         self.cancelButton = ICStandardButton("Cancel")
@@ -56,6 +59,7 @@ class ICCompareGroups(QDialog):
             groupGrid.addWidget(self.grouplabel2,2,0, Qt.AlignRight)
             groupGrid.addWidget(self.groupCombo2,2,1)
 
+        groupGrid.addWidget(self.logPValuesCB)
         groupGrid.setColumnStretch(0,0)
         groupGrid.setColumnStretch(1,1)
         groupGrid.setHorizontalSpacing(2)
@@ -92,13 +96,15 @@ class ICCompareGroups(QDialog):
                         "withinGroupings"    :   []}
         else:
             grouping = self.mC.grouping.getCurrentGrouping()
+
         funcProps = {"key":"stats::compareGroups",
                       "kwargs":
                       {
                       "dataID":self.mC.getDataID(),
                       "grouping":grouping,
                       "test":self.test,
-                      "referenceGroup": referenceGroup
+                      "referenceGroup": referenceGroup,
+                      "logPValues" : self.logPValuesCB.isChecked()
                       }
                     }
         

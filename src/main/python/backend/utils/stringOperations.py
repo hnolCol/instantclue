@@ -51,7 +51,7 @@ def getRandomString(N = 20):
 
 def mergeListToString(listItem,joinString = ";"):
     ""
-    return joinString.join(x for x in listItem)
+    return joinString.join(str(x) for x in listItem)
 
 def buildReplaceDict(uniqueValues,splitSearchString):
     '''

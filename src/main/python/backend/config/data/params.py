@@ -18,6 +18,7 @@ decimalForFloats = ['.',',']
 compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
 nanReplaceString = ['-','None', 'nan','  ']
 thoursandsString = ['None',',','.']
+MTMethods = ["bonferroni","sidak","holm-sidak","holm","simes-hochberg","hommel","fdr_bh","fdr_by","fdr_tsbh","fdr_tsbky"]
 
 DEFAULT_PARAMETER = [
     {
@@ -82,6 +83,24 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Data Settings",
     "description"   :   "If True, viewing the data will use clipping if QuickSelect widgets."
+    },
+    {
+    "name"          :   "data.quick.subset.ignore.nanString",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Settings",
+    "description"   :   "If True, when subsetting data using the QuickFilter Icon (top-left) the given nanString ('-' by default) will be ignored. If False, it will not be ignored."
+    },
+    {
+    "name"          :   "data.shortcut.subset.operator",
+    "value"         :   "or",
+    "dtype"         :   str,
+    "range"         :   ["or","and"],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Settings",
+    "description"   :   "Subsetting using useful shortcuts is avaible for categorical columns using the context menu.\nThe operator is used when multiple columns are selected."
     },
     {
     "name"          :   "colorMap",
@@ -1040,43 +1059,6 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Dimensional Reduction Settings",
     "description"   :   "If enabled, the mean is subtracted to scale data."
     },
-    
-    {
-    "name"          :   "Encoding",
-    "value"         :   "utf-8",
-    "dtype"         :   str,
-    "range"         :   ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp'],
-    "parent"        :   "intern",
-    "parentType"    :   "Loading Text Files",
-    "description"   :   "Encoding to read txt files (*.txt, *.csv)"
-    },
-    {
-    "name"          :   "Column Separator",
-    "value"         :   "tab",
-    "dtype"         :   str,
-    "range"         :   ['tab',',','space',';','/','&','|','^','+','-'],
-    "parent"        :   "intern",
-    "parentType"    :   "Loading Text Files",
-    "description"   :   "Column separator for reading files (columns)"
-    },
-    {
-    "name"          :   "Skip Rows",
-    "value"         :   0,
-    "dtype"         :   int,
-    "range"         :   [0,np.inf],
-    "parent"        :   "intern",
-    "parentType"    :   "Loading Text Files",
-    "description"   :   "Number of rows to skip"
-    }, 
-    {
-    "name"          :   "Object Replace String",
-    "value"         :   "-",
-    "dtype"         :   str,
-    "range"         :   "any",
-    "parent"        :   "intern",
-    "parentType"    :   "Loading Text Files",
-    "description"   :   "Missing categories will be replaced by this string."
-    }, 
     {
     "name"          :   "hclustClusterColorMap",
     "value"         :   "Paired",
@@ -1906,11 +1888,36 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "WordCloud Settings",
     "description"   :   "Whether to include numbers as phrases or not. Ignore if generate_from_frequencies is True."
-    }
-    
+    },
+    {
+    "name"          :   "mt.method",
+    "value"         :   "fdr_bh",
+    "dtype"         :   str,
+    "range"         :   MTMethods,
+    "parent"        :   "intern",
+    "parentType"    :   "Multiple Testing Correction Settings",
+    "description"   :   "Default method for multiple testing correction."
+    },
+    {
+    "name"          :   "mt.add.categorical.column",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multiple Testing Correction Settings",
+    "description"   :   "If True, categorical column will be added indicating by '+' if hypothesis can be rejected for given alpha."
+    },
+    {
+    "name"          :   "mt.alpha",
+    "value"         :   0.05,
+    "dtype"         :   float,
+    "range"         :   [0,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Multiple Testing Correction Settings",
+    "description"   :   "FWER, family-wise error rate."
+    },
     ]
     
-
 
 
 #     encodingsCommonInPython = ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp']

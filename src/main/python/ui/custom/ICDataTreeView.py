@@ -1,6 +1,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
+from backend.config.data.params import MTMethods
 from .resortableTable import ResortableTable
 from .warnMessage import WarningMessage
 from ..delegates.dataTreeViewDelegates import *
@@ -9,8 +10,20 @@ from ..dialogs.selectionDialog import SelectionDialog
 from ..dialogs.ICGrouper import ICGrouper
 from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase
+from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
 import pandas as pd
 import numpy as np
+
+
+
+
+MT_MENUS = [{
+        "subM":"Multiple testing corrections",
+        "name":methodName,
+        "funcKey": "stats::multipleTesting",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"method":methodName}
+    } for methodName in MTMethods]
 
 dataTypeSubMenu = {
     "Numeric Floats": [
@@ -24,7 +37,7 @@ dataTypeSubMenu = {
                 "Model Fitting",
                 "Group Comparison",
                 ]),
-        ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize"]),
+        ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",[]),
         ("Filter",["NaN Filter","Outlier"]),
         ("Clustering",["k-means"]),
@@ -42,11 +55,12 @@ dataTypeSubMenu = {
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
-        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]),
+        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter"]), #"(Prote-)omics-toolkit"
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("String operation",["Split on .."]),
-        ("Filter",["To QuickSelect .."]),
-        ("(Prote-)omics-toolkit", ["Match to db.."])
+        ("Filter",["Subset Shortcuts","To QuickSelect .."]),
+        ("Subset Shortcuts",["Keep","Remove"]),
+       # ("(Prote-)omics-toolkit", ["Match to db.."])
         ]
 }
 
@@ -79,6 +93,7 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"1W-ANOVA"}
     },
+    
     # {
     #     "subM":"Multiple Groups",
     #     "name":"2W-ANOVA",
@@ -285,6 +300,7 @@ menuBarItems = [
         "funcKey": "stats::rowCorrelation",
         "dataType": "Numeric Floats"
     },
+
     {
         "subM":"Value Transformation",
         "name":"Absolute values",
@@ -411,16 +427,52 @@ menuBarItems = [
     },
     {
         "subM":"Filter",
-        "name":"Categorical Filter",
-        "funcKey": "applyFilter",
-        "dataType": "Categories"
-    },
-    {
-        "subM":"Filter",
         "name":"Find string(s)",
         "funcKey": "applyFilter",
         "dataType": "Categories",
-        "fnKwargs": {"filterType":"string"}
+        "fnKwargs": {"filterType":"string","calledFromMenu":True}
+    },
+    {
+        "subM":"Filter",
+        "name":"Categorical Filter",
+        "funcKey": "applyFilter",
+        "dataType": "Categories",
+        "fnKwargs": {"calledFromMenu":True}
+    },
+    {
+        "subM":"Filter",
+        "name":"Custom Categorical Filter",
+        "funcKey": "applyFilter",
+        "dataType": "Categories",
+        "fnKwargs": {"filterType":"multiColumnCategory","calledFromMenu":True}
+    },
+    {
+        "subM":"Keep",
+        "name":"+",
+        "funcKey": "filter::subsetShortcut",
+        "dataType": "Categories",
+        "fnKwargs": {"how":"keep","stringValue":"+"}
+    },
+    {
+        "subM":"Keep",
+        "name":"-",
+        "funcKey": "filter::subsetShortcut",
+        "dataType": "Categories",
+        "fnKwargs": {"how":"keep","stringValue":"-"}
+    },
+    {
+        "subM":"Remove",
+        "name":"+",
+        "funcKey": "filter::subsetShortcut",
+        "dataType": "Categories",
+        "fnKwargs": {"how":"remove","stringValue":"+"}
+    },
+    {
+        "subM":"Remove",
+        "name":"-",
+        "funcKey": "filter::subsetShortcut",
+        "dataType": "Categories",
+        "fnKwargs": {"how":"remove","stringValue":"-"}
     },
     {
         "subM":"Column operation ..",
@@ -439,6 +491,12 @@ menuBarItems = [
         "name":"Factorize column(s)",
         "funcKey": "data::factorizeColumns",
         "dataType": "Categories",
+    },
+    {
+        "subM":"Column operation ..",
+        "name":"Row wise calculations",
+        "funcKey": "rowWiseCalculations",
+        "dataType": "Numeric Floats"
     },
     {
         "subM":"Missing values (NaN)",
@@ -722,12 +780,12 @@ menuBarItems = [
         "funcKey": "smartReplace",
         "dataType": "Numeric Floats",
     },
-    {
-        "subM":"Kinetic",
-        "name":"First Order",
-        "funcKey": "fitModel",
-        "dataType": "Numeric Floats",
-    },
+    # {
+    #     "subM":"Kinetic",
+    #     "name":"First Order",
+    #     "funcKey": "fitModel",
+    #     "dataType": "Numeric Floats",
+    # },
     {
         "subM":"Outlier",
         "name":"Remove outliers (Group)",
@@ -791,7 +849,7 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs": {"estimator":"KNeighborsRegressor"}
     },
-]
+] + MT_MENUS
 
 class DataTreeView(QWidget):
     def __init__(self,parent=None, mainController = None, sendToThreadFn = None, dataID = None, tableID = None):
@@ -1381,13 +1439,21 @@ class DataTreeViewTable(QTableView):
                             self.focusRow -= 1
                         self.model().rowRangeChange(self.focusRow,currentFocusRow)
     
-    def applyFilter(self,tableIndex = None, **kwargs):
+    def rowWiseCalculations(self):
+        ""
+        dlg = BasicOperationDialog(self.mC,dataID = self.mC.getDataID(), selectedColumns = self.getSelectedData())
+        dlg.exec_()
+
+    def applyFilter(self,calledFromMenu = False, tableIndex = None, **kwargs):
         "Apply filtering (numeric or categorical)"
-        if tableIndex is None:
-            
-            tableIndex = self.model().index(self.focusRow,0)
-        if "columnNames" not in kwargs:
-            kwargs["columnNames"] = self.getSelectedData([tableIndex])
+        if not calledFromMenu:
+            if tableIndex is None:
+                tableIndex = self.model().index(self.focusRow,0)
+            if "columnNames" not in kwargs:
+                kwargs["columnNames"] = self.getSelectedData([tableIndex])
+        else:
+            kwargs["columnNames"] = self.getSelectedData()
+        
         self.mC.mainFrames["sliceMarks"].applyFilter(dragType = self.tableID, **kwargs)
         
     def leaveEvent(self, event):
@@ -1611,7 +1677,6 @@ class DataTreeViewTable(QTableView):
                # fnKwargs = {"columnNames":columnNames,"grouping":grouping}
                 #self.prepareMenuAction("data::smartReplace",fnKwargs,addColumnSelection=False)
             except Exception as e:
-                print("??")
                 print(e)
 
         else:

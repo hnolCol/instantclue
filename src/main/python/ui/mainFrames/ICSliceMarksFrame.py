@@ -11,7 +11,7 @@ from ui.custom.tableviews.ICMarkerTable import ICMarkerTable
 from ui.custom.tableviews.ICStatisticTable import ICStatisticTable
 from ui.custom.tableviews.ICQuickSelectTable import ICQuickSelectTable
 from ..dialogs.ICColorChooser import ColorChooserDialog
-from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings
+from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
 from ..dialogs.ICNumericFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage
 from ..utils import createSubMenu, createLabel
@@ -301,12 +301,13 @@ class SliceMarksFrame(QWidget):
             
         if dragType != "Numeric Floats":
             
-                self.mC.data.categoricalFilter.setupLiveStringFilter(dataID,columnNames, filterType = filterType)
+                filterType = self.mC.data.categoricalFilter.setupLiveStringFilter(dataID,columnNames, filterType = filterType)
                 if filterType == "category":
                     self.filterDlg = CategoricalFilter(mainController = self.mC, categoricalColumns = columnNames)
                 elif filterType == "string":
                     self.filterDlg = FindStrings(mainController = self.mC, categoricalColumns = columnNames)
-            
+                elif filterType == "multiColumnCategory":
+                    self.filterDlg = CustomCategoricalFilter(mainController = self.mC, categoricalColumns = columnNames)
         else:
             
                 self.filterDlg = NumericFilter(mainController = self.mC, selectedNumericColumn = columnNames)

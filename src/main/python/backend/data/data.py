@@ -336,14 +336,39 @@ class DataCollection(object):
 	def readDataFromClipboard(self):
 		""
 		try:
-			print(self.loadDefaultReadFileProps())
+			
 			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
-			print(e)
+			
 			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
 		localTime = time.localtime()
 		current_time = time.strftime("%H:%M:%S", localTime)
 		return self.addDataFrame(data, fileName = "pastedData({})".format(current_time),cleanObjectColumns = True)
+
+	def rowWiseCalculations(self,dataID,calculationProps,operation = "subtract"):
+		""
+		funcKeyMatch = {"Mean":np.nanmean,"Sum":np.nansum,"Median":np.nanmedian}
+		operationKeys = {"subtract":np.subtract,"divide":np.divide,"multiply":np.multiply,"addition":np.add}
+		data = self.dfs[dataID]
+		collectResults = pd.DataFrame(index = data.index)
+		for columnName, calcProp in calculationProps.items():
+			X = data[columnName].values 
+			if calcProp["metric"] == "Specific Column":
+				Y = data[calcProp["columns"]].values 
+				#ugly hack to not show the long 'Specific colum" in the name
+				calcProp["metric"] = ""
+			elif calcProp["metric"] in funcKeyMatch:
+				Y = funcKeyMatch[calcProp["metric"]](data[calcProp["columns"]].values,axis=1)
+			#perform calculation
+			XYCalc = operationKeys[operation](X,Y)
+			if isinstance(calcProp["columns"],str):
+				newColumnName = "{}:({}):{}({})".format(columnName,operation,calcProp["metric"],calcProp["columns"])
+			else:
+				newColumnName = "{}:({}):{}({})".format(columnName,operation,calcProp["metric"],mergeListToString(calcProp["columns"].flatten(),","))
+			collectResults[newColumnName] = XYCalc
+
+		return self.joinDataFrame(dataID,collectResults)
+	
 
 	def dropColumns(self,dataID,columnNames):
 		""

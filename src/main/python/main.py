@@ -39,7 +39,7 @@ from multiprocessing import freeze_support
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
-__VERSION__ = "0.9.240.20210216"
+__VERSION__ = "0.9.240.20210219"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -91,6 +91,7 @@ menuBarItems = [
     {
         "subM":"About",
         "name":"v. {}".format(__VERSION__),
+        "fn": lambda : pd.DataFrame([__VERSION__]).to_clipboard(index=False,header=False)
     },
 
     {

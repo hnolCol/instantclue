@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE
+from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox
 from ..custom.buttonDesigns import AcceptButton, RefreshButton, ResetButton, BigPlusButton, LabelLikeButton
 from ..custom.warnMessage import WarningMessage
 #external imports
@@ -11,9 +11,11 @@ import numpy as np
 from collections import OrderedDict 
 
 LINE_EDIT_STATUS = {"Greater than":(True,False),
+                    "Greater Equal than":(True,False),
                     "Between":(False,False),
                     "Not between":(False,False),
                     "Smaller than":(False,True),
+                    "Smaller equal than":(False,True),
                     "n largest":(True,False),
                     "n smallest":(False,True)} 
 
@@ -41,18 +43,17 @@ class NumericFilter(QDialog):
         self.__connectEvents()
 
         self.addDragFilters()
-    
+        
 
     def __controls(self):
         ""
         self.titleLabel = createTitleLabel("Numeric Filter")
         self.filterLabel = createLabel("Filter on: ", fontSize = 12)
-        self.columnNameCombo = QComboBox()
-        self.columnNameCombo.addItems(self.numericColumns)
+        self.columnNameCombo = createCombobox(self, items = self.numericColumns.values.tolist())
+        
 
         self.operatorLabel = createLabel("Operator: ", fontSize = 12)
-        self.operatorCombo = QComboBox()
-        self.operatorCombo.addItems(self.mainController.numericFilter.getOperatorOptions())
+        self.operatorCombo = createCombobox(self,items = self.mainController.numericFilter.getOperatorOptions())
         self.operatorCombo.setCurrentText(self.mainController.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
 
@@ -114,12 +115,16 @@ class NumericFilter(QDialog):
         for numericColumn in self.selectedNumericColumn.values:
             if numericColumn in self.numericColumns.values:
                 self.addFilter(filterName=numericColumn)
-                self.updateLineEdits(numericColumn, "Greater than")
+                self.updateLineEdits(numericColumn, "Greater Equal than")
 
     def addFilter(self,event=None, filterName = None):
         ""
         if filterName is None:
             filterName = self.columnNameCombo.currentText()
+            if filterName == "Choose additional column":
+                w = WarningMessage(infoText="Choose column from drop down menu that you would like to use the filter on.")
+                w.exec_() 
+                return
         if filterName not in self.filterProps:
             self.filterProps[filterName] = dict()
             self.filterProps[filterName]["frame"] = self.createFilterInfoWidgetLayout(filterName)
@@ -128,9 +133,9 @@ class NumericFilter(QDialog):
 
     def chooseType(self,event=None,filterName = None):
         ""
-        menu = createMenu()
+        menu = createMenu(parent=self)
 
-        for filterType in ["Greater than","Smaller than","Between", "Not between","n largest","n smallest"]:
+        for filterType in ["Greater than","Greater Equal than","Smaller than","Smaller Equal than","Between", "Not between","n largest","n smallest"]:
             menu.addAction(filterType)
         senderGeom = self.sender().geometry()
         topLeft = self.filterProps[filterName]["frame"].mapToGlobal(senderGeom.bottomLeft())
@@ -146,7 +151,7 @@ class NumericFilter(QDialog):
             self.resetValidator(filterName, topN = "n " in action.text())
 
 
-    def createFilterInfoWidgetLayout(self, columnName, filterType = "Greater than"):
+    def createFilterInfoWidgetLayout(self, columnName, filterType = "Greater Equal than"):
         ""
         outerFrame = QFrame(self)
         outerFrame.setStyleSheet("background:grey")
@@ -259,7 +264,9 @@ class NumericFilter(QDialog):
         ""
         numericColumns = [col for col in self.numericColumns if col not in self.filterProps] 
         self.columnNameCombo.clear()
-        self.columnNameCombo.addItems(numericColumns )
+        self.columnNameCombo.addItems(["Choose additional column"] + numericColumns )
+       
+        self.columnNameCombo.model().item(0).setEnabled(False)
 
     def lineEditChanged(self,event=None,filterName = None):
         ""

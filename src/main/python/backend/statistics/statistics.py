@@ -12,6 +12,7 @@ from sklearn.manifold import TSNE
 
 from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from statsmodels.stats.multitest import multipletests
 #import pingouin as pg
 from pingouin import anova
 #from .anova.anova import Anova
@@ -492,6 +493,26 @@ class StatisticCenter(object):
             
             return self.sourceData.joinDataFrame(dataID,df)
            
+    def runMultipleTestingCorrection(self,dataID,columnNames,method=None):
+        ""
+        config = self.sourceData.parent.config
+        addCatColumn = config.getParam("mt.add.categorical.column")
+        if method is None:
+            method = config.getParam("mt.method")
+        alpha = config.getParam("mt.alpha")
+        with threadpool_limits(limits=1, user_api='blas'): #require to prevent crash (np.dot not thread safe)
+            data = self.getData(dataID,columnNames)
+            results = pd.DataFrame(index = data.index)
+            for columnName in columnNames:
+                noNanData = data[columnName].dropna()
+                reject, corrPValues, sidakAlpha, bonfAlpha = multipletests(noNanData.values,alpha=alpha,method=method)
+                results.loc[noNanData.index,"corr-p({},{}):{}".format(method,alpha,columnName)] = corrPValues
+                if addCatColumn:
+                    results.loc[noNanData.index,"sig({},{}):{}".format(method,alpha,columnName)] = ["+" if x else self.sourceData.replaceObjectNan for x in reject]
+        return self.sourceData.joinDataFrame(dataID,results)
+        #return getMessageProps("Done..","Multiple testing correction done.")
+
+
     def runComparison(self,dataID,grouping,test,referenceGroup=None, logPValues = True):
         """Compare groups."""
         
@@ -511,7 +532,9 @@ class StatisticCenter(object):
             F,p = f_oneway(*testGroupData,axis=1)
             results["F({})".format(groupingName)] = F
             if logPValues:
-                results["-log10-p-1WANOVA({})".format(groupingName)] = np.log10(p) * (-1)
+                pValueColumn = "-log10-p-1WANOVA({})".format(groupingName)
+                results[pValueColumn] = np.log10(p) * (-1)
+                results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
             else:
                 results["p-1WANOVA({})".format(groupingName)] = p
         elif test == "2W-ANOVA":
@@ -540,7 +563,9 @@ class StatisticCenter(object):
 
                     t, p = ttest_ind(X,Y,axis=1,nan_policy="omit",equal_var = test == "t-test")
                     if logPValues:
-                        results["-log10-p-value:({})".format(resultColumnNames[n])] = np.log10(p) * (-1)
+                        pValueColumn = "-log10-p-value:({})".format(resultColumnNames[n])
+                        results[pValueColumn] = np.log10(p) * (-1)
+                        results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
                     else:
                         results["p-value:({})".format(resultColumnNames[n])] = p 
                     results["T-stat:({})".format(resultColumnNames[n])] = t

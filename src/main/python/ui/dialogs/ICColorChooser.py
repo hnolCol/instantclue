@@ -73,8 +73,6 @@ class ColorChooserDialog(QDialog):
     def __windowUpdate(self):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
         self.setWindowOpacity(0.98)
-
-    
     
     def __controls(self):
         """Init widgets"""

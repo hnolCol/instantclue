@@ -28,7 +28,7 @@ descriptionMerge = ['full outer: Use union of keys from both frames\n'+
 class ICDMergeDataFrames(QDialog):
     def __init__(self, mainController, *args, **kwargs):
         super(ICDMergeDataFrames, self).__init__(*args, **kwargs)
-
+        self.setWindowTitle("Merge data frames.")
         self.mC = mainController
         self.mergeParams = dict()
         self.dfWidgets = dict()
@@ -186,7 +186,10 @@ class ICDMergeDataFrames(QDialog):
                 #handle result
                 if dlg.exec_():
                     selectedColumns = dlg.getSelection()
+                    print(selectableColumns)
                     self.mergeParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0])
+
+                    self.sender().setText(";".join([str(x) for x in selectedColumns.values.flatten()]))
            
                 
         except Exception as e:
