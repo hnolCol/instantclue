@@ -31,7 +31,7 @@ class BasicOperationDialog(QDialog):
         self.calculationProps = OrderedDict([(colName,{}) for colName in selectedColumns])
 
         self.selectedColumns = selectedColumns
-        self.selectableColumns = self.mC.data.getNumericColumns(dataID)
+        self.selectableColumns = self.mC.mainFrames["data"].dataTreeView.getColumns("Numeric Floats")["Numeric Floats"]
 
         self.__controls()
         self.__layout()
@@ -148,7 +148,7 @@ class BasicOperationDialog(QDialog):
                 self.calculationProps[column] = {"metric":metricName,"columns":metricParams.values.flatten()}
             else:
                 metricColumn = metricParams.values.flatten()
-                df.loc[columnBool, "Selected Metric/Column"] = metricColumn
+                df.loc[columnBool, "Selected Metric/Column"] = metricColumn[0]
                 self.calculationProps[column] = {"metric":metricName,"columns":metricColumn[0]}
 
         self.model.initData(df)

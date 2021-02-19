@@ -84,7 +84,7 @@ class ICGrouper(QDialog):
         self.addGroup = BigPlusButton(buttonSize=(25,25), tooltipStr="Add an additional group.")
 
         dataID = self.mC.getDataID()
-        numericColumns = self.mC.data.getNumericColumns(dataID)
+        numericColumns = self.mC.mainFrames["data"].dataTreeView.getColumns("Numeric Floats")["Numeric Floats"]
         self.table =  ResortTableWidget(parent = self, menu = self.menu)
         self.model = ResortTableModel(parent = self.table,
                                       inputLabels=numericColumns,
