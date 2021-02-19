@@ -268,7 +268,7 @@ class PushHoverButton(QPushButton):
     def getStandardFont(self, fontSize = 12):
         ""
         if isWindows():
-            fontSize -= 2
+            fontSize -= 1
         return getStandardFont(fontSize=fontSize) 
 
     def getMainFont(self):

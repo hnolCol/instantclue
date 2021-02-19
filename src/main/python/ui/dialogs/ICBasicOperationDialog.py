@@ -64,7 +64,8 @@ class BasicOperationDialog(QDialog):
         self.modelData["Selected Metric/Column"] = ["" for _ in range(self.selectedColumns.size)]
         self.model = PandaModel(parent= self.table, df = self.modelData)
         self.table.setModel(self.model)
-
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
 
         self.okButton = ICStandardButton(itemName="Apply")
         self.cancelButton = ICStandardButton(itemName = "Cancel")

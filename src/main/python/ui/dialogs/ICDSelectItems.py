@@ -8,10 +8,11 @@ from ..custom.buttonDesigns import ResetButton, AcceptButton, CheckButton
 import pandas as pd
 
 class ICDSelectItems(QDialog):
-    def __init__(self, data = pd.DataFrame(), *args, **kwargs):
+    def __init__(self, data = pd.DataFrame(), stretch = True, *args, **kwargs):
         super(ICDSelectItems, self).__init__(*args, **kwargs)
     
         self.data = data
+        self.stretch = stretch
         self.__windowUpdate()
         self.__controls()
         self.__layout()
@@ -26,6 +27,8 @@ class ICDSelectItems(QDialog):
         self.table.horizontalHeader().setVisible(False)
         self.model = SelectablePandaModel(parent=self.table, df = self.data)
         self.table.setModel(self.model)
+        if self.stretch:
+            self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
        
         self.selectCB = QCheckBox("Select all")
         self.selectCB.setTristate(False)
