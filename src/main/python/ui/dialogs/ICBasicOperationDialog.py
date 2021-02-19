@@ -87,8 +87,8 @@ class BasicOperationDialog(QDialog):
         hbox.addStretch(1)
 
         self.layout().addLayout(hbox)
-        self.layout().addStretch(1)
         self.layout().addWidget(self.table)
+
         hboxBottom = QHBoxLayout() 
         hboxBottom.addWidget(self.okButton)
         hboxBottom.addStretch(1)
