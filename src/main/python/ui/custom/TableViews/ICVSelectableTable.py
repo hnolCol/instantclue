@@ -222,7 +222,7 @@ class PandaModel(QAbstractTableModel):
 
         elif role == Qt.FontRole:
             font = QFont("Helvetica")
-            font.setPixelSize(9)
+            font.setPixelSize(10)
             return font
         return None
     
@@ -236,7 +236,7 @@ class PandaModel(QAbstractTableModel):
         font = QFont()
         font.setFamily("Arial")
         font.setWeight(300)
-        font.setPointSize(7)
+        font.setPointSize(8)
         return font
 
     def getRowDataIndexByTableIndex(self,index):

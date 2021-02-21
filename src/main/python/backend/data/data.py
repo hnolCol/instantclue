@@ -369,6 +369,13 @@ class DataCollection(object):
 
 		return self.joinDataFrame(dataID,collectResults)
 	
+	def sortColumns(self,dataID,sortedColumnDict):
+		""
+		sortedColumns = []
+		for v in sortedColumnDict.values():
+			sortedColumns.extend(v.values.flatten())
+		self.dfs[dataID] = self.dfs[dataID][sortedColumns]
+		return getMessageProps("Done..","Columns resorted")
 
 	def dropColumns(self,dataID,columnNames):
 		""
@@ -376,6 +383,7 @@ class DataCollection(object):
 			self.dfs[dataID] = self.dfs[dataID].drop(columns = columnNames, errors = "ignore")
 			self.extractDataTypeOfColumns(dataID)
 			taskCompleteKwargs = getMessageProps("Column (s) deleted","Selected columns deleted.")
+			taskCompleteKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 			taskCompleteKwargs["columnNames"] = columnNames
 			return taskCompleteKwargs
 		else:
@@ -2073,7 +2081,7 @@ class DataCollection(object):
 
 			if "_merge" in mergedDataFrames.columns:
 				mergedDataFrames["_merge"] = mergedDataFrames["_merge"].astype(str)
-
+			mergedDataFrames.reset_index(drop=True,inplace=True)
 			return self.addDataFrame(
 							dataFrame = mergedDataFrames, 
 							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID])

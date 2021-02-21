@@ -929,7 +929,7 @@ class DataTreeView(QWidget):
 
     def sortLabels(self):
         "Sorts label, first ascending, then descending, then raw order"
-        how = "ascending"
+        #how = "ascending"
         if hasattr(self.table.model(),"lastSearchType"):
             lastSerachType = getattr(self.table.model(),"lastSearchType")
             if lastSerachType is None:
@@ -941,6 +941,12 @@ class DataTreeView(QWidget):
                 setattr(self.table.model(),"lastSearchType",None)
             
         self.table.model().sort(how=how)
+        columnDict = self.mC.mainFrames["data"].dataTreeView.getColumns("all")
+       
+        #funKwargs = {"key":","fnKwargs":}
+        funcProps = {"key":"data::sortColumns",
+                    "kwargs":{"sortedColumnDict":columnDict,"dataID":self.mC.getDataID()}}
+        self.mC.sendRequestToThread(funcProps)
 
     def customSortLabels(self):
         ""
@@ -1389,9 +1395,12 @@ class DataTreeViewTable(QTableView):
             #delete selected rows
             self.model().layoutAboutToBeChanged.emit()
             selectedRows = self.selectionModel().selectedRows()
-            self.model().deleteEntriesByIndexList(selectedRows)
+           # self.model().deleteEntriesByIndexList(selectedRows)
             self.selectionModel().clear()
-            self.model().layoutChanged.emit()
+           # self.model().layoutChanged.emit()
+
+            deletedColumns = self.model().getSelectedData(selectedRows)
+            self.dropColumnsInDataFrame(deletedColumns)
 
         elif e.key() == Qt.Key_Escape:
             #clear selection
@@ -1607,17 +1616,23 @@ class DataTreeViewTable(QTableView):
 
     def renameColumn(self,columnNameMapper):
         ""
-        funcProps = {"key":"data::renameColumns","kwargs":{"columnNameMapper":columnNameMapper}}
-        self.sendToThread(funcProps,addDataID=True)
+        funcProps = {"key":"data::renameColumns",
+                    "kwargs":{"columnNameMapper":columnNameMapper,
+                            "dataID":self.mC.getDataID()}}
+        self.mC.sendRequestToThread(funcProps)
     
     def dropColumn(self, tableIndex):
         "Drops column by table Index"
         selectedRows = [tableIndex]
         #get selected data by index
         deletedColumns = self.model().getSelectedData(selectedRows)
-        self.model().deleteEntriesByIndexList(selectedRows)
-        funcProps = {"key":"data::dropColumns","kwargs":{"columnNames":deletedColumns}}
-        self.sendToThread(funcProps,addDataID = True)
+        #self.model().deleteEntriesByIndexList(selectedRows)
+        self.dropColumnsInDataFrame(deletedColumns)
+        
+    def dropColumnsInDataFrame(self,deletedColumns):
+        ""
+        funcProps = {"key":"data::dropColumns","kwargs":{"columnNames":deletedColumns,"dataID":self.mC.getDataID()}}
+        self.mC.sendRequestToThread(funcProps)
 
     def copyDataToClipboard(self,tableIndex):
       

@@ -93,6 +93,7 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"dropColumns","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":[
                 {"obj":"self","fn":"removeItemsFromReceiverBox","objKey":"middle","objName":"mainFrames","requiredKwargs":["columnNames"]},
+                updateTreeView,
                 sendMessageProps]   
         },
     "data::deleteData":
@@ -290,6 +291,14 @@ funcPropControl = {
             "completedRequest":
                     [sendMessageProps]
         },
+    
+    "data::sortColumns":
+        {
+            "threadRequest":{"obj":"data","fn":"sortColumns","requiredKwargs":["dataID","sortedColumnDict"]},
+            "completedRequest":
+                    [sendMessageProps]
+        },
+
     "data::sortDataByValues":
         {
             "threadRequest":{"obj":"data","fn":"sortDataByValues","requiredKwargs":["dataID","columnName","values"]},

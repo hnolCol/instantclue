@@ -15,7 +15,7 @@ LINE_EDIT_STATUS = {"Greater than":(True,False),
                     "Between":(False,False),
                     "Not between":(False,False),
                     "Smaller than":(False,True),
-                    "Smaller equal than":(False,True),
+                    "Smaller Equal than":(False,True),
                     "n largest":(True,False),
                     "n smallest":(False,True)} 
 
@@ -316,10 +316,11 @@ class NumericFilter(QDialog):
 
     def updateLineEdits(self,columnName, filterType):
         ""
+        
         if filterType in LINE_EDIT_STATUS:
             
             minReadOnly , maxReadOnly = LINE_EDIT_STATUS[filterType]
-
+           
             self.filterProps[columnName]["min"].setReadOnly(minReadOnly)
             self.filterProps[columnName]["max"].setReadOnly(maxReadOnly)
 
