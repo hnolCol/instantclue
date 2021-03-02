@@ -13,8 +13,8 @@ plotTypes = ["lineplot",
             "hclust",
             "corrmatrix",
             "x-ys-plot",
-           # "dim-red-plot",
-           # "clusterplot"
+            "dim-red-plot",
+            "clusterplot",
             "forestplot",
             "wordcloud"]
             
@@ -36,7 +36,8 @@ requiredProps = {
     "x-ys-plot" : {"numericalCols":2,"categoricalCols":0},
     "dim-red-plot": {"numericalCols":2,"categoricalCols":0},
     "forestplot" : {"numericalCols":1,"categoricalCols":1},
-    "wordcloud" : {"numericalCols":0,"categoricalCols":1}
+    "wordcloud" : {"numericalCols":0,"categoricalCols":1},
+    "clusterplot" : {"numericalCols":2,"categoricalCols":0}
 }
 
 
@@ -56,7 +57,8 @@ plotTypeTooltips = {
     "x-ys-plot":"XYs Plot. Plots data of column vs column.\nYou can choose to have a common x-axis or to use every second column.\nOpen Settings to see more options.",
     "dim-red-plot" : "Dimensional reduction.\nAvailable methods: PCA",
     "forestplot"   : "Forest plot. Calculates odds ratios and confidence interval.",
-    "wordcloud"   : "Word Cloud - Use categorical column to create a word cloud."
+    "wordcloud"   : "Word Cloud - Use categorical column to create a word cloud.",
+    "clusterplot" : "Clusterplot. Display clusters of data in multiple plot types (barplot/boxplot/lineplot)."
 }
 
 gridPosition = {
@@ -75,6 +77,7 @@ gridPosition = {
         "hclust":(6,0),
         "corrmatrix":(6,1),
         "dim-red-plot" : (7,0),
+        "clusterplot": (7,1),
         "countplot":(8,0),
         "wordcloud" : (8,1)
         

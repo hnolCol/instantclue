@@ -30,19 +30,26 @@ class ICDMergeDataFrames(QDialog):
         super(ICDMergeDataFrames, self).__init__(*args, **kwargs)
         self.setWindowTitle("Merge data frames.")
         self.mC = mainController
+        
         self.mergeParams = dict()
         self.dfWidgets = dict()
-
+        #dict to collect merge parameters
         self.mergeParams["left"] = dict()
         self.mergeParams["right"] = dict()
 
-
+        
         self.__controls()
         self.__layout()
         self.__connectEvents()
-    
+
+        #set size policy of dialog
+        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Expanding)
+        self.setFixedHeight(200)
+        self.setMaximumHeight(200)
+
     def __controls(self):
         """Init widgets"""
+        
         self.headerLabel = createTitleLabel("Merge Two Data Frames", fontSize=14)
         ### add menu button
         self.parameterGrid = self.addParameters()
@@ -51,6 +58,8 @@ class ICDMergeDataFrames(QDialog):
 
         self.okButton = ICStandardButton(itemName="Merge")
         self.cancelButton = ICStandardButton(itemName = "Cancel")
+
+        
         
     def __layout(self):
 
@@ -60,10 +69,11 @@ class ICDMergeDataFrames(QDialog):
         self.layout().addLayout(self.parameterGrid,2,0,1,4)
         self.layout().addLayout(self.hbox1,3,0,1,4)
         self.layout().addLayout(self.hbox2,4,0,1,4)
-        self.layout().addWidget(self.okButton,5,0)
-        self.layout().addWidget(self.cancelButton,5,3)
+        self.layout().addWidget(self.okButton,6,0)
+        self.layout().addWidget(self.cancelButton,6,3)
         self.layout().setColumnStretch(2,1)
-        self.layout().setRowStretch(6,1)
+        self.layout().setRowStretch(5,1)
+        
         
        
        
@@ -73,8 +83,14 @@ class ICDMergeDataFrames(QDialog):
         self.okButton.clicked.connect(self.merge)
         
     def addDataFrame(self, dfID = "left"):
-        ""
-        hbox = QHBoxLayout()
+        """
+        Add DataFrame related widgets to the QDialog. 
+        Three options: 
+        a) Selected the dataframe name
+        b) Select Key columns to be used for merging
+        c) Select columns to transfer to the merged data frame (if nothing selected, all columns will be attached.)
+        """
+        gridBox = QGridLayout()
         #data frame selection widgets
         dataFrameLabel = LabelLikeCombo(parent = self, 
                                         items = self.mC.data.fileNameByID, 
@@ -88,23 +104,25 @@ class ICDMergeDataFrames(QDialog):
                         text = "Choose key column(s)", 
                         tooltipStr="Choose key column(s) used for merging\nValue must match in both data frames.", 
                         itemBorder=5)
+
         mergeColumns.clicked.connect(lambda _,paramID = "mergeColumns": self.openColumnSelection(paramID=paramID))
         
         columnsButton = ICStandardButton(itemName = "...", tooltipStr="Select columns to keep for merging (default: keep all).")
         columnsButton.setFixedSize(15,15)    
         columnsButton.clicked.connect(lambda _,paramID = "selectedColumns": self.openColumnSelection(paramID=paramID))
-        #FilterTypeMenu
-       # dataFrameLabel.clicked.connect(self.chooseDataFrame)
-
 
         #add widgets
-        hbox.addWidget(dataFrameLabel)
-        hbox.addWidget(mergeColumns)
-        hbox.addStretch()
-        hbox.addWidget(columnsButton)
+        gridBox.addWidget(dataFrameLabel,0,0,Qt.AlignLeft)
+        gridBox.addWidget(mergeColumns,0,1,Qt.AlignCenter)
+        gridBox.addWidget(columnsButton,0,2,Qt.AlignRight)
+
+        #handle column stretch
+        gridBox.setColumnStretch(0,2)
+        gridBox.setColumnStretch(1,2)
+        gridBox.setColumnStretch(2,0)
 
         self.dfWidgets[dfID] = [dataFrameLabel,mergeColumns,columnsButton]
-        return hbox
+        return gridBox
 
     def addParameters(self):
         ""
@@ -186,9 +204,7 @@ class ICDMergeDataFrames(QDialog):
                 #handle result
                 if dlg.exec_():
                     selectedColumns = dlg.getSelection()
-                    print(selectableColumns)
-                    self.mergeParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0])
-
+                    self.mergeParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0],index = selectedColumns.index)
                     self.sender().setText(";".join([str(x) for x in selectedColumns.values.flatten()]))
            
                 

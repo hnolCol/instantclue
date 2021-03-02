@@ -25,7 +25,6 @@ class MessageBase(QDialog):
     def __controls(self):
 
         self.mainFrame = QFrame()
-        self.mainFrame.setStyleSheet("background-color: #f6f6f6}")
         #set up title label
         self.tLabel = createTitleLabel(self.title)
         self.tLabel.setAlignment(Qt.AlignHCenter)

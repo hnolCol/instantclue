@@ -39,8 +39,8 @@ class QVLine(QFrame):
 
 
 class QToggle(QPushButton):
-    def __init__(self, parent = None):
-        super().__init__(parent)
+    def __init__(self, parent = None,*args,**kwargs):
+        super().__init__(parent=parent,*args,**kwargs)
         self.setCheckable(True)
         self.setMinimumWidth(66)
         self.setMinimumHeight(22)

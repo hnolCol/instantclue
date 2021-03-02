@@ -1,6 +1,10 @@
 
 from ...color.data import colorParameterRange
+from ...statistics.statistics import clusteringMethodNames
+
 import numpy as np
+
+clusterMethodNames = list(clusteringMethodNames.keys())
 REQUIRED_ATTR_NAMES = ["id","name","value","dtype","range","parent","parentType","description"]
 arrowOptions = ["arc3","arc3,rad=0.","arc3,rad=0.3","arc3,rad=-0.3",
                 "angle,angleA=-90,angleB=180,rad=0",
@@ -266,6 +270,24 @@ DEFAULT_PARAMETER = [
     "parent"        :   "numericFilter",
     "parentType"    :   "Filter Settings",
     "description"   :   "Sets the default operator for numeric filtering.",
+    },
+    {
+    "name"          :   "leading.string.numeric.filter",
+    "value"         :   "NumericFilter_",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Filter Settings",
+    "description"   :   "Leading string for column names created by numerical filtering.",
+    },
+    {
+    "name"          :   "leading.string.numeric.filter.subset",
+    "value"         :   "NumericSubset_",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Filter Settings",
+    "description"   :   "Leading string for subsets created by numerical filtering.",
     },
     {
     "name"          :   "axes.facecolor",
@@ -842,7 +864,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -851,7 +873,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["euclidean","nanEuclidean","correlation","None"],
     "parent"        :   "statCenter",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Define metric used for column dendrogram. If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -860,7 +882,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Data with nan might be clustered using the nanEuclidean distance metric. This parameter defines the minimum number of valid values that must exist.",
     },
     {
@@ -869,7 +891,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Define method used for row dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -878,7 +900,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -887,7 +909,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
     },
     {
@@ -896,7 +918,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["raw values","center 0","min = -1, max = 1","custom"],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Method how to calculate color map limits.",
     },
         {
@@ -905,7 +927,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Enabled if colorMapLimits is set to custom. Minimal value.",
     },
     {
@@ -914,7 +936,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Enabled if colorMapLimits is set to custom. Maximal value.",
     },
     {
@@ -923,7 +945,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["pearson","kendall","spearman"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Method how to calculate color map limits.",
     },
     {
@@ -932,7 +954,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "If less than given value of rows are visible in cluster, label will be added to the top right axis.",
     },
     {
@@ -941,7 +963,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "If less than given value of rows are visible in cluster. Lines will be drawn around rectangles.",
     },
     {
@@ -950,10 +972,18 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
     },
-    
+    {
+    "name"          :   "add.column.names.in.emb.name",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "If enable, adds the used column names in the name for the embedding."
+    },    
     {
     "name"          :   "tsne.n.components",
     "value"         :   2,
@@ -1060,12 +1090,117 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, the mean is subtracted to scale data."
     },
     {
+    "name"          :   "spectral.embedding.n.components",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "The dimension of the projected subspace."
+    },
+    {
+    "name"          :   "spectral.embedding.n.affinity",
+    "value"         :   "nearest_neighbors",
+    "dtype"         :   str,
+    "range"         :   ["nearest_neighbors","rbf"],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "The dimension of the projected subspace."
+    },
+
+    {
+    "name"          :   "mds.n.components",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Number of dimensions in which to immerse the dissimilarities."
+    },
+    {
+    "name"          :   "mds.metric",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "If True, perform metric MDS; otherwise, perform nonmetric MDS."
+    },
+    {
+    "name"          :   "isomap.n.neighbors",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Number of neighbors to consider for each point."
+    },
+    {
+    "name"          :   "isomap.n.components",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Number of coordinates for the manifold."
+    },
+    {
+    "name"          :   "isomap.path.method",
+    "value"         :   "auto",
+    "dtype"         :   str,
+    "range"         :   ["auto", "FW", "D"],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   """
+                        ‘auto’ : attempt to choose the best algorithm automatically. 
+                        ‘FW’ : Floyd-Warshall algorithm.
+                        ‘D’ : Dijkstra’s algorithm.
+                        """
+    },
+    {
+    "name"          :   "locally.linear.n.components",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Number of coordinates for the manifold."
+    },
+    {
+    "name"          :   "locally.linear.n.neighbors",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Number of neighbors to consider for each point."
+    }, 
+    {
+    "name"          :   "locally.linear.method",
+    "value"         :   "standard",
+    "dtype"         :   str,
+    "range"         :   ["standard","hessian","modified","ltsa"],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Method for locally linear embedding algorithm."
+    },
+    {
+    "name"          :   "locally.neighbors.algorithm",
+    "value"         :   "auto",
+    "dtype"         :   str,
+    "range"         :   ["auto", "brute", "kd_tree", "ball_tree"],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "Algorithm to use for nearest neighbors search, passed to neighbors."
+    },
+
+    {
     "name"          :   "hclustClusterColorMap",
     "value"         :   "Paired",
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Colormap for cluster rectangles."
     }, 
     {
@@ -1074,7 +1209,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "HClust Settings",
+    "parentType"    :   "Cluster (HClust) Settings",
     "description"   :   "Colormap for color labeling."
     }, 
    
@@ -1123,6 +1258,24 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Groups Settings",
     "description"   :   "Minimum required non-nan values in background to be called significant in target group."
     },
+    {
+    "name"          :   "clusterplot.method",
+    "value"         :   "kmeans",
+    "dtype"         :   str,
+    "range"         :   clusterMethodNames,
+    "parent"        :   "intern",
+    "parentType"    :   "Clusterplot Settings",
+    "description"   :   "Algorithm used to detect cluster."
+    }, 
+    {
+    "name"          :   "clusterplot.type",
+    "value"         :   "boxplot",
+    "dtype"         :   str,
+    "range"         :   ["barplot","boxplot","lineplot","line+area"],
+    "parent"        :   "intern",
+    "parentType"    :   "Clusterplot Settings",
+    "description"   :   "Plot type how detected clusters are represented."
+    }, 
     {
     "name"          :   "alpha.IQR",
     "value"         :   0.7,

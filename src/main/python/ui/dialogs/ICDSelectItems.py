@@ -76,7 +76,7 @@ class ICDSelectItems(QDialog):
     
     def manageSelection(self,newSate):
         ""
-        print(newSate)
+       
         if newSate == 0:
             self.sender().setText("Select all")
 

@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 from ..utils import createTitleLabel, createLabel, createLineEdit
-
+from ..custom.buttonDesigns import ICStandardButton
 
 class QuickSelectDialog(QDialog):
     def __init__(self,mainController,*args, **kwargs):
@@ -40,28 +40,25 @@ class QuickSelectDialog(QDialog):
         self.separatorEdit.setText(self.mC.config.getParam("quick.select.separator"))
         
         # set up okay buttons
-        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        
+        self.acceptButton = ICStandardButton(itemName="Okay")
+        self.cancelButton = ICStandardButton(itemName="Cancel")
 
         
     def __layout(self):
-
         """Put widgets in layout"""
         self.setLayout(QGridLayout())
 
+        hbox = QHBoxLayout() 
+        hbox.addWidget(self.acceptButton)
+        hbox.addWidget(self.cancelButton)
+
         self.layout().addWidget(self.headerLabel,0,0,1,3)
         self.layout().addWidget(self.infoLabel,1,0,1,3)
-
         self.layout().addWidget(self.rawValues,2,0,1,1)
         self.layout().addWidget(self.uniqueValues,2,1,1,1)
         self.layout().addWidget(self.separatorEdit,2,2,1,1)
+        self.layout().addLayout(hbox,3,0,1,3)
         
-        self.layout().addWidget(self.buttonBox,3,0,1,3)
-        #self.layout().addWidget(self.cancelButton,3,1,1,2)
 
 
     def __connectEvents(self):
@@ -70,6 +67,9 @@ class QuickSelectDialog(QDialog):
         self.separatorEdit.textChanged.connect(self.updateSep)
         self.rawValues.clicked.connect(lambda:self.changeProps(mode="raw"))
         self.uniqueValues.clicked.connect(lambda:self.changeProps(mode="unique"))
+
+        self.cancelButton.clicked.connect(self.close)
+        self.acceptButton.clicked.connect(self.accept)
 
     def updateSep(self,newSep):
         ""

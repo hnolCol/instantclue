@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
-from ..utils import HOVER_COLOR
+from ..utils import HOVER_COLOR, getStandardFont
 
 class DeleteDelegate(QStyledItemDelegate):
     def __init__(self,parent, highLightColumn = 1):
@@ -279,8 +279,13 @@ class ItemDelegate(QStyledItemDelegate):
         painter.drawText(rect,   Qt.AlignVCenter | Qt.AlignLeft, self.parent().model().data(index,Qt.DisplayRole))
        
     def setEditorData(self,editor,index):
+        editor.setFont(getStandardFont())
         editor.setAutoFillBackground(True)
         editor.setText(self.parent().model().data(index,Qt.DisplayRole))
+
+
+
+
 
 class AddDelegate(QStyledItemDelegate):
     def __init__(self,parent,highLightColumn = 1):

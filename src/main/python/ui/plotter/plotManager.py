@@ -13,6 +13,7 @@ from .ICPlots.ICCountplot import ICCountplot
 from .ICPlots.ICXYPlot import ICXYPlot
 from .ICPlots.ICForestplot import ICForestplot
 from .ICPlots.ICWordCloud import ICWordCloud
+from .ICPlots.ICClusterplot import ICClusterplot
 
 plotTypeGraph = {
                 "scatter"       :       ICScatterPlot,
@@ -29,7 +30,8 @@ plotTypeGraph = {
                 "x-ys-plot"     :       ICXYPlot,
                 "dim-red-plot"  :       ICBarplot,      
                 "forestplot"    :       ICForestplot,
-                "wordcloud"     :       ICWordCloud
+                "wordcloud"     :       ICWordCloud,
+                "clusterplot"   :       ICClusterplot
                 }
 
 additionToGraph = {

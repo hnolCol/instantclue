@@ -38,7 +38,7 @@ class CollapsableDataTreeView(QWidget):
     
     def __init__(self, parent=None, sendToThreadFn = None, dfs = OrderedDict(), mainController = None):
         super(CollapsableDataTreeView, self).__init__(parent)
-
+    
         self.sendToThreadFn = sendToThreadFn
         self.mC = mainController
         self.dfs = dfs #OrderedDict keys: dataID, values: names
@@ -81,7 +81,7 @@ class CollapsableDataTreeView(QWidget):
         frameWidgets = []
         self.dataHeaders = dict()
         for header in ["Numeric Floats","Integers","Categories"]:
-            self.dataHeaders[header] = DataTreeView(self, sendToThreadFn = self.sendToThread, tableID = header, mainController=self.mC)
+            self.dataHeaders[header] = DataTreeView(self, tableID = header, mainController=self.mC)
             frame = {"title":header,
                      "open":False,
                      "fixedHeight":False,
@@ -143,8 +143,6 @@ class CollapsableDataTreeView(QWidget):
                 action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
 
             menus["main"].exec_(menuPosition)
-
-
 
     def addSelectionOfAllDataTypes(self,funcProps):
         """
@@ -263,11 +261,12 @@ class CollapsableDataTreeView(QWidget):
                 specificColumnSelected = frd.specificColumnSelected #bool
                 selectedIndex = frd.selectedColumnIndex
                 dataType = frd.selectedDataType # selected data type
+                mustMatchCompleteCell = frd.mustMatchCompleteCell 
                 if selectedIndex == 0: #this means complete selection, save if colum header is by change same in data
 
                     specificColumn = self.getSelectedColumns(dataType=dataType)
                     if len(specificColumn) == 0:
-                        w = WarningMessage(iconDir = self.mC.mainPath, infoText = "No selected columns found in selected datat type: {}".format(dataType))
+                        w = WarningMessage(iconDir = self.mC.mainPath, infoText = "No selected columns found in selected data type: {}".format(dataType))
                         w.exec_()
                         return
                     
@@ -276,9 +275,16 @@ class CollapsableDataTreeView(QWidget):
                     specificColumn = [frd.selectedColumn]
                 else:
                     specificColumn = None
-
-                funcProps = {"key":funcKey,"kwargs":{"findStrings":fS,"replaceStrings":rS,"specificColumns":specificColumn,"dataID":self.mC.getDataID(),"dataType":dataType}}
-                self.sendToThread(funcProps)
+                
+                funcProps = {"key":funcKey,"kwargs":{
+                                    "findStrings":fS,
+                                    "replaceStrings":rS,
+                                    "specificColumns":specificColumn,
+                                    "dataID":self.mC.getDataID(),
+                                    "dataType":dataType,
+                                    "mustMatchCompleteCell":mustMatchCompleteCell}
+                            }
+                self.mC.sendRequestToThread(funcProps)
         except Exception as e:
             print(e)
 

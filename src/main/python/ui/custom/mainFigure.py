@@ -242,6 +242,9 @@ class MainFigure(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.mainFigureCollection = mainFigureRegistry
         self.updateFigure.connect(self.update)
+        self.setWindowFlags(Qt.Window | Qt.WindowSystemMenuHint
+                            | Qt.WindowMinimizeButtonHint
+                            | Qt.WindowCloseButtonHint)
         
         self.mainController = mainController
         self.figSize = figSize
@@ -257,7 +260,6 @@ class MainFigure(QDialog):
         # a figure instance to plot on
         if mainFigure is None:
             self.figure = figure(figsize=self.figSize)
-           
         else:
             self.figure = mainFigure
             self.figure.set_dpi(100)

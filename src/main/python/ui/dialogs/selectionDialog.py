@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
 from ..utils import createLabel, createLineEdit, createTitleLabel
-
+from ..custom.buttonDesigns import ICStandardButton
 
 from collections import OrderedDict 
 
@@ -45,8 +45,8 @@ class SelectionDialog(QDialog):
             self.selectionCombos[selectionName]["cb"] = cb
 
 
-        self.okayButton = QPushButton("Ok")
-        self.closeButton = QPushButton("Close")
+        self.okayButton = ICStandardButton(itemName="Okay")
+        self.closeButton = ICStandardButton(itemName="Close")
         
         
     def __layout(self):

@@ -57,7 +57,8 @@ plotFnDict = {
     "x-ys-plot":"getXYPlotProps",
     "dim-red-plot":"getDimRedProps",
     "forestplot" : "getForestplotProps",
-    "wordcloud"  : "getWordCloud"
+    "wordcloud"  : "getWordCloud",
+    "clusterplot" : "getClusterProps"
 }
 
 line_kwargs = dict(linewidths=.45, colors='k')
@@ -192,6 +193,60 @@ class PlotterBrain(object):
         }}
 
 
+    def getClusterBoxplots(self,clusterLabels, data):
+        ""
+        plotData = {}
+    
+        for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby("Labels",sort=False)):
+            plotData[n] = {}
+            plotData[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns] 
+            plotData[n]["patch_artist"] = True
+        return plotData
+           
+            
+
+
+    def getClusterProps(self, dataID, numericColumns, categoricalColumns):
+        ""
+        #get config 
+        config = self.sourceData.parent.config
+        #get cluster method
+        method = config.getParam("clusterplot.method")
+        # color group file
+        colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
+
+        clusterLabels, data = self.sourceData.statCenter.runCluster(dataID,numericColumns,method)
+        clusterLabels = clusterLabels.sort_values("Labels")
+        print(clusterLabels)
+        uniqueClusters = np.unique(clusterLabels["Labels"])
+        nClusters = uniqueClusters.size 
+        print(uniqueClusters)
+        print(nClusters)
+        colorMap, _ = self.sourceData.colorManager.createColorMapDict(uniqueClusters,addNaNLevels=[-1],as_hex = True)
+        print(colorMap)
+
+        plotData = self.getClusterBoxplots(clusterLabels,data)
+
+        axisPositions = getAxisPostistion(nClusters,maxCol=self.maxColumns)
+        axisLabels = dict([(n,{"x":"Column Names","y":""}) for n in range(nClusters)])#
+        axisTitles = dict([(n,uniqueCluster) for n,uniqueCluster in enumerate(uniqueClusters)])
+        tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
+        tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
+
+        colorGroups["group"] = list(colorMap.keys())
+        colorGroups["color"] = list(colorMap.values())
+        colorGroups["internalID"] = [getRandomString() for _ in range(len(colorMap))]
+
+        return {"data":{
+            "plotData": plotData,
+            "axisPositions" : axisPositions,
+            "axisLabels"    :   axisLabels,
+            "tickPositions": tickPositions,
+            "tickLabels": tickLabels,
+            "axisTitles" : axisTitles,
+            "dataColorGroups" : colorGroups,
+            "colorCategoricalColumn" : "Cluster Labels",
+        }}
 
     def getBarplotProps(self, dataID, numericColumns, categoricalColumns):
         ""

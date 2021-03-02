@@ -885,7 +885,7 @@ class DataCollection(object):
 		
 	
          
-	def replaceInColumns(self,dataID,findStrings,replaceStrings, specificColumns = None, dataType = "Numeric Floats"):
+	def replaceInColumns(self,dataID,findStrings,replaceStrings, specificColumns = None, dataType = "Numeric Floats", mustMatchCompleteCell = False):
 		""
 		if dataID in self.dfs:
 			if specificColumns is None: #replace in columnHeaders
@@ -894,8 +894,11 @@ class DataCollection(object):
 					rS = replaceStrings[n] if len(replaceStrings) > 1 else replaceStrings[0]
 					if newColumnNames is None:
 						newColumnNames = self.dfs[dataID].columns
+					if not mustMatchCompleteCell:
+						newColumnNames = newColumnNames.str.replace(fS,rS,case=True,regex = False)
+					else:
+						newColumnNames = newColumnNames.replace(fS,rS)
 
-					newColumnNames = newColumnNames.str.replace(fS,rS,case=True,regex = False)
 				if np.unique(newColumnNames).size != newColumnNames.size:
 					return getMessageProps("Error..","Replacing caused at least two column names to have the same name.")
 				self.dfs[dataID].columns = newColumnNames
@@ -904,8 +907,10 @@ class DataCollection(object):
 				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 				funcProps["dataID"] = dataID
 				return funcProps
+
 			elif isinstance(specificColumns,list) and len(specificColumns) > 0 and all(x in self.getPlainColumnNames(dataID) for x in specificColumns):
 				try:
+				
 					if dataType == "Numeric Floats":
 						replaceValues = [float(x) if x != "nan" else np.nan for x in replaceStrings]#replace nan string with numpys nan
 						findValues = [float(x) if x != "nan" else np.nan for x in findStrings]
@@ -913,14 +918,21 @@ class DataCollection(object):
 						replaceValues = [int(x) if x != "nan" else np.nan for x in replaceStrings]#replace nan string with numpys nan
 						findValues = [int(x) if x != "nan" else np.nan for x in findStrings]
 					else:
-						replaceValues = [x if x != "nan" else self.replaceObjectNan for x in replaceStrings]#replace nan string with numpys nan
-						findValues = [str(x) if x != "nan" else self.replaceObjectNan for x in replaceStrings]
-				except:
+						replaceValues = [x if x != "nan" else self.replaceObjectNan for x in replaceStrings]#replace nan object string
+						findValues = [str(x) if x != "nan" else self.replaceObjectNan for x in findStrings]
+				except Exception as e:
+					print(e)
 					return getMessageProps("Error..","Strings could not be converted to required data type. Use 'nan' for NaN!")
 
 				if len(findValues) > 1 and len(replaceValues) == 1:
-					replaceValues = replaceValues * len(findValues)
-				self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns].replace(findValues, replaceValues)
+					replaceValues = replaceValues * len(findValues)	
+				if dataType not in ["Numeric Floats","Integers"] and not mustMatchCompleteCell:
+					#convert to pandas series and ensure str data type
+					for fS,rS in zip(findStrings,replaceStrings):
+						#replace happens after each other
+						self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns[0]].astype(str).str.replace(fS, rS,regex=False,case=True)
+				else:
+					self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns].replace(findValues, replaceValues)
 				return getMessageProps("Column renamed.","Column evaluated and renamed.")
 
 		else:

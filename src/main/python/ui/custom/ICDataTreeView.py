@@ -1,19 +1,23 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
-from backend.config.data.params import MTMethods
+
 from .resortableTable import ResortableTable
 from .warnMessage import WarningMessage
+
 from ..delegates.dataTreeViewDelegates import *
-from ..utils import createSubMenu, createMenu, createMenus
+from ..utils import createSubMenu, createMenu, createMenus, getStandardFont
 from ..dialogs.selectionDialog import SelectionDialog
 from ..dialogs.ICGrouper import ICGrouper
 from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
+
+#data import 
+from backend.config.data.params import MTMethods
+
 import pandas as pd
 import numpy as np
-
 
 
 
@@ -297,8 +301,11 @@ menuBarItems = [
     {
         "subM":"Data Format Transformation",
         "name":"Row Correlation Matrix",
-        "funcKey": "stats::rowCorrelation",
-        "dataType": "Numeric Floats"
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"stats::rowCorrelation",
+                    "requiredColumns": ["indexColumn"],
+                    "addColumns" : True}
     },
 
     {
@@ -334,18 +341,49 @@ menuBarItems = [
         "funcKey": "dimReduction::UMAP",
         "dataType": "Numeric Floats"
     },
+    # {
+    #     "subM":"Dimensional Reduction",
+    #     "name":"UMAP.T",
+    #     "funcKey": "dimReduction::UMAP",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs":{"transpose":True}
+    # }, ######### DIM red
+
     {
         "subM":"Dimensional Reduction",
-        "name":"UMAP.T",
-        "funcKey": "dimReduction::UMAP",
+        "name":"Isomap",
+        "funcKey": "dimReduction::ManifoldEmbedding",
         "dataType": "Numeric Floats",
-        "fnKwargs":{"transpose":True}
+        "fnKwargs":{"manifoldName":"Isomap"}
     },
+ #######
     {
         "subM":"Dimensional Reduction",
         "name":"t-SNE",
-        "funcKey": "dimReduction::TSNE",
-        "dataType": "Numeric Floats"
+        "funcKey": "dimReduction::ManifoldEmbedding",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"manifoldName":"TSNE"}
+    },
+        {
+        "subM":"Dimensional Reduction",
+        "name":"SpectralEmbedding",
+        "funcKey": "dimReduction::ManifoldEmbedding",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"manifoldName":"SpecEmb"}
+    },
+    {
+        "subM":"Dimensional Reduction",
+        "name":"Multidimensional scaling (MDS)",
+        "funcKey": "dimReduction::ManifoldEmbedding",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"manifoldName":"MDS"}
+    },
+    {
+        "subM":"Dimensional Reduction",
+        "name":"Locally Linear Embedding (LLE)",
+        "funcKey": "dimReduction::ManifoldEmbedding",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"manifoldName":"LLE"}
     },
     {
         "subM":"Data Format Transformation",
@@ -852,14 +890,16 @@ menuBarItems = [
 ] + MT_MENUS
 
 class DataTreeView(QWidget):
-    def __init__(self,parent=None, mainController = None, sendToThreadFn = None, dataID = None, tableID = None):
+    def __init__(self,parent=None, mainController = None, dataID = None, tableID = None):
         super(DataTreeView, self).__init__(parent)
         self.tableID = tableID
+
         self.mC = mainController
+
         self.__controls()
         self.__layout()
         self.__connectEvents()
-        self.sendToThreadFn = sendToThreadFn
+
         self.showShortcuts = True
         self.dataID = dataID
         self.groupingName = ""
@@ -874,10 +914,11 @@ class DataTreeView(QWidget):
 
     def __setupTable(self):
         ""
+        
         self.table = DataTreeViewTable(parent = self, 
-                                    sendToThread = self.sendToThread, 
                                     tableID= self.tableID, 
-                                    mainController=self.mC)
+                                    mainController=self.mC,
+                                    sendToThread= self.sendToThread)
         self.table.setFocusPolicy(Qt.ClickFocus)
         self.model = DataTreeModel(parent=self.table)
         self.table.setItemDelegateForColumn(0,ItemDelegate(self.table))
@@ -917,11 +958,14 @@ class DataTreeView(QWidget):
 
     def sendToThread(self, funcProps = {}, addSelectionOfAllDataTypes = False, addDataID = False):
         ""
-        if hasattr(self,"sendToThreadFn"):
-
-            self.sendToThreadFn(funcProps,
-                                addSelectionOfAllDataTypes  = addSelectionOfAllDataTypes,
-                                addDataID = addDataID)
+        if addDataID:
+            if not "kwargs" in funcProps:
+                funcProps["kwargs"] = {}
+            funcProps["kwargs"]["dataID"] = self.getDataID() 
+        if addSelectionOfAllDataTypes:
+            funcProps = self.mC.mainFrames["data"].dataTreeView.addSelectionOfAllDataTypes(funcProps)
+        
+        self.mC.sendRequestToThread(funcProps)
 
     def setDataID(self,dataID):
         ""
@@ -1187,10 +1231,8 @@ class DataTreeModel(QAbstractTableModel):
             rowIndex = index.row() 
             if rowIndex >= 0 and rowIndex < self._labels.index.size:
                 return str(self._labels.iloc[index.row()])
-        elif role == Qt.FontRole and index.column() == 0:
-            font = QFont()
-            font.setFamily("Arial")
-            font.setPointSize(10)
+        elif role == Qt.FontRole:
+            font = getStandardFont
             return font
         elif role == Qt.ToolTipRole:
             if index.column() == 3:
@@ -1275,7 +1317,6 @@ class DataTreeModel(QAbstractTableModel):
 class DataTreeViewTable(QTableView):
 
     def __init__(self, parent=None, rowHeight = 22, mainController = None, sendToThread = None, tableID = None):
-
         super(DataTreeViewTable, self).__init__(parent)
        
         self.setMouseTracking(True)
@@ -1290,8 +1331,7 @@ class DataTreeViewTable(QTableView):
         self.mC = mainController
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragOnly)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)# sssetSelectionBehavior(QAbstractItemView::SelectRows
-       # self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
         
         self.rowHeight = rowHeight
         self.sendToThread = sendToThread
@@ -1415,6 +1455,9 @@ class DataTreeViewTable(QTableView):
                 self.model().rowDataChanged(self.focusRow)
 
         elif e.key() in [Qt.Key_Enter, Qt.Key_Return]:
+            if self.focusRow is None or self.focusColumn is None:
+                super().keyPressEvent(e)
+                return 
             #get focused index
             tableIndex = self.model().index(self.focusRow,self.focusColumn)
 
@@ -1469,6 +1512,8 @@ class DataTreeViewTable(QTableView):
    
         if self.rightClick:
             return
+        if self.state() == QAbstractItemView.EditingState:
+            return 
         if self.focusRow is not None:
             dataRow = int(self.focusRow)
             self.focusColumn = None
@@ -1532,6 +1577,9 @@ class DataTreeViewTable(QTableView):
 
     def mouseMoveEvent(self,event):
         
+        #check if table is being edited, if yes - return
+        if self.state() == QAbstractItemView.EditingState:
+            return 
         if event.buttons() == Qt.LeftButton:
             
             super(QTableView,self).mouseMoveEvent(event)
@@ -1756,7 +1804,7 @@ class DataTreeViewTable(QTableView):
                         n,dragColumn in enumerate(dragColumns) if n < len(askUserForColumns)]))
 
             if sel.exec_():
-                self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=sel.savedSelection, addColumnSelection=False)
+                self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=sel.savedSelection, addColumnSelection=False if not "addColumns" in kwargs else kwargs["addColumns"])
 
         elif "requiredStr" in  kwargs:
             

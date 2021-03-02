@@ -28,7 +28,6 @@ class AnalysisSelection(QWidget):
         # set up collapsable frame widget
         # we need extra frame to get parent size correctly
         self.dataTreeFrame = QFrame(self)
-        
         #add widget to frame
         self.frames = CollapsableFrames(parent=self.dataTreeFrame,buttonDesign=DataHeaderButton,spacing=0)
         frameWidgets = []
@@ -38,7 +37,7 @@ class AnalysisSelection(QWidget):
             for k, v in hierAnalysisSteps.items():
                 header = k
                 values = v
-            self.dataHeaders[header] = DataTreeView(self.frames, sendToThreadFn = self.sendToThread, tableID = header)
+            self.dataHeaders[header] = DataTreeView(self.frames, mainController = self.mC, tableID = header)
             frame = {"title":header,
                      "open":False,
                      "fixedHeight":False,
@@ -107,7 +106,7 @@ class AnalysisSelection(QWidget):
                 
                 if exists:
                     if task == "Line (y = m*x + b)":
-                        askLineData = ICDataInput(title = "Provide line's slope and intercep.\ny = m*x + b",valueNames = ["m","b"], valueTypes = {"m":float,"b":float})
+                        askLineData = ICDataInput(mainController=self.mC, title = "Provide line's slope and intercep.\ny = m*x + b",valueNames = ["m","b"], valueTypes = {"m":float,"b":float})
                         if askLineData.exec_():
                             m, b = askLineData.providedValues["m"], askLineData.providedValues["b"]
                         else:
@@ -119,7 +118,7 @@ class AnalysisSelection(QWidget):
                     graph.updateFigure.emit()
             elif task == "Quadrant Lines":
                 reqFloats = ["x_min","x_max","y_min","y_max"]
-                askQuadData = ICDataInput(title = "Provide x and y axis quadrant limits",valueNames = reqFloats, 
+                askQuadData = ICDataInput(mainController=self.mC,title = "Provide x and y axis quadrant limits",valueNames = reqFloats, 
                         valueTypes = {"x_min":float,"x_max":float,"y_min":float,"y_max":float})
                 if askQuadData.exec_():
                     quadrantCoords = [askQuadData.providedValues[floatName] for floatName in reqFloats]

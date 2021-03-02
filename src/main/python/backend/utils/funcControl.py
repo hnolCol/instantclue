@@ -481,7 +481,13 @@ funcPropControl = {
                     updateTreeView,
                     sendMessageProps]           
         },
-        
+    "dimReduction::ManifoldEmbedding":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runManifoldEmbedding","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":[
+                    updateTreeView,
+                    sendMessageProps]           
+        },      
     "dimReduction::UMAP":
         {
             "threadRequest":{"obj":"statCenter","fn":"runUMAP","requiredKwargs":["dataID","columnNames"]},

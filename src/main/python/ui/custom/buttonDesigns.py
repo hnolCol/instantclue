@@ -406,6 +406,13 @@ class LabelLikeButton(PushHoverButton):
         self.width = QFontMetrics(font).width(self.text) + 2 * self.itemBorder
         self.height = QFontMetrics(font).height() + self.itemBorder
     
+    def adjustWidth(self, maximumSize = 300):
+        ""
+        if self.width > maximumSize:
+            self.width = maximumSize
+
+        self.setMinimumWidth(self.width)
+    
     def getText(self):
         ""
         return self.text
@@ -414,6 +421,7 @@ class LabelLikeButton(PushHoverButton):
         ""
         self.text = text
         self.updateSize()
+        self.adjustWidth()
         self.update()
     
     
@@ -1832,10 +1840,11 @@ class PlotTypeButton(PushHoverButton):
                             "addSwarmplot"  :   self.drawSwarmAdd,
                             "dim-red-plot"  :   self.drawDimRed,
                             "forestplot"    :   self.drawForestplot,
+                            "clusterplot"   :   self.drawClusterplot,
                             "wordcloud"     :   self.drawWordcloud}
 
     def paintEvent(self,event, noAxis = False):
-        ""
+        "NoAxis - no effect. remove"
         #create common background/reacts to hover
         super().paintEvent(event)
         painter = QPainter(self)
@@ -1846,8 +1855,7 @@ class PlotTypeButton(PushHoverButton):
         #get rect
         rect = event.rect()
         try:
-            if not noAxis:
-                rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter,rect,False)
+            rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter,rect,False)
             if self.plotType is not None and self.plotType in self.funcKeyDict:
                 self.funcKeyDict[self.plotType](painter,rectHeight,rectWidth, rectX, rectY)
         except Exception as e:
@@ -1890,6 +1898,36 @@ class PlotTypeButton(PushHoverButton):
                         topRight)
 
         return rectHeight, rectWidth, rectX, rectY
+
+    def drawClusterplot(self,qp, height, width, rectX, rectY):
+        ""
+        if self.mouseOver:
+            defaultColors = ["#A0D4CB",WIDGET_HOVER_COLOR,"#397546"]
+        else:
+            defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546"]
+        X = np.array([
+                [0.2,0.15, 0],
+                [0.4,0.22, 0],
+                [0.6,0.19, 0],
+                [0.8,0.17, 0],
+
+                [0.2,0.52, 1],
+                [0.4,0.45, 1],
+                [0.6,0.50, 1],
+                [0.8,0.51, 1],
+
+                [0.2,0.75, 2],
+                [0.4,0.80, 2],
+                [0.6,0.78, 2],
+                [0.8,0.821, 2]
+            ])
+          
+        
+        for x, y, cIdx in X:
+            b = QBrush(QColor(defaultColors[int(cIdx)]))
+            qp.setBrush(b)
+            xy = QPointF(rectX + width*x + np.random.random(), rectY+height*y + np.random.random())
+            qp.drawEllipse(xy,3,3)
 
 
     def drawCorrMatrix(self,qp, height, width, rectX, rectY, X = None):

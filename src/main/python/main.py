@@ -380,7 +380,6 @@ class InstantClue(QMainWindow):
     def sendRequestToThread(self, funcProps = None, **kwargs):
         # Pass the function to execute
         try:
-           # print("takings this to thread")
             if "key" not in funcProps:
                 return
             else:

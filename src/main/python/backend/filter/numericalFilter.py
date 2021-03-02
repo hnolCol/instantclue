@@ -19,7 +19,24 @@ funcFilter = {"Between":"findBetweenIndicies",
               "n largest": "findNLargestIndices",
               "n smallest": "findNSmallestIndices"}
 
+funcColumnName = {"Between":"[{},{}]",
+              "Not between":"{}[]{}",
+              "Greater than": ">{}",
+              "Greater Equal than" : ">={}",
+              "Smaller than": "<{}",
+              "Smaller Equal than": "<={}",
+              "n largest": "lrgst{}",
+              "n smallest": "smll{}"}
 
+minMaxForColumnName = {
+              "Greater than": "max",
+              "Greater Equal than" : "max",
+              "Smaller than": "min",
+              "Smaller Equal than": "min",
+              "n largest": "max",
+              "n smallest": "min"}
+
+              
 class NumericFilter(object):
     
     def __init__(self, sourceData, operator= "and"):
@@ -43,11 +60,26 @@ class NumericFilter(object):
         elif self.operator == "and":
             filterIdx, counts = np.unique(arr, return_counts=True)
             filterIdx = filterIdx[np.where(counts == len(filterProps))]
+
+        #get column name
+        columnNameStr = []
+        for columnName, filterProp in filterProps.items():
+            filterType = filterProp["filterType"]
+            funcColumnName[filterType]
+            if filterType in minMaxForColumnName:
+                columnNameStr.append("{}".format(columnName) + funcColumnName[filterType].format(filterProp[minMaxForColumnName[filterType]]))
+            else:
+                columnNameStr.append("{}".format(columnName) + funcColumnName[filterType].format(filterProp["min"],filterProp["max"]))
+        
         if subsetData:
-            subsetName = "NumericSubset_({})_({})".format(mergeListToString(filterProps.keys()),self.sourceData.getFileNameByID(dataID))
+
+            subsetName = "{}({})_({})".format(self.sourceData.parent.config.getParam("leading.string.numeric.filter.subset"),
+                                                " ".join(columnNameStr),
+                                                self.sourceData.getFileNameByID(dataID))
+
             return self.sourceData.subsetDataByIndex(dataID, filterIdx, subsetName)
         else:
-            annotationColumnName = "NumericFilter_({})".format(mergeListToString(filterProps.keys()))
+            annotationColumnName = "{}({})".format(self.sourceData.parent.config.getParam("leading.string.numeric.filter")," ".join(columnNameStr))
             return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
 
     def findBetweenIndicies(self,data,props):

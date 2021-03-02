@@ -5,7 +5,7 @@ from PyQt5.QtCore import *
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 
-from ...delegates.quickSelectDelegates import DelegateColor #borrow delegate
+from ...delegates.quickSelectDelegates import DelegateColor, ItemDelegate #borrow delegate
 
 import pandas as pd
 import numpy as np
@@ -107,6 +107,7 @@ class ICColorTable(ICColorSizeTableBase):
         self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
         self.table.resizeColumns()
         self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
+        self.table.setItemDelegateForColumn(1,ItemDelegate(self.table))
 
     def __layout(self):
         ""
@@ -310,15 +311,16 @@ class ColorTableModel(QAbstractTableModel):
         elif role == Qt.EditRole:
             if not self.isEditable:
                 return False
-            if index.column() != 0:
+            if index.column() != 1:
                 return False
             newValue = str(value)
             oldValue = str(self._labels.iloc[index.row()])
-            columnNameMapper = {oldValue:newValue}
-            if oldValue != newValue:
-                self.parent().renameColumn(columnNameMapper)
-                self.updateData(value,index)
-                self.dataChanged.emit(index,index)
+            print(newValue)
+            # columnNameMapper = {oldValue:newValue}
+            # if oldValue != newValue:
+            #     self.parent().renameColumn(columnNameMapper)
+            #     self.updateData(value,index)
+            #     self.dataChanged.emit(index,index)
             return True
 
     def setColor(self, dataIndex, hexColor):
@@ -353,10 +355,10 @@ class ColorTableModel(QAbstractTableModel):
             
     def flags(self, index):
         "Set Flags of Column"
-        if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-        else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        #if index.column() == 0:
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        #else:
+         #   return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
@@ -510,11 +512,12 @@ class ColorTable(QTableView):
     
     def mousePressEvent(self,e):
         ""
-       # super().mousePressEvent(e)
+        
         if e.buttons() == Qt.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
+            super().mousePressEvent(e)
     
     def mouseReleaseEvent(self,e):
         ""
@@ -561,6 +564,11 @@ class ColorTable(QTableView):
                 self.menu.exec(QCursor.pos() + QPoint(4,4))
                 
                 self.clickedRow = None 
+            
+            elif tableIndexCol == 1:
+                print("?")
+                super().mouseReleaseEvent(e)
+                
 
         except Exception as e:
             print(e)

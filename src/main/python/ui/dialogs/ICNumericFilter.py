@@ -29,9 +29,9 @@ class NumericFilter(QDialog):
     def __init__(self,mainController, selectedNumericColumn = '', *args, **kwargs):
         super(NumericFilter,self).__init__(*args, **kwargs)
 
-        self.mainController = mainController
-        self.dataID = self.mainController.mainFrames["data"].getDataID()
-        self.numericColumns = self.mainController.data.getNumericColumns(self.dataID)
+        self.mC = mainController
+        self.dataID = self.mC.mainFrames["data"].getDataID()
+        self.numericColumns = self.mC.data.getNumericColumns(self.dataID)
         self.selectedNumericColumn = selectedNumericColumn
         
         self.filterProps = OrderedDict() 
@@ -53,8 +53,8 @@ class NumericFilter(QDialog):
         
 
         self.operatorLabel = createLabel("Operator: ", fontSize = 12)
-        self.operatorCombo = createCombobox(self,items = self.mainController.numericFilter.getOperatorOptions())
-        self.operatorCombo.setCurrentText(self.mainController.numericFilter.getOperator())
+        self.operatorCombo = createCombobox(self,items = self.mC.numericFilter.getOperatorOptions())
+        self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
 
         self.addFilterIcon = BigPlusButton(buttonSize=(30,30))
@@ -166,8 +166,8 @@ class NumericFilter(QDialog):
         columnLabel = LabelLikeButton(parent = self, text = columnName, tooltipStr="Selected column to apply filter on. Only one filter per column is allowed.", itemBorder=5)
         filterLabel = LabelLikeButton(parent = self, text = filterType, tooltipStr="Filter Type: Between, Greater, Smaller ...", itemBorder=5)
         
-        minValue, maxValue = self.mainController.data.getMinMax(self.dataID,columnName)
-        nValues = self.mainController.data.getNumValidValues(self.dataID,columnName)
+        minValue, maxValue = self.mC.data.getMinMax(self.dataID,columnName)
+        nValues = self.mC.data.getNumValidValues(self.dataID,columnName)
 
         minEditValue  = self.createValueLineEdit("Set value",
                                                 "Set minimum value\nmin value: {}\nvalid values: {}".format(minValue,nValues),
@@ -243,9 +243,14 @@ class NumericFilter(QDialog):
         funcProps = OrderedDict()
         for columnName, filtProps in self.filterProps.items():
             if filtProps["min"].text() != "" or filtProps["max"].text() != "":
-                funcProps[columnName] = {"min":float(filtProps["min"].text()) if filtProps["min"].text() != "" else -np.inf,
+                try:
+                    funcProps[columnName] = {"min":float(filtProps["min"].text()) if filtProps["min"].text() != "" else -np.inf,
                                     "max":float(filtProps["max"].text()) if filtProps["max"].text() != "" else np.inf,
                                     "filterType":filtProps["filterType"]}
+                except:
+                    warn = WarningMessage(infoText = "Entered values could not be converted to floats. Please use . instead of , for decimal numbers.", iconDir = self.mC.mainPath)
+                    warn.exec_()
+                    return
         if len(funcProps) == 0:
             warn = WarningMessage(infoText = "Please enter values to specifiy the numeric filter.",iconDir = self.mC.mainPath)
             warn.exec_()
@@ -256,7 +261,7 @@ class NumericFilter(QDialog):
         if self.CBFilterOptions["Subset Matches"].checkState():
             funcProps["kwargs"]["subsetData"] = True
             funcProps["key"] = "filter::subsetNumericFilter"
-        self.mainController.sendRequestToThread(funcProps)
+        self.mC.sendRequestToThread(funcProps)
         self.close()
         
 
@@ -342,7 +347,7 @@ class NumericFilter(QDialog):
         
     def setOperator(self,newOperator):
         ""
-        self.mainController.numericFilter.setOperator(newOperator)
+        self.mC.numericFilter.setOperator(newOperator)
     
     def setCBCheckStates(self,event=None):
         ""

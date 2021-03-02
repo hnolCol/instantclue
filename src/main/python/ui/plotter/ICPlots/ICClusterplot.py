@@ -9,14 +9,13 @@ class ICClusterplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
         ""
-        super(ICBoxplot,self).__init__(*args,**kwargs)
-
-        self.boxplotItems = dict() 
-        
+        super(ICClusterplot,self).__init__(*args,**kwargs)
+        self.boxplotItems = {} 
         
     def initClusters(self,onlyForID = None, targetAx = None):
         ""
-        
+        for n, boxplotProps in self.data["plotData"].items():
+            self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
            
     def onDataLoad(self, data):
         ""
@@ -24,17 +23,17 @@ class ICClusterplot(ICChart):
             self.data = data
             self.initAxes(data["axisPositions"])
             
-          
-            self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
-     
-            for n,ax in self.axisDict.items():
-                if n in data["axisLimits"]:
-                    self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
-     
-            self.setAxisLabels(self.axisDict,data["axisLabels"])
+            if "tickPositions" in data and "tickLabels" in data:
+                self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
+            if "axisLimits" in data:
+                for n,ax in self.axisDict.items():
+                    if n in data["axisLimits"]:
+                        self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
+            if "axisLabels" in data:
+                self.setAxisLabels(self.axisDict,data["axisLabels"])
          
             self.addTitles()
-
+            self.initClusters()
           
             if self.interactive:
                 for ax in self.axisDict.values():
@@ -42,10 +41,8 @@ class ICClusterplot(ICChart):
                 #adda qucik select hover
                 self.addQuickSelectHoverScatter()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-
             self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
-        
             print(e)
         
 
@@ -95,25 +92,25 @@ class ICClusterplot(ICChart):
                 print(e)
 
     
-	def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
-		""
-		for ax in self.axisDict.values():
-			if self.isQuickSelectModeUnique():
+    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+        ""
+        for ax in self.axisDict.values():
+            if self.isQuickSelectModeUnique():
 
-				scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
-				
+                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
+                
 
-			elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
+            elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
 
-				dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
-				scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
-				scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+                dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
+                scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
+                scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
 
-			else:
-				
-				continue
+            else:
+                
+                continue
 
-			self.updateQuickSelectScatter(ax, scatterColors = scatterColors, scatterSizes = scatterSizes)
+            self.updateQuickSelectScatter(ax, scatterColors = scatterColors, scatterSizes = scatterSizes)
 	
 
     def updateBackgrounds(self):

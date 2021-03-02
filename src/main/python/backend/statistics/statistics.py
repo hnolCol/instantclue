@@ -1,14 +1,14 @@
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
-from ..utils.stringOperations import getMessageProps, getRandomString
+from ..utils.stringOperations import getMessageProps, getRandomString, mergeListToString
 
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
 from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
 
-from sklearn.cluster import KMeans
-from sklearn.manifold import TSNE
+from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
+from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
 
 from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -24,7 +24,18 @@ import pandas as pd
 import numpy as np
 #from cvae import cvae
 import fastcluster
+from collections import OrderedDict
 
+clusteringMethodNames = OrderedDict([
+                            ("kmeans",KMeans),
+                            ("Birch",Birch),
+                            ("OPTICS",OPTICS),
+                            ("HDBSCAN",hdbscan.HDBSCAN),
+                            ("Affinity Propagation",AffinityPropagation),
+                            ("Agglomerative Clustering",AgglomerativeClustering)
+                            ])
+
+manifoldFnName = {"Isomap":"runIsomap","MDS":"runMDS","TSNE":"runTSNE","LLE":"runLLE","SpecEmb":"runSE"}
 
 class StatisticCenter(object):
 
@@ -192,30 +203,18 @@ class StatisticCenter(object):
 
 
 
-    def runTSNE(self,dataID,columnNames,transformGraph = True, *args,**kwargs):
+    def runTSNE(self,X,*args,**kwargs):
         ""
-        try:
-            X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
-            if checkPassed:
-                nComp = self.sourceData.parent.config.getParam("tsne.n.components")
-                perplexity = self.sourceData.parent.config.getParam("tsne.perplexity")
-                early_exaggeration = self.sourceData.parent.config.getParam("tsne.early_exaggeration")
-                self.calcTSNE = TSNE(n_components=nComp,
-                                     perplexity=perplexity,
-                                     early_exaggeration = early_exaggeration,
-                                     *args,**kwargs)
-                embedding = self.calcTSNE.fit_transform(X)
-                compNames = ["Comp::TSNE_{:02d}".format(n) for n in range(nComp)]
-
-                df = pd.DataFrame(embedding.astype(np.float64),index=dataIndex, columns = compNames)
-                msgProps = getMessageProps("Done..","TSNE calculation performed.\nColumns were added to the tree view.")
-                            
-                result = {**self.sourceData.joinDataFrame(dataID,df),**msgProps}
-                return result
-            else:
-                return getMessageProps("Error..","Insufficient data for TSNE")
-        except Exception as e:
-            return getMessageProps("Error..","There was an unknown error")
+        nComp = self.sourceData.parent.config.getParam("tsne.n.components")
+        perplexity = self.sourceData.parent.config.getParam("tsne.perplexity")
+        early_exaggeration = self.sourceData.parent.config.getParam("tsne.early_exaggeration")
+        self.calcTSNE = TSNE(n_components=nComp,
+                                perplexity=perplexity,
+                                early_exaggeration = early_exaggeration,
+                                *args,**kwargs)
+        return self.calcTSNE.fit_transform(X)
+            
+            
 
     # def runCVAE(self,dataID,columnNames, transpose = False, *args,**kwargs):
     #     "Runs a Variational Autoencoder Dimensional Reduction"
@@ -241,10 +240,11 @@ class StatisticCenter(object):
         with threadpool_limits(limits=1, user_api='blas'): #require to prevent crash (np.dot not thread safe)
             X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
             if checkPassed:
-                    nN = self.sourceData.parent.config.getParam("umap.n.neighbors")
-                    minDist = self.sourceData.parent.config.getParam("umap.min.dist")
-                    metric = self.sourceData.parent.config.getParam("umap.metric")
-                    nComp = self.sourceData.parent.config.getParam("umap.n.components")
+                    config = self.sourceData.parent.config
+                    nN = config.getParam("umap.n.neighbors")
+                    minDist = config.getParam("umap.min.dist")
+                    metric = config.getParam("umap.metric")
+                    nComp = config.getParam("umap.n.components")
 
                     self.calcUMAP = umap.UMAP(n_neighbors = nN,
                                                 metric = metric,
@@ -316,7 +316,7 @@ class StatisticCenter(object):
                 
             return getMessageProps("Error ..",errMsg)
 
-    def runRowCorrelation(self,dataID,columnNames, indexColumns = ["T: PG.Genes"]):
+    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["T: PG.Genes"]):
         """
         Calculates correlation between all rows.
         Correlation coefficients will be filterd for NaN and threshold specified by
@@ -324,6 +324,9 @@ class StatisticCenter(object):
         """
         if columnNames.size < 3:
             return getMessageProps("Error..","Requires at least three columns.")
+        #check index column
+        if isinstance(indexColumn,str):
+            indexColumn = [indexColumn]
         #get correlation data
         data = self.getData(dataID,columnNames)
         #remove rows that have less than 3 values (corr would be always 1)
@@ -331,7 +334,7 @@ class StatisticCenter(object):
         #calculate corr matrix
         corrMatrix = data.T.corr(method = self.corrMethod)
         #get cateogrical daata
-        catData = self.sourceData.getDataByColumnNames(dataID,indexColumns,rowIdx=data.index)["fnKwargs"]["data"]
+        catData = self.sourceData.getDataByColumnNames(dataID,indexColumn,rowIdx=data.index)["fnKwargs"]["data"][indexColumn[0]]
         #set index
         corrMatrix.index = catData.values
         corrMatrix.columns = catData.values
@@ -440,7 +443,9 @@ class StatisticCenter(object):
         except Exception as e:
             print(e)
 
-    def runHDBSCAN(self,dataID,columnNames):
+
+
+    def runHDBSCAN(self,dataID,columnNames, attachToSource = False):
         ""
         data = self.getData(dataID,columnNames).dropna()
         model = hdbscan.HDBSCAN(
@@ -448,9 +453,12 @@ class StatisticCenter(object):
                 min_samples=self.sourceData.parent.config.getParam("hdbscan.min.samples"),
                 cluster_selection_epsilon=self.sourceData.parent.config.getParam("hdbscan.cluster.selection.epsilon"))
         clusterLabels = model.fit_predict(data.values)
-        df = pd.DataFrame(["C({})".format(x) for x in clusterLabels], columns = ["HDBSCAN"], index = data.index)
         
-        return self.sourceData.joinDataFrame(dataID,df)
+        df = pd.DataFrame(["C({})".format(x) for x in clusterLabels], columns = ["HDBSCAN"], index = data.index)
+        if not attachToSource:
+            return df, data
+        else:
+            return self.sourceData.joinDataFrame(dataID,df)
 
     def fitModel(self, dataID, columnNames, timeGrouping, compGrouping = None, replicateOrder = "columnOrder", model="First Order Kinetic"):
         "Fit Model to Data"
@@ -587,16 +595,90 @@ class StatisticCenter(object):
             return wilcoxon(X.values, Y.values)
         return
 
-    def runCluster(self,dataID,columnNames):
-        ""
+    def runCluster(self,dataID,columnNames,methodName):
+        "Clsuter analysis for cluster plot"
+        if methodName in clusteringMethodNames:
+            if methodName == "HDBSCAN":
+
+                clusterLabels, data = self.runHDBSCAN(dataID,columnNames,attachToSource = False)
+                clusterLabels.columns = ["Labels"]
             
+            else:
+                data = self.getData(dataID,columnNames).dropna()
+
+                alg = clusteringMethodNames[methodName]()
+                alg.fit(data.values)
+                if hasattr(alg,"labels_"):
+                    clusterLabels = pd.DataFrame(alg.labels_, index=data.index,columns = ["Labels"])
+            return clusterLabels, data
+
+    def runManifoldEmbedding(self,dataID,columnNames,manifoldName,attachToSource=True):
+        
+        X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
+        if checkPassed: 
+    
+            if manifoldName in manifoldFnName:
+
+                embed = getattr(self,manifoldFnName[manifoldName])(X)
+                if self.sourceData.parent.config.getParam("add.column.names.in.emb.name"):
+                    compNames  = ["E({}):({}):_{}".format(manifoldName,mergeListToString(columnNames.values,","),n) for n in range(embed.shape[1])]  
+                else:
+                    compNames  = ["E({}):_{}".format(manifoldName,n) for n in range(embed.shape[1])]  
+                df = pd.DataFrame(embed.astype(np.float64),index=dataIndex,columns = compNames)
+
+                if not attachToSource:
+                    return df, data
+                else:
+                    msgProps = getMessageProps("Done..","{} calculation performed.\nColumns were added to the tree view.".format(manifoldName))
+                    result = {**self.sourceData.joinDataFrame(dataID,df),**msgProps}
+                    return result
+
+            return getMessageProps("Error..","Manifold unknown.")
+
+        return getMessageProps("Error..", errMsg)
+        
+    def runIsomap(self,X):
+        ""
+        config  = self.sourceData.parent.config
+        return Isomap(
+                n_components = config.getParam("isomap.n.components"),
+                n_neighbors = config.getParam("isomap.n.neighbors"),
+                path_method= config.getParam("isomap.path.method")
+                ).fit_transform(X)
+
+    def runMDS(self,X):
+        ""
+        config  = self.sourceData.parent.config
+        return MDS(
+            n_components = config.getParam("mds.n.components"), 
+            metric = config.getParam("mds.metric")).fit_transform(X)
+        
+
+    def runLLE(self,X,*args,**kwargs):
+        ""
+        config  = self.sourceData.parent.config
+        return LocallyLinearEmbedding(
+                    n_neighbors = config.getParam("locally.linear.n.neighbors"),
+                    method = config.getParam("locally.linear.method"), 
+                    n_components = config.getParam("locally.linear.n.components"),
+                    neighbors_algorithm = config.getParam("locally.neighbors.algorithm"), *args, **kwargs).fit_transform(X)
+                    
+    def runSE(self,X,*args,**kwargs):
+        ""
+        config  = self.sourceData.parent.config
+        return SpectralEmbedding(
+                    n_components=config.getParam("spectral.embedding.n.components"), 
+                    affinity=config.getParam("spectral.embedding.n.affinity"),
+                    *args,**kwargs).fit_transform(X)
+
+
     def _nanEuclidianDistance(self,u,v):
 
         return np.sqrt(np.nansum((u - v) ** 2, axis=0))
 
     def clusterData(self, data, metric = "euclidean", method = "complete"):
         '''
-        Clusters the data
+        Clusters the data for hierarchical clustering
         '''
         
         try:

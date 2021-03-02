@@ -10,13 +10,15 @@ import numpy as np
 
 class ICDataInput(QDialog):
 
-    def __init__(self,title = "Welcome", valueNames = [], defaultValues = {}, valueTypes = {}, *args,**kwargs):
+    def __init__(self, mainController, title = "Welcome", valueNames = [], defaultValues = {}, valueTypes = {}, *args,**kwargs):
         super(ICDataInput,self).__init__(*args,**kwargs)
 
         self.title = title
         self.valueNames = valueNames
         self.valueTypes = valueTypes
         self.defaultValues = defaultValues
+
+        self.mC = mainController
         
         self.lineEdits = OrderedDict()
         self.providedValues = OrderedDict()

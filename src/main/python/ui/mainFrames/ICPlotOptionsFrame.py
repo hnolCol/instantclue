@@ -17,6 +17,7 @@ from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..dialogs.ICConfiguration import ConfigDialog
 from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import createSubMenu
+from backend.statistics.statistics import clusteringMethodNames
 import numpy as np
 import os
 
@@ -175,9 +176,18 @@ class PlotOptionFrame(QWidget):
             action = menu["Size .."].addAction(str(scatterSize))
             action.triggered.connect(lambda _, size = scatterSize: self.mC.config.setParam("swarm.scatterSize",size))
 
-
         self.typeMenus["addSwarmplot"] = menu["main"]
 
+        #add clusterplot menu 
+        menu = createSubMenu(subMenus=["Method","Plot type"])
+        menu["main"].addAction("Export clusters")
+        for clusterMethod in clusteringMethodNames.keys():
+            action = menu["Method"].addAction(clusterMethod)
+            action.triggered.connect(lambda _, cMethod = clusterMethod: self.mC.config.setParam("clusterplot.method",cMethod))
+        for plotType in ["barplot","boxplot","lineplot"]:
+            action = menu["Plot type"].addAction(plotType)
+            action.triggered.connect(lambda _, pType = plotType: self.mC.config.setParam("clusterplot.type",pType))
+        self.typeMenus["clusterplot"] = menu["main"]
 
     def handleSplitOfDataByCategory(self):
         ""
@@ -315,7 +325,7 @@ class PlotOptionFrame(QWidget):
             return
         if scaleString == "Custom values":
             try:
-                askLimits = ICDataInput(title = "Cluster color map limits.",valueNames = ["min","max"], valueTypes = {"min":float,"max":float})
+                askLimits = ICDataInput(mainController=self.mC, title = "Cluster color map limits.",valueNames = ["min","max"], valueTypes = {"min":float,"max":float})
                 if askLimits.exec_():
                     minValue, maxValue = askLimits.providedValues["min"], askLimits.providedValues["max"]
                     self.mC.config.setParam("colorMapLimits","custom")

@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from ..custom.buttonDesigns import ICStandardButton
 from ..utils import createLabel, createLineEdit, createCombobox
 from ..custom.warnMessage import WarningMessage
-
+from ..custom.utils import QToggle
 import csv
 
 
@@ -38,7 +38,7 @@ class FindReplaceDialog(QDialog):
         self.modeCombo.currentTextChanged.connect(self.onModeChange)
         self.modeCombo.setEnabled(False if self.dataID is None else True)
 
-        self.dataTypeCombo = createCombobox(self,items=["Numeric Floats","Categories","Integers"])
+        self.dataTypeCombo = createCombobox(self,items=["Categories","Integers","Numeric Floats"])
         self.dataTypeCombo.setToolTip("Select data type. If you select 'Current Column Selection' only columns from this type will be considered.\nThe input is transformed to the selected data type. If it fails, nan will be entered or the selected categorical value for missing values (default:'-')")
         self.dataTypeCombo.currentTextChanged.connect(self.onDatTypeChange)
         self.dataTypeCombo.setEnabled(False)
@@ -49,11 +49,13 @@ class FindReplaceDialog(QDialog):
         #create line edits
         self.findLine = createLineEdit("Find string(s) ..",
                                    'For multiple strings use "str1","str2" ')
-        self.findLine.textChanged.connect(self.onFindStringChange)
+        
 
         self.replaceLine = createLineEdit("Replace with ..",
                                    'For multiple strings use either one "str1"\n or equal length of strings: "str1","str2".\nStrings will be replaced in given order.')
-        self.replaceLine.textChanged.connect(self.onReplaceStringChange)
+        
+        self.mustMatchLabel = createLabel("Entire match:","If enabled, only cell that match the search string completely will be replaced.",fontSize=12)
+        self.mustMatchCompleteCellButton = QToggle(self)
         # set up okay buttons
         self.okayButton = ICStandardButton("Okay")
         self.okayButton.setEnabled(False if self.dataID is None else True)
@@ -71,23 +73,30 @@ class FindReplaceDialog(QDialog):
         self.layout().addWidget(self.findLine)
         self.layout().addWidget(self.replaceLine)
         hbox = QHBoxLayout()
-        hbox.addWidget(self.okayButton)
-        hbox.addWidget(self.cancelButton)
+        hbox.addWidget(self.mustMatchLabel)
+        hbox.addWidget(self.mustMatchCompleteCellButton)
         self.layout().addLayout(hbox)
+        hboxButtons = QHBoxLayout()
+        hboxButtons.addWidget(self.okayButton)
+        hboxButtons.addWidget(self.cancelButton)
+        self.layout().addLayout(hboxButtons)
 
     def __connectEvents(self):
         """Connect events to functions"""
         self.okayButton.clicked.connect(self.accept)
         self.cancelButton.clicked.connect(self.close)
+        #attach textChange listeners 
+        self.findLine.textChanged.connect(self.onFindStringChange)
+        self.replaceLine.textChanged.connect(self.onReplaceStringChange)
 
     def accept(self,event = None):
         ""
         if self.validateInput():
-            
             if self.columnCombo.isEnabled():
                 self.specificColumnSelected = True
                 self.selectedColumn = self.columnCombo.currentText()
                 self.selectedColumnIndex = self.columnCombo.currentIndex()
+                self.mustMatchCompleteCell = self.mustMatchCompleteCellButton.isChecked()
             else:
                 self.specificColumnSelected = False
             super().accept() 
@@ -125,12 +134,13 @@ class FindReplaceDialog(QDialog):
                 return False
             else:
                 self.findStrings, self.replaceStrings = self.getStringLists()
+                
                 if len(self.replaceStrings) == 1 and len(self.findStrings) >= 1:
                     return True
                 elif len(self.replaceStrings) > 1 and len(self.replaceStrings) == len(self.findStrings):
                     return True
                 else:
-                    w = WarningMessage(infoText = "Please enter either on replace string or a matching number of strings (find vs replace).")
+                    w = WarningMessage(infoText = "Please enter either a replace string or a matching number of strings (find vs replace).")
                     w.exec_()
                     return False
         
