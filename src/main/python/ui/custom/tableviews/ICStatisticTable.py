@@ -152,7 +152,14 @@ class StatisticTableModel(QAbstractTableModel):
             
         elif role == Qt.DisplayRole: 
             if index.column() < 2:
-                return str(getReadableNumber(self._labels.iloc[index.row(),index.column()]))
+                
+                value = self._labels.iloc[index.row(),index.column()]
+                if isinstance(value,str):
+                    try:
+                        value = float(value)
+                    except:
+                        return str(self._labels.iloc[index.row(),index.column()])
+                return str(getReadableNumber(value))
             else:
                 return str(self._labels.iloc[index.row(),index.column()])
         

@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 from backend.color.colorHelper import ColorHelper
-from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu
+from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
 from ..custom.utils import PropertyChooser
 from ..custom.buttonDesigns import BigArrowButton
 
@@ -27,16 +27,15 @@ class ConfigDialog(QDialog):
         """Init widgets"""
         propItems = sorted(self.mC.config.getParentTypes())
         self.titleLabel = createTitleLabel("Configurations")
-        self.infoLabel = createLabel("Changed parameters are automatically saved.", fontSize=11)
+        self.infoLabel = createLabel("Changed parameters are automatically saved.")
         self.propHolder = PropertyChooser()
 
         self.saveButton = BigArrowButton(tooltipStr = "Save Setting Profile", buttonSize=(30,30))
         self.loadButton = BigArrowButton(direction="up", tooltipStr = "Load Setting Profile", buttonSize=(30,30))
         
         self._setupScrollarea()
-        self.propCombo = QComboBox()
+        self.propCombo = createCombobox(self,propItems)
         
-        self.propCombo.addItems(propItems)
         if self.mC.config.lastConfigGroup is not None:
             self.updatePropHolder(self.mC.config.lastConfigGroup)
             self.propCombo.setCurrentText(self.mC.config.lastConfigGroup)

@@ -374,7 +374,7 @@ class PlotOptionFrame(QWidget):
             if self.mC.getPlotType() == "corrmatrix":
                 
                 corrMatrixData = graph.getPlotData()
-                dlg = PandaTableDialog(parent=self,df = corrMatrixData, addToMainDataOption = False, ignoreChanges =  True)
+                dlg = PandaTableDialog(parent=self,df = corrMatrixData, addToMainDataOption = False, ignoreChanges =  True, mainController = self.mC)
                 dlg.exec_()
 
             else:

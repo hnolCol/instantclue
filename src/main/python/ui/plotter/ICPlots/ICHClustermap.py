@@ -321,7 +321,7 @@ class ICClustermap(ICChart):
                 self.setTicksOff(self.axisDict["axLabelColor"])
             #set xticks on cluster map
             numColumns = self.data["plotData"].values.shape[1]
-            if numColumns < 50:
+            if numColumns < self.getParam("cluster.label.limit"):
                 self.setXTicks(ax = self.axisDict["axClusterMap"], 
                             ticks = np.linspace(0.5,numColumns-0.5,num=numColumns),
                             labels = self.data["columnNames"], rotation=90)

@@ -238,7 +238,7 @@ class MainFigure(QDialog):
         super(MainFigure, self).__init__(parent,*args,**kwargs)
         self.setAcceptDrops(True)
         self.acceptDrop = False
-        self.setModal(False)
+        self.setModal(False) 
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.mainFigureCollection = mainFigureRegistry
         self.updateFigure.connect(self.update)
@@ -246,7 +246,7 @@ class MainFigure(QDialog):
                             | Qt.WindowMinimizeButtonHint
                             | Qt.WindowCloseButtonHint)
         
-        self.mainController = mainController
+        self.mC = mainController
         self.figSize = figSize
 
         self.__defineVars(figureID=figureID)

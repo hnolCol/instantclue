@@ -179,7 +179,7 @@ class DataHandleFrame(QFrame):
 
         
         frameWidgets = [
-                {"title":"Load Data & Sessions","open":True,"fixedHeight":True,"height":50,"layout":vbox1},
+                {"title":"Load & Save Data","open":True,"fixedHeight":True,"height":50,"layout":vbox1},
                 {"title":"Data","open":True,"fixedHeight":False,"height":0.4,"layout":vbox2},
                 {"title":"Quick Select","open":False,"fixedHeight":False,"height":0.4,"layout":vbox3},
                 {"title":"Live Graph","open":False,"fixedHeight":False,"height":0.4,"layout":vbox4},

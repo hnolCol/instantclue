@@ -1,4 +1,5 @@
 
+import matplotlib.font_manager
 from ...color.data import colorParameterRange
 from ...statistics.statistics import clusteringMethodNames
 
@@ -23,8 +24,28 @@ compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
 nanReplaceString = ['-','None', 'nan','  ']
 thoursandsString = ['None',',','.']
 MTMethods = ["bonferroni","sidak","holm-sidak","holm","simes-hochberg","hommel","fdr_bh","fdr_by","fdr_tsbh","fdr_tsbky"]
+FONT_FAMILIES = np.unique([f.name for f in matplotlib.font_manager.fontManager.afmlist]).tolist()
 
 DEFAULT_PARAMETER = [
+    {
+    "name"          :   "label.font.size",
+    "value"         :   12,
+    "dtype"         :   float,
+    "range"         :   [0.5,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "GUI Settings",
+    "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
+    },
+    {
+    "name"          :   "label.font.family",
+    "value"         :   "Helvetica",
+    "dtype"         :   str,
+    "range"         :   ["Helvetica"],
+    "parent"        :   "intern",
+    "parentType"    :   "GUI Settings",
+    "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
+    },
+
     {
     "name"          :   "load.file.encoding",
     "value"         :   "utf-8",

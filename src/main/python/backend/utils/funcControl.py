@@ -242,7 +242,7 @@ funcPropControl = {
 
     "copyDataFrameByIdToClipboard":
         {
-            "threadRequest":{"obj":"data","fn":"copyDataFrameToClipboard","requiredKwargs":["id"]},
+            "threadRequest":{"obj":"data","fn":"copyDataFrameToClipboard","requiredKwargs":["dataID"]},
             "completedRequest":[sendMessageProps]
         },
     
@@ -251,7 +251,16 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"copyDataFrameToClipboard","requiredKwargs":["data"]},
             "completedRequest":[sendMessageProps]
         },
-
+    "data:copyDataToClipboard":
+        {
+            "threadRequest":{"obj":"data","fn":"copyDataFrameToClipboard","requiredKwargs":[]},
+            "completedRequest":[sendMessageProps]
+        },
+    "data:copyDataFromQuickSelectToClipboard":
+        {
+            "threadRequest":{"obj":"data","fn":"joinAndCopyDataForQuickSelect","requiredKwargs":["dataID","columnName","selectionData"]},
+            "completedRequest":[sendMessageProps]
+        },
     "data::updateQuickSelectData":
         {
         "threadRequest":{"obj":"data","fn":"getQuickSelectData","requiredKwargs":["dataID","filterProps"]},

@@ -295,7 +295,23 @@ class DataCollection(object):
 
 	
 	def columnRegExMatches(self,dataID,columnNames,searchString,splitString=";"):
-		""
+		"""
+		Return data indeces that match a regular expression. The regular expression
+		is designed to match categories based on the provided serach string and split string
+		A category  is a substring surrounded by split string. For example: 
+		
+		membrane;mitochondrion;nucleus
+
+		as they appear in Gene Ontology expression. 
+
+		Parameter 
+		============
+
+		Returns
+		============
+		
+		"""
+
 		regEx = self.categoricalFilter.buildRegex([searchString], withSeparator=True, splitString=splitString)
 		data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
 		boolIdx = data[columnNames[0]].str.contains(regEx)
@@ -310,12 +326,39 @@ class DataCollection(object):
 		return self.copyDataFrameToClipboard(data = self.dfs[dataID].loc[:,checkedColNames])
 
 
-	def copyDataFrameToClipboard(self,dataID=None,data=None):
+	def joinAndCopyDataForQuickSelect(self,dataID,columnName,selectionData,splitString):
+		""
+
+		dataToConcat = []
+		for checkedValue,checkedColor,userDefinedColors,checkSizes in selectionData.values:
+
+			dataIdx = self.columnRegExMatches(dataID,[columnName],checkedValue,splitString)
+			valueSubset = self.dfs[dataID].loc[dataIdx]
+			valueSubset["QuickSelectValue"] = [checkedValue] * dataIdx.size
+			
+			if pd.isna(userDefinedColors):
+				valueSubset["QuickSelectColor"] = [checkedColor] * dataIdx.size
+			else:
+				valueSubset["QuickSelectColor"] = [userDefinedColors] * dataIdx.size
+
+			valueSubset["QuickSelectSize"] = [checkSizes] * dataIdx.size
+			dataToConcat.append(valueSubset)
+
+		data = pd.concat(dataToConcat,ignore_index=True)
+		data.to_clipboard()
+		return getMessageProps("Done ..","Quick Select data copied to clipboard. Data might contain duplicated rows.")
+
+	def copyDataFrameToClipboard(self,dataID=None,data=None,attachDataToMain = None):
 		""
 		if dataID is None and data is None:
 			return {"messageProps":{"title":"Error",
 								"message":"Neither id nor data specified.."}
 					}	
+		elif dataID is not None and dataID in self.dfs and attachDataToMain is not None:
+			#attach new data to exisisitng
+			dataToCopy = attachDataToMain.join(self.dfs[dataID])
+			dataToCopy.to_clipboard(excel=True)
+
 		elif dataID is not None and dataID in self.dfs:
 
 			self.dfs[dataID].to_clipboard(excel=True)
@@ -748,10 +791,11 @@ class DataCollection(object):
 				elif filterProps["mode"] == "unique":
 					
 					checkedLabels.name = "group"
-					quickSelectColor.name = "color"
+					#quickSelectColor.name = "color"
 					
-					df = pd.DataFrame(checkedLabels).join(quickSelectColor)
+					df = pd.DataFrame(checkedLabels)#.join(quickSelectColor)
 					df["size"] = [colorData.loc[idx,"size"].values[0] for group,idx in idxByCheckedLabel.items()]
+					df["color"] = [colorData.loc[idx,"color"].values[0] for group,idx in idxByCheckedLabel.items()]
 					#df.columns = ["group","color"]
 					df = df[["color","size","group"]]
 					

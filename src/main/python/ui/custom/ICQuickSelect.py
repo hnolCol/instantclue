@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.quickSelectDialog import QuickSelectDialog
-from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR
+from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont
 
 import os
 import pandas as pd
@@ -38,8 +38,8 @@ class QuickSelect(QWidget):
         self.searchLineEdit.setPlaceholderText("Search ...")
         self.searchLineEdit.textChanged.connect(self.model.search)
     
-        self.annotateButton = AnnotateButton(self,tooltipStr="Annotate Selection")
-        self.maskButton = MaskButton(self,tooltipStr="Mask unchecked items in data.")
+        self.annotateButton = AnnotateButton(self,tooltipStr="Annotate Selection. If this is already selected, clicking again will set the mode to 'mask'")
+        self.maskButton = MaskButton(self,tooltipStr="Mask unchecked items in data. To remove mask, select 'Annotate Select' (left) or click again (toggle)")
  
         self.sortAscendingButton = ArrowButton(self, tooltipStr="Sort Quick Select in ascending order.\nClick again to restore raw data order.")
         self.sortDescendingButton = ArrowButton(self,direction="down", tooltipStr="Sort Quick Select in descending order.\nClick again to restore raw data order.")
@@ -189,19 +189,25 @@ class QuickSelect(QWidget):
 
     def setMaskMode(self,event=None):
         ""
-        self.selectionMode = "mask"
-        self.annotateButton.setState(False)
-        self.maskButton.setState(True)
-        self.updateMode() 
+        if hasattr(self,"selectionMode") and self.selectionMode == "mask":
+            self.setAnnotateMode()
+        else:
+            self.selectionMode = "mask"
+            self.annotateButton.setState(False)
+            self.maskButton.setState(True)
+            self.updateMode() 
 
     def setAnnotateMode(self,event=None):
         ""
-        #if any clipping was defined before by MaskMode, reset
-        self.resetClipping()
-        self.selectionMode = "annotate"
-        self.annotateButton.setState(True)
-        self.maskButton.setState(False)
-        self.updateMode() 
+        if hasattr(self,"selectionMode") and self.selectionMode == "annotate":
+            self.setMaskMode()
+        else:
+            self.selectionMode = "annotate"
+            #remove clipping
+            self.resetClipping()
+            self.annotateButton.setState(True)
+            self.maskButton.setState(False)
+            self.updateMode() 
 
     def setCheckStateByDataIndex(self,dataIndex):
         ""
@@ -386,6 +392,69 @@ class QuickSelect(QWidget):
         #update data 
         self.model.completeDataChanged()
 
+
+    def exportSelectionToClipbard(self,event=None, attachColumns = False):
+        ""
+
+        selectionData = self.model.getCompleteSelectionData(attachSizes=True)
+        selectionData = selectionData.dropna(subset=["checkedValues"])
+
+        if selectionData["checkedValues"].index.size == 0:
+                self.mC.sendMessageRequest({"title":"Error ..","message":"No selection made in Quick Select"})
+                return  
+        else:
+            
+            if attachColumns:
+                funcProps = {}
+
+                filterMode = self.quickSelectProps["filterProps"]["mode"]
+                if filterMode == "raw":
+                    funcProps["key"] = "data:copyDataToClipboard"
+                    funcProps["kwargs"] = {}
+                    funcProps["kwargs"]["attachDataToMain"] = selectionData
+                    funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+
+                else:  
+                    
+                    funcProps["key"] = "data:copyDataFromQuickSelectToClipboard"
+                    funcProps["kwargs"] = {}
+                    funcProps["kwargs"]["columnName"] = self.quickSelectProps["columnName"]
+                    funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                    funcProps["kwargs"]["splitString"] = self.quickSelectProps["filterProps"]["sep"]
+                    funcProps["kwargs"]["selectionData"] = selectionData
+
+
+                self.sendToThreadFn(funcProps)
+
+            else:
+
+                selectionData.to_clipboard()
+
+            self.mC.sendMessageRequest({"title":"Done ..","message":"Selection copied to clipboard."})
+
+    def getCurrentDataIdx(self, dataIndex, searchString = None):
+        ""
+        filterMode = self.quickSelectProps["filterProps"]["mode"]
+        if filterMode == "raw":
+            hoverIdx = np.array([dataIndex])
+        else:  
+
+            if searchString is None:
+                searchString = self.table.getCurrentHighlightLabel()
+
+            if searchString in self.hoverIdx:
+                hoverIdx = self.hoverIdx[searchString]
+            else:
+                columnName = self.quickSelectProps["columnName"]
+                dataID = self.quickSelectProps["dataID"]
+                splitString = self.quickSelectProps["filterProps"]["sep"]
+                hoverIdx = self.mC.data.columnRegExMatches(dataID,[columnName],searchString,splitString)
+                if hoverIdx.empty:
+                    return
+                self.hoverIdx[searchString] = hoverIdx
+
+        return hoverIdx
+
     def saveSelection(self,event=None, selectionData = None):
         ""
 
@@ -401,6 +470,7 @@ class QuickSelect(QWidget):
             if selectionData["checkedValues"].index.size == 0:
                 self.mC.sendMessageRequest({"title":"Error ..","message":"No selection made in Quick Select"})
                 return   
+
             text, ok = QInputDialog.getText(self, 'Save Quick Selection', 'Enter name of selection:')
             if ok:
                 selectName = text
@@ -486,27 +556,11 @@ class QuickSelect(QWidget):
             if self.lastIdx != dataIndex:
                 exists, graph = self.mC.getGraph()
                 if exists:
-                    filterMode = self.quickSelectProps["filterProps"]["mode"]
-                    if filterMode == "raw":
-                        hoverIdx = np.array([dataIndex])
-                    else:  
-                        searchString = self.table.getCurrentHighlightLabel()
-                        if searchString in self.hoverIdx:
-                            hoverIdx = self.hoverIdx[searchString]
-                        else:
-                            columnName = self.quickSelectProps["columnName"]
-                            dataID = self.quickSelectProps["dataID"]
-                            splitString = self.quickSelectProps["filterProps"]["sep"]
-                            hoverIdx = np.array([dataIndex])
-                            hoverIdx = self.mC.data.columnRegExMatches(dataID,[columnName],searchString,splitString)
-                            if hoverIdx.empty:
-                                return
-                            self.hoverIdx[searchString] = hoverIdx
+                    hoverIdx = self.getCurrentDataIdx(dataIndex)
                     if hoverIdx is not None:
                         graph.setHoverData(hoverIdx)
                 if hoverIdx is not None:
                     self.mC.mainFrames["data"].liveGraph.updateGraphByIndex(hoverIdx)
-
 
                 self.lastIdx = dataIndex
             
@@ -548,10 +602,7 @@ class QuickSelect(QWidget):
     
     def getDataIndexOfCurrentSelection(self):
         ""
-        #filterMode = self.quickSelectProps["filterProps"]["mode"]
         return self.model.checkedLabels.index[self.model.checkedLabels]
-      
-
 
     def hasData(self):
         ""
@@ -783,12 +834,14 @@ class QuickSelectModel(QAbstractTableModel):
         checkedIndex = self.checkedLabels[self.checkedLabels == 1].index
         return self._inputLabels.loc[checkedIndex]
 
-    def getCompleteSelectionData(self):
+    def getCompleteSelectionData(self, attachSizes = False):
         ""
         selectionData = dict()
         selectionData["checkedValues"] = self.getCheckedData()
         selectionData["checkedColors"] = self.checkedColors
         selectionData["userDefinedColors"] = self.userDefinedColors
+        if attachSizes:
+            selectionData["checkSizes"] = self.checkedSizes
         selectionData = pd.DataFrame().from_dict(selectionData)
         return selectionData
     
@@ -871,23 +924,26 @@ class QuickSelectModel(QAbstractTableModel):
                 return Qt.Checked
             else:
                 return Qt.Unchecked
+        elif role == Qt.TextAlignmentRole:
+            
+            return Qt.AlignVCenter
+
         elif self.parent().table.mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().table.mouseOverItem:
+            
             return QColor(HOVER_COLOR)
 
         elif role == Qt.FontRole and index.column() == 0:
+
             font = self.getFont()
             if self.getCheckStateByTableIndex(index):
                 font.setItalic(True)
+
             return font
 
 
     def getFont(self):
         ""
-        font = QFont()
-        font.setFamily("Arial")
-        font.setWeight(300)
-        font.setPointSize(9)
-        return font
+        return getStandardFont()
 
 
     def dataAvailable(self):
@@ -1088,6 +1144,12 @@ class QuickSelectTableView(QTableView):
         ""
         self.parent().saveSelection()
 
+    @pyqtSlot()
+    def exportSelectionClipboard(self):
+        ""
+        attachColumns = "all columns" in self.sender().text() 
+        self.parent().exportSelectionToClipbard(attachColumns = attachColumns)
+
     def leaveEvent(self,event=None):
         ""
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
@@ -1127,14 +1189,13 @@ class QuickSelectTableView(QTableView):
                 return
         if self.rightClick:
             #handle right click events
-            
             #cast menu
             try:
                 savedSelections = self.parent().favSelection.getSavedSelections()
                 if len(savedSelections) == 0:
-                    subMenus = ["Selection from .."]
+                    subMenus = ["Selection from ..","Export selection"]
                 else:
-                    subMenus = ["Load","Delete","Selection from .."]
+                    subMenus = ["Load","Delete","Selection from ..","Export selection"]
                 menus = createSubMenu(subMenus=subMenus)
 
                 for savedSel in savedSelections:
@@ -1143,8 +1204,13 @@ class QuickSelectTableView(QTableView):
 
                 for readType in ["Clipboard","Text/CSV file"]:
                     menus["Selection from .."].addAction(readType, self.readSelection)
+                
+                menus["Export selection"].addAction("To clipboard", self.exportSelectionClipboard)
+                menus["Export selection"].addAction("To clipboard (all columns)", self.exportSelectionClipboard)
+
                 menus["main"].addAction("Save selection", self.saveSelection)
                 menus["main"].addAction("Annotate selection", self.annotateSelection)
+                
                 menus["main"].addAction("Uncheck all", self.uncheckSelection)
                 menus["main"].exec_(self.mapToGlobal(e.pos()))
                     

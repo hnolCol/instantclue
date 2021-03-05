@@ -7,7 +7,7 @@ from collections import OrderedDict
 from .buttonDesigns import ResetButton, PushHoverButton, ResortButton
 from .resortableTable import ResortableTable
 from .utils import clearLayout
-from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR
+from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel
 
 class BoxItem(PushHoverButton):
 
@@ -128,7 +128,7 @@ class ReceiverBox(QFrame):
         
     def __controls(self):
         ""
-        self.titleLabel = QLabel(self.title)
+        self.titleLabel = createLabel(self.title)
         self.clearButton = ResetButton(self, tooltipStr="Remove all items from receiver box.")
         self.sortButton = ResortButton(parent=self,tooltipStr="Resort items in receiver box.")
 

@@ -185,6 +185,9 @@ class CollapsableDataTreeView(QWidget):
         
     def exportMenu(self,e=None):
         ""
+        sender = self.sender()
+        if hasattr(sender,"mouseLostFocus"):
+            sender.mouseLostFocus()
         menu = createMenu()
         
         for fileFormat, actionName in [("txt","Tab del. txt"),

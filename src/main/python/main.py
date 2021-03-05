@@ -22,7 +22,7 @@ from backend.plotting.plotterCalculations import PlotterBrain
 
 from ui.custom.utils import QVLine, QHLine
 from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton       
-from ui.utils import removeFileExtension, areFilesSuitableToLoad
+from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
 from ui.custom.ICWelcomeScreen import ICWelcomeScreen
 
@@ -44,6 +44,7 @@ __VERSION__ = "0.9.310.20210221"
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
+standardFontSize = 12 
 
 
 
@@ -139,7 +140,10 @@ class InstantClue(QMainWindow):
 
         self.mainPath = os.path.dirname(sys.argv[0])
         self.setWindowIcon(QIcon(os.path.join(self.mainPath,"icons","instantClueLogo.png")))
+        
         self.config = Config(mainController = self)
+        self.config.setParamRange("label.font.family",QFontDatabase().families())
+        self._setupFontStyle()
         #set up data collection
         self._setupData()
         #setup filter center
@@ -193,6 +197,12 @@ class InstantClue(QMainWindow):
         self.grouping = ICGrouping(self.data)
         self.colorManager = self.data.colorManager
         self.sessionManager = ICSessionHandler(mainController = self)
+
+    def _setupFontStyle(self):
+        ""
+        from ui import utils
+        utils.standardFontSize = self.config.getParam("label.font.size")
+        utils.standardFontFamily = self.config.getParam("label.font.family")
 
     def _setupFilters(self):
         ""
@@ -479,6 +489,8 @@ class InstantClue(QMainWindow):
         ""
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
 
+# def createLabel(text,tooltipText = None, :
+#     ""
     def sendMessageRequest(self,messageProps = dict()):
         "Display message on user screen in the top right corner"
         # check if all keys present

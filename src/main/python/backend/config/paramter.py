@@ -78,8 +78,8 @@ class Parameter(object):
         "Set the value of an attribute"
         if attrName in ATTR_NAMES:
             if ignoreRange or self.checkRange(value):
-
                 self.params[attrName] = value
+                
 
     def updateAttrInParent(self):
         "Update value of parameter in parent"

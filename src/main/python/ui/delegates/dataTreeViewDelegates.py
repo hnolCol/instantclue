@@ -251,9 +251,8 @@ class ItemDelegate(QStyledItemDelegate):
         self.highLightColumn = highLightColumn
 
     def paint(self, painter, option, index):
-        font = painter.font()
-        font.setPointSize(9)
-        painter.setFont(font)
+
+        painter.setFont(getStandardFont())
         rect = option.rect
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
             b = QBrush(QColor(HOVER_COLOR))

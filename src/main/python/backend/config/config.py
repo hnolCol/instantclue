@@ -6,10 +6,11 @@ from collections import OrderedDict
 import os 
 import pickle
 import matplotlib
-# Say, "the default sans-serif font is COMIC SANS"
+
 matplotlib.rcParams['font.sans-serif'] = "Arial"
 # Then, "ALWAYS use sans-serif fonts"
 matplotlib.rcParams['font.family'] = "sans-serif"
+
 class Config(object):
     ""
     def __init__(self, mainController):
@@ -125,6 +126,12 @@ class Config(object):
         ""
         if paramName in self.parameters:
             self.parameters[paramName].setAttr("value",value)
+            self.parameters[paramName].updateAttrInParent()
+
+    def setParamRange(self,paramName,paramRange):
+        ""
+        if paramName in self.parameters and isinstance(paramRange,list):
+            self.parameters[paramName].setAttr("range", paramRange, ignoreRange = True)
             self.parameters[paramName].updateAttrInParent()
 
     def toggleParam(self,paramName):

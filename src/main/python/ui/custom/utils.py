@@ -2,7 +2,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu
+from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit
 from .buttonDesigns import LabelLikeButton
 import numpy as np
 
@@ -22,6 +22,22 @@ def clearLayout(layout):
         child = layout.takeAt(0)
         if child.widget():
             child.widget().deleteLater()
+
+
+
+class BuddyLabel(QLabel):
+    def __init__(self, buddy, parent = None):
+        super(BuddyLabel, self).__init__(parent)
+        self.buddy = buddy
+        # When it's clicked, hide itself and show its buddy
+        font = getStandardFont()
+        self.setFont(font)
+
+    def mousePressEvent(self, event):
+        self.hide()
+        self.buddy.show()
+        self.buddy.setFocus() # Set focus on buddy so user doesn't have to click again
+
 
 class QHLine(QFrame):
     def __init__(self,parent=None):
@@ -95,14 +111,13 @@ class PropertyChooser(QWidget):
             self.inputValues = []
 
         for n, p in  enumerate(parameters):
-            propLabel = createLabel("{}:".format(p.getAttr("name")),fontSize=12)
+            propLabel = createLabel("{}:".format(p.getAttr("name")))
             if p.getAttr("dtype") == str:
                 if isinstance(p.getAttr("range"),list):
-                    vInput = QComboBox()
-                    vInput.addItems(p.getAttr("range"))
+                    vInput = createCombobox(self,p.getAttr("range"))
                     vInput.setCurrentText(p.getAttr("value"))
                 elif isinstance(p.getAttr("range"),str):
-                    vInput = QLineEdit()
+                    vInput = createLineEdit(p.getAttr("name"),"")
                     vInput.setText(p.getAttr("value"))
 
             elif p.getAttr("dtype") == bool:
@@ -111,7 +126,7 @@ class PropertyChooser(QWidget):
                 vInput.setChecked(p.getAttr("value"))
 
             else:
-                vInput = QLineEdit()
+                vInput = createLineEdit(p.getAttr("name"),"")
                 vInput.setText(str(p.getAttr("value")))
                 
                 

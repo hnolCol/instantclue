@@ -44,7 +44,7 @@ class CollapsButton(QPushButton):
         self.strokeWidth = strokeWidth
         self.setMouseTracking(mouseTracking)
         self.mouseEntered = False
-        self.QFont = QFont("verdana",fontSize, weight=QFont.Light) if font is None else font
+        self.QFont = getStandardFont()#QFont("verdana",fontSize, weight=QFont.Light) if font is None else font
         self.QFont.setLetterSpacing(QFont.PercentageSpacing,105)
         self.QFont.setWordSpacing(3)
         self.widgetHeight = widgetHeight
@@ -273,12 +273,9 @@ class PushHoverButton(QPushButton):
 
     def getMainFont(self):
         
-        font = QFont("Arial")
+        font = getStandardFont()
         font.setCapitalization(QFont.SmallCaps)
-        if isWindows():
-            font.setPointSize(8)
-        else:
-            font.setPointSize(10)
+
         return font
 
     def getRectProps(self,event):
@@ -1855,9 +1852,10 @@ class PlotTypeButton(PushHoverButton):
         #get rect
         rect = event.rect()
         try:
-            rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter,rect,False)
-            if self.plotType is not None and self.plotType in self.funcKeyDict:
-                self.funcKeyDict[self.plotType](painter,rectHeight,rectWidth, rectX, rectY)
+            if not noAxis:
+                rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter,rect,False)
+                if self.plotType is not None and self.plotType in self.funcKeyDict:
+                    self.funcKeyDict[self.plotType](painter,rectHeight,rectWidth, rectX, rectY)
         except Exception as e:
             print(e)
 

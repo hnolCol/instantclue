@@ -2,15 +2,45 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ..utils import clearLayout, getStandardFont, BuddyLabel
+from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit
 
-from ...delegates.quickSelectDelegates import DelegateColor, ItemDelegate #borrow delegate
+from ...delegates.quickSelectDelegates import DelegateColor#, ItemDelegate #borrow delegate
 
 import pandas as pd
 import numpy as np
 import os
 
+
+
+class ItemDelegate(QStyledItemDelegate):
+    def __init__(self,parent):
+        super(ItemDelegate,self).__init__(parent)
+    
+
+    def paint(self, painter, option, index):
+        painter.setFont(getStandardFont())
+        rect = option.rect
+        if self.parent().mouseOverItem is not None and index.row() == self.parent().mouseOverItem:
+            b = QBrush(QColor(HOVER_COLOR))
+            painter.setBrush(b)
+            painter.setPen(Qt.NoPen)
+            painter.drawRect(option.rect)
+            self.addText(index,painter,rect)
+        
+        else:
+            self.addText(index,painter,rect)
+    
+    def addText(self,index,painter,rect):
+        ""
+        painter.setPen(QPen(self.parent().model().data(index,Qt.ForegroundRole)))
+        rect.adjust(9,0,0,0)
+        painter.drawText(rect,   Qt.AlignVCenter | Qt.AlignLeft, self.parent().model().data(index,Qt.DisplayRole))
+       
+    def setEditorData(self,editor,index):
+        editor.setFont(getStandardFont())
+        editor.setAutoFillBackground(True)
+        editor.setText(self.parent().model().data(index,Qt.DisplayRole))
 
 class ICColorSizeTableBase(QWidget):
     selectionChanged = pyqtSignal()
@@ -36,6 +66,7 @@ class ICColorSizeTableBase(QWidget):
             self.setTitle(title)
             self.table.model().layoutAboutToBeChanged.emit()
             self.table.model().isEditable = isEditable
+            self.table.createMenu()
             self.table.model().initData(data)
             self.table.model().completeDataChanged()
             self.table.model().layoutChanged.emit()
@@ -74,13 +105,17 @@ class ICColorSizeTableBase(QWidget):
             self.table.mouseOverItem = None
 
     def saveModelDataToExcel(self):
-        ""
+        "Allows export to excel file."
         baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),"ICExport")
         fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,
                         "Excel files (*.xlsx)")
                 #if user cancels file selection, return function
         if fname:
             self.table.model()._labels.to_excel(fname,sheet_name="ICExport")
+    
+    def copyToClipboard(self):
+        "Pastes model data to clipboard."
+        self.table.model()._labels.to_clipboard()
 
 class ICColorTable(ICColorSizeTableBase):
     clorMapChanged = pyqtSignal() 
@@ -98,7 +133,16 @@ class ICColorTable(ICColorSizeTableBase):
         ""
         self.mainHeader = createTitleLabel("Colors",fontSize = 14)
         self.mainHeader.setWordWrap(True)
-        self.titleLabel = createLabel(text = self.title)
+
+        self.titleEdit = createLineEdit("Enter title ..","Title for the legend. Source data remain uneffected.")
+        self.titleEdit.hide() # Hide line edit
+        self.titleEdit.editingFinished.connect(self.titleChanged)
+        self.titleLabel = BuddyLabel(self.titleEdit) # Create our custom label, and assign myEdit as its buddy
+        self.titleLabel.setText(self.title)
+        self.titleLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed) # Change vertical size policy so they both match and you don't get popping when switching
+
+
+        #self.titleLabel = createLabel(text = self.title)
         self.table = ColorTable(parent = self, mainController=self.mC)
         self.model = ColorTableModel(parent=self.table)
         self.table.setModel(self.model)
@@ -111,10 +155,28 @@ class ICColorTable(ICColorSizeTableBase):
 
     def __layout(self):
         ""
+        hLabelLayout = QHBoxLayout()
+        hLabelLayout.addWidget(self.titleLabel)
+        hLabelLayout.addWidget(self.titleEdit)
+
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.mainHeader)
-        self.layout().addWidget(self.titleLabel)
+        self.layout().addLayout(hLabelLayout)
         self.layout().addWidget(self.table)  
+
+    def titleChanged(self):
+        ""
+        if not self.titleEdit.text():
+            self.titleEdit.hide()
+            self.titleLabel.setText(self.title)
+            self.titleLabel.show()
+        else:
+            self.title = self.titleEdit.text()
+            self.titleEdit.hide()
+            self.titleLabel.setText(self.titleEdit.text())
+            #save name
+            #self.groupItems[groupID]["name"] = edit.text()
+            self.titleLabel.show()
 
     @pyqtSlot()
     def updateColorsByColorMap(self):
@@ -144,12 +206,12 @@ class ICColorTable(ICColorSizeTableBase):
             print(e) 
 
     def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
-        ""
+        "Adds color legend to graph."
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()
             graph.addColorLegendToGraph(
-                            self.model._labels,
+                            self.model._labels.loc[self.model._inLegend.values],
                             ignoreNaN = ignoreNaN, 
                             title = self.title, 
                             legendKwargs = legendKwargs)
@@ -177,9 +239,7 @@ class ColorTableModel(QAbstractTableModel):
 
         self._labels = labels
         self._inputLabels = labels.copy()
-        self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
-        self.setDefaultSize()
-        
+        self._inLegend = pd.Series(np.ones(shape = self._labels.index.size).astype(bool) ,index=self._labels.index)
 
     def rowCount(self, parent=QModelIndex()):
         
@@ -193,45 +253,16 @@ class ColorTableModel(QAbstractTableModel):
         ""
         return self._labels.index.size > 0 
 
-    def setDefaultSize(self,size=50):
-        ""
-        self.defaultSize = size
-
     def getDataIndex(self,row):
         ""
         if self.validDataIndex(row):
             return self._labels.index[row]
-        
-    def getColumnStateByDataIndex(self,dataIndex):
-        ""
-        return self.columnInGraph.loc[dataIndex] == 1
 
-    def getColumnStateByTableIndex(self,tableIndex):
-        ""
-        dataIndex = self.getDataIndex(tableIndex.row())
-        if dataIndex is not None:
-            return self.getColumnStateByDataIndex(dataIndex)
-
-    def setColumnState(self,tableIndex, newState = None):
-        ""
-        dataIndex = self.getDataIndex(tableIndex.row())
-        if dataIndex is not None:
-            if newState is None:
-                newState = not self.columnInGraph.loc[dataIndex]
-            self.columnInGraph.loc[dataIndex] = newState
-            return newState
-    
-    def setColumnStateByData(self,columnNames,newState):
-        ""
-        idx = self._labels[self._labels.isin(columnNames)].index
-        if not idx.empty:
-            self.columnInGraph[idx] = newState
-
-    def updateData(self,value,index):
+    def updateGroupData(self,value,index):
         ""
         dataIndex = self.getDataIndex(index.row())
         if dataIndex is not None:
-            self._labels[dataIndex] = value
+            self._labels.loc[dataIndex,"group"] = value
             self._inputLabels = self._labels.copy()
 
     def validDataIndex(self,row):
@@ -296,7 +327,13 @@ class ColorTableModel(QAbstractTableModel):
         ""
         if self.parent().colorChangedForItem is not None and "internalID" in self._labels.columns:
             return self._labels.iloc[self.parent().colorChangedForItem].loc["internalID"]
-            
+
+    def toggleInLegend(self,*args,**kwargs):
+        ""
+        mouseOverItem = self.parent().mouseOverItem
+        if mouseOverItem is not None:
+            self._inLegend.iloc[mouseOverItem] = not self._inLegend.iloc[mouseOverItem] 
+
     def setData(self,index,value,role):
         ""
         row =index.row()
@@ -315,12 +352,10 @@ class ColorTableModel(QAbstractTableModel):
                 return False
             newValue = str(value)
             oldValue = str(self._labels.iloc[index.row()])
-            print(newValue)
-            # columnNameMapper = {oldValue:newValue}
-            # if oldValue != newValue:
-            #     self.parent().renameColumn(columnNameMapper)
-            #     self.updateData(value,index)
-            #     self.dataChanged.emit(index,index)
+            if oldValue != newValue:
+                self.updateGroupData(newValue,index)
+                self.dataChanged.emit(index,index)
+               
             return True
 
     def setColor(self, dataIndex, hexColor):
@@ -337,11 +372,20 @@ class ColorTableModel(QAbstractTableModel):
             return QVariant()
             
         elif role == Qt.DisplayRole and index.column() == 1: 
+
             return str(self._labels.iloc[index.row(),index.column()])
         
         elif role == Qt.FontRole:
 
             return getStandardFont()
+
+        elif role == Qt.ForegroundRole and index.column() == 1:
+            
+            if self._inLegend.iloc[index.row()]:
+
+                return QColor("black")
+            else:
+                return QColor("grey")
 
         elif role == Qt.ToolTipRole:
 
@@ -355,26 +399,15 @@ class ColorTableModel(QAbstractTableModel):
             
     def flags(self, index):
         "Set Flags of Column"
-        #if index.column() == 0:
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-        #else:
-         #   return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+       
+        if self.isEditable and index.column() == 1:
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+        else:
+            return Qt.ItemIsEnabled 
 
     def setNewData(self,labels):
         ""
         self.initData(labels)
-        self.completeDataChanged()
-
-    def search(self,searchString):
-        ""
-        if self._inputLabels.size == 0:
-            return
-        if len(searchString) > 0:
-      
-            boolMask = self._labels.str.contains(searchString,case=False,regex=False)
-            self._labels = self._labels.loc[boolMask]
-        else:
-            self._labels = self._inputLabels
         self.completeDataChanged()
 
     
@@ -404,7 +437,6 @@ class ColorTableModel(QAbstractTableModel):
         ""
         initColor = self._inputLabels.loc[dataIndex,"color"]
         self.setColor(dataIndex,initColor)
-    
 
 
     def updateColors(self,colorList):
@@ -444,9 +476,6 @@ class ColorTable(QTableView):
         self.mC = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
-        
-
-        self.createMenu()
 
         self.rowHeight      =   rowHeight
         self.rightClick     =   False
@@ -473,8 +502,8 @@ class ColorTable(QTableView):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
         menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
-        menu["main"].addAction("Remove", self.parent().removeFromGraph)
-
+        
+        
         if self.model() is not None and hasattr(self.model(),"isEditable") and self.model().isEditable: #if editable - add the option to choose color from palette
             colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
             for col in colors:
@@ -492,6 +521,9 @@ class ColorTable(QTableView):
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
             menu["Add Legend at (-NaN Color) .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(ignoreNaN = True,legendKwargs = {"loc":lloc}))
         
+        menu["main"].addAction("Hide/Show in Legend", self.model().toggleInLegend)
+        menu["main"].addAction("Remove", self.parent().removeFromGraph)
+        menu["main"].addAction("Copy to clipboard",self.parent().copyToClipboard)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
         menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
         self.menu = menu["main"]
@@ -559,16 +591,14 @@ class ColorTable(QTableView):
                 
                 
             elif tableIndexCol == 1 and self.rightClick:
-               # idx = self.model().index(0,0)
                 self.rightClickedRowIndex = tableIndex.row()
                 self.menu.exec(QCursor.pos() + QPoint(4,4))
                 
                 self.clickedRow = None 
             
             elif tableIndexCol == 1:
-                print("?")
-                super().mouseReleaseEvent(e)
-                
+                #allow editing
+                super().mouseReleaseEvent(e)   
 
         except Exception as e:
             print(e)
@@ -577,6 +607,8 @@ class ColorTable(QTableView):
     def mouseMoveEvent(self,event):
         
         ""
+        if self.state() == QAbstractItemView.EditingState:
+            return 
         if not self.model().dataAvailable():
             return
         rowAtEvent = self.rowAt(event.pos().y())

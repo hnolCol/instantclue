@@ -15,6 +15,9 @@ headerLabelStyleSheet = """
                     }
                     """
 
+standardFontSize = 12 
+standardFontFamily = "Helvetica"
+
 def copyAttributes(obj2, obj1, attr_list):
     for i_attribute  in attr_list:
         getattr(obj2, 'set_' + i_attribute)( getattr(obj1, 'get_' + i_attribute)() )
@@ -38,14 +41,18 @@ def getExtraLightFont(fontSize=12,font="Helvetica"):
     font.setWeight(QFont.ExtraLight)
     return font
 
-def getStandardFont(fontSize = 10, font="Helvetica"):
+def getStandardFont(fontSize = None, font=None):
     ""
+    if fontSize is None:
+        fontSize = standardFontSize
+    if font is None:
+        font = standardFontFamily
     font = QFont(font) 
-    if isWindows():
+   
+    if isWindows(): #ugly hack but on windows fonts appear huge
         fontSize -= 2
     font.setPointSize(fontSize)
     return font
-
 
 def createLabel(text,tooltipText = None, **kwargs):
     ""
@@ -60,11 +67,11 @@ def createLabel(text,tooltipText = None, **kwargs):
     return w
 
 
-def createTitleLabel(text, fontSize = 18, colorString = "#4F6571", font="Helvetica"):
+def createTitleLabel(text, fontSize = 18, colorString = "#4F6571"):
     ""
     w = QLabel()
     #set font
-    font = QFont(font) 
+    font = QFont(getStandardFont()) 
     if isWindows():
         fontSize -= 2
     font.setPointSize(fontSize)
@@ -74,11 +81,15 @@ def createTitleLabel(text, fontSize = 18, colorString = "#4F6571", font="Helveti
     w.setStyleSheet("QLabel {color : "+colorString+"; }")
     return w
 
-def createLineEdit(plateHolderText,tooltipText):
-    ""
-    w = QLineEdit()
+def createLineEdit(plateHolderText="",tooltipText="",*args,**kwargs):
+    """
+    Creates Line Edit using the standard font.
+    Additional args and kwargs will be forwarded to QLineEdit
+    """
+    w = QLineEdit(*args,**kwargs)
     w.setPlaceholderText(plateHolderText)
     w.setToolTip(tooltipText)
+    w.setFont(getStandardFont())
     return w
 
 def getMessageProps(title,message):
@@ -122,6 +133,7 @@ def createCombobox(parent = None, items = []):
     #set up data frame combobox and its style
     combo = QComboBox(parent)
     combo.addItems(items)
+    combo.setFont(getStandardFont())
     combo.setStyleSheet("selection-background-color: white; outline: None; selection-color: {}".format(INSTANT_CLUE_BLUE)) 
     return combo
 

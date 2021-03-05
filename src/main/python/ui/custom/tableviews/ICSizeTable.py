@@ -106,11 +106,11 @@ class SizeTableModel(QAbstractTableModel):
         if self.validDataIndex(row):
             return self._labels.index[row]
 
-    def updateData(self,value,index):
+    def updateGroupData(self,value,index):
         ""
         dataIndex = self.getDataIndex(index.row())
         if dataIndex is not None:
-            self._labels[dataIndex] = value
+            self._labels.loc[dataIndex,"group"] = value
             self._inputLabels = self._labels.copy()
 
     def validDataIndex(self,row):
@@ -172,22 +172,30 @@ class SizeTableModel(QAbstractTableModel):
             if not self.isEditable:
                 return False
             #get value
-            v = int(np.sqrt(value))
-            
-            self._labels.iloc[index.row(),index.column()] = value
-            if v > self.maxSize:
-                self.setRowHeights()
-            elif v < self.minSize:
-                self.setRowHeights()
-            self.parent().sizeChangedForItem = index.row()
-            self.parent().parent().selectionChanged.emit()
+            if index.column() == 0:
+                v = int(np.sqrt(value))
+                self._labels.iloc[index.row(),index.column()] = value
+                if v > self.maxSize:
+                    self.setRowHeights()
+                elif v < self.minSize:
+                    self.setRowHeights()
+                self.parent().sizeChangedForItem = index.row()
+                self.parent().parent().selectionChanged.emit()
 
-            if self._labels.index.size == 1:
-                rowHeight = v + self.parent().rowHeight
-                self.parent().setRowHeight(index.row(),rowHeight)
-                self.parent().setColumnWidth(0,rowHeight)
-            
-            self.completeDataChanged()
+                if self._labels.index.size == 1:
+                    rowHeight = v + self.parent().rowHeight
+                    self.parent().setRowHeight(index.row(),rowHeight)
+                    self.parent().setColumnWidth(0,rowHeight)
+                
+                self.completeDataChanged()
+            elif index.column() == 1:
+                newValue = str(value)
+                oldValue = str(self._labels.iloc[index.row()])
+                if oldValue != newValue:
+                    self.updateGroupData(newValue,index)
+                    self.dataChanged.emit(index,index)
+            else:
+                return False
             
             return True
 
@@ -218,6 +226,7 @@ class SizeTableModel(QAbstractTableModel):
             return getStandardFont()
 
         elif role == Qt.ToolTipRole:
+
             dataIndex = self.getDataIndex(index.row())
             if index.column() == 0:
                 if self.isEditable:
@@ -225,17 +234,19 @@ class SizeTableModel(QAbstractTableModel):
                 else:
                     return "Current size: {}\nSize range for numeric values can only be changed in the settings dialog.".format(self._labels.loc[dataIndex,"size"])
             elif index.column() == 1:
-                return "Current size: {}\nSize encoded categorical or numeric values.".format(self._labels.loc[dataIndex,"size"])
+                return "Current size: {}\nSize encoded categorical or numeric values.\nDouble click to change the name (categorical columns only). This does not effect the source data but allows to change the legend label.".format(self._labels.loc[dataIndex,"size"])
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
+
             return QColor(HOVER_COLOR)
             
     def flags(self, index):
         "Set Flags of Column"
-        if index.column() == 0 and self.isEditable:
+
+        if self.isEditable:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemIsEnabled 
 
     def setNewData(self,labels):
         ""

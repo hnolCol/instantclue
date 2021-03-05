@@ -273,7 +273,7 @@ class StatisticCenter(object):
             else:
                 return getMessageProps("Error ..",errMsg)
     
-    def runPCA(self,dataID,columnNames,initGraph = False, liveGraph = False, returnProjections = False, *args,**kwargs):
+    def runPCA(self,dataID, columnNames, initGraph = False, liveGraph = False, returnProjections = False, *args,**kwargs):
         "Transform values."
         X, checkPassed, errMsg, dataIndex  = self.prepareData(dataID,columnNames)
         if checkPassed:
@@ -287,31 +287,20 @@ class StatisticCenter(object):
                 embedding, eigV, explVariance = self.calcPCA.run()
             comColumns = ["PCA_Component_{:02d} ({:.2f})".format(n+1,explVariance[n]) for n in range(embedding.shape[1])]
 
-            if initGraph:
-                return checkPassed, pd.DataFrame(embedding,index=dataIndex,columns = comColumns), pd.DataFrame(eigV,index=columnNames,columns = comColumns)
-            elif liveGraph:
-                funcProps =  getMessageProps("Updatep","live updated")
-                funcProps["data"] = {"projection":pd.DataFrame(embedding,index=dataIndex,columns = comColumns),
-                                    "eigV":pd.DataFrame(eigV,index=columnNames,columns = comColumns)}
-                return funcProps
+            if returnProjections:
+                
+                df = pd.DataFrame(eigV, columns = ["Component {} ({:.2f}%)".format(n,explVariance[n]) for n in range(eigV.shape[1])])
+                
+                df["ColumnNames"] = columnNames.values.flatten()
+                baseFileName = self.sourceData.getFileNameByID(dataID)
+                
+                result = self.sourceData.addDataFrame(df, fileName = "PCA.T:({})".format(baseFileName))
             else:
-                
-                
-                if returnProjections:
-                   
-                    df = pd.DataFrame(eigV, columns = ["Component {} ({:.2f}%)".format(n,explVariance[n]) for n in range(eigV.shape[1])])
-                    try:
-                        df["ColumnNames"] = columnNames
-                        baseFileName = self.sourceData.getFileNameByID(dataID)
-                    except Exception as e:
-                        print(e)
-                    result = self.sourceData.addDataFrame(df, fileName = "PCA.T:({})".format(baseFileName))
-                else:
-                    df = pd.DataFrame(embedding,columns = comColumns)
-                    df[comColumns] = df[comColumns].astype(float)
-                    result = self.sourceData.joinDataFrame(dataID,df)
+                df = pd.DataFrame(embedding,columns = comColumns)
+                df[comColumns] = df[comColumns].astype(float)
+                result = self.sourceData.joinDataFrame(dataID,df)
 
-                return result
+            return result
         else:
                 
             return getMessageProps("Error ..",errMsg)

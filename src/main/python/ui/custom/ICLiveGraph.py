@@ -45,7 +45,7 @@ class LiveGraph(QWidget):
         "control widgets"
         # a figure instance to plot on
         self.figure = Figure()
-        self.liveGraph = BlitingLiveGraph(self.figure)
+        self.liveGraph = BlitingLiveGraph(self.figure, mainController = self.mC)
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
@@ -166,7 +166,6 @@ class LiveGraph(QWidget):
         self.liveGraph.setData(data,colorMapper)
         if storeData:
             self.data = data
-        
 
     def getDragType(self):
         ""
@@ -190,9 +189,19 @@ class LiveGraph(QWidget):
             self.liveGraph.setResizeTrigger(True)
         #self.liveGraph.canvasResized()
 
+    def enterEvent(self,event=None):
+        ""
+        if self.liveGraph.getResizeTrigger():
+            self.liveGraph.canvasResized()
+
+    def leaveEvent(self,event=None):
+        ""
+        if self.liveGraph.getResizeTrigger():
+            self.liveGraph.canvasResized()
+
 class BlitingLiveGraph(object):
 
-    def __init__(self,figure, plotType = "Line"):
+    def __init__(self,figure, plotType = "Line", mainController = None):
         ""
         self.figure = figure
         self.plotType = plotType
@@ -200,13 +209,13 @@ class BlitingLiveGraph(object):
         self.selectionIndex = None
         self.resized = False
         self.colorMapper = None
+        self.mC = mainController
         
-
     def addAxis(self):
         if not hasattr(self,"ax"):
 
             self.ax = self.figure.add_subplot(111)
-            self.figure.subplots_adjust(left=0.075,right=0.95, top = 0.98, bottom = 0.2)
+            self.figure.subplots_adjust(left=0.075,right=0.95, top = 0.965, bottom = 0.2)
         else:
             self.ax.clear()
             
@@ -271,10 +280,46 @@ class BlitingLiveGraph(object):
         #hide line
         self.setInvisible()
 
+    def addXTicks(self, xTicksVisible, numColumn):
+        #add some minor border
+        if self.plotType == "Line":
+            self.ax.set_xticks(xTicksVisible)
+            self.ax.set_xlim(-0.25,numColumn-0.75)
+        elif self.plotType == "Bar":
+            self.ax.set_xticks(xTicksVisible+0.5)
+            self.ax.set_xlim(-0.5,numColumn + 0.5)
+        elif self.plotType == "Boxplot":
+            self.ax.set_xticks(xTicksVisible+0.5)
+            self.ax.set_xlim(-0.5,numColumn + 0.5)
+        
+        self.ax.set_xticklabels(self.xtickLabels,rotation = 45, ha="right")
+
+    def adjustXTicksToSize(self, numColumn):
+        ""
+        figSize = self.figure.get_size_inches() * self.figure.get_dpi()
+        fontSizeLabels = self.mC.config.getParam("xtick.labelsize")
+        labelsToFit = int(figSize[0] / (fontSizeLabels * 3)) 
+        #dynamic adaptions of xticks
+        if numColumn > labelsToFit:
+            self.xTicks = np.arange(numColumn)
+            xTicksVisible = np.array([int(x) for x in np.linspace(0,numColumn-1,num = labelsToFit)])
+            self.xtickLabels = [self.data.columns[x] for x in xTicksVisible]
+        else:
+            self.xTicks = np.arange(numColumn)
+            self.xtickLabels = self.data.columns
+            xTicksVisible = self.xTicks
+        
+        self.addXTicks(xTicksVisible,numColumn)
+
     def canvasResized(self,event=None):
         "Handle background upgrade upon figure resize"
-        self.updateBackground(redraw=True)
-        self.setResizeTrigger(False)
+        if hasattr(self,"ax") and hasattr(self,"data") and self.data.columns.size > 0:
+            #adjust xticks
+            self.adjustXTicksToSize(numColumn=self.data.columns.size)
+            #update background
+            self.updateBackground(redraw=True)
+            #reset trgígger
+            self.setResizeTrigger(False)
 
     def updateAxis(self, redraw=True):
         '''
@@ -318,27 +363,8 @@ class BlitingLiveGraph(object):
         try:
             #save columnName per idx
             self.xTickLabels = OrderedDict([(n,columnName) for n,columnName in enumerate(self.data.columns)])
-            if numColumn > 20:
-                self.xTicks = np.arange(numColumn)
-                xTicksVisible = np.array([int(x) for x in np.linspace(0,numColumn-1,num = 20)])
-                self.xtickLabels = [self.data.columns[x] for x in xTicksVisible]
-            else:
-                self.xTicks = np.arange(numColumn)
-                self.xtickLabels = self.data.columns
-                xTicksVisible = self.xTicks
+            self.adjustXTicksToSize(numColumn)
             
-            #add some minor border
-            if self.plotType == "Line":
-                self.ax.set_xticks(xTicksVisible )
-                self.ax.set_xlim(-0.25,numColumn-0.75)
-            elif self.plotType == "Bar":
-                self.ax.set_xticks(xTicksVisible+0.5)
-                self.ax.set_xlim(-0.5,numColumn + 0.5)
-            elif self.plotType == "Boxplot":
-                self.ax.set_xticks(xTicksVisible+0.5)
-                self.ax.set_xlim(-0.5,numColumn + 0.5)
-            
-            self.ax.set_xticklabels(self.xtickLabels,rotation = 45, ha="right",fontsize=6)
         except Exception as e:
             print(e)
     def setYAxisProps(self):

@@ -4,10 +4,11 @@ from PyQt5.QtWidgets import *
 
 from ..custom.buttonDesigns import BigPlusButton, ResetButton, LabelLikeButton, ICStandardButton
 from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps, createMenu
-from ..custom.utils import clearLayout
+from ..custom.utils import clearLayout, BuddyLabel
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 from ..custom.ICReceiverBox import ItemHolder, BoxItem
 from ..custom.warnMessage import WarningMessage
+
 from collections import OrderedDict
 import pandas as pd
 
@@ -42,18 +43,6 @@ class ICGroupFrame(QFrame):
             print(e)
     
 
-
-# Make a custom label widget (mostly for its mousePressEvent)
-class BuddyLabel(QLabel):
-    def __init__(self, buddy, parent = None):
-        super(BuddyLabel, self).__init__(parent)
-        self.buddy = buddy
-        # When it's clicked, hide itself and show its buddy
-
-    def mousePressEvent(self, event):
-        self.hide()
-        self.buddy.show()
-        self.buddy.setFocus() # Set focus on buddy so user doesn't have to click again
 
 
 
