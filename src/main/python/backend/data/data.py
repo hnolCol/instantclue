@@ -274,7 +274,8 @@ class DataCollection(object):
 			"sep":config.getParam("load.file.column.separator"),
 			"thousands":config.getParam("load.file.float.thousands"),
 			"decimal": config.getParam("load.file.float.decimal"),
-			"skiprows": config.getParam("load.file.skiprows")}
+			"skiprows": config.getParam("load.file.skiprows"),
+			"na_values":config.getParam("load.file.na.values")}
 		return self.checkLoadProps(props)
 
 	def checkLoadProps(self,loadFileProps):
@@ -283,6 +284,10 @@ class DataCollection(object):
 			return {"sep":"\t"}
 		if loadFileProps["sep"] in ["tab","space"]:
 			loadFileProps["sep"] = sepConverter[loadFileProps["sep"]]
+		if "na_values" in loadFileProps and loadFileProps["na_values"] == "None":
+			loadFileProps["na_values"] = None
+		elif isinstance(loadFileProps["na_values"],str) and ";" in loadFileProps["na_values"]:
+			loadFileProps["na_values"] = loadFileProps["na_values"].split(";")
 		if "thousandas" not in loadFileProps or loadFileProps["thousands"] == "None":
 			loadFileProps["thousands"] = None
 		try:

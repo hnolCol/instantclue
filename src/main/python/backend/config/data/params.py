@@ -92,6 +92,17 @@ DEFAULT_PARAMETER = [
     "description"   :   "None if no thousands separator is present."
     },
     {
+    "name"          :   "load.file.na.values",
+    "value"         :   "#VALUE!",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Load File Settings",
+    "description"   :   "Additional na values. If you want to provide multiple value separate them by a semicolon ';'."
+    },
+
+    
+    {
     "name"          :   "Object Replace String",
     "value"         :   "-",
     "dtype"         :   str,

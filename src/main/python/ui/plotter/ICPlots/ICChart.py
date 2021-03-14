@@ -428,7 +428,8 @@ class ICChart(QObject):
 	
 	def getSubMenus(self):
 		""
-		return ["To main figure","To WebApp"]
+
+		return ["To main figure","To WebApp","Axis limits .."]
 
 	def addMainFigActions(self,menu):
 		""
@@ -462,6 +463,11 @@ class ICChart(QObject):
 
 	def addMenuActions(self, menus):
 		""
+		#axis limit menus
+		menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
+		menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
+		menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
+		menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
 		
 		if hasattr(self,"colorLegend"):
 			menus["main"].addAction("Remove color legend", self.removeColorLegend)
@@ -926,7 +932,9 @@ class ICChart(QObject):
 
 	def alignLimitsOfAllAxes(self, updateFigure = True):
 		""
+		
 		axes, xLims, yLims = self.getAxesWithLimits()
+		
 		xMin, xMax = np.min(xLims[:,0]), np.max(xLims[:,1])
 		yMin, yMax = np.min(yLims[:,0]), np.max(yLims[:,1])
 		

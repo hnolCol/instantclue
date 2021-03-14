@@ -1398,8 +1398,8 @@ class DataTreeViewTable(QTableView):
         #cast menu if right click
         
         if self.rightClick and not self.rightClickMove and tableColumn == 0:
-           
-            self.menu.exec_(self.mapToGlobal(e.pos()))
+            if hasattr(self,"menu"):
+                self.menu.exec_(self.mapToGlobal(e.pos()))
         
         elif tableColumn == 0 and not self.rightClick:
             if not shiftPressed and not ctrlPressed:

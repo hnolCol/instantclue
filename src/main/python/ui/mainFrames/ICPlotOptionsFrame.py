@@ -32,6 +32,7 @@ class PlotOptionFrame(QWidget):
         self.typeManager = PlotTypeManager()
         self.mainFigureRegistry = MainFigureRegistry()
         self.currentPlotType = self.getDefaultPlotType()
+        self.mainFigureDialogs = dict()
         self._controls()
         self._layout()
         self._connectEvents()
@@ -48,6 +49,7 @@ class PlotOptionFrame(QWidget):
             self.buttons.append(button)
                 
         self.mainFigureButton = MainFigureButton(tooltipStr="Opens a Main Figure (A4).\nCreate an axis to export plots from the main window to the main figure.")
+        self.mainFigureButton.setContextMenuPolicy(Qt.CustomContextMenu)
         self.configButton = SettingsButton(tooltipStr="Opens Settings.")
 
     def _layout(self):
@@ -69,9 +71,11 @@ class PlotOptionFrame(QWidget):
         ""
         for n,plotType in enumerate(self.typeManager.getAvailableTypes()):
             self.buttons[n].clicked.connect(lambda _,plotType = plotType:self.setType(plotType))
-            self.buttons[n].customContextMenuRequested.connect(lambda _,plotType = plotType:self.postContextMenu(plotType))
+            self.buttons[n].customContextMenuRequested.connect(lambda _,plotType = plotType: self.postContextMenu(plotType))
 
         self.mainFigureButton.clicked.connect(self.openMainFigure)
+        self.mainFigureButton.customContextMenuRequested.connect(self.castMainFigureMenu)
+        
         self.configButton.clicked.connect(self.openConfig)
 
     def updateTypeSpecMenus(self):
@@ -201,6 +205,23 @@ class PlotOptionFrame(QWidget):
         self.mC.config.toggleParam("boxplot.split.data.on.category")
 
 
+    def castMainFigureMenu(self,event=None):
+        ""
+        mainFiguresIDs = self.mainFigureRegistry.getMainFigureIDs()
+
+        menus = createSubMenu(subMenus=["Show"])
+        for mainFID in mainFiguresIDs:
+            action = menus["Show"].addAction("F{}".format(mainFID))
+            action.triggered.connect(lambda _,mainFID = mainFID: self.showMainFigureByID(mainFID))
+       
+        self.postContextMenu(menu=menus["main"])
+
+    def showMainFigureByID(self,mainFID):
+        ""
+        if mainFID in self.mainFigureDialogs:
+            self.mainFigureDialogs[mainFID].raise_()
+           
+
 
     def changeXYParams(self,paramName,actionName):
         ""
@@ -236,19 +257,28 @@ class PlotOptionFrame(QWidget):
         "Modifies the correlation matrix used."
         self.mC.config.setParam("colorMatrixMethod",method)
        
-    def postContextMenu(self, plotType):
+    def postContextMenu(self, plotType = None, menu = None):
         ""
-        if plotType in self.typeMenus:
+        if hasattr(self.sender(),"mouseLostFocus"):
             self.sender().mouseLostFocus()
-            senderGeom = self.sender().geometry()
-            topLeft = self.mapToGlobal(senderGeom.bottomLeft())
-            self.typeMenus[plotType].exec_(topLeft)
+        senderGeom = self.sender().geometry()
+        bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
+
+ 
+        if menu is not None and hasattr(menu,"exec_"):
+
+            menu.exec_(bottomLeft )
+
+        elif plotType in self.typeMenus:
+            
+            self.typeMenus[plotType].exec_(bottomLeft )
 
     def getReceiverBoxItems(self):
         ""
         return self.mC.mainFrames["middle"].getReceiverBoxItems()
 
     def getReceiverBoxItemProps(self):
+        ""
         receiverBoxItems = self.mC.mainFrames["middle"].getReceiverBoxItems()
         nNumCol = len(receiverBoxItems["numericColumns"])
         nCatCol = len(receiverBoxItems["categoricalColumns"])
@@ -317,6 +347,7 @@ class PlotOptionFrame(QWidget):
         ""
         mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure, figureID = figureID)
         mainFigure.show()
+        self.mainFigureDialogs[mainFigure.figureID] = mainFigure
         return mainFigure
 
     def updateColorScaleInClustermap(self, scaleString = "Raw data"):

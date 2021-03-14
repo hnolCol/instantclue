@@ -114,7 +114,11 @@ class MainFigureRegistry(object):
 
     def getMainFigures(self):
         ""
-        return [fig["figure"] for fig in self.mainFigures.values()]
+        return [fig["figure"] for figID,fig in self.mainFigures.items() if figID in self.mainFigureTemplates]
+
+    def getMainFigureIDs(self):
+        ""
+        return [figID for figID in self.mainFigures.keys() if figID in self.mainFigureTemplates]
 
     def getMainFiguresByID(self):
         ""

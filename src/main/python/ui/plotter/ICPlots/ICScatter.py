@@ -62,14 +62,14 @@ class ICScatterPlot(ICChart):
 
     def getGraphSpecMenus(self):
         ""
-        return ["Axis limits .."]
+        return []
 
     def addGraphSpecActions(self,menus):
         ""
-        menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
-        menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
-        menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
-        menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
+        # menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
+        # menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
+        # menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
+        # menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
         if self.preventQuickSelectCapture:
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:

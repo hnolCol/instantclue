@@ -57,6 +57,8 @@ class FilterBase(QDialog):
         ""
         if event.key() == Qt.Key_Enter:
             return
+        elif event.key() == Qt.Key_Escape:
+            self.close() 
        
 
 class CustomCategoricalFilter(FilterBase):

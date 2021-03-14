@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createMenu, createSubMenu
+from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createMenu, createSubMenu, getStandardFont
 from ..warnMessage import AskQuestionMessage
 
 #external imports
@@ -221,8 +221,7 @@ class PandaModel(QAbstractTableModel):
             return QBrush(QColor("black"))
 
         elif role == Qt.FontRole:
-            font = QFont("Helvetica")
-            font.setPixelSize(10)
+            font = getStandardFont()
             return font
         return None
     
@@ -233,11 +232,7 @@ class PandaModel(QAbstractTableModel):
 
     def getFont(self):
         ""
-        font = QFont()
-        font.setFamily("Arial")
-        font.setWeight(300)
-        font.setPointSize(8)
-        return font
+        return getStandardFont()
 
     def getRowDataIndexByTableIndex(self,index):
         ""

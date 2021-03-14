@@ -13,7 +13,8 @@ comboboxLabelToParam = dict([('Encoding:',"load.file.encoding"),
                             ('Decimal Point String:',"load.file.float.decimal"),
                             ('Thousand Separator:',"load.file.float.thousands"),
                             ('Replace NaN in Object Columns:',"Object Replace String"),
-                            ('skip Rows:',"load.file.skiprows")])
+                            ('skip Rows:',"load.file.skiprows"),
+                            ("Add. na values","load.file.na.values")])
 
 #ParamToComboLabel = dict([(v,k) for k,v in comboboxLabelToParam.items()])
 
@@ -23,12 +24,14 @@ comboBoxToGetInputFromUser = OrderedDict([('Encoding:',encodingsCommonInPython),
 											('Thousand Separator:',thoursandsString),
 											('Decompression:',compressionsForSourceFile),
 											('Skip Rows:',[str(x) for x in range(0,20)]),
-											('Replace NaN in Object Columns:',nanReplaceString)])
+											('Replace NaN in Object Columns:',nanReplaceString),
+                                            ("Add. na values",["None","#VALUE!","#WERT"])])
 
 
 comboboxExcelFile = OrderedDict([("Excel sheets:",["None"]),
                                  ('Skip Rows:',[str(x) for x in range(0,20)]),
-                                 ('Thousand Separator:',thoursandsString)])
+                                 ('Thousand Separator:',thoursandsString),
+                                 ("Add. na values",["#VALUE!","#WERT","None"])])
 
 
 pandasInstantClueTranslate = {'Encoding:':'encoding',
@@ -37,9 +40,12 @@ pandasInstantClueTranslate = {'Encoding:':'encoding',
 						  'Thousand Separator:':'thousands',
 						  'Decompression:':'compression',
 						  'Skip Rows:':'skiprows',
-                          "Excel sheets:":"sheet_name"
+                          "Excel sheets:":"sheet_name",
+                          "Add. na values":"na_values"
 						  }
-tooltips = {"Excel sheets:":"Provide names of excel sheets to load as: Sheet1;Sheet2.\nIf None - all excel sheets will be loaded.\nNote that a comma in the sheet name will result in unexpected file loading."}
+
+tooltips = {"Excel sheets:":"Provide names of excel sheets to load as: Sheet1;Sheet2.\nIf None - all excel sheets will be loaded.\nNote that a comma in the sheet name will result in unexpected file loading.",
+            "Add. na values":"Add additional value to recognize as nan. If you want to provide multiple additional nan values separate them by a semicolon ;"}
 
 class ImporterBase(QDialog):
     def __init__(self,mainController,*args,**kwargs):

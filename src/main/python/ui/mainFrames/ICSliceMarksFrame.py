@@ -11,6 +11,7 @@ from ui.custom.tableviews.ICMarkerTable import ICMarkerTable
 from ui.custom.tableviews.ICStatisticTable import ICStatisticTable
 from ui.custom.tableviews.ICQuickSelectTable import ICQuickSelectTable
 from ..dialogs.ICColorChooser import ColorChooserDialog
+from ..dialogs.ICSizeDialog import ICSizeDialog
 from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
 from ..dialogs.ICNumericFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage
@@ -246,6 +247,7 @@ class SliceMarksFrame(QWidget):
         ""
         self.selectButton.clicked.connect(self.chooseSelectMode)
         self.colorButton.clicked.connect(self.chooseColor)
+        self.sizeButton.clicked.connect(self.chooseSize)
         #self.filterButton.clicked.connect(self.applyFilter)
 
 
@@ -268,18 +270,30 @@ class SliceMarksFrame(QWidget):
         if action:
             self.adjustSelectMode(mode = action.text())
 
-    def chooseColor(self,event=None):
+    def findSendersBottomLeft(self):
         ""
         #find bottom left corner
         senderGeom = self.sender().geometry()
-        topLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
         #set sender status 
-        self.sender().mouseOver = False
+        if hasattr(self.sender(),"mouseOver"):
+            self.sender().mouseOver = False
+        return bottomLeft
+    def chooseColor(self,event=None):
+        ""
+        bottomLeft = self.findSendersBottomLeft()
         #cast menu
         dlg = ColorChooserDialog(mainController = self.mC)
-        dlg.setGeometry(topLeft.x(),topLeft.y(),350,300)
+        dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),350,300)
         dlg.exec_() 
     
+    def chooseSize(self,event=None):
+        ""
+        bottomLeft = self.findSendersBottomLeft()
+        dlg = ICSizeDialog(mainController=self.mC)
+        dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),250,200)
+        dlg.exec_() 
+
     def checkGraph(self):
         ""
         exists, graph = self.mC.getGraph()
