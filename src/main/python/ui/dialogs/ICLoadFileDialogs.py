@@ -93,15 +93,21 @@ class ExcelImporter(ImporterBase):
         self.widgetControl = []
         for label, options in comboboxExcelFile.items():
             
-            propLabel = QLabel()
-            propLabel.setText(label)
+            propLabel = createLabel(label)
             propLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            propCombo = createCombobox(items=options)
+            propCombo.setEditable(True)
 
             if label in tooltips:
                 propLabel.setToolTip(tooltips[label])
 
-            propCombo = createCombobox(items=options)
-            propCombo.setEditable(True)
+            if label in comboboxLabelToParam:
+                
+                defaultValue = self.mC.config.getParam(comboboxLabelToParam[label])
+                
+                propCombo.setCurrentText(defaultValue)
+
+           
             
             self.widgetControl.append((propLabel,propCombo))
 

@@ -13,12 +13,17 @@ The tool was developed to equip everyone with a tool that enables analysis and v
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 
-### New Features (v. 0.9.2.240) (Worklist)
+### New Features (v. >= 0.10,0) (Worklist)
 
 Novel features incorporated into Instant Clue are listed below. Features that are under development are indicated.
 This list provides an overview about upcoming features. Release specific features are document for each release separately (GitHub Release Page).
 Please use the [discussion forum](https://github.com/hnolCol/instantclue/discussions) to suggest new features and/or discuss new plot types.
 
+- [ ] Grouping: Allow export to excel. Add to hierarchical clustering. 
+- [ ] Kinetic - Model fitting (first/second order). Available but experimental.
+- [ ] Dimensional reduction plot
+- [x] Add dimensional reduction techniques.
+- [x] Clusterplot. Visualize detected clusters by several methods.
 - [x] QuickSelect and LiveGraph Widgets (interact with the main graph and with each other)
 - [x] User definable settings
 - [x] Responsive and modern User Interface (UI)
@@ -27,7 +32,7 @@ Please use the [discussion forum](https://github.com/hnolCol/instantclue/discuss
 - [x] Categorical values can now be encoded by different markers
 - [x] Categorical countplot. 
 - [x] Grouping of columns to perform row-wise statistical tests. Groups are highligted in dimensional reduction plots as well as correlation matrix plots.
-- [ ] Export to markdown friendly string format and json file format of datasets.
+- [x] Export to markdown friendly string format and json file format of datasets.
 - [ ] Creating log (saving version and processing of data as well as creation of charts)
 - [x] MainFigure Icons Update (responsive)
 
@@ -66,7 +71,7 @@ Coming soon - under development.
 
 #### Cluster plot 
 
-Coming soon - under development. 
+Available but experimental. At the moment, only boxplots are used for visualization. Numerous cluster methods from scikit-learn library are available.
 
 
 ## Issues

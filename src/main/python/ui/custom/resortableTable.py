@@ -19,7 +19,6 @@ class ResortableTable(QDialog):
             self.__layout()
             self.__connectEvents()
 
-
     def __controls(self):
         ""
         self.titleLabel = createTitleLabel("Use Drag & Drop to sort items.",fontSize=15)
@@ -148,10 +147,13 @@ class ResortTableWidget(QTableView):
             self.draggedRows = self.selectionModel().selectedRows()
             self.model().setDraggedIndicies(self.draggedRows)
         currentIndex = self.mouseEventToIndex(event) 
-        if currentIndex.row() == -1:
-            rowOffset = self.model().rowOffset + 1
+        if self.model().onlyDragNoResort:
+            rowOffset = 0
         else:
-            rowOffset = currentIndex.row() - self.dragStartIndex.row()
+            if currentIndex.row() == -1:
+                rowOffset = self.model().rowOffset + 1
+            else:
+                rowOffset = currentIndex.row() - self.dragStartIndex.row()
        
         if self.model().setRowOffset(rowOffset):
             self.model().setHiddenIdx(self.draggedRows)
@@ -173,6 +175,7 @@ class ResortTableModel(QAbstractTableModel):
         self.title = title
         self.hiddenIndex = []
         self.rowOffset = 0
+        self.onlyDragNoResort = False
 
     def initData(self,inputLabels):
         ""
@@ -283,6 +286,8 @@ class ResortTableModel(QAbstractTableModel):
 
     def resortData(self):
         ""
+        if self.onlyDragNoResort:
+            return
         if self.saveOffset == self.rowOffset:
             return
         else:

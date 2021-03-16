@@ -11,6 +11,8 @@ widgetParamMatches = [
     {"label": "Size of scatter points:", "paramName": "scatterSize"},
     {"label": "Min scatter point in range:", "paramName": "minScatterSize"},
     {"label": "Max scatter point in range:", "paramName": "maxScatterSize"},
+    {"label":"Add swarm scatter size", "paramName": "swarm.scatterSize"},
+    {"label":"XYPlot marker size","paramName":"xy.plot.marker.size"}
 ]
 
 
@@ -122,7 +124,8 @@ class ICSizeDialog(QDialog):
             w = SlideLineEdit(self, header=props["label"],initValue=initValue, minValue = paramRange[0],maxValue = paramRange[1])
             self.lineEditSliders.append(w)
 
-        self.acceptButton = ICStandardButton(itemName="Save & Apply")
+        self.acceptButton = ICStandardButton(itemName="Save")
+        self.discardButton = ICStandardButton(itemName = "Discard")
 
 
     def __layout(self):
@@ -140,13 +143,18 @@ class ICSizeDialog(QDialog):
         self.layout().addLayout(hboxTop)
         for w in self.lineEditSliders:
             self.layout().addWidget(w)
-        self.layout().addWidget(self.acceptButton)
+
+        hboxBottom = QHBoxLayout()
+        hboxBottom.addWidget(self.acceptButton)
+        hboxBottom.addWidget(self.discardButton)
+        self.layout().addLayout(hboxBottom)
         self.layout().addStretch()
         
        
     def __connectEvents(self):
         """Connect events to functions"""
         self.closeButton.clicked.connect(self.close)
+        self.discardButton.clicked.connect(self.close)
         self.acceptButton.clicked.connect(self.accept)
     
     def __windowUpdate(self):

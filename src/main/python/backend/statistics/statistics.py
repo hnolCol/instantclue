@@ -1,7 +1,8 @@
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
 from ..utils.stringOperations import getMessageProps, getRandomString, mergeListToString
-
+from backend.utils.stringOperations import getNumberFromTimeString
+from backend.utils.misc import getKeyMatchInValuesFromDict
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
@@ -296,7 +297,7 @@ class StatisticCenter(object):
                 
                 result = self.sourceData.addDataFrame(df, fileName = "PCA.T:({})".format(baseFileName))
             else:
-                df = pd.DataFrame(embedding,columns = comColumns)
+                df = pd.DataFrame(embedding,columns = comColumns, index = dataIndex)
                 df[comColumns] = df[comColumns].astype(float)
                 result = self.sourceData.joinDataFrame(dataID,df)
 
@@ -449,16 +450,85 @@ class StatisticCenter(object):
         else:
             return self.sourceData.joinDataFrame(dataID,df)
 
-    def fitModel(self, dataID, columnNames, timeGrouping, compGrouping = None, replicateOrder = "columnOrder", model="First Order Kinetic"):
+    def fitModel(self, dataID, columnNames, timeGrouping, compGrouping, replicateGrouping = "None", model="First Order Kinetic", normalization = "None", transformation = "None", sortTimeGroup = True, addDataAUC = True, addFitAUC = True):
         "Fit Model to Data"
-        data = self.getData(dataID,columnNames)
+        def _calcLineRegress(row, xValues,addDataAUC, addFitAUC):
+            r = linregress(x = xValues, y=row)
+            lRegress = r._asdict()
+            if addDataAUC:
+                lRegress["dataAUC"] = np.trapz(row,xValues)
+            if addFitAUC:
+                x = np.linspace(np.nanmin(xValues), np.nanmax(xValues), num = 200)
+                y = x * r.slope + r.intercept
+                lRegress["fitAUC"] = np.trapz(y,x)
+            t12 = np.log(2)/r.slope * (-1)
+            lRegress["halfLife"] = t12 if t12 > 0 else np.nan
+            return pd.Series(lRegress)
         try:
-            xtime = [(groupName,groupColumns) if isinstance(groupName,int) or isinstance(groupName,float) else (float(groupName.split(" ")[0]),groupColumns)\
-                                                                                                            for groupName,groupColumns in timeGrouping.items()] 
-        except:
+            returnProps = {}
+            xtime = [(getNumberFromTimeString(groupName),groupColumns.values) for groupName,groupColumns in timeGrouping.items()]
+            if sortTimeGroup:
+                xtime.sort(key=lambda x:x[0])
+
+            xtime = OrderedDict(xtime)
+            data = self.getData(dataID,np.unique(columnNames))
+            #transform
+
+            if replicateGrouping is None:
+
+                replicateGrouping = {"None":pd.Series(columnNames)}
+            #normalize
+
+            if compGrouping == "None" or compGrouping is None:
+
+                compGrouping = {"selectedColumns":pd.Series(columnNames)} 
+           
+            for groupNameComp, groupColumnsComp in compGrouping.items():
+            
+                for repID, replicateColumns in replicateGrouping.items():
+                    
+                    groupColumnsCompPerReplicate = [colName for colName in groupColumnsComp.values if colName in replicateColumns.values]
+                    timeValues = [getKeyMatchInValuesFromDict(groupColumn,xtime) for groupColumn in  groupColumnsCompPerReplicate]
+                    #remove vcolumns where not time was submitted
+                    timeValueColumns = OrderedDict([(groupColumnsCompPerReplicate[n],timeValue) for n,timeValue in enumerate(timeValues) if timeValue is not None])
+                    #if len(timeValueColumns) < 2: #no regression performed with less than 2 timepoints
+                    #   continue
+                    
+                    if normalization != "None":
+                        if normalization in ["Divide by median of first timepoint"]:
+                            firstTimePoint = list(xtime.keys())[0]
+                            firstTimePointColumns = xtime[firstTimePoint]
+                            firstTimePointColumnsPerGroup = [colName for colName in firstTimePointColumns if colName in groupColumnsCompPerReplicate]
+                            firstTimePointMedian = np.nanmedian(data[firstTimePointColumnsPerGroup], axis=1).flatten()
+                   
+                    if transformation  != "None":
+                        if transformation == "2^x":
+                            dataSubset = 2 ** data[list(timeValueColumns.keys())]
+
+                    if normalization != "None":
+
+                        dataSubset = dataSubset[list(timeValueColumns.keys())].divide(2 ** firstTimePointMedian, axis="rows")
+
+                    dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
+                    
+                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
+                    X.index = data.index
+
+                    X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
+                    if normalization != "None":
+                        dataSubset.columns = ["norm:fitModel:{}".format(colName) for colName in dataSubset.columns]
+                        self.sourceData.joinDataFrame(dataID,dataSubset)
+                    
+                    returnProps = self.sourceData.joinDataFrame(dataID, X)
+
+            returnProps["messageProps"] = getMessageProps("Done..","Model fitting performed. Columns added to the data frame.")["messageProps"]
+            return returnProps
+
+        except Exception as e:
+            print(e)
             return getMessageProps("Error..","Time group could not be interpreted.")
           
-        print(xtime) 
+       
         
     def runKMeansElbowMethod(self,dataID,columnNames,kMax = 20):
         ""

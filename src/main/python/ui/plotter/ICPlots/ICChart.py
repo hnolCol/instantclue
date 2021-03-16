@@ -75,7 +75,7 @@ class ICChart(QObject):
 						ax,
 						appendWhere = "top", 
 						title = "Axis title", 
-						axisSize = 0.25, 
+						axisSize = 0.20, 
 						axisPadding=0, 
 						textSize = 9,  
 						textRotation = 90):

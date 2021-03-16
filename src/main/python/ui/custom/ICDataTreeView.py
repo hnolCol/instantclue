@@ -818,12 +818,12 @@ menuBarItems = [
         "funcKey": "smartReplace",
         "dataType": "Numeric Floats",
     },
-    # {
-    #     "subM":"Kinetic",
-    #     "name":"First Order",
-    #     "funcKey": "fitModel",
-    #     "dataType": "Numeric Floats",
-    # },
+    {
+        "subM":"Kinetic",
+        "name":"First Order",
+        "funcKey": "fitModel",
+        "dataType": "Numeric Floats",
+    },
     {
         "subM":"Outlier",
         "name":"Remove outliers (Group)",
@@ -1731,7 +1731,7 @@ class DataTreeViewTable(QTableView):
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found."})
        
     def fitModel(self,*args,**kwargs):
-        if not self.mC.grouping.groupingExists():
+        if True:#not self.mC.grouping.groupingExists():
             try:
                 #columnNames = self.mC.grouping.getColumnNames()
                 #grouping = self.mC.grouping.getCurrentGrouping()

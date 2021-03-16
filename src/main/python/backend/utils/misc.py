@@ -10,6 +10,12 @@ def getTxtFilesFromDir(pathToDir):
         return txtFiles
     return []
 
+def getKeyMatchInValuesFromDict(value,inputDict):
+    ""
+    if isinstance(inputDict,dict):
+        for k,v in inputDict.items():
+            if value in v:
+                return k 
 
 def replaceKeyInDict(toReplaced, inputDict, replaceValue):
     ""

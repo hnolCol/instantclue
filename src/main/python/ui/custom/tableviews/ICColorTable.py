@@ -17,7 +17,6 @@ class ItemDelegate(QStyledItemDelegate):
     def __init__(self,parent):
         super(ItemDelegate,self).__init__(parent)
     
-
     def paint(self, painter, option, index):
         painter.setFont(getStandardFont())
         rect = option.rect

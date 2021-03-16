@@ -50,7 +50,7 @@ def getStandardFont(fontSize = None, font=None):
     font = QFont(font) 
    
     if isWindows(): #ugly hack but on windows fonts appear huge
-        fontSize -= 2
+        fontSize -= 3
     font.setPointSize(fontSize)
     return font
 

@@ -15,7 +15,11 @@ class ICClusterplot(ICChart):
     def initClusters(self,onlyForID = None, targetAx = None):
         ""
         for n, boxplotProps in self.data["plotData"].items():
-            self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
+            if n in self.axisDict and onlyForID is None:
+                self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
+            elif n == onlyForID and targetAx is not None:
+                self.targetBoxplotItems = dict()
+                self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
            
     def onDataLoad(self, data):
         ""
@@ -34,6 +38,7 @@ class ICClusterplot(ICChart):
          
             self.addTitles()
             self.initClusters()
+            self.savePatches()
           
             if self.interactive:
                 for ax in self.axisDict.values():
@@ -44,7 +49,39 @@ class ICClusterplot(ICChart):
             self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
             print(e)
-        
+
+    def getClusterIDsByDataIndex(self):
+
+        ""
+        return self.data["clusterLabels"], self.data["dataID"]
+
+    def savePatches(self):
+        ""
+        colorGroupData = self.data["dataColorGroups"]
+        self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
+        self.groupColor = dict() 
+        self.setFacecolors(colorGroupData)
+
+    def setFacecolors(self, colorGroupData = None, onlyForID = None):
+        ""
+        if onlyForID is not None and hasattr(self,"targetBoxplotItems"):
+            for n, boxprops in self.targetBoxplotItems.items():
+                plottedBoxProps = self.boxplotItems[onlyForID] #get boxes from plotted items
+                for artist, plottedArtist in zip(boxprops["boxes"],plottedBoxProps["boxes"]):
+                    artist.set_facecolor(plottedArtist.get_facecolor())
+        else:
+            for n, boxprops in self.boxplotItems.items():
+                for artist, fc in zip(boxprops["boxes"],self.data["facecolors"][n]):   
+                    artist.set_facecolor(fc)
+
+                    if colorGroupData is not None and hasattr(self,"groupColor"):
+                        idx = colorGroupData.index[colorGroupData["color"] == fc]
+                        
+                        intID = colorGroupData.loc[idx,"internalID"].iloc[0]
+                        self.colorGroupArtists[intID].append(artist)
+                        if intID not in self.groupColor:
+                            self.groupColor[intID] = fc
+
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         ""
@@ -137,6 +174,13 @@ class ICClusterplot(ICChart):
             
     def mirrorAxisContent(self, axisID, targetAx,*args,**kwargs):
         ""
-        
+        data = self.data
+        self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
+    
+        self.addTitles(onlyForID = axisID, targetAx = targetAx)
+        self.initClusters(onlyForID=axisID,targetAx=targetAx)
+        self.setFacecolors(onlyForID=axisID)
+
+        self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)
 
 

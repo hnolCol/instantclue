@@ -61,6 +61,14 @@ class ICGrouping(object):
         cNames = cNames.append(list(self.groups[self.currentGrouping].values()))
         return cNames
     
+    def getColumnNamesFromGroup(self, groupName):
+        ""
+        if groupName in self.groups:
+            cNames = pd.Series()
+            cNames = cNames.append(list(self.groups[groupName].values()))
+            return cNames
+        return pd.Series()
+
     def getColorsForGroupMembers(self):
         ""
         if not self.currentGrouping in self.groups:

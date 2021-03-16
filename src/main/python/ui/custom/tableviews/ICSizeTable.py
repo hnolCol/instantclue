@@ -5,7 +5,7 @@ from PyQt5.QtCore import *
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
-from .ICColorTable import ICColorSizeTableBase
+from .ICColorTable import ICColorSizeTableBase, ItemDelegate
 import pandas as pd
 import numpy as np
 
@@ -32,6 +32,7 @@ class ICSizeTable(ICColorSizeTableBase):
         self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
         self.table.resizeColumns()
         self.table.setItemDelegateForColumn(0,SpinBoxDelegate(self.table))
+        self.table.setItemDelegateForColumn(1,ItemDelegate(self.table))
         
         
     def __layout(self):
@@ -64,7 +65,11 @@ class ICSizeTable(ICColorSizeTableBase):
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()
-            graph.addSizeLegendToGraph(self.model._labels,ignoreNaN,title = self.title, legendKwargs = legendKwargs)
+            graph.addSizeLegendToGraph(
+                    self.model._labels.loc[self.model._inLegend.values],
+                    ignoreNaN,
+                    title = self.title, 
+                    legendKwargs = legendKwargs)
             self.model.completeDataChanged()
 
 
@@ -79,7 +84,7 @@ class SizeTableModel(QAbstractTableModel):
 
         self._labels = labels
         self._inputLabels = labels.copy()
-        
+        self._inLegend = pd.Series(np.ones(shape = self._labels.index.size).astype(bool) ,index=self._labels.index)
         self.setDefaultSize()
         self.maxSize = None
         self.setRowHeights()
@@ -168,6 +173,7 @@ class SizeTableModel(QAbstractTableModel):
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
+
         elif role == Qt.EditRole:
             if not self.isEditable:
                 return False
@@ -224,6 +230,14 @@ class SizeTableModel(QAbstractTableModel):
         elif role == Qt.FontRole:
 
             return getStandardFont()
+        
+        elif role == Qt.ForegroundRole and index.column() == 1:
+            
+            if self._inLegend.iloc[index.row()]:
+
+                return QColor("black")
+            else:
+                return QColor("grey")
 
         elif role == Qt.ToolTipRole:
 
@@ -271,7 +285,14 @@ class SizeTableModel(QAbstractTableModel):
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 
+    def toggleInLegend(self,*args,**kwargs):
+        ""
 
+        mouseOverItem = self.parent().mouseOverItem
+        
+        if mouseOverItem is not None:
+            self._inLegend.iloc[mouseOverItem] = not self._inLegend.iloc[mouseOverItem] 
+       
 
 
 class SizeTable(QTableView):
@@ -290,7 +311,7 @@ class SizeTable(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
 
-        self.createMenu()
+        
 
         self.rowHeight      =   rowHeight
         self.rightClick     =   False
@@ -311,6 +332,7 @@ class SizeTable(QTableView):
         menu = createSubMenu(None,["Subset by ..","Add Legend at .."])
         menu["main"].addAction("Remove",self.parent().resetSizeInGraph)
         menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
+        menu["main"].addAction("Hide/Show in Legend", self.model().toggleInLegend)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
 
         for legendLoc in legendLocations:
@@ -368,7 +390,7 @@ class SizeTable(QTableView):
                 
             elif tableIndexCol == 1 and self.rightClick:
                 self.rightClickedRowIndex = tableIndex.row()
-                self.menu.exec(QCursor.pos())
+                self.menu.exec(QCursor.pos()+ QPoint(4,4))
                 
                 self.rightClick = False
             else:
@@ -384,6 +406,8 @@ class SizeTable(QTableView):
     def mouseMoveEvent(self,event):
         
         ""
+        if self.state() == QAbstractItemView.EditingState:
+            return 
         if not self.model().dataAvailable():
             return
         rowAtEvent = self.rowAt(event.pos().y())

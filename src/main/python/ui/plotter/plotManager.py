@@ -28,7 +28,7 @@ plotTypeGraph = {
                 "histogram"     :       ICHistogram,
                 "countplot"     :       ICCountplot,
                 "x-ys-plot"     :       ICXYPlot,
-                "dim-red-plot"  :       ICBarplot,      
+                #"dim-red-plot"  :       ICBarplot,      
                 "forestplot"    :       ICForestplot,
                 "wordcloud"     :       ICWordCloud,
                 "clusterplot"   :       ICClusterplot

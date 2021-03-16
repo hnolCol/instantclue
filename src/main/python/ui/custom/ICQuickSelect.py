@@ -6,7 +6,7 @@ from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.quickSelectDialog import QuickSelectDialog
 from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont
-
+from .warnMessage import WarningMessage
 import os
 import pandas as pd
 import numpy as np
@@ -392,6 +392,28 @@ class QuickSelect(QWidget):
         #update data 
         self.model.completeDataChanged()
 
+    def exportSelectionToData(self,event=None):
+        ""
+        filterMode = self.quickSelectProps["filterProps"]["mode"]
+        selectionData = self.model.getCompleteSelectionData(attachSizes=True)
+        selectionData = selectionData.dropna(subset=["checkedValues"])
+        selectionData = selectionData.dropna(axis=1,how="all")
+        
+
+        if selectionData["checkedValues"].index.size == 0:
+                self.mC.sendMessageRequest({"title":"Error ..","message":"No selection made in Quick Select"})
+                return  
+
+        if filterMode == "raw":
+            funcProps = {}
+            funcProps["key"] = "data::joinDataFrame"
+            funcProps["kwargs"] = {}
+            funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+            funcProps["kwargs"]["dataFrame"] = selectionData
+            self.sendToThreadFn(funcProps)
+
+        else:
+            self.mC.sendMessageRequest({"title":"Error ..","message":"Only supported for raw selection mode."})
 
     def exportSelectionToClipbard(self,event=None, attachColumns = False):
         ""
@@ -1150,6 +1172,11 @@ class QuickSelectTableView(QTableView):
         attachColumns = "all columns" in self.sender().text() 
         self.parent().exportSelectionToClipbard(attachColumns = attachColumns)
 
+    @pyqtSlot()
+    def exportSelectionToData(self):
+        ""
+        self.parent().exportSelectionToData()
+
     def leaveEvent(self,event=None):
         ""
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
@@ -1204,12 +1231,14 @@ class QuickSelectTableView(QTableView):
 
                 for readType in ["Clipboard","Text/CSV file"]:
                     menus["Selection from .."].addAction(readType, self.readSelection)
+
                 
                 menus["Export selection"].addAction("To clipboard", self.exportSelectionClipboard)
                 menus["Export selection"].addAction("To clipboard (all columns)", self.exportSelectionClipboard)
-
+                menus["Export selection"].addAction("Add annotation column in data", self.exportSelectionToData)
+                
                 menus["main"].addAction("Save selection", self.saveSelection)
-                menus["main"].addAction("Annotate selection", self.annotateSelection)
+                menus["main"].addAction("Annotate selection in scatter plot", self.annotateSelection)
                 
                 menus["main"].addAction("Uncheck all", self.uncheckSelection)
                 menus["main"].exec_(self.mapToGlobal(e.pos()))

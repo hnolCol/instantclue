@@ -1,6 +1,7 @@
 from decimal import Decimal
 import random
 import string
+import numpy as np
 
 
 def findCommonStart(*strings):
@@ -39,6 +40,18 @@ def combineStrings(self, row , nanObjectString = "-"):
                 else:
                     base = base+';'+s
         return base	
+
+def getNumberFromTimeString(timeString):
+    ""
+    t = np.nan
+    if " " in timeString and np.char.isnumeric(timeString.split(" ")[0]):
+        t = float(timeString.split(" ")[0])
+
+    elif np.char.isnumeric(timeString):
+
+        t = float(timeString)
+    
+    return t 
 
 def getMessageProps(title,message):
     ""

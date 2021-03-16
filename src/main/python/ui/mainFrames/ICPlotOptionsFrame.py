@@ -184,13 +184,13 @@ class PlotOptionFrame(QWidget):
 
         #add clusterplot menu 
         menu = createSubMenu(subMenus=["Method","Plot type"])
-        menu["main"].addAction("Export clusters")
+        menu["main"].addAction("Export clusters", self.addClusterLabel)
         for clusterMethod in clusteringMethodNames.keys():
             action = menu["Method"].addAction(clusterMethod)
             action.triggered.connect(lambda _, cMethod = clusterMethod: self.mC.config.setParam("clusterplot.method",cMethod))
-        for plotType in ["barplot","boxplot","lineplot"]:
-            action = menu["Plot type"].addAction(plotType)
-            action.triggered.connect(lambda _, pType = plotType: self.mC.config.setParam("clusterplot.type",pType))
+        # for plotType in ["barplot","boxplot","lineplot"]:
+        #     action = menu["Plot type"].addAction(plotType)
+        #     action.triggered.connect(lambda _, pType = plotType: self.mC.config.setParam("clusterplot.type",pType))
         self.typeMenus["clusterplot"] = menu["main"]
 
     def handleSplitOfDataByCategory(self):
@@ -228,6 +228,7 @@ class PlotOptionFrame(QWidget):
         self.mC.config.toggleParam(paramName)
         currentState = self.mC.config.getParam(paramName)
         self.sender().setText(actionName[currentState])
+
 
     def addClusterLabel(self,event=None):
         "Add cluster ID to source data."

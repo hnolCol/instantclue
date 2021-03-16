@@ -193,14 +193,15 @@ class PlotterBrain(object):
         }}
 
 
-    def getClusterBoxplots(self,clusterLabels, data):
+    def getClusterBoxplots(self,clusterLabels, data, numericColumns, columnName):
         ""
         plotData = {}
     
-        for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby("Labels",sort=False)):
+        for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby(columnName,sort=False)):
             plotData[n] = {}
             plotData[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns] 
             plotData[n]["patch_artist"] = True
+            plotData[n]["positions"] = np.arange(len(numericColumns))
         return plotData
            
             
@@ -217,16 +218,18 @@ class PlotterBrain(object):
 
         clusterLabels, data = self.sourceData.statCenter.runCluster(dataID,numericColumns,method)
         clusterLabels = clusterLabels.sort_values("Labels")
-        print(clusterLabels)
-        uniqueClusters = np.unique(clusterLabels["Labels"])
+        columnName = "C({})".format(method)
+        clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
+        #print(clusterLabels)
+        uniqueClusters = np.unique(clusterLabels[columnName])
         nClusters = uniqueClusters.size 
-        print(uniqueClusters)
-        print(nClusters)
+        #print(uniqueClusters)
+        #print(nClusters)
         colorMap, _ = self.sourceData.colorManager.createColorMapDict(uniqueClusters,addNaNLevels=[-1],as_hex = True)
-        print(colorMap)
+        #print(colorMap)
 
-        plotData = self.getClusterBoxplots(clusterLabels,data)
-
+        plotData = self.getClusterBoxplots(clusterLabels,data,numericColumns,columnName)
+        faceColors = dict([(n,[colorMap[uniqueCluster]] * len(numericColumns)) for n,uniqueCluster in enumerate(uniqueClusters)])
         axisPositions = getAxisPostistion(nClusters,maxCol=self.maxColumns)
         axisLabels = dict([(n,{"x":"Column Names","y":""}) for n in range(nClusters)])#
         axisTitles = dict([(n,uniqueCluster) for n,uniqueCluster in enumerate(uniqueClusters)])
@@ -244,8 +247,11 @@ class PlotterBrain(object):
             "tickPositions": tickPositions,
             "tickLabels": tickLabels,
             "axisTitles" : axisTitles,
+            "facecolors" : faceColors,
             "dataColorGroups" : colorGroups,
             "colorCategoricalColumn" : "Cluster Labels",
+            "clusterLabels" : clusterLabels,
+            "dataID" : dataID
         }}
 
     def getBarplotProps(self, dataID, numericColumns, categoricalColumns):

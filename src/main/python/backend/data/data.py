@@ -158,9 +158,10 @@ class DataCollection(object):
 		return funcProps
 
 	def addDataFrameFromTxtFile(self,pathToFile,fileName,loadFileProps = None, returnPlainDf = False):
+		"Load Data frame from txt file"
 		try:
 			if loadFileProps is None:
-				loadFileProps = {"sep":"tab","skiprows":0}
+				loadFileProps = self.loadDefaultReadFileProps()
 			loadFileProps = self.checkLoadProps(loadFileProps)
 			df = pd.read_csv(pathToFile,**loadFileProps)
 		except Exception as e:

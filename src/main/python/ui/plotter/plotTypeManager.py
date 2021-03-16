@@ -13,7 +13,7 @@ plotTypes = ["lineplot",
             "hclust",
             "corrmatrix",
             "x-ys-plot",
-            "dim-red-plot",
+            #"dim-red-plot",
             "clusterplot",
             "forestplot",
             "wordcloud"]

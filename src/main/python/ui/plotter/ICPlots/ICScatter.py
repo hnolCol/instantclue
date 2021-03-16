@@ -27,13 +27,14 @@ class ICScatterPlot(ICChart):
               
                 numericColumns = pd.Series(list(columnPair))
                 #if columns present, no need to add them to the data.
-                labelColumnNamesNotInData = [colName for colName in labelColumnNames if colName not in labelColumnNames]
+                labelColumnNamesNotInData = [colName for colName in labelColumnNames if colName not in self.scatterPlots[columnPair].data.columns]
                 #columnNames = labelColumnNames.append(numericColumns,ignore_index=True)
                 if len(labelColumnNamesNotInData) > 0:
                     data = self.mC.data.getDataByColumnNames(dataID,labelColumnNamesNotInData)["fnKwargs"]["data"]
                     plotData = self.scatterPlots[columnPair].data
                     data = plotData.join(data)
-               
+                else:
+                    data = self.scatterPlots[columnPair].data
                 self.annotations[columnPair] = ICScatterAnnotations(
                                 parent = self,
                                 plotter = self.p,

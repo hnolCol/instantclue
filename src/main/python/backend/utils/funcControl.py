@@ -511,6 +511,15 @@ funcPropControl = {
                 sendMessageProps
             ]
         },
+    "stats::fitModel": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"fitModel","requiredKwargs":["dataID", "timeGrouping", "compGrouping","columnNames"]},
+            "completedRequest":
+                    refreshColumnView          
+        },
+    
+
+        
 
     "stats::compareGroups": 
         {

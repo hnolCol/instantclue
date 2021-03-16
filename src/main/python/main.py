@@ -142,7 +142,7 @@ class InstantClue(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(self.mainPath,"icons","instantClueLogo.png")))
         
         self.config = Config(mainController = self)
-        self.config.setParamRange("label.font.family",QFontDatabase().families())
+        
         self._setupFontStyle()
         #set up data collection
         self._setupData()
@@ -200,9 +200,16 @@ class InstantClue(QMainWindow):
 
     def _setupFontStyle(self):
         ""
+        self.config.setParamRange("label.font.family",QFontDatabase().families())
         from ui import utils
         utils.standardFontSize = self.config.getParam("label.font.size")
-        utils.standardFontFamily = self.config.getParam("label.font.family")
+        fontFamily = self.config.getParam("label.font.family") 
+        if fontFamily in self.config.getParamRange("label.font.family"):
+            utils.standardFontFamily = fontFamily
+        else:
+            #default to arial
+            self.config.setParam("label.font.family","Arial") 
+            utils.standardFontFamily = "Arial"
 
     def _setupFilters(self):
         ""
