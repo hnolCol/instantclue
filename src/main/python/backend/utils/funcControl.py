@@ -93,6 +93,7 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"dropColumns","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":[
                 {"obj":"self","fn":"removeItemsFromReceiverBox","objKey":"middle","objName":"mainFrames","requiredKwargs":["columnNames"]},
+                {"obj":"grouping","fn":"checkGroupsForExistingColumnNames","requiredKwargs":["columnNames"]},
                 updateTreeView,
                 sendMessageProps]   
         },

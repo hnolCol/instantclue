@@ -2114,7 +2114,8 @@ class PlotterBrain(object):
                     #get kernel data
                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                     #get random x position around 0 to spread data
-                    kdeData = np.array([np.random.uniform(-x*0.5,x*0.5) for x in kdeData])
+                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                    kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                     kdeData = kdeData + tickPositions[0][n]
                     #save data
                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -2170,6 +2171,7 @@ class PlotterBrain(object):
                 startPos = m if m == 0 else m + (widthBox/3 * m) #add border
                 endPos = startPos + widthBox * (nColorCats-1)
                 positions = np.linspace(startPos,endPos,num=nColorCats)
+
                 tickPos = np.median(positions)
                 tickPositions.append(tickPos)
                 tickLabels.append(numColumn)
@@ -2186,7 +2188,9 @@ class PlotterBrain(object):
                         else:
                             kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                             #get random x position around 0 to spread data between - and + kdeData
-                            kdeData = np.array([np.random.uniform(-x * 0.3 , x * 0.3) for x in kdeData])
+                            kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                            
+                            kdeData = np.array([np.random.uniform(-x * 0.80 , x * 0.80) for x in kdeData])
                             kdeData = kdeData + positions[nColCat]
                             data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                         plotData = plotData.join(data)
@@ -2274,9 +2278,10 @@ class PlotterBrain(object):
                             else:
                                 #get kernel data
                                 
-                                kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.8)
+                                kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                 #get random x position around 0 to spread data between - and + kdeData
-                                kdeData = np.array([np.random.uniform(-x*0.5,x*0.5) for x in kdeData])
+                                kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                 kdeData = kdeData + positions[nColCat]
                                 data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                             plotData = plotData.join(data)
@@ -2374,9 +2379,10 @@ class PlotterBrain(object):
                                     kdeData = np.array([0])+  positions[nColCat]
                                     data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                                 else:
-                                    kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.8)
+                                    kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                     #get random x position around 0 to spread data between - and + kdeData
-                                    kdeData = np.array([np.random.uniform(-x*0.5,x*0.5) for x in kdeData])
+                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                    kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                     kdeData = kdeData + positions[nColCat]
                                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                                 plotData = plotData.join(data)

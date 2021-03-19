@@ -140,7 +140,7 @@ class FindReplaceDialog(QDialog):
                 elif len(self.replaceStrings) > 1 and len(self.replaceStrings) == len(self.findStrings):
                     return True
                 else:
-                    w = WarningMessage(infoText = "Please enter either a replace string or a matching number of strings (find vs replace).")
+                    w = WarningMessage(infoText = "Please enter either a replace string or a matching number of strings (find vs replace).",iconDir = self.mC.mainPath)
                     w.exec_()
                     return False
         

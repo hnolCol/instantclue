@@ -27,8 +27,9 @@ def replaceKeyInDict(toReplaced, inputDict, replaceValue):
 
 def scaleBetween(data,feature_range=(0,1)):
     ""
+    xmin, xmax = feature_range
     minV = np.nanmin(data)
     maxV = np.nanmax(data)
-    return (data - minV) / (maxV - minV)
+    return (data - minV) / (maxV - minV) * (xmax - xmin) + xmin
     #scaler = MinMaxScaler(feature_range=feature_range)
     #return scaler.fit_transform(data)

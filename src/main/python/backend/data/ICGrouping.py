@@ -40,6 +40,41 @@ class ICGrouping(object):
         if setToCurrent:
             self.currentGrouping = groupingName
     
+    def checkGroupsForExistingColumnNames(self,columnNames):
+        ""
+        deletedColumnNames = columnNames
+        deleteGroups = []
+        alteredGroups = []
+        if len(self.groups) > 0:
+            for groupingName, groupedItems in self.groups.items():
+                columnsInGrouping = self.getColumnNamesFromGroup(groupingName)
+               
+                if any(colName in columnsInGrouping.values for colName in deletedColumnNames.values):
+                    updatedGrouping = OrderedDict()
+                    for groupName , columnNames in groupedItems.items():
+                        
+                        updatedColumnNames = pd.Series([colName for colName in columnNames if colName not in deletedColumnNames.values])
+                       
+                        if len(updatedColumnNames) < 2 and groupingName not in deleteGroups:
+                            deleteGroups.append(groupingName)
+                        else:
+                            updatedGrouping[groupName] = updatedColumnNames
+                       
+                    alteredGroups.append((groupingName,updatedGrouping))
+                    
+           
+            for groupingName, updatedGrouping in alteredGroups:
+                self.groups[groupingName] = updatedGrouping   
+            
+            for groupingNameToDelete in deleteGroups:
+                #delete groups
+                del self.groups[groupingNameToDelete]   
+                if groupingNameToDelete == self.currentGrouping:
+                    self.currentGrouping = None
+
+            
+
+    
     def setCurrentGrouping(self,groupingName):
         ""
         if groupingName in self.groups:
@@ -130,7 +165,7 @@ class ICGrouping(object):
             return [(referenceGroup,groupName) for groupName in groupNames if groupName != referenceGroup]
         
         else:
-            print(list(combinations(groupNames,r=2)))
+           # print(list(combinations(groupNames,r=2)))
             return list(combinations(groupNames,r=2))
 
 

@@ -208,10 +208,10 @@ class ResortTableModel(QAbstractTableModel):
         elif role == Qt.FontRole:
             return self.getFont()
         elif role == Qt.DisplayRole:
-           # if index.row() in self.hiddenIndex:
-           #     return ""
-           # else:
-            return str(self._labels.iloc[index.row()])
+            try:
+                return str(self._labels.iloc[index.row()])
+            except:
+                return ""
         elif role == Qt.BackgroundRole:
             return QBrush(QColor("white"))#TABLE_ODD_ROW_COLOR
             

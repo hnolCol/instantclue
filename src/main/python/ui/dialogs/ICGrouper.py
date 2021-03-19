@@ -199,17 +199,17 @@ class ICGrouper(QDialog):
         groupingName = self.groupingEdit.text()
         
         if  groupingName == "":
-            w = WarningMessage(infoText = "No name for Grouping found.")
+            w = WarningMessage(infoText = "No name for Grouping found.",iconDir = self.mC.mainPath)
             w.exec_()
             return
         
         elif self.mC.grouping.nameExists(groupingName):
-            w = WarningMessage(infoText = "The name of grouping exists already.")
+            w = WarningMessage(infoText = "The name of grouping exists already.",iconDir = self.mC.mainPath)
             w.exec_()
             return
             
         elif any(self.groupItems[groupID]["items"].size < 2 for groupID in self.groupItems.keys()):
-            w = WarningMessage(infoText = "One or more groups contain only a single item. Either remove group or add items.")
+            w = WarningMessage(infoText = "One or more groups contain only a single item. Either remove group or add items.",iconDir = self.mC.mainPath)
             w.exec_()
             return
         

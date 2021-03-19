@@ -1264,6 +1264,24 @@ DEFAULT_PARAMETER = [
     "description"   :   "Error value in barplots."
     }, 
     {
+    "name"          :   "boxbarviolin.border",
+    "value"         :   0.25,
+    "dtype"         :   float,
+    "range"         :   [0,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Barplot Settings",
+    "description"   :   "Spacing between major elements measured by their width - e.g. 0.1 means that the border of a box is 0.1 its with. Bars separated by categorical column on x-axis consider the minor spacing."
+    }, 
+    {
+    "name"          :   "barplot.minor.spacing",
+    "value"         :   0,
+    "dtype"         :   float,
+    "range"         :   [0,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Barplot Settings",
+    "description"   :   "Spacing between minor bars."
+    }, 
+    {
     "name"          :   "WorkingDirectory",
     "value"         :   "./",
     "dtype"         :   str,
