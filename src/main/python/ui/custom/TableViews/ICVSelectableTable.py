@@ -26,6 +26,7 @@ class PandaTable(QTableView):
         self.highlightRow = None
         self.setMouseTracking(True)
         self.setShowGrid(True)
+        self.shiftHold = False
 
         self.mC = mainController
         
@@ -142,6 +143,7 @@ class PandaTable(QTableView):
     def selectionChanged(self,selected,deselected):
         "Mark Datapoints in Selection"
         selectedRows = np.unique([idx.row() for idx in selected.indexes()])
+        
         if self.mC is not None and hasattr(self.mC,"getGraph"):
             exists,graph = self.mC.getGraph()
             if exists:

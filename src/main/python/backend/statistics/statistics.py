@@ -6,6 +6,7 @@ from backend.utils.misc import getKeyMatchInValuesFromDict
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
+from scipy.optimize import curve_fit
 from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
 
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
@@ -282,6 +283,7 @@ class StatisticCenter(object):
             config = self.sourceData.parent.config
             nComps = config.getParam("pca.n.components")
             scaleData = config.getParam("pca.scale")
+            attachCurrentGroupingOnly = config.getParam("pca.add.current.grouping.only")
             
             with threadpool_limits(limits=1, user_api='blas'):
                 self.calcPCA = ICPCA(X,n_components=nComps, scale=scaleData)
@@ -293,8 +295,11 @@ class StatisticCenter(object):
                 df = pd.DataFrame(eigV, columns = ["Component {} ({:.2f}%)".format(n,explVariance[n]) for n in range(eigV.shape[1])])
                 
                 df["ColumnNames"] = columnNames.values.flatten()
-                baseFileName = self.sourceData.getFileNameByID(dataID)
-                
+                annotatedGroupings = self.sourceData.parent.grouping.getGroupingsByColumnNames(columnNames,attachCurrentGroupingOnly)
+                if len(annotatedGroupings) > 0:
+                    for groupingName, groupMatches in annotatedGroupings.items(): 
+                        df[groupingName] = groupMatches.values
+                baseFileName = self.sourcefData.getFileNameByID(dataID)
                 result = self.sourceData.addDataFrame(df, fileName = "PCA.T:({})".format(baseFileName))
             else:
                 df = pd.DataFrame(embedding,columns = comColumns, index = dataIndex)
@@ -452,6 +457,7 @@ class StatisticCenter(object):
 
     def fitModel(self, dataID, columnNames, timeGrouping, compGrouping, replicateGrouping = "None", model="First Order Kinetic", normalization = "None", transformation = "None", sortTimeGroup = True, addDataAUC = True, addFitAUC = True):
         "Fit Model to Data"
+        
         def _calcLineRegress(row, xValues,addDataAUC, addFitAUC):
             r = linregress(x = xValues, y=row)
             lRegress = r._asdict()
@@ -464,6 +470,16 @@ class StatisticCenter(object):
             t12 = np.log(2)/r.slope * (-1)
             lRegress["halfLife"] = t12 if t12 > 0 else np.nan
             return pd.Series(lRegress)
+
+        def _calcIncrease(row,xValues, corrK):
+            ""
+            def f(x,k):
+                return 1 - np.exp(-(k+corrK)*x)
+            print(corrK)
+            popt, pcov = curve_fit(f,xValues,row)
+            r = {"k":popt[0]}
+            return pd.Series(r)
+
         try:
             returnProps = {}
             xtime = [(getNumberFromTimeString(groupName),groupColumns.values) for groupName,groupColumns in timeGrouping.items()]
@@ -504,15 +520,21 @@ class StatisticCenter(object):
                     if transformation  != "None":
                         if transformation == "2^x":
                             dataSubset = 2 ** data[list(timeValueColumns.keys())]
+                    else:
+                        dataSubset = data[list(timeValueColumns.keys())]
 
                     if normalization != "None":
 
                         dataSubset = dataSubset[list(timeValueColumns.keys())].divide(2 ** firstTimePointMedian, axis="rows")
 
-                    dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
-                    
-                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
-                    X.index = data.index
+                    #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
+                    dataSubset = dataSubset.dropna()
+                    corrK = 0.0303 if groupNameComp == "C" else 0
+                    #X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
+                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcIncrease(row,xValues,corrK), axis=1)
+                   #
+                    print(X)
+                    X.index = dataSubset.index
 
                     X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
                     if normalization != "None":

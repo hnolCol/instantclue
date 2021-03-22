@@ -26,7 +26,7 @@ class ICModelBase(QDialog):
         self.dataTypeCombo = createCombobox(self,["2^x","None"])
 
         self.normalizaionLabel = createLabel("Value Normalization:","Normalization value will be calculated on raw data before transformation and then transformed prior normalization.")
-        self.normalizationCombo = createCombobox(self,["Divide by median of first timepoint"])
+        self.normalizationCombo = createCombobox(self,["None","Divide by median of first timepoint"])
 
         self.timeGroupLabel = createLabel("Time Grouping:","Grouping to indicate time. Groupnames should either be intergers (2,4,6...) \nor given as integer plus unit separted with a space (1 min)")
         self.timeGroupCombo = createCombobox(self,self.mC.grouping.getGroupings())
@@ -122,7 +122,7 @@ class ICModelBase(QDialog):
             "columnNames" : self.mC.grouping.getColumnNamesFromGroup(timeGrouping).values.tolist() + self.mC.grouping.getColumnNamesFromGroup(compGrouping).values.tolist()
             }
         funcProps = {"key":funcKey,"kwargs":kwargs}
-        self.mC.sendRequestToThread(funcProps)
+        self.mC.sendRequest(funcProps)#sendRequestToThread(funcProps)
 
 
 

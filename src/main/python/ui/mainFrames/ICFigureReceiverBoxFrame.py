@@ -282,7 +282,7 @@ class MatplotlibFigure(QWidget):
                 exists,graph = self.mC.getGraph()
                 if exists:
                     graph.addSwarm(self.mC.mainFrames["data"].getDataID(),**self.addReceiverBoxItems({}))
-                self.mC.mainFrames["right"].setType(graph.plotType, update=False) # reset original plot type
+                    self.mC.mainFrames["right"].setType(graph.plotType, update=False) # reset original plot type
             else:
                 self.initiateChart(*args, **kwargs)
 

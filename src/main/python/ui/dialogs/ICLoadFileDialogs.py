@@ -2,6 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from backend.config.data.params import encodingsCommonInPython, commonSepartor, decimalForFloats,thoursandsString, nanReplaceString
+from ..custom.buttonDesigns import ICStandardButton
 from ..utils import createLabel, createCombobox
 from collections import OrderedDict
 
@@ -87,8 +88,8 @@ class ExcelImporter(ImporterBase):
 
     def __controls(self):
 
-        self.loadButton = QPushButton("Load")
-        self.closeButton = QPushButton("Cancel")
+        self.loadButton = ICStandardButton(itemName="Load")
+        self.closeButton = ICStandardButton(itemName="Cancel")
 
         self.widgetControl = []
         for label, options in comboboxExcelFile.items():
@@ -152,8 +153,8 @@ class PlainTextImporter(ImporterBase):
 
     def __controls(self):
 
-        self.loadButton = QPushButton("Load")
-        self.closeButton = QPushButton("Cancel")
+        self.loadButton = ICStandardButton(itemName="Load")
+        self.closeButton = ICStandardButton(itemName="Cancel")
         
 
         self.widgetControl = []

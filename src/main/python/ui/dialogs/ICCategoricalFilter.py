@@ -31,6 +31,7 @@ class FilterBase(QDialog):
     def __init__(self,*args,**kwargs):
         ""
         super(FilterBase, self).__init__(*args,**kwargs)
+        self.shiftPressed = False
         
     def forceSearch(self,event=None):
         "Forcing the search"
@@ -59,6 +60,13 @@ class FilterBase(QDialog):
             return
         elif event.key() == Qt.Key_Escape:
             self.close() 
+        elif event.key() == Qt.Key_Shift:
+            setattr(self.table,"shiftHold",True)
+            
+
+    def keyReleaseEvent(self,event=None):
+        ""
+        setattr(self.table,"shiftHold",False)
        
 
 class CustomCategoricalFilter(FilterBase):

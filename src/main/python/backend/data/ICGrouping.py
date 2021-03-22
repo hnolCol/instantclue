@@ -134,6 +134,34 @@ class ICGrouping(object):
         if self.currentGrouping in self.groups:
             return list(self.groups[self.currentGrouping].keys())
 
+    def getGroupNameByColumn(self, groupingName):
+        ""
+        if groupingName in self.groups:
+            return OrderedDict([(colName,k) for k,v in self.groups[groupingName].items() for colName in v.values])
+
+    def getGroupingsByColumnNames(self,columnNames, currentGroupingOnly = False):
+        ""
+        if not self.groupingExists():
+            return OrderedDict()
+
+        annotatedGroupins = OrderedDict() 
+        if not currentGroupingOnly:
+            for groupingName, groupedItems in self.groups.items():
+
+                groupingColumnNames = self.getColumnNamesFromGroup(groupingName)
+                if any(colName in groupingColumnNames.values for colName in columnNames.values):
+                    columnNameGroupMatches = self.getGroupNameByColumn(groupingName)
+                    annotatedGroupins[groupingName] = columnNames.map(columnNameGroupMatches)
+        elif self.currentGrouping is not None:
+            groupingColumnNames = self.getColumnNamesFromGroup(self.currentGrouping)
+            if any(colName in groupingColumnNames.values for colName in columnNames.values):
+                    columnNameGroupMatches = self.getGroupNameByColumn(groupingName)
+                    annotatedGroupins[groupingName] = columnNames.map(columnNameGroupMatches)
+
+        return annotatedGroupins
+
+
+
 
     def getPositiveExclusives(self,dataID = None, columnNames = None):
         ""

@@ -2110,6 +2110,7 @@ class PlotterBrain(object):
                 if groupData.index.size == 1:
                     kdeData = np.array([0]) +  positions[n]
                     data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
+                    kdeIndex = data.index
                 else:
                     #get kernel data
                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
@@ -2185,6 +2186,7 @@ class PlotterBrain(object):
                         if groupData.index.size == 1:
                             kdeData = np.array([0])+  positions[nColCat]
                             data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
+                            kdeIndex = data.index
                         else:
                             kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                             #get random x position around 0 to spread data between - and + kdeData
@@ -2275,6 +2277,7 @@ class PlotterBrain(object):
                             if groupData.index.size == 1:
                                 kdeData = np.array([0]) +  positions[nColCat]
                                 data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
+                                kdeIndex = data.index
                             else:
                                 #get kernel data
                                 
@@ -2378,6 +2381,7 @@ class PlotterBrain(object):
                                 if groupData.index.size == 1:
                                     kdeData = np.array([0])+  positions[nColCat]
                                     data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
+                                    kdeIndex = data.index
                                 else:
                                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                     #get random x position around 0 to spread data between - and + kdeData

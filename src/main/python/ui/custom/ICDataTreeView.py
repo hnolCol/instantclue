@@ -1030,11 +1030,14 @@ class DataTreeView(QWidget):
             self.groupingName = groupingName
             groupColors = self.mC.grouping.getGroupColors()
             self.model.resetGrouping()
-            for groupName, columnNames in enumerate(grouping.items()):
+            print(grouping)
+            for groupName, columnNames in grouping.items():
                 #for idx in columnNames.index:
                 modelDataIndex = self.model.getIndexFromNames(columnNames)
                 self.model.setColumnStateByDataIndex(modelDataIndex,True)
-                
+                print(modelDataIndex)
+                print(groupColors)
+                print(groupName)
                 self.model.setGroupingColorByDataIndex(modelDataIndex,groupColors[groupName])
                 
                 self.model.setGroupNameByDataIndex(modelDataIndex,groupName)
@@ -1122,8 +1125,8 @@ class DataTreeModel(QAbstractTableModel):
 
     def setColumnStateByDataIndex(self,columnNameIndex,newState):
         ""
-        print(columnNameIndex)
-        print(newState)
+       # print(columnNameIndex)
+       # print(newState)
         idx = self._labels.index.intersection(columnNameIndex)
         if not idx.empty:
              self.columnInGrouping[idx] = newState

@@ -93,7 +93,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "load.file.na.values",
-    "value"         :   "#VALUE!",
+    "value"         :   "#VALUE!;#DIV/0!",
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
@@ -1120,6 +1120,15 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Dimensional Reduction Settings",
     "description"   :   "If enabled, the mean is subtracted to scale data."
+    },
+    {
+    "name"          :   "pca.add.current.grouping.only",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction Settings",
+    "description"   :   "If enabled, selected columns for PCA are annotated by the grouping. Otherwise test all exisiting groupings if columnNames overlap."
     },
     {
     "name"          :   "spectral.embedding.n.components",
