@@ -572,6 +572,21 @@ class DataCollection(object):
 		
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))
 
+	def explodeDataByColumn(self,dataID,columnNames,splitString=None):
+			"Splits rows by splitString into lists and then applies explode on that particular column"
+			if dataID in self.dfs:
+				columnName = columnNames.values[0]
+				data = self.dfs[dataID].copy()
+				if splitString is None:
+					splitString = self.parent.config.getParam("explode.split.string")
+				data[columnName] = data[columnName].str.split(splitString,expand=False)
+				explodedData = data.explode(columnName, ignore_index=True)
+				fileName = self.getFileNameByID(dataID)
+				return self.addDataFrame(explodedData, fileName="explode({})::{}".format(fileName,columnName))
+
+			else:
+				return errorMessage
+
 	def fillNaInObjectColumns(self,dataID,columnLabelList, naFill = None):
 		'''
 		Replaces nan in certain columns by value
@@ -933,7 +948,30 @@ class DataCollection(object):
 			return kdeData, data.index
 		return None, None
 		
-	
+	def replaceColumns(self,dataID,columnNames,data):
+		""
+		if dataID in self.dfs:
+			# if replacedColumnNames is not None and columnNames.size != replacedColumnNames.size:
+			# 	return getMessageProps("Erorr..","There was an error in replacing data in place (incorrect column name number)")
+			# elif replacedColumnNames is None:
+			# 	replacedColumnNames = columnNames
+
+			if self.dfs[dataID][columnNames].shape != data.shape:
+				return getMessageProps("Error","Data that should be used for replacing are not of correct shape. {} vs {}".format(self.dfs[dataID][columnNames].shape,data.shape))
+			
+			else:
+				#replace column names 
+				#replaceColumns = dict([(k,replacedColumnNames.values[n]) for n,k in enumerate(columnNames.values)])
+				#self.dfs[dataID] = self.dfs[dataID].rename(columns = replaceColumns, axis="columns")
+				self.dfs[dataID][columnNames] = data 
+				funcProps = getMessageProps("Done ..","Data have been updated.")
+				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+				funcProps["dataID"] = dataID
+				return funcProps
+		else:
+			return errorMessage
+				
+			
          
 	def replaceInColumns(self,dataID,findStrings,replaceStrings, specificColumns = None, dataType = "Numeric Floats", mustMatchCompleteCell = False):
 		""
@@ -2209,32 +2247,56 @@ class DataCollection(object):
 	def unstackColumn(self,dataID, columnNames, separator = ';'):
 		'''
 		Unstacks column. 
+		Depracted and replaced by explode since 0.11.
 		'''
-		if dataID in self.dfs:
-			columnName = columnNames.values[0]
-			row_accumulator = []
+		return {}
+		# if dataID in self.dfs:
+		# 	columnName = columnNames.values[0]
+		# 	row_accumulator = []
 			
-			def splitListToRows(row, separator):
-				split_row = row[columnName].split(separator)
+		# 	def splitListToRows(row, separator):
+		# 		split_row = row[columnName].split(separator)
 				
-				for s in split_row:
-					new_row = row.to_dict()
-					new_row[columnName] = s
-					row_accumulator.append(new_row)    
+		# 		for s in split_row:
+		# 			new_row = row.to_dict()
+		# 			new_row[columnName] = s
+		# 			row_accumulator.append(new_row)    
 
 			
-			self.dfs[dataID].apply(splitListToRows, axis=1, args = (separator, ))
-			unstackedDf = pd.DataFrame(row_accumulator)
+		# 	self.dfs[dataID].apply(splitListToRows, axis=1, args = (separator, ))
+		# 	unstackedDf = pd.DataFrame(row_accumulator)
 			
-			#acquire name and source file
+		# 	#acquire name and source file
 			
-			baseFile = self.getFileNameByID(dataID)
-			fileName = 'unstack({})[{}]'.format(columnName,baseFile)
+		# 	baseFile = self.getFileNameByID(dataID)
+		# 	fileName = 'unstack({})[{}]'.format(columnName,baseFile)
 			
-			completeKwargs = self.addDataFrame(unstackedDf, fileName = fileName)				
-			return completeKwargs
+		# 	completeKwargs = self.addDataFrame(unstackedDf, fileName = fileName)				
+		# 	return completeKwargs
 		
+	def transposeDataFrame(self,dataID, columnNames = None, columnLabel = None):
+		""
+		if dataID in self.dfs:
+			newColumnNames = self.dfs[dataID][columnLabel].values
+			if np.unique(newColumnNames).size != columnNames.size:
+				newColumnNames = ["{}_{}".format(newColumnNames[n],n) for n in np.arange(newColumnNames.size)]
+
+			if columnLabel is not None:
+				if columnNames is not None:
+					requiredColumnNames = [colName for colName in self.dfs[dataID].columns if colName != columnLabel and colName in columnNames.values]
+				else:
+					requiredColumnNames = [colName for colName in self.dfs[dataID].columns if colName != columnLabel]
+			else:
+				requiredColumnNames = self.dfs[dataID].columns.values 
 	
+			dataT = self.dfs[dataID][requiredColumnNames].T 
+			dataT.columns = newColumnNames
+			dataT = dataT.reset_index()
+
+			return self.addDataFrame(dataT,"t:{}".format(self.getFileNameByID(dataID)))
+
+		return errorMessage
+
 	def transform_data(self,columnNameList,transformation):
 		'''
 		Calculates data transformation and adds these to the data frame.

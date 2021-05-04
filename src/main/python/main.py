@@ -15,6 +15,7 @@ from backend.filter.categoricalFilter import CategoricalFilter
 from backend.utils.funcControl import funcPropControl
 from backend.utils.misc import getTxtFilesFromDir
 from backend.utils.stringOperations import getRandomString
+from backend.utils.Logger import ICLogger
 from backend.config.config import Config
 from backend.saver.ICSessionHandler import ICSessionHandler
 
@@ -48,7 +49,7 @@ standardFontSize = 12
 
 
 
-for file in getTxtFilesFromDir(exampleDir):
+for fileName in getTxtFilesFromDir(exampleDir):
     addExample =  {
         "subM":"Load Examples",
         "name":"name",
@@ -56,9 +57,9 @@ for file in getTxtFilesFromDir(exampleDir):
                 "kwargs":{"funcProps":{"key":"data::addDataFrameFromTxtFile",
                           "kwargs":{"pathToFile":os.path.join(filePath,"examples","name.txt"),"fileName":"name.txt"}}}
         }}
-    addExample["name"] = removeFileExtension(file)
-    addExample["fn"]["kwargs"]["funcProps"]["kwargs"]["pathToFile"] = os.path.join(exampleDir,file)
-    addExample["fn"]["kwargs"]["funcProps"]["kwargs"]["fileName"] = file
+    addExample["name"] = removeFileExtension(fileName)
+    addExample["fn"]["kwargs"]["funcProps"]["kwargs"]["pathToFile"] = os.path.join(exampleDir,fileName)
+    addExample["fn"]["kwargs"]["funcProps"]["kwargs"]["fileName"] = removeFileExtension(fileName)
     exampleFuncs.append(addExample)
 
 menuBarItems = [
@@ -159,6 +160,8 @@ class InstantClue(QMainWindow):
         self.splitterWidget = MainWindowSplitter(self)
         #set up notifcation handler
         self.notification = Notification()
+        #set up logger 
+        self.logger = ICLogger(self.config,__VERSION__)
 
         _widget = QWidget()
         _layout = QVBoxLayout(_widget)
@@ -412,15 +415,15 @@ class InstantClue(QMainWindow):
                 if all(reqKwarg in funcProps["kwargs"] for reqKwarg in fnRequest["requiredKwargs"]):
                     # Any other kwargs are passed to the run function
                     threadID = getRandomString()
+
                     worker = Worker(fn = fn, funcKey = funcKey, ID = threadID,**funcProps["kwargs"]) 
                     worker.signals.result.connect(self._threadComplete)
                     worker.signals.finished.connect(self._threadFinished)
                     worker.signals.progress.connect(self.progress_fn)
                     worker.signals.error.connect(self.errorInThread)
-                    
                     self.threadpool.start(worker)
-
                     self.mainFrames["sliceMarks"].threadWidget.addActiveThread(threadID, funcKey)
+                    self.logger.add(funcKey,funcProps["kwargs"])
                     #Count.setText(str(self.threadpool.activeThreadCount()))
                 
                 else:
@@ -443,7 +446,7 @@ class InstantClue(QMainWindow):
             event.ignore()
 
     def getUserLoginInfo(self):
-        ""
+        "Visionary ..."
         try:
             URL = "http://127.0.0.1:5000/api/v1/projects"
             r = requests.get(URL)
@@ -452,7 +455,7 @@ class InstantClue(QMainWindow):
             return False, []
 
     def sendTextEntryToWebApp(self, projectID = 1, title = "", text = "Hi", isMarkDown = True):
-        ""
+        "Visionary ..."
         URL = "http://127.0.0.1:5000/api/v1/projects/entries"
         jsonData = {
                 "ID"            :   projectID,
@@ -507,8 +510,116 @@ class InstantClue(QMainWindow):
                 messageProps["message"])
 
     def _setupStyle(self):
+    #   defaultColors = ["#A0D4CB",WIDGET_HOVER_COLOR,"#397546"]
+    #     else:
+    #         defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546"]
+
 
         self.setWindowTitle("Instant Clue")
+        self.setStyleSheet(" QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 0px}")
+        self.setStyleSheet("""
+                QScrollBar:horizontal {
+                    border: none;
+                    background: none;
+                    height: 11px;
+                    margin: 0px 11px 0 11px;
+                }
+
+                QScrollBar::handle:horizontal {
+                    background: darkgrey;
+                    min-width: 11px;
+                   
+                }
+                QScrollBar::handle:horizontal:hover {
+                    background: #286FA4;
+                }
+
+                QScrollBar::add-line:horizontal {
+                    background: none;
+                    width: 11px;
+                    subcontrol-position: right;
+                    subcontrol-origin: margin;
+                    
+                }
+
+                QScrollBar::sub-line:horizontal {
+                    background: none;
+                    width: 11px;
+                    subcontrol-position: top left;
+                    subcontrol-origin: margin;
+                    position: absolute;
+                }
+
+                QScrollBar:left-arrow:horizontal{
+                    width: 11px;
+                    height: 11px;
+                    background: #7c7c7b;
+                    
+                }
+
+                QScrollBar:right-arrow:horizontal {
+                    width: 11px;
+                    height: 11px;
+                    background: #7c7c7b;
+                    
+                }
+                
+
+                QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                    background: none;
+                }
+
+                /* VERTICAL */
+                QScrollBar:vertical {
+                    border: none;
+                    background: none;
+                    width: 11px;
+                    margin: 11px 0 11px 0;
+                }
+
+                QScrollBar::handle:vertical {
+                    background: darkgrey;
+                    min-height: 11px;
+                    border-radius: 1px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: #286FA4;
+                }
+
+                QScrollBar::add-line:vertical {
+                    background: none;
+                    height: 11px;
+                    subcontrol-position: bottom;
+                    subcontrol-origin: margin;
+                }
+
+                QScrollBar::sub-line:vertical {
+                    background: none;
+                    height: 11px;
+                    subcontrol-position: top left;
+                    subcontrol-origin: margin;
+                    position: absolute;
+                }
+
+                QScrollBar:up-arrow:vertical {
+                    width: 11px;
+                    height: 11px;
+                    background: #7c7c7b;
+                    
+                }
+
+                QScrollBar:down-arrow:vertical {
+                    width: 11px;
+                    height: 11px;
+                    background: #7c7c7b;
+                    
+                }
+
+                QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                    background: none;
+                }
+
+                """)
 
 class MainWindowSplitter(QWidget):
 

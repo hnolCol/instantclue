@@ -167,9 +167,9 @@ class PlainTextImporter(ImporterBase):
             if label in comboboxLabelToParam:
                 
                 defaultValue = self.mC.config.getParam(comboboxLabelToParam[label])
-                
+                if defaultValue not in options:
+                    propCombo.addItem(defaultValue)
                 propCombo.setCurrentText(defaultValue)
-            
             
             self.widgetControl.append((propLabel,propCombo))
 

@@ -103,6 +103,13 @@ class ICChart(QObject):
 
 		cax.add_artist(at)
 
+	def addExtraLines(self,axisDict,extraLines):
+		""
+		for n,ax in axisDict.items():
+			if n in extraLines:
+				line = Line2D(**extraLines[n])
+				ax.add_line(line)
+
 	def addHoverBinding(self):
 		""
 		if self.interactive:
@@ -1348,17 +1355,25 @@ class ICChart(QObject):
 		if yLimit is not None:
 			ax.set_ylim(yLimit)
 
-	def setAxisLabels(self,axes,labels, onlyForID = None ):
+	def setAxisLabels(self,axes,labels, onlyForID = None, onlyLastRowForX = False, onlyFirstColumnForY = False):
 		""
 		for n, ax in axes.items():
 			if onlyForID is not None and n != onlyForID:
 				continue
-			label = labels[n]
 			
-			if "x" in label:
+			label = labels[n]
+			if "x" in label and not onlyLastRowForX:
 				ax.set_xlabel(label["x"])
-			if "y" in label:
+			elif onlyLastRowForX and ax.get_subplotspec().is_last_row():
+				ax.set_xlabel(label["x"])
+			else:
+				ax.set_xlabel("")
+			if "y" in label and not onlyFirstColumnForY:
 				ax.set_ylabel(label["y"])
+			elif onlyFirstColumnForY and ax.get_subplotspec().is_first_col():
+				ax.set_ylabel(label["y"])
+			else:
+				ax.set_ylabel("")
 	
 	def setAxisOff(self,ax):
 		""
@@ -1467,12 +1482,15 @@ class ICChart(QObject):
 						labelbottom = False, 
 						labelleft = False)
 
-	def setXTicksForAxes(self,axes,xTicks,xLabels,onlyForID = None,**kwargs):
+	def setXTicksForAxes(self,axes,xTicks,xLabels,onlyForID = None, onlyLastRow = False, **kwargs):
 		""
 		for n, ax in axes.items():
 			if onlyForID is not None and n != onlyForID:
 				continue
-			self.setXTicks(ax,xTicks[n],xLabels[n],**kwargs)
+			if onlyLastRow and onlyForID is None and not ax.get_subplotspec().is_last_row():
+				self.setXTicks(ax,xTicks[n],[""] * len(xTicks[n]),**kwargs)
+			else:
+				self.setXTicks(ax,xTicks[n],xLabels[n],**kwargs)
 	
 	def setYTicksForAxes(self,axes,yTicks,xLabels,onlyForID = None,**kwargs):
 		""
@@ -1701,6 +1719,8 @@ class ICChartToolTip(object):
 				backgroundUpdate = True
 		if backgroundUpdate:
 			self.update_background()
+	
+	
 
 			
 	def buildTooltip(self):

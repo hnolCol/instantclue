@@ -86,6 +86,9 @@ class ItemHolder(QWidget):
             self.setLayout(QVBoxLayout())
             self.layout().setAlignment(Qt.AlignTop)
         self.layout().setContentsMargins(2,1,2,1)
+        p = self.palette()
+        p.setColor(self.backgroundRole(), QColor("#f6f6f6"))
+        self.setPalette(p)
         
 
     def addItem(self,boxItem):
@@ -133,6 +136,7 @@ class ReceiverBox(QFrame):
         self.sortButton = ResortButton(parent=self,tooltipStr="Resort items in receiver box.")
 
         self.itemHolder = ItemHolder()
+
         self.itemFrame = QScrollArea()
         self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemFrame.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -142,6 +146,8 @@ class ReceiverBox(QFrame):
         self.itemFrame.setFrameShape(QFrame.NoFrame)
         self.itemFrame.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
         self.itemFrame.setMaximumHeight(25)
+
+        
 
     def __layout(self):
         ""

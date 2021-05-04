@@ -600,28 +600,29 @@ class ICClustermap(ICChart):
         ""
        # print(dataIndex)
        # if dataIndex in self.data["plotData"].index:
-        self.p.f.canvas.restore_region(self.colorLabelBackground)
-        inv = self.axisDict["axLabelColor"].transLimits.inverted()
-        xOffsetText,_= inv.transform((0.04, 0.25))
-        xOffsetScatter,_= inv.transform((0.02, 0.25))
-        idxPosition = [self.data["plotData"].index.get_loc(idx) + 0.5 for idx in dataIndex if idx in self.data["plotData"].index]
-        if hasattr(self,"labelData"):
-            if len(idxPosition) == 0:
-                self.hoverTextProps["visible"] = False
-                self.hoverTextProps["text"] = ""
-            else:
-                self.hoverTextProps["y"] = idxPosition[0]
-                self.hoverTextProps["x"] = xOffsetText + self.getColorMeshXOffset()
-                self.hoverTextProps["visible"] = True
-                self.hoverTextProps["text"] = ";".join(self.labelData.loc[dataIndex].values[0,:])
-                self.hoverTextProps["va"] = "center"
-            self.hoverText.update(self.hoverTextProps)
-            self.axisDict["axLabelColor"].draw_artist(self.hoverText)
-        
-        #create numpy array with scatter offsets
-        coords = self.getOffsets(idxPosition, xOffsetScatter + self.getColorMeshXOffset())
+        if hasattr(self,"colorLabelBackground"):
+            self.p.f.canvas.restore_region(self.colorLabelBackground)
+            inv = self.axisDict["axLabelColor"].transLimits.inverted()
+            xOffsetText,_= inv.transform((0.04, 0.25))
+            xOffsetScatter,_= inv.transform((0.02, 0.25))
+            idxPosition = [self.data["plotData"].index.get_loc(idx) + 0.5 for idx in dataIndex if idx in self.data["plotData"].index]
+            if hasattr(self,"labelData"):
+                if len(idxPosition) == 0:
+                    self.hoverTextProps["visible"] = False
+                    self.hoverTextProps["text"] = ""
+                else:
+                    self.hoverTextProps["y"] = idxPosition[0]
+                    self.hoverTextProps["x"] = xOffsetText + self.getColorMeshXOffset()
+                    self.hoverTextProps["visible"] = True
+                    self.hoverTextProps["text"] = ";".join(self.labelData.loc[dataIndex].values[0,:])
+                    self.hoverTextProps["va"] = "center"
+                self.hoverText.update(self.hoverTextProps)
+                self.axisDict["axLabelColor"].draw_artist(self.hoverText)
+            
+            #create numpy array with scatter offsets
+            coords = self.getOffsets(idxPosition, xOffsetScatter + self.getColorMeshXOffset())
 
-        self.setHoverScatterData(coords,self.axisDict["axLabelColor"])
+            self.setHoverScatterData(coords,self.axisDict["axLabelColor"])
 
     
     def updateHclustSize(self,sizeData):
@@ -684,7 +685,8 @@ class ICClustermap(ICChart):
         
     def updateBackgrounds(self):
         "Update Background for blitting"
-        self.colorLabelBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axLabelColor"].bbox)	
+        if "axLabelColor" in self.axisDict:
+            self.colorLabelBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axLabelColor"].bbox)	
         if "axRowDendro" in self.axisDict:
             self.rowDendroBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axRowDendro"].bbox)	
         if self.tooltipActive:

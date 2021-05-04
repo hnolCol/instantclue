@@ -139,6 +139,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "Subsetting using useful shortcuts is avaible for categorical columns using the context menu.\nThe operator is used when multiple columns are selected."
     },
     {
+    "name"          :   "explode.split.string",
+    "value"         :   ";",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Data Settings",
+    "description"   :   "Split string to be used when the explode function is applied."
+    },
+    {
     "name"          :   "colorMap",
     "value"         :   "RdYlBu",
     "dtype"         :   str,
@@ -1008,6 +1017,24 @@ DEFAULT_PARAMETER = [
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
     },
     {
+    "name"          :   "corrmatrix.plot.type.upper.right",
+    "value"         :   "heatmap",
+    "dtype"         :   str,
+    "range"         :   ["heatmap","scatter"],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust) Settings",
+    "description"   :   "Plot type for correlation matirx. If set to heatmap a common correlation matrix will be plotted. If set to scatter a multi-scatter plot will be displayed.",
+    },
+    {
+    "name"          :   "corrmatrix.plot.type.bottom.left",
+    "value"         :   "heatmap",
+    "dtype"         :   str,
+    "range"         :   ["heatmap","scatter"],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust) Settings",
+    "description"   :   "Plot type for correlation matirx. If set to heatmap a common correlation matrix will be plotted. If set to scatter a multi-scatter plot will be displayed.",
+    },
+    {
     "name"          :   "add.column.names.in.emb.name",
     "value"         :   True,
     "dtype"         :   bool,
@@ -1309,6 +1336,16 @@ DEFAULT_PARAMETER = [
     "description"   :   "Default Directory to save files/images to."
     }, 
     {
+    "name"          :   "perform.transformation.in.place",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "General Settings",
+    "description"   :   "Perform transformation in place (no new columns created)"
+    }, 
+    
+    {
     "name"          :   "exclusivesMinNonNaN",
     "value"         :   1,
     "dtype"         :   int,
@@ -1330,10 +1367,37 @@ DEFAULT_PARAMETER = [
     "name"          :   "clusterplot.type",
     "value"         :   "boxplot",
     "dtype"         :   str,
-    "range"         :   ["barplot","boxplot","lineplot","line+area"],
+    "range"         :   ["boxplot","lineplot"],
     "parent"        :   "intern",
     "parentType"    :   "Clusterplot Settings",
     "description"   :   "Plot type how detected clusters are represented."
+    }, 
+    {
+    "name"          :   "clusterplot.linewidth",
+    "value"         :   0.5,
+    "dtype"         :   float,
+    "range"         :   [0.001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Clusterplot Settings",
+    "description"   :   "Line width of lineplots."
+    }, 
+    {
+    "name"          :   "clusterplot.lineplot.color.distance",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Clusterplot Settings",
+    "description"   :   "If lineplot is selected, color the lines accordingly to the distance to the cluster center (k-means, birch)."
+    }, 
+    {
+    "name"          :   "clusterplot.show.cluster.center",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Clusterplot Settings",
+    "description"   :   "Draw line to indicate cluster center (kmeans, birch)."
     }, 
     {
     "name"          :   "alpha.IQR",
@@ -1599,6 +1663,15 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Cluster (K-Means) Settings",
     "description"   :   "If enabled, reports the new space, each dimension is the distance to the cluster centers..",
+    }, 
+    {
+    "name"          :   "kmeans.default.number.clusters",
+    "value"         :   8,
+    "dtype"         :   int,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (K-Means) Settings",
+    "description"   :   "Number of clusters. Will be used by the cluster plot.",
     }, 
     {
     "name"          :   "feature.create.subset",

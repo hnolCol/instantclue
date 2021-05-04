@@ -1,6 +1,9 @@
 #Color Palette Selection
 
 #Instant Clue Specific color maps
+
+Set7 = ["#f0f0f1","#99999c","#f0ab04","#3b9673","#11395d","#bc3618"]
+
 Set4 = ['#D1D3D4','#6D6E71','#EE3124','#FCB74A','#2E5FAC','#9BD5F4',
           '#068135','#91CA65']
 Set5 = ['#7F3F98','#2E5FAC','#27AAE1','#9BD5F4','#017789','#00A14B',
@@ -19,9 +22,9 @@ oneColorSeq = ['Greys','Blues','Blues_r','Greens','Purples','Reds']
 twoColorSeq = ['BuGn','PuBu','PuBuGn','BuPu','OrRd']
 diverging = ['BrBG','PuOr','Spectral','RdBu','RdBu_r',
 	'RdYlBu','RdYlGn','viridis','inferno','cubehelix']
-qualitative = ['Accent','Dark2','Paired','Pastel1','Pastel2','Set1','Set2','Set3']
+qualitative = ['Accent','Dark2','Paired','Pastel1','Pastel2','Set1','Set2','Set3','Set7']
 
 #colorMapRange
 
-colorParameterRange = oneColorSeq + twoColorSeq + diverging + qualitative + ["Set4","Set5","Set6"]
+colorParameterRange = oneColorSeq + twoColorSeq + diverging + qualitative + ["Set4","Set5","Set6","Set7"]
 

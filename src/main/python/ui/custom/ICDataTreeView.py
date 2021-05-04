@@ -154,6 +154,7 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"metric":"var"}
     },
+
     {
         "subM":"Logarithmic",
         "name":"ln",
@@ -294,10 +295,30 @@ menuBarItems = [
     },
     {
         "subM":"Data Format Transformation",
-        "name":"Unstack Column",
-        "funcKey": "data::unstackColumn",
+        "name":"Explode",
+        "funcKey": "data::explodeDataByColumn",
         "dataType": "Categories"
     },
+    {
+        "subM":"Data Format Transformation",
+        "name":"Transpose",
+        "funcKey": "getUserInput",
+        "dataType" : "All",
+        "fnKwargs": {"funcKey":"data::transpose",
+                    "requiredColumns": ["columnLabel"],
+                    }
+    },
+    {
+        "subM":"Data Format Transformation",
+        "name":"Transpose (Selection)",
+        "funcKey": "getUserInput",
+        "dataType" : "All",
+        "fnKwargs": {"funcKey":"data::transposeSelection",
+                    "requiredColumns": ["columnLabel"],
+                    "addColumns" : True
+                    }
+    },
+    
     {
         "subM":"Data Format Transformation",
         "name":"Row Correlation Matrix",
@@ -307,13 +328,20 @@ menuBarItems = [
                     "requiredColumns": ["indexColumn"],
                     "addColumns" : True}
     },
-
     {
         "subM":"Value Transformation",
         "name":"Absolute values",
         "funcKey": "transformer::transformData",
         "dataType": "Numeric Floats",
         "fnKwargs": {"transformKey":"absolute"}
+    },
+    {
+        "subM":"Value Transformation",
+        "name":"In place transformation",
+        "funcKey": "toggleParam",
+        "checkable" : True,
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"paramName":"perform.transformation.in.place"}
     },
     
     {
@@ -840,7 +868,8 @@ menuBarItems = [
         "subM":"Clustering",
         "name":"HDBSCAN",
         "funcKey": "stats::runHDBSCAN",
-        "dataType": "Numeric Floats"
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"attachToSource":True}
     },
     {
         "subM":"k-means",
@@ -856,6 +885,7 @@ menuBarItems = [
         "fnKwargs" : {"funcKey":"stats::runKMeans", 
                       "info":"Provide number of clusters (k).",
                       "min": 2,
+                      "default": "kmeans.default.number.clusters",
                       "max": "nDataRows",
                       "requiredInt":"k"}
     },
@@ -1384,6 +1414,9 @@ class DataTreeViewTable(QTableView):
                                 action.triggered.connect(lambda _,funcKey = menuAction["funcKey"], kwargs = menuAction["fnKwargs"]: self.prepareMenuAction(funcKey=funcKey,kwargs = kwargs))
                             else:
                                 action.triggered.connect(lambda _,funcKey = menuAction["funcKey"]:self.prepareMenuAction(funcKey=funcKey))
+                        if "checkable" in menuAction and menuAction["checkable"]:
+                            action.setCheckable(True)
+                            action.setChecked(self.mC.config.getParam(menuAction["fnKwargs"]["paramName"]))
         except Exception as e:
             print(e)
     
@@ -1627,6 +1660,7 @@ class DataTreeViewTable(QTableView):
             indices = self.selectionModel().selectedRows()
         return self.model().getSelectedData(indices)
 
+   
 
     def compareGroups(self, event=None, test = None, *args, **kwargs):
         ""
@@ -1656,6 +1690,11 @@ class DataTreeViewTable(QTableView):
                         "grouping":self.mC.grouping.getCurrentGrouping()}}
         self.sendToThread(funcProps,addDataID = True)
 
+    def toggleParam(self,paramName):
+        ""
+       # print(paramName)
+        self.mC.config.toggleParam(paramName)#"perform.transformation.in.place"
+        self.sender().setChecked(self.mC.config.getParam("perform.transformation.in.place"))
 
 
     def createGroups(self, event=None,**kwargs):
@@ -1828,8 +1867,17 @@ class DataTreeViewTable(QTableView):
             labelText, minValue, maxValue = kwargs["info"], kwargs["min"], kwargs["max"]
             if maxValue == "nColumns":
                 maxValue = self.getSelectedData().size
-        
-            number, ok = QInputDialog().getDouble(self,"Provide float",labelText, maxValue-minValue/2 ,minValue, maxValue, 2 )
+            if "default" in kwargs:
+                if isinstance(kwargs["default"],str) and self.mC.config.paramExists(kwargs["default"]): 
+                    defaultValue = self.mC.config.getParam(kwargs["default"])
+                elif isinstance(kwargs["default"],float) or isinstance(kwargs["default"],int):
+                    defaultValue = kwargs["default"]
+                else:
+                    defaultValue = float(kwargs["default"])
+            else:
+                defaultValue = (maxValue-minValue)/2
+
+            number, ok = QInputDialog().getDouble(self,"Provide float",labelText, defaultValue ,minValue, maxValue, 2 )
             if ok:
                 self.prepareMenuAction(funcKey = kwargs["funcKey"],kwargs = {kwargs["requiredFloat"]:number})
         
@@ -1841,8 +1889,18 @@ class DataTreeViewTable(QTableView):
             elif maxValue == "nDataRows":
                 dataID = self.mC.mainFrames["data"].getDataID()
                 maxValue = self.mC.data.getRowNumber(dataID)
-
-            number, ok = QInputDialog().getInt(self,"Provide integer",labelText, maxValue-minValue/2 ,minValue, maxValue)
+            
+            if "default" in kwargs:
+                if isinstance(kwargs["default"],str) and self.mC.config.paramExists(kwargs["default"]): 
+                    defaultValue = self.mC.config.getParam(kwargs["default"])
+                elif isinstance(kwargs["default"],float) or isinstance(kwargs["default"],int):
+                    defaultValue = kwargs["default"]
+                else:
+                    defaultValue = int(kwargs["default"])
+            else:
+                defaultValue = int((maxValue-minValue)/2)
+            
+            number, ok = QInputDialog().getInt(self,"Provide integer",labelText, defaultValue ,minValue, maxValue)
         
             if ok:
                 fnKwargs = {kwargs["requiredInt"]:number}

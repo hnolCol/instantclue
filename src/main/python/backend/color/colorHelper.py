@@ -38,6 +38,7 @@ class ColorHelper(object):
 		'''
 		Set Custom Color Palettes 
 		'''
+		self.customColors['Set7'] = Set7
 		self.customColors['Set4'] = Set4
 		self.customColors['Set5'] = Set5
 		self.customColors['Set6'] = Set6

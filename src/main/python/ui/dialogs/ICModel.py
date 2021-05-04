@@ -23,9 +23,9 @@ class ICModelBase(QDialog):
         self.title = createTitleLabel(self.title)
 
         self.dataTypeLabel = createLabel("Value Transformation:","First order kinetic requires calculation of remaining fraction based on division to basal (0h). If you have log2 data, use the 2^x funtion.")
-        self.dataTypeCombo = createCombobox(self,["2^x","None"])
+        self.dataTypeCombo = createCombobox(self,["2^x","None","ln","SILAC -> ln(rf)","Int. -> ln(rf)","log2 Int. -> ln(rf)"])
 
-        self.normalizaionLabel = createLabel("Value Normalization:","Normalization value will be calculated on raw data before transformation and then transformed prior normalization.")
+        self.normalizaionLabel = createLabel("Value Normalization:","Normalization strategy if rf is calculated from intensity values.")
         self.normalizationCombo = createCombobox(self,["None","Divide by median of first timepoint"])
 
         self.timeGroupLabel = createLabel("Time Grouping:","Grouping to indicate time. Groupnames should either be intergers (2,4,6...) \nor given as integer plus unit separted with a space (1 min)")
@@ -122,7 +122,7 @@ class ICModelBase(QDialog):
             "columnNames" : self.mC.grouping.getColumnNamesFromGroup(timeGrouping).values.tolist() + self.mC.grouping.getColumnNamesFromGroup(compGrouping).values.tolist()
             }
         funcProps = {"key":funcKey,"kwargs":kwargs}
-        self.mC.sendRequest(funcProps)#sendRequestToThread(funcProps)
+        self.mC.sendRequestToThread(funcProps)
 
 
 

@@ -21,7 +21,7 @@ contextMenuData = OrderedDict([
 
 class PandaTable(QTableView):
     
-    def __init__(self, parent=None, mainController = None,  cornerButton = True):
+    def __init__(self, parent=None, mainController = None,  cornerButton = True, hideMenu = False):
         super(PandaTable, self).__init__(parent)
         self.highlightRow = None
         self.setMouseTracking(True)
@@ -29,12 +29,13 @@ class PandaTable(QTableView):
         self.shiftHold = False
 
         self.mC = mainController
-        
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.verticalHeader().setDefaultSectionSize(15)
-        self.verticalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
-        self.verticalHeader().customContextMenuRequested.connect( self.showHeaderMenu )
+        if not hideMenu:
+            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.customContextMenuRequested.connect( self.showHeaderMenu )
         self.setItemDelegate(EditorDelegate(self))
-
+        
         self.setCornerButtonEnabled(cornerButton)
         
         self.setStyleSheet("""
@@ -57,7 +58,7 @@ class PandaTable(QTableView):
             fn = getattr(self,v["fn"])
             action.triggered.connect(fn)
 
-        menus["main"].exec_(QCursor.pos())
+        menus["main"].exec_(QCursor.pos()+QPoint(3,3))
 
   
     def getSelectedRows(self):
@@ -142,14 +143,26 @@ class PandaTable(QTableView):
 
     def selectionChanged(self,selected,deselected):
         "Mark Datapoints in Selection"
-        selectedRows = np.unique([idx.row() for idx in selected.indexes()])
+
+        selectedRows = self.getSelectedRows()
+        dataIndex = np.array([self.model().getRowDataIndexByTableIndex(idx) for idx in selectedRows])
+        self.markSelectionInDataAndSetLabel(dataIndex)
+        self.model().completeDataChanged() 
         
+    def markSelectionInDataAndSetLabel(self,dataIndex):
+        ""
         if self.mC is not None and hasattr(self.mC,"getGraph"):
             exists,graph = self.mC.getGraph()
             if exists:
-                selectedRows = self.getSelectedRows()
-                dataIndex = np.array([self.model().getRowDataIndexByTableIndex(idx) for idx in selectedRows])
                 graph.setHoverData(dataIndex)
+        if hasattr(self.parent(),"setSelectedRowsLabel"):
+            self.parent().setSelectedRowsLabel(int(dataIndex.size))
+
+    # def currentChanged(self,selected,deselected):
+    #     ""
+    #     print(selected)
+    #     dataIndex = np.array([self.model().getRowDataIndexByTableIndex(idx) for idx in selected])
+    #     self.markSelectionInDataAndSetLabel(dataIndex)
 
 class EditorDelegate(QStyledItemDelegate):
 
@@ -283,6 +296,8 @@ class SelectablePandaModel(PandaModel):
         super(SelectablePandaModel,self).__init__(*args, **kwargs)
         self.setCheckedSeries()
         self._df = self.df.copy()
+        self.lastClicked = None
+        
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
@@ -339,15 +354,37 @@ class SelectablePandaModel(PandaModel):
 
     def setCheckState(self,tableIndex):
         "Sets check state by table index."
-        dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
-        newState = not self.checkedLabels.loc[dataIndex]
-        self.checkedLabels.loc[dataIndex] = newState
-        return newState
+        try:
+            dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
+            newState = not self.checkedLabels.loc[dataIndex]
+            
+            if newState and self.lastClicked is None:
+                self.lastClicked = tableIndex
+            
+            elif hasattr(self.parent(),"shiftHold") and not self.parent().shiftHold:
+                self.lastClicked = None
+            
+            if hasattr(self.parent(),"shiftHold") and self.parent().shiftHold and self.lastClicked is not None:
+                if tableIndex.row() > self.lastClicked.row():
+                    dataIndices = self.checkedLabels.index[self.lastClicked.row():tableIndex.row()+1]
+                else:
+                    dataIndices = self.checkedLabels.index[tableIndex.row():self.lastClicked.row()]
+                if all(self.getCheckStateByDataIndex(dataIndex) for dataIndex in dataIndices):
+                    self.setCheckStateByDataIndex(dataIndices, state = 0)
+                else:
+                    self.setCheckStateByDataIndex(dataIndices)
+                self.lastClicked = None
+            else:
+                self.checkedLabels.loc[dataIndex] = newState
 
-    def setCheckStateByDataIndex(self,dataIndex):
+            return newState
+        except:
+            return False
+
+    def setCheckStateByDataIndex(self,dataIndex, state = 1):
         ""
         matchedIdx = dataIndex.intersection(self.checkedLabels.index)
-        self.checkedLabels.loc[matchedIdx] = 1 
+        self.checkedLabels.loc[matchedIdx] = state
 
     def setCheckedSeries(self):
         ""
@@ -364,8 +401,6 @@ class SelectablePandaModel(PandaModel):
             self.checkedLabels = self.checkedLabels.astype(bool)
         else:
             self.setCheckedSeries()
-
-        
 
     def flags(self,index):
         if index.column() == 0:

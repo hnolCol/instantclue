@@ -10,7 +10,7 @@ import numpy as np
 
 class ICDataInput(QDialog):
 
-    def __init__(self, mainController, title = "Welcome", valueNames = [], defaultValues = {}, valueTypes = {}, *args,**kwargs):
+    def __init__(self, mainController, title = " ", valueNames = [], defaultValues = {}, valueTypes = {}, *args,**kwargs):
         super(ICDataInput,self).__init__(*args,**kwargs)
 
         self.title = title
@@ -73,7 +73,6 @@ class ICDataInput(QDialog):
 
     def saveData(self):
         
-            
         "Saves data if input can be converted to required data type"
         for valueName in self.valueNames:
             edit = self.lineEdits[valueName]
@@ -88,8 +87,6 @@ class ICDataInput(QDialog):
         else:
             return True
         
-    
-    
 
     def getValueType(self,valueName,value):
         ""

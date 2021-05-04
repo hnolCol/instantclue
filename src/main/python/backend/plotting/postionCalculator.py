@@ -169,15 +169,22 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickLabels = []
         groupNames = []
         widthBox= 1/(nColorCats)
+        singleNumericValue = len(numericColumns) == 1
+        
         for m, numericColumn in enumerate(numericColumns):
             numData = data.dropna(subset=[numericColumn])
+            axisGroupBy = numData.groupby(categoricalColumns[0],sort=False)
             startPos = m if m == 0 else m + (widthBox/3 * m)
             endPos = startPos + widthBox * (nColorCats-1)
             positions = np.linspace(startPos,endPos,num=nColorCats)
-            tickPos = np.median(positions)
-            tickPositions.append(tickPos)
-            tickLabels.append(numericColumn)
-            for n,(groupName,groupData) in enumerate(numData.groupby(categoricalColumns[0],sort=False)):
+            if singleNumericValue:
+                tickPositions.extend(positions)
+                tickLabels.extend([key for key, _ in axisGroupBy])
+            else:
+                tickPos = np.median(positions)
+                tickPositions.append(tickPos)
+                tickLabels.append(numericColumn)
+            for n,(groupName,groupData) in enumerate(axisGroupBy):
                 if groupData.index.size > 0:
                     filteredData.append(groupData[numericColumn])
                     faceColors.append(colors[groupName])
@@ -185,6 +192,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                     groupNames.append("({}:{})::({})".format(categoricalColumns[0],groupName,numericColumn))
                     
         axisLimits[0] = {"xLimit" :  (boxPositions[0] - widthBox, boxPositions[-1] + widthBox), "yLimit" : None} 
+        
         #overriding names, idiot. change!
         tickPositions = {0:tickPositions}
         boxPositions = {0:boxPositions}

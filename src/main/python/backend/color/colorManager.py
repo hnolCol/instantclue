@@ -250,14 +250,15 @@ class ColorManager(object):
         ""
         return self.colorMap
 
-    def matchColorsToValues(self,arr = None):
+    def matchColorsToValues(self,arr = None, colorMapName = None):
         ""
-        cmap, colors = self.get_max_colors_from_pallete(returnColors=True)
+        cmap, colors = self.get_max_colors_from_pallete(colorMapName,returnColors=True)
         norm = Normalize(vmin=np.nanmin(arr), vmax=np.nanmax(arr), clip=True)
         mapper = cm.ScalarMappable(norm=norm, cmap=cmap)
         colorMap = mapper.to_rgba(arr)
         return colorMap, colors 
         
+
 
 
     def get_max_colors_from_pallete(self,colorMap = None, returnColors = False):
@@ -279,6 +280,8 @@ class ColorManager(object):
             n = 9
         elif colorMap == 'Set5':
             n = 13
+        elif colorMap == 'Set7':
+            n = 4
         elif colorMap in self.savedMaxColors:
             n = self.savedMaxColors[colorMap]
         else:

@@ -117,6 +117,10 @@ class Config(object):
         filePath = os.path.join(self.getConfigPath(),fileName)
         with open(filePath, 'wb') as paramFle:
             pickle.dump([p.params for p in self.parameters.values()], paramFle)
+    
+    def paramExists(self,paramName):
+        ""
+        return paramName in self.parameters
             
     def saveProfile(self,settingName, overWriteCurrent=True):
         ""

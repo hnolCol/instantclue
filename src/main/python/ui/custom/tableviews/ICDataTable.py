@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps
+from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
 from .ICVSelectableTable import PandaTable, PandaModel
 from ..warnMessage import AskQuestionMessage
 
@@ -11,13 +11,14 @@ from ..warnMessage import AskQuestionMessage
 import pandas as pd 
 import numpy as np
 from collections import OrderedDict
+#to do
+#move to dialogs
 
 contextMenuData = OrderedDict([
             ("deleteRows",{"label":"Delete Row(s)","fn":"deleteRows"}),
             ("copyRows",{"label":"Copy Row(s)","fn":"copyRows"}),
             ("copyData",{"label":"Copy Data Frame","fn":"copyDf"})
         ])
-
 
 
 class PandaTableDialog(QDialog):
@@ -43,6 +44,7 @@ class PandaTableDialog(QDialog):
     def __control(self):
         ""
         self.headerLabel = createTitleLabel(self.headerLabelText, fontSize=12)
+        self.selectionLabel = createLabel("0 row(s) selected")
         self.table = PandaTable(parent= self, mainController = self.mC) 
         self.model = PandaModel()#PandaModel()
         self.table.setModel(self.model)
@@ -55,8 +57,11 @@ class PandaTableDialog(QDialog):
     def __layout(self):
         ""
         self.setLayout(QVBoxLayout())
-
-        self.layout().addWidget(self.headerLabel)
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.headerLabel)
+        hbox.addStretch(1)
+        hbox.addWidget(self.selectionLabel)
+        self.layout().addLayout(hbox)
         self.layout().addWidget(self.table)
 
         if hasattr(self,"addDataToMain"):
@@ -78,6 +83,12 @@ class PandaTableDialog(QDialog):
     def sendToThread(self,funcProps):
 
         self.parent().mC.sendRequestToThread(funcProps)
+
+    def setSelectedRowsLabel(self, nRows = 0):
+        ""
+        
+        if isinstance(nRows,int):
+            self.selectionLabel.setText("{} row(s) selected".format(nRows))
 
     def addData(self,X = pd.DataFrame()):
         ""

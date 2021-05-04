@@ -299,7 +299,7 @@ class StatisticCenter(object):
                 if len(annotatedGroupings) > 0:
                     for groupingName, groupMatches in annotatedGroupings.items(): 
                         df[groupingName] = groupMatches.values
-                baseFileName = self.sourcefData.getFileNameByID(dataID)
+                baseFileName = self.sourceData.getFileNameByID(dataID)
                 result = self.sourceData.addDataFrame(df, fileName = "PCA.T:({})".format(baseFileName))
             else:
                 df = pd.DataFrame(embedding,columns = comColumns, index = dataIndex)
@@ -469,6 +469,7 @@ class StatisticCenter(object):
                 lRegress["fitAUC"] = np.trapz(y,x)
             t12 = np.log(2)/r.slope * (-1)
             lRegress["halfLife"] = t12 if t12 > 0 else np.nan
+            
             return pd.Series(lRegress)
 
         def _calcIncrease(row,xValues, corrK):
@@ -529,13 +530,14 @@ class StatisticCenter(object):
 
                     #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
                     dataSubset = dataSubset.dropna()
-                    corrK = 0.0303 if groupNameComp == "C" else 0
-                    #X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
-                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcIncrease(row,xValues,corrK), axis=1)
+                    
+                    #corrK = 0.0303 if groupNameComp == "C" else 0
+                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
+                    #X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcIncrease(row,xValues,corrK), axis=1)
                    #
-                    print(X)
+                    #print(X)
                     X.index = dataSubset.index
-
+                    
                     X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
                     if normalization != "None":
                         dataSubset.columns = ["norm:fitModel:{}".format(colName) for colName in dataSubset.columns]
@@ -675,8 +677,16 @@ class StatisticCenter(object):
                 return "Error, samples must be of the same size (length)."
             return wilcoxon(X.values, Y.values)
         return
+    
+    def _getClusterKwargs(self,methodName):
+        ""
+        if methodName=="kmeans":
+            return {
+                "n_clusters":self.sourceData.parent.config.getParam("kmeans.default.number.clusters")
+                }
+        return {}
 
-    def runCluster(self,dataID,columnNames,methodName):
+    def runCluster(self,dataID,columnNames,methodName,returnModel = False):
         "Clsuter analysis for cluster plot"
         if methodName in clusteringMethodNames:
             if methodName == "HDBSCAN":
@@ -686,11 +696,14 @@ class StatisticCenter(object):
             
             else:
                 data = self.getData(dataID,columnNames).dropna()
-
-                alg = clusteringMethodNames[methodName]()
+                alg = clusteringMethodNames[methodName](**self._getClusterKwargs(methodName))
                 alg.fit(data.values)
                 if hasattr(alg,"labels_"):
                     clusterLabels = pd.DataFrame(alg.labels_, index=data.index,columns = ["Labels"])
+            if returnModel:
+
+                return clusterLabels,data,alg
+
             return clusterLabels, data
 
     def runManifoldEmbedding(self,dataID,columnNames,manifoldName,attachToSource=True):
@@ -775,7 +788,7 @@ class StatisticCenter(object):
             elif metric == "nanEuclidean":
                 i = data
                 j = np.nansum((i - i[:, None]) ** 2, axis=2) ** .5
-                linkage = sch.linkage(j,method = method)
+                linkage = fastcluster.linkage(j,method = method)
             else:
                 distanceMatrix = scd.pdist(data, metric = metric)
                 linkage = sch.linkage(distanceMatrix,method = method)

@@ -391,7 +391,7 @@ class ColorTableModel(QAbstractTableModel):
             if index.column() == 0:
                 return "Set color. Left-click will cycle through the nan Color (settings) and default color.\nNot available for numeric scales."
             elif index.column() == 1:
-                return "Color encoded categorical or numerical values."
+                return "Color encoded categorical or numerical values. Double click + cmd/ctrl+c to copy entry."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
@@ -475,6 +475,8 @@ class ColorTable(QTableView):
         self.mC = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+
+        
 
         self.rowHeight      =   rowHeight
         self.rightClick     =   False

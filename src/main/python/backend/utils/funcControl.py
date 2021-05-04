@@ -108,6 +108,21 @@ funcPropControl = {
             "completedRequest":[
                 sendMessageProps]
         },
+     "data::explodeDataByColumn":
+        {
+            "threadRequest":{"obj":"data","fn":"explodeDataByColumn","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":addDataAndRefresh
+        },   
+     "data::transpose":
+        {
+            "threadRequest":{"obj":"data","fn":"transposeDataFrame","requiredKwargs":["dataID"]},
+            "completedRequest":addDataAndRefresh
+        }, 
+    "data::transposeSelection":
+        {
+            "threadRequest":{"obj":"data","fn":"transposeDataFrame","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":addDataAndRefresh
+        }, 
     "data::renameColumns":
         {
             "threadRequest":{"obj":"data","fn":"renameColumns","requiredKwargs":["dataID","columnNameMapper"]},

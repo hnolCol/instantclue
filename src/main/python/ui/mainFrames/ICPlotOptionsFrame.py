@@ -57,12 +57,16 @@ class PlotOptionFrame(QWidget):
         self.setLayout(QGridLayout())
         self.layout().setSpacing(2)
         self.layout().setContentsMargins(0,0,0,0)
+        plotTypeGrid = QGridLayout()
+        plotTypeGrid.setContentsMargins(0,0,0,0)
+        plotTypeGrid.setSpacing(2)
         for b in self.buttons:
             nRow, nCol = gridPosition[b.plotType]
-            self.layout().addWidget(b,nRow,nCol)
-        self.layout().setRowStretch(9,1)
-        self.layout().addWidget(self.mainFigureButton,10,0)
-        self.layout().addWidget(self.configButton,11,0)
+            plotTypeGrid.addWidget(b,nRow,nCol)
+        self.layout().addLayout(plotTypeGrid,0,0,1,2)
+        self.layout().setRowStretch(1,1)
+        self.layout().addWidget(self.mainFigureButton,2,0)
+        self.layout().addWidget(self.configButton,3,0)
 
         self.layout().setAlignment(Qt.AlignTop)
 
@@ -188,6 +192,9 @@ class PlotOptionFrame(QWidget):
         for clusterMethod in clusteringMethodNames.keys():
             action = menu["Method"].addAction(clusterMethod)
             action.triggered.connect(lambda _, cMethod = clusterMethod: self.mC.config.setParam("clusterplot.method",cMethod))
+        for clusterPlotType in self.mC.config.getParamRange("clusterplot.type"):
+            action = menu["Plot type"].addAction(clusterPlotType)
+            action.triggered.connect(lambda _, plottype = clusterPlotType: self.mC.config.setParam("clusterplot.type",plottype))
         # for plotType in ["barplot","boxplot","lineplot"]:
         #     action = menu["Plot type"].addAction(plotType)
         #     action.triggered.connect(lambda _, pType = plotType: self.mC.config.setParam("clusterplot.type",pType))

@@ -31,7 +31,6 @@ class FilterBase(QDialog):
     def __init__(self,*args,**kwargs):
         ""
         super(FilterBase, self).__init__(*args,**kwargs)
-        self.shiftPressed = False
         
     def forceSearch(self,event=None):
         "Forcing the search"
@@ -66,7 +65,8 @@ class FilterBase(QDialog):
 
     def keyReleaseEvent(self,event=None):
         ""
-        setattr(self.table,"shiftHold",False)
+        if event.key() == Qt.Key_Shift:
+            setattr(self.table,"shiftHold",False)
        
 
 class CustomCategoricalFilter(FilterBase):
@@ -105,7 +105,7 @@ class CustomCategoricalFilter(FilterBase):
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
 
-        self.table = PandaTable(self, cornerButton = False) 
+        self.table = PandaTable(self, cornerButton = False, hideMenu = True) 
         self.model = MultiColumnSelectablePandaModel(parent= self.table, df = self.mC.categoricalFilter.liveSearchData)
         self.table.setModel(self.model)
         #set columns stretch
@@ -227,7 +227,7 @@ class CategoricalFilter(FilterBase):
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
 
-        self.table = PandaTable(self, cornerButton = False) 
+        self.table = PandaTable(self, cornerButton = False, hideMenu = True) 
         self.model = SelectablePandaModel(parent= self.table, df = self.mC.categoricalFilter.liveSearchData)
         self.table.setModel(self.model)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
@@ -328,7 +328,7 @@ class FindStrings(FilterBase):
             cb.setToolTip(FIND_STRING_TOOLTIPS[n])
             self.CBFilterOptions[filtOption] = cb
 
-        self.table = PandaTable(self, cornerButton = False) 
+        self.table = PandaTable(self, cornerButton = False, hideMenu = True) 
         self.model = SelectablePandaModel(parent= self.table, df = self.mC.categoricalFilter.liveSearchData)
         self.table.setModel(self.model)
         for nColumn in range(self.mC.categoricalFilter.liveSearchData.columns.size):

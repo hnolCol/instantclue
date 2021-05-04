@@ -182,6 +182,9 @@ class SliceMarksFrame(QWidget):
         self.markerTable = ICMarkerTable(mainController=self.mC)
 
         self.scrollWidget = QWidget()
+        p = self.scrollWidget.palette()
+        p.setColor(self.scrollWidget.backgroundRole(), QColor("#f6f6f6"))
+        self.scrollWidget.setPalette(p)
 
         self.tableScrollArea.setWidget(self.scrollWidget)
         self.tableScrollArea.setWidgetResizable(True)

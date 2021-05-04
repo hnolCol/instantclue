@@ -35,8 +35,19 @@ class Transformer(object):
     def __init__(self, sourceData):
 
         self.sourceData = sourceData
-
+        self.config = self.sourceData.parent.config
         self.inplace = True
+
+    def _addToSourceData(self,dataID,columnNames,transformedData):
+        ""
+        if self._transformInPlace():
+            return self.sourceData.replaceColumns(dataID,columnNames,transformedData.values)
+        else:
+            return self.sourceData.joinDataFrame(dataID,transformedData)
+
+    def _transformInPlace(self):
+        ""
+        return self.config.getParam("perform.transformation.in.place")
 
     def transformData(self, dataID, transformKey, columnNames, **kwargs):
         ""
@@ -52,7 +63,8 @@ class Transformer(object):
                     transformedValues,
                     columns=transformedColumnNames,
                     index=self.sourceData.dfs[dataID].index)
-        return self.sourceData.joinDataFrame(dataID, transformedData)
+
+        return self._addToSourceData(dataID,columnNames,transformedData)
 
 
     def logarithmicTransformation(self,dataID, columnNames, base):
@@ -60,13 +72,13 @@ class Transformer(object):
         if base in logarithmicBase:
 
             transformedColumnNames = ["t({}):{}".format(base,col) for col in columnNames.values]
-            transformedValues = pd.DataFrame(        
+            transformedData = pd.DataFrame(        
                             logarithmicBase[base](self.sourceData.dfs[dataID][columnNames].values),
                             index = self.sourceData.dfs[dataID].index,
                             columns = transformedColumnNames
                             )
-            transformedValues[~np.isfinite(transformedValues)] = np.nan
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+            transformedData[~np.isfinite(transformedData)] = np.nan
+        return self._addToSourceData(dataID,columnNames,transformedData)
 
     def rollingWindowTransformation(self,dataID,columnNames,windowSize,metric):
         ""
@@ -78,7 +90,7 @@ class Transformer(object):
                     getattr(rollingWindow,metric)().values,
                     columns=transformedColumnNames,
                     index=self.sourceData.dfs[dataID].index)
-            return self.sourceData.joinDataFrame(dataID, transformedData)
+            return self._addToSourceData(dataID,columnNames,transformedData)
         else:
             return getMessageProps("Error..","Unknown metric.")
 
@@ -96,12 +108,13 @@ class Transformer(object):
             else:
                 transformedColumnNames = ["s({}):{}".format(metric,mergedColumns)] 
             
-            transformedValues = pd.DataFrame(        
+            transformedData = pd.DataFrame(        
                             summarizeMetric[metric](self.sourceData.dfs[dataID][columnNames].values,axis=1, **kwargs),
                             index = self.sourceData.dfs[dataID].index,
                             columns = transformedColumnNames
                             )
-            return self.sourceData.joinDataFrame(dataID,transformedValues)
+
+            return self._addToSourceData(dataID,columnNames,transformedData)
         else:
             return getMessageProps("Error..","Unknown metric.")
 	# def calculate_rolling_metric(self,numericColumns,windowSize,metric,quantile = 0.5):

@@ -1,6 +1,8 @@
  
 from .ICChart import ICChart
 from collections import OrderedDict
+from matplotlib.collections import LineCollection
+from matplotlib.colors import to_hex
 import numpy as np 
 import pandas as pd
 
@@ -14,12 +16,28 @@ class ICClusterplot(ICChart):
         
     def initClusters(self,onlyForID = None, targetAx = None):
         ""
-        for n, boxplotProps in self.data["plotData"].items():
-            if n in self.axisDict and onlyForID is None:
-                self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
-            elif n == onlyForID and targetAx is not None:
-                self.targetBoxplotItems = dict()
-                self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
+        if self.getParam("clusterplot.type") == "boxplot": 
+            for n, boxplotProps in self.data["plotData"].items():
+                if n in self.axisDict and onlyForID is None:
+                    self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
+                elif n == onlyForID and targetAx is not None:
+                    self.targetBoxplotItems = dict()
+                    self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
+
+        elif self.getParam("clusterplot.type") == "lineplot":
+            self.colorGroupArtists = OrderedDict()
+            self.groupColor = OrderedDict() 
+            for n, lineProps in self.data["plotData"].items():
+                if n in self.axisDict and onlyForID is None:
+                    lineCollection = LineCollection(**lineProps,
+                                colors=self.data["facecolors"][n], 
+                                linewidths = self.getParam("clusterplot.linewidth"),
+                                alpha = self.getParam("alpha"))
+                    intID = self.data["dataColorGroups"]["internalID"].iloc[n]
+                    self.colorGroupArtists[intID] = [lineCollection]
+                    self.groupColor[intID] = self.data["facecolors"][n] if isinstance(self.data["facecolors"][n],str) else to_hex(self.data["facecolors"][n][0])
+
+                    self.axisDict[n].add_collection(lineCollection)
            
     def onDataLoad(self, data):
         ""
@@ -28,17 +46,19 @@ class ICClusterplot(ICChart):
             self.initAxes(data["axisPositions"])
             
             if "tickPositions" in data and "tickLabels" in data:
-                self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
+                self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90, onlyLastRow=True)
             if "axisLimits" in data:
                 for n,ax in self.axisDict.items():
                     if n in data["axisLimits"]:
                         self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
             if "axisLabels" in data:
-                self.setAxisLabels(self.axisDict,data["axisLabels"])
+
+                self.setAxisLabels(self.axisDict,data["axisLabels"], onlyLastRowForX=True, onlyFirstColumnForY=True)
          
             self.addTitles()
             self.initClusters()
             self.savePatches()
+            self.addExtraLines(self.axisDict,self.data["extraLines"])
           
             if self.interactive:
                 for ax in self.axisDict.values():
@@ -57,10 +77,11 @@ class ICClusterplot(ICChart):
 
     def savePatches(self):
         ""
-        colorGroupData = self.data["dataColorGroups"]
-        self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
-        self.groupColor = dict() 
-        self.setFacecolors(colorGroupData)
+        if self.getParam("clusterplot.type") == "boxplot":
+            colorGroupData = self.data["dataColorGroups"]
+            self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
+            self.groupColor = dict() 
+            self.setFacecolors(colorGroupData)
 
     def setFacecolors(self, colorGroupData = None, onlyForID = None):
         ""
@@ -85,12 +106,17 @@ class ICClusterplot(ICChart):
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         ""
+        
         for color, _ , intID in colorGroup.values:
             if intID in self.colorGroupArtists:
                 if self.groupColor[intID] != color:
                     artists = self.colorGroupArtists[intID]
-                    for artist in artists:
-                        artist.set_facecolor(color)
+                    if self.getParam("clusterplot.type") == "lineplot":
+                        #Line collection at list position 0
+                        artists[0].set_colors(color)
+                    else:
+                        for artist in artists:
+                            artist.set_facecolor(color)
                     self.groupColor[intID] = color
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
@@ -113,17 +139,18 @@ class ICClusterplot(ICChart):
         
         if hasattr(self,"quickSelectScatter"):
             try:
-                for n,ax in self.axisDict.items():
-                    if n in self.data["plotData"] and ax in self.backgrounds and ax in self.quickSelectScatter:                        
-                        data = self.data["plotData"][n]["x"]
-                        coords = [(self.data["plotData"][n]["positions"][m], X.loc[dataIdx], intIDMatch[mIdx],dataIdx) for mIdx,dataIdx in enumerate(dataIndex) for m,X in enumerate(data) if dataIdx in X.index.values ]
-                        coords = pd.DataFrame(coords, columns = ["x","y","intID","idx"])
-                        
-                        sortedDataIndex = coords["idx"].values
-                        scatterColors = [propsData.loc[idx,"color"] for idx in sortedDataIndex]
-                        scatterSizes = [propsData.loc[idx,"size"] for idx in sortedDataIndex]
-                        self.quickSelectScatterDataIdx[ax] = {"idx":sortedDataIndex,"coords":coords}
-                        self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
+                
+                    for n,ax in self.axisDict.items():
+                        if n in self.data["quickSelect"] and ax in self.backgrounds and ax in self.quickSelectScatter:                        
+                            data = self.data["quickSelect"][n]["x"]
+                            coords = [(self.data["quickSelect"][n]["positions"][m], X.loc[dataIdx], intIDMatch[mIdx],dataIdx) for mIdx,dataIdx in enumerate(dataIndex) for m,X in enumerate(data) if dataIdx in X.index.values ]
+                            coords = pd.DataFrame(coords, columns = ["x","y","intID","idx"])
+                            
+                            sortedDataIndex = coords["idx"].values
+                            scatterColors = [propsData.loc[idx,"color"] for idx in sortedDataIndex]
+                            scatterSizes = [propsData.loc[idx,"size"] for idx in sortedDataIndex]
+                            self.quickSelectScatterDataIdx[ax] = {"idx":sortedDataIndex,"coords":coords}
+                            self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
 
             except Exception as e:
                 print(e)
@@ -162,9 +189,10 @@ class ICClusterplot(ICChart):
         ""
         if hasattr(self,"backgrounds"):
             for n, ax in self.axisDict.items():
-                if n in self.data["plotData"] and ax in self.backgrounds:
-                    data = self.data["plotData"][n]["x"]
-                    coords = np.array([(self.data["plotData"][n]["positions"][m], X.loc[dataIdx]) for dataIdx in dataIndex for m,X in enumerate(data) if dataIdx in X.index.values ])
+                #if self.getParam("clusterplot.type") == "boxplot":
+                if n in self.data["quickSelect"] and ax in self.backgrounds:
+                    data = self.data["quickSelect"][n]["x"]
+                    coords = np.array([(self.data["quickSelect"][n]["positions"][m], X.loc[dataIdx]) for dataIdx in dataIndex for m,X in enumerate(data) if dataIdx in X.index.values ])
                     self.p.f.canvas.restore_region(self.backgrounds[ax])
                     if coords.size > 0:
                         

@@ -1,0 +1,12 @@
+checkedValues	checkedColors	userDefinedColors
+MIB complex	#abcdde	
+28S ribosomal subunit, mitochondrial	#2a76a9	
+prohibitin 2 complex, mitochondrial	#b2d990	
+Signaling > Calcium homeostasis > Mitochondrial permeability transition pore	#3b9735	
+Isocitrate dehydrogenase [NAD], mitochondrial	#f4a1a0	
+39S ribosomal subunit, mitochondrial	#d4292b	
+OXPHOS > Complex I > CI subunits	#f2be7a	
+MICOS complex	#ec7f13	
+TOM complex (TOM5, TOM6, TOM7, TOM20, TOM22, TOM40, TOM70), mitochondrial	#c9b5d3	
+OXPHOS > Complex III > CIII subunits	#6a4493	
+F1F0-ATP synthase, mitochondrial	#f7f7a1	

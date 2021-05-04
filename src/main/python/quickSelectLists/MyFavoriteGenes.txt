@@ -1,0 +1,7 @@
+checkedValues	checkedColors	userDefinedColors
+Afg3l2	#abcdde	
+Mpc1	#2a76a9	
+Spg7	#b2d990	
+Mpc2	#3b9735	
+Phb	#f4a1a0	
+Chchd2	#d4292b	

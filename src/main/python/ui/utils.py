@@ -11,7 +11,7 @@ INSTANT_CLUE_BLUE = "#286FA4"
 headerLabelStyleSheet = """ 
                     QLabel {
                         color: #4C626F;
-                        font: 12px verdana;
+                        font: 12px Arial;
                     }
                     """
 

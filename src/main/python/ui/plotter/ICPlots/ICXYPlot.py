@@ -15,17 +15,6 @@ class ICXYPlot(ICChart):
         self.xyplotItems = dict() 
 
 
-    def getGraphSpecMenus(self):
-        ""
-        return ["Axis limits .."]
-
-
-    def addGraphSpecActions(self,menus):
-        ""
-        menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
-        menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
-        menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
-
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
         ""
@@ -45,13 +34,18 @@ class ICXYPlot(ICChart):
         elif onlyForID in self.data["lines"]:
             for m,l in enumerate(self.data["lines"][onlyForID]):
                 if isinstance(l,Line2D):
+                    print(self.data["lineKwargs"][onlyForID][m]["props"])
                     targetAx.add_line(Line2D(**self.data["lineKwargs"][onlyForID][m]["props"]))
+                    print("done")
                 elif isinstance(l,LineCollection):
                     targetAx.add_collection(LineCollection(**self.data["lineKwargs"][onlyForID][m]["props"]))
 
             if onlyForID in self.data["markerLines"]:
                 for markerKwrags in self.data["markerKwargs"][onlyForID]:
-                    targetAx.add_line(Line2D(**markerKwrags["props"]))
+                    if "xdata" in markerKwrags["props"] and "ydata" in markerKwrags["props"]:
+                        
+                        targetAx.add_line(Line2D(**markerKwrags["props"]))
+
 
     def onDataLoad(self, data):
         ""

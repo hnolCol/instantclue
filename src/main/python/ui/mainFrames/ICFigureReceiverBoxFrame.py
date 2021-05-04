@@ -19,7 +19,6 @@ class MatplotlibFigure(QWidget):
         self.setAcceptDrops(True)
         self.acceptDrop = False
         self.isPlotting = False
-        sourceData = mainController.data
 
         self.mC = mainController
         

@@ -280,6 +280,7 @@ class DataHandleFrame(QFrame):
         for filePath in files:
             if os.path.exists(filePath):
                 fileName = removeFileExtension(Path(filePath).name)
+                print(fileName)
                 self.mC.config.setParam("WorkingDirectory",os.path.dirname(filePath))
                 funcProps = dict()
                 funcProps["key"] = "data::addDataFrameFromTxtFile"

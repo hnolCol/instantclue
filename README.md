@@ -9,9 +9,15 @@
 Instant Clue is a Python (>3.7) based desktop application (GUI) using the PyQt5 library for data visualization and analysis.
 The tool was developed to equip everyone with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
+
+
 ### Status
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
+
+## Executables 
+
+Please find the executables for Windows and Mac in the [Releases](https://github.com/hnolCol/instantclue/releases).
 
 ### New Features (v. >= 0.10,0) (Worklist)
 
@@ -33,7 +39,7 @@ Please use the [discussion forum](https://github.com/hnolCol/instantclue/discuss
 - [x] Categorical countplot. 
 - [x] Grouping of columns to perform row-wise statistical tests. Groups are highligted in dimensional reduction plots as well as correlation matrix plots.
 - [x] Export to markdown friendly string format and json file format of datasets.
-- [ ] Creating log (saving version and processing of data as well as creation of charts)
+- [ ] Creating log (saving version and processing of data as well as creation of charts) to ensure tracability of performed functions.
 - [x] MainFigure Icons Update (responsive)
 
 ## Quick Select and Live Graph Widget

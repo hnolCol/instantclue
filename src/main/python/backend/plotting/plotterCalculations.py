@@ -192,17 +192,30 @@ class PlotterBrain(object):
             
         }}
 
+    def getClusterLineplots(self,clusterLabels, data, numericColumns, columnName):
+        ""
+        plotData = {}
+        quickSelect = {}
+        xValues = np.arange(len(numericColumns))
+        for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby(columnName,sort=False)):
+            plotData[n] = {}
+            quickSelect[n] = {}
+            plotData[n]["segments"] = [list(zip(xValues,data.loc[idx,:].values.flatten())) for idx in clusterData.index] 
+            quickSelect[n]["positions"] = np.arange(len(numericColumns))
+            quickSelect[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns]
+        return plotData, quickSelect
 
     def getClusterBoxplots(self,clusterLabels, data, numericColumns, columnName):
         ""
         plotData = {}
-    
+        quickSelect = {}
         for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby(columnName,sort=False)):
             plotData[n] = {}
             plotData[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns] 
             plotData[n]["patch_artist"] = True
             plotData[n]["positions"] = np.arange(len(numericColumns))
-        return plotData
+        quickSelect = plotData.copy()
+        return plotData, quickSelect
            
             
 
@@ -213,32 +226,74 @@ class PlotterBrain(object):
         config = self.sourceData.parent.config
         #get cluster method
         method = config.getParam("clusterplot.method")
+        plottype = config.getParam("clusterplot.type")
         # color group file
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
 
-        clusterLabels, data = self.sourceData.statCenter.runCluster(dataID,numericColumns,method)
+        clusterLabels, data, model = self.sourceData.statCenter.runCluster(dataID,numericColumns,method,True)
         clusterLabels = clusterLabels.sort_values("Labels")
         columnName = "C({})".format(method)
+
         clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
+        
         #print(clusterLabels)
-        uniqueClusters = np.unique(clusterLabels[columnName])
+        uniqueClusters = clusterLabels[columnName].unique()
         nClusters = uniqueClusters.size 
+        
         #print(uniqueClusters)
         #print(nClusters)
         colorMap, _ = self.sourceData.colorManager.createColorMapDict(uniqueClusters,addNaNLevels=[-1],as_hex = True)
         #print(colorMap)
+        if plottype == "boxplot":
+            plotData,qSData = self.getClusterBoxplots(clusterLabels,data,numericColumns,columnName)
+            faceColors = dict([(n,[colorMap[uniqueCluster]] * len(numericColumns)) for n,uniqueCluster in enumerate(uniqueClusters)])
 
-        plotData = self.getClusterBoxplots(clusterLabels,data,numericColumns,columnName)
-        faceColors = dict([(n,[colorMap[uniqueCluster]] * len(numericColumns)) for n,uniqueCluster in enumerate(uniqueClusters)])
+        elif plottype == "lineplot":
+            
+            plotData, qSData = self.getClusterLineplots(clusterLabels,data,numericColumns,columnName)
+            if config.getParam("clusterplot.lineplot.color.distance") and method in ["kmeans","Birch"]:
+                faceCs = []
+                distanceMeasures = model.transform(data.loc[clusterLabels.index])
+               # cmap = self.sourceData.colorManager.get_max_colors_from_pallete(config.getParam("twoColorMap"))
+                #cmap,colors = self.sourceData.colorManager.matchColorsToValues(distanceMeasures)
+                for n,uniqueCluster in enumerate(uniqueClusters):
+                    boolIdx = clusterLabels[columnName] == "C({})".format(n)
+                    X = distanceMeasures[boolIdx.values,n] #get distance for cluster
+                    colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Blues_r")
+                    faceCs.append((n,colorArray))
+                faceColors = dict(faceCs)#dict([(n,colorMap[uniqueCluster]) ])
+
+            else:
+
+                faceColors = dict([(n,colorMap[uniqueCluster]) for n,uniqueCluster in enumerate(uniqueClusters)])
+        
         axisPositions = getAxisPostistion(nClusters,maxCol=self.maxColumns)
-        axisLabels = dict([(n,{"x":"Column Names","y":""}) for n in range(nClusters)])#
-        axisTitles = dict([(n,uniqueCluster) for n,uniqueCluster in enumerate(uniqueClusters)])
+        axisLabels = dict([(n,{"x":"","y":"Value"}) for n in range(nClusters)])#
+        axisTitles = dict([(n,"{} n:{}".format(uniqueCluster,np.sum(clusterLabels[columnName] == uniqueCluster))) for n,uniqueCluster in enumerate(uniqueClusters)])
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
-        tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
+        #tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
+        tickLabels = dict([(n,numericColumns) for n in range(nClusters)])#
+
+        if method in ["kmeans","Birch"] and config.getParam("clusterplot.show.cluster.center"):
+
+            if hasattr(model,"cluster_centers_"):
+                clusterCenters = model.cluster_centers_
+            elif hasattr(model,"subcluster_centers_"):
+                clusterCenters = model.subcluster_centers_
+
+            extraLines = dict([(n,{
+                                "xdata":np.arange(len(numericColumns)),
+                                "ydata":clusterCenter.flatten(),
+                                "linewidth":0.75,
+                                "color":"black"}) for n,clusterCenter in enumerate(clusterCenters)])
+        else:
+            extraLines = {}
 
         colorGroups["group"] = list(colorMap.keys())
         colorGroups["color"] = list(colorMap.values())
         colorGroups["internalID"] = [getRandomString() for _ in range(len(colorMap))]
+
+        
 
         return {"data":{
             "plotData": plotData,
@@ -251,7 +306,9 @@ class PlotterBrain(object):
             "dataColorGroups" : colorGroups,
             "colorCategoricalColumn" : "Cluster Labels",
             "clusterLabels" : clusterLabels,
-            "dataID" : dataID
+            "dataID" : dataID,
+            "extraLines" : extraLines,
+            "quickSelect" : qSData
         }}
 
     def getBarplotProps(self, dataID, numericColumns, categoricalColumns):
@@ -347,7 +404,7 @@ class PlotterBrain(object):
                 quantiles = np.nanquantile(groupData[numericColumns],[0,0.25,0.5,0.75,1],axis=0)
                 xValues = np.arange(len(numericColumns))
                 plotData[0].append({"quantiles":quantiles,"xValues":xValues,"color":colors[groupName]})
-                minQGroup, maxQGroup = np.min(quantiles[0,:]),np.max(quantiles[-1,:])
+                minQGroup, maxQGroup = np.nanmin(quantiles[0,:]),np.nanmax(quantiles[-1,:])
                 if minQGroup < minQ:
                     minQ = minQGroup
                 if maxQGroup > maxQ:
@@ -384,7 +441,7 @@ class PlotterBrain(object):
                     quantiles = np.nanquantile(groupData[numericColumns],[0,0.25,0.5,0.75,1],axis=0)
                     xValues = np.arange(len(numericColumns))
                     plotData[n].append({"quantiles":quantiles,"xValues":xValues,"color":colors[groupName]})
-                    minQGroup, maxQGroup = np.min(quantiles[0,:]),np.max(quantiles[-1,:])
+                    minQGroup, maxQGroup = np.nanmin(quantiles[0,:]),np.nanmax(quantiles[-1,:])
                     if minQGroup < minQ:
                         minQ = minQGroup
                     if maxQGroup > maxQ:
@@ -1280,7 +1337,7 @@ class PlotterBrain(object):
             colXLimit, colYLimit, colLineCollection = None, None, None
 
 
-            axisDict = self.getClusterAxes(numericColumns, corrMatrix=corrMatrix)
+            axisDict = self.getClusterAxes(numericColumns, corrMatrix=corrMatrix, rowOn = rowMetric != "None" and rowMethod != "None")
            # print(axisDict)
             
 
@@ -1320,7 +1377,7 @@ class PlotterBrain(object):
             print(e)
             return {}
        
-
+        print(axisDict)
        
 
         return {"newPlot":True,
@@ -1406,9 +1463,9 @@ class PlotterBrain(object):
         '''
         return sch.fcluster(linkage,maxD,'distance')	
 
-    def getClusterAxes(self, numericColumns, corrMatrix=False):
+    def getClusterAxes(self, numericColumns, corrMatrix=False, rowOn = True):
         ""
-        x0,y0 = 0.15,0.15
+        x0,y0 = 0.10,0.15
         x1,y1 = 0.95,0.95
         width = x1-x0
         height = y1-y0
@@ -1419,7 +1476,9 @@ class PlotterBrain(object):
         addFactorMainWidth =  -0.15+len(numericColumns) * 0.008 
 		
         clusterMapWidth = width*multWidth+addFactorMainWidth
-        rowDendroWidth = width * 0.13
+        rowDendroWidth = width * 0.13 if rowOn else 0
+       
+
         if clusterMapWidth > 0.75:
             clusterMapWidth = 0.75
 				
@@ -1442,16 +1501,16 @@ class PlotterBrain(object):
         axisDict["axColumnDendro"] = [x0 + rowDendroWidth, 
                                     y0+heightMain,
                                     clusterMapWidth,
-                                    (width* 0.13)*correctHeight]
+                                    (rowDendroWidth)*correctHeight]
 
-        axisDict["axClusterMap"] = [x0+width*0.13,
+        axisDict["axClusterMap"] = [x0+rowDendroWidth,
                                     y0,
                                     clusterMapWidth,
                                     heightMain]
         
         axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+width*0.02, #add margin
                                     y0,
-                                    width-clusterMapWidth-rowDendroWidth,
+                                    width-clusterMapWidth-rowDendroWidth if clusterMapWidth < 0.75 else 0.1,
                                     heightMain]		
         
         axisDict["axColormap"] =    [x0,
@@ -1607,7 +1666,7 @@ class PlotterBrain(object):
 
         columnPairs = [("Component_01","Component_02"), ("Component_02","Component_03")]
         #print(result)
-        print(eigVectors)
+      #  print(eigVectors)
         axisPostions = dict([(n,[2,2,n+1]) for n in range(4)])
     
 
