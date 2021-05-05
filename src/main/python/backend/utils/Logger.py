@@ -8,7 +8,7 @@ class ICLogger(object):
         ""
         self.loggerPath = config.getParam("logger.path")
         self.version = version
-        self.createFile()
+        #self.createFile()
 
 
     def createFile(self):
