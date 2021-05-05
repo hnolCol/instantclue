@@ -26,7 +26,7 @@ outdated==0.2.0
 pandas==1.2.1
 pandas-flavor==0.2.0
 patsy==0.5.1
-Pillow==8.0.1
+Pillow==8.1.1
 pingouin==0.3.11
 pyinstaller @ https://github.com/pyinstaller/pyinstaller/tarball/develop
 pyinstaller-hooks-contrib==2020.11
