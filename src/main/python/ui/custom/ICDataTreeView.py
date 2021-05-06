@@ -42,7 +42,7 @@ dataTypeSubMenu = {
                 "Group Comparison",
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
-        ("Data Format Transformation",[]),
+        ("Data Format Transformation",["Groupby and Aggregate .."]),
         ("Filter",["NaN Filter","Outlier"]),
         ("Clustering",["k-means"]),
         ("Smoothing",["Aggregate rows ..","Rolling window .."]),
@@ -317,8 +317,7 @@ menuBarItems = [
                     "requiredColumns": ["columnLabel"],
                     "addColumns" : True
                     }
-    },
-    
+    },  
     {
         "subM":"Data Format Transformation",
         "name":"Row Correlation Matrix",
@@ -327,6 +326,56 @@ menuBarItems = [
         "fnKwargs": {"funcKey":"stats::rowCorrelation",
                     "requiredColumns": ["indexColumn"],
                     "addColumns" : True}
+    },
+    {
+        "subM":"Groupby and Aggregate ..",
+        "name":"mean",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"mean"}}
+    },
+    {
+        "subM":"Groupby and Aggregate ..",
+        "name":"sum",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"sum"}}
+    },
+    {
+        "subM":"Groupby and Aggregate ..",
+        "name":"median",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"median"}}
+    },
+    {
+        "subM":"Groupby and Aggregate ..",
+        "name":"min",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"min"}}
+    },
+    {
+        "subM":"Groupby and Aggregate ..",
+        "name":"median",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"max"}}
     },
     {
         "subM":"Value Transformation",
@@ -1853,7 +1902,10 @@ class DataTreeViewTable(QTableView):
                         n,dragColumn in enumerate(dragColumns) if n < len(askUserForColumns)]))
 
             if sel.exec_():
-                self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=sel.savedSelection, addColumnSelection=False if not "addColumns" in kwargs else kwargs["addColumns"])
+                fnKwargs = sel.savedSelection
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=fnKwargs, addColumnSelection=False if not "addColumns" in kwargs else kwargs["addColumns"])
 
         elif "requiredStr" in  kwargs:
             

@@ -311,7 +311,7 @@ class StatisticCenter(object):
                 
             return getMessageProps("Error ..",errMsg)
 
-    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["T: PG.Genes"]):
+    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["Gene names"]):
         """
         Calculates correlation between all rows.
         Correlation coefficients will be filterd for NaN and threshold specified by
@@ -334,21 +334,25 @@ class StatisticCenter(object):
         corrMatrix.index = catData.values
         corrMatrix.columns = catData.values
         #move to long format
-        corrMatrix = corrMatrix.unstack().reset_index()
+        corrMatrixLong = corrMatrix.unstack().reset_index()
+        #add prev index
+        numberOfFeatures = corrMatrix.index.size
+        longFormatSize = corrMatrixLong.index.size
+        corrMatrixLong["Index"] = np.tile(data.index,int(longFormatSize/numberOfFeatures))
         #remove nana
-        corrMatrix = corrMatrix.dropna()
+        corrMatrixLong = corrMatrixLong.dropna()
         if self.corrMethod in self.corrCoeffName:
             coeffName = self.corrCoeffName[self.corrMethod]
         else:
             coeffName = "CorrCoeff"
-        corrMatrix.columns = ["Level 0","Level 1",coeffName]
+        corrMatrixLong.columns = ["Level 0","Level 1",coeffName,"Index"]
 
         if self.absCorrCoeff > 0: 
-            boolIdx = np.abs(corrMatrix["r"].values) > self.absCorrCoeff
-            corrMatrix = corrMatrix.loc[boolIdx,]
+            boolIdx = np.abs(corrMatrixLong["r"].values) > self.absCorrCoeff
+            corrMatrixLong = corrMatrixLong.loc[boolIdx,]
         baseFileName = self.sourceData.getFileNameByID(dataID)
 
-        return self.sourceData.addDataFrame(corrMatrix,fileName="corrMatrix::{}".format(baseFileName))
+        return self.sourceData.addDataFrame(corrMatrixLong,fileName="corrMatrix::{}".format(baseFileName))
 
     def runFeatureSelection(self,dataID,columnNames, grouping, groupFactors, model = "Random Forest", createSubset=False, RFECV = False):
         "Selects features based on model"

@@ -169,6 +169,13 @@ funcPropControl = {
                 {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]},
                 sendMessageProps]   
         },
+    "data::groupbyAndAggregate":
+        {
+            "threadRequest":{"obj":"data","fn":"groupbyAndAggregate","requiredKwargs":["dataID","columnNames","groupbyColumn"]},
+            "completedRequest": addDataAndRefresh  
+        },
+
+        
     "receiverBox:addItems":
         {
             "threadRequest":{"obj":"data","fn":"evaluateColumnsForPlot","requiredKwargs":["dataID","columnNames","dataType"]},

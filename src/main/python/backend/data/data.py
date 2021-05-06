@@ -252,6 +252,21 @@ class DataCollection(object):
 					print(e)
 		return errorMessage
 
+	def groupbyAndAggregate(self,dataID,columnNames,groupbyColumn,metric="mean"):
+		"""
+		Aggregates data by a specific groupbyColumn. 
+		ColumnNames can only be numeric.
+		
+		"""
+		if dataID in self.dfs:
+			requiredColumns = columnNames.append(pd.Series([groupbyColumn]),ignore_index=True)
+			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
+			aggregatedData = data.groupby(by=groupbyColumn,sort=False).aggregate(metric)
+			aggregatedData = aggregatedData.reset_index()
+			return self.addDataFrame(aggregatedData,fileName = "groupAgg({}):{}".format(self.getFileNameByID(dataID),groupbyColumn))
+		else:
+			return errorMessage
+
 	def checkColumnNamesInDataByID(self,dataID,columnNames):
 		""
 		checkedColumnNames = []
