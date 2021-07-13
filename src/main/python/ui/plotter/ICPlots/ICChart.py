@@ -20,7 +20,7 @@ from backend.utils.stringOperations import getRandomString
 from ...utils import INSTANT_CLUE_BLUE, createSubMenu
 from .ICScatterAnnotations import find_nearest, find_nearest_index, xLim_and_yLim_delta
 from ...custom.warnMessage import WarningMessage
-
+from ...dialogs.ICShareGraph import ICShareGraph
 from .charts.scatter_plotter import scatterPlot
 
 import requests
@@ -78,6 +78,7 @@ class ICChart(QObject):
 						axisSize = 0.20, 
 						axisPadding=0, 
 						textSize = 9,  
+						caBackground = None,
 						textRotation = 90):
 		"""
 		Source:
@@ -87,7 +88,7 @@ class ICChart(QObject):
 		cax = divider.append_axes(appendWhere, size=axisSize, pad=axisPadding)
 		cax.get_xaxis().set_visible(False)
 		cax.get_yaxis().set_visible(False)
-		cax.set_facecolor(self.getParam("axis.title.box.background"))
+		cax.set_facecolor(self.getParam("axis.title.box.background") if caBackground is None else caBackground)
 		at = AnchoredText(
 							title, 
 							loc=10,
@@ -103,12 +104,24 @@ class ICChart(QObject):
 
 		cax.add_artist(at)
 
-	def addExtraLines(self,axisDict,extraLines):
+	def addExtraLines(self,axisDict,extraLines,onlyForID = None, targetAx = None):
 		""
 		for n,ax in axisDict.items():
-			if n in extraLines:
+			if onlyForID is not None and targetAx is not None and n in extraLines:
+				line = Line2D(**extraLines[n])
+				targetAx.add_line(line)
+			elif n in extraLines:
 				line = Line2D(**extraLines[n])
 				ax.add_line(line)
+	
+	def addLineCollections(self,lineCollections):
+		""
+		for axisID,lineCollection in lineCollections.items():
+			
+			if axisID in self.axisDict:
+				ax = self.axisDict[axisID]
+				ax.add_artist(lineCollection)
+
 
 	def addHoverBinding(self):
 		""
@@ -119,6 +132,15 @@ class ICChart(QObject):
 		""
 		if self.interactive:
 			self.onPressEvent = self.p.f.canvas.mpl_connect('button_release_event', self.onPress)
+
+
+	def addText(self,ax,axisTransform  = False, stdTextFont = True,  *args,**kwargs):
+		""
+		kwargs["transform"] = ax.transAxes if axisTransform else None
+		if stdTextFont:
+			kwargs["fontproperties"] = self.getStdFontProps()#"fontproperties"
+		ax.text(*args,**kwargs)
+
 
 	def addTitles(self, fancyTitle = True, onlyForID = None, targetAx = None, *args, **kwargs):
 		""
@@ -164,7 +186,6 @@ class ICChart(QObject):
 
 	def checkForQuickSelectDataAndUpdateFigure(self):
 		""
-	
 		qsData = self.getQuickSelectData()
 		if qsData is not None:
 			self.mC.quickSelectTrigger.emit()
@@ -207,7 +228,6 @@ class ICChart(QObject):
 		if not hasattr(self,"annotations") or self.annotations is None:
 			return False
 		elif isinstance(self.annotations,dict) and hasattr(self,"addedAnnotations") and ax in self.addedAnnotations:
-			#for annotationClass in self.annotations.values():
 				annotations = self.addedAnnotations[ax].values()
 				return any(anno.contains(event)[0] for anno in annotations)
 		else:
@@ -299,7 +319,7 @@ class ICChart(QObject):
 		group1, group2 = self.statData["groupName"]
 		statGroupByGroups = self.statCollection.groupby(["Group1","Group2"]).groups
 		if (group1,group2) in statGroupByGroups or (group2,group1) in statGroupByGroups:
-			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2))
+			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2), iconDir = self.mC.mainPath)
 			w.exec_()
 			return False
 		return True
@@ -407,6 +427,17 @@ class ICChart(QObject):
 			return True
 		return False 
 
+
+	def getNearestNeighborLines(self):
+		""
+		if "dataID" in self.data and "columnPairs" in self.data and hasattr(self,"scatterPlots"):
+
+			funKey = "plotter:getNearestNeighbors"
+			kwargs = {"dataID":self.data["dataID"],"numericColumnPairs":self.data["columnPairs"]}
+			funcProps = {"key":funKey,"kwargs":kwargs}
+
+			self.mC.sendRequestToThread(funcProps)
+
 	def getLineCoordsForStats(self,ax):
 		""
 		if hasattr(self,"statData"):
@@ -442,7 +473,6 @@ class ICChart(QObject):
 		""
 		try:
 			mainFigMenus = self.mC.mainFrames["right"].mainFigureRegistry.getMenu(menu["To main figure"],self.mirrorAxis)
-			 
 		except Exception as e:
 			print(e)
 
@@ -456,6 +486,7 @@ class ICChart(QObject):
 				action.triggered.connect(lambda chk, projectParams = project: self.sendToWebApp(projectParams))
 		else:
 			menus["To WebApp"].addAction("Login")
+		
 
 	def sendToWebApp(self, projectParams):
 		""
@@ -482,12 +513,19 @@ class ICChart(QObject):
 			menus["main"].addAction("Remove size legend", self.removeSizeLegend)
 		if hasattr(self,"markerLegend"):
 			menus["main"].addAction("Remove marker legend", self.removeMarkerLegend)
+		menus["main"].addAction("Share graph", self.shareGraph)
 
 	def addQuickSelectHoverScatter(self):
 		""
 		self.quickSelectScatter = {}
 		for ax in self.axisDict.values():
 			self.quickSelectScatter[ax] = ax.scatter(x=[],y=[],**self.getScatterKwargs(),zorder = 1e9)
+
+
+	def shareGraph(self):
+		""
+		shareDialog = ICShareGraph(mainController=self.mC)
+		shareDialog.exec_()
 
 	def removeSizeLegend(self):
 		""
@@ -538,30 +576,33 @@ class ICChart(QObject):
 	def addDiagonal(self):
 
 		for n,ax in self.axisDict.items():
-			xlim = np.array(list(self.getAxisLimit(ax)))
+			xData = np.array(list(self.getAxisLimit(ax)))
 			yData = np.array(list(self.getAxisLimit(ax,"y")))
-			lc = INSTANT_CLUE_BLUE#self.mC.config.
-			l = Line2D(xdata = xlim, ydata = yData, lw=0.75, color = lc)
-			ax.add_artist(l)
-
-			#save line
-			lineID = getRandomString()
-			self.extraArtists[lineID] = {"artist":l,"color":lc,"name":"Axis diagonal"}
+			self.addLine(ax,xData,yData,"Diagonal")
 
 	def addLinearLine(self,m=1,b=0):
 		"Adds a line to each axis"
 		
 		for n,ax in self.axisDict.items():
-			xlim = np.array(list(self.getAxisLimit(ax)))
-			yData = xlim * m + b
-			lc = INSTANT_CLUE_BLUE#self.mC.config.
-			l = Line2D(xdata = xlim, ydata = yData, lw=0.75, color = lc)
+			xData = np.array(list(self.getAxisLimit(ax)))
+			yData = xData * m + b
+			self.addLine(ax,xData,yData,"Linear Line")
+			
 
-			ax.add_artist(l)
+	def addLine(self,ax,xdata,ydata,name):
+		""
+		lKwargs = {"xdata":xdata,"ydata":ydata,"lw":0.75,"color":INSTANT_CLUE_BLUE}
+		l = Line2D(**lKwargs)
 
-			#save line
-			lineID = getRandomString()
-			self.extraArtists[lineID] = {"artist":l,"color":lc,"name":"linear line"}
+		ax.add_artist(l)
+		#save line
+		lineID = getRandomString()
+		self.extraArtists[lineID] = {
+			"artist":l,
+			"color":INSTANT_CLUE_BLUE,
+			"name":"Line({})".format(lineID) if name is None else name,
+			"ax":ax,
+			"lkwargs":lKwargs}
 
 	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
 		""
@@ -739,10 +780,11 @@ class ICChart(QObject):
 	def addLineByArray(self,x,y):
 		""
 		for _,ax in self.axisDict.items():
-			l = Line2D(xdata = x, ydata = y, lw=0.75, color = INSTANT_CLUE_BLUE)
-			ax.add_artist(l)
-			lineID = getRandomString()
-			self.extraArtists[lineID] = {"artist":l,"color":INSTANT_CLUE_BLUE,"name":"Line({})".format(lineID)}
+			#l = Line2D(xdata = x, ydata = y, lw=0.75, color = INSTANT_CLUE_BLUE)
+			#ax.add_artist(l)
+			#lineID = getRandomString()
+			self.addLine(ax,x,y,None)
+			#self.extraArtists[lineID] = {"artist":l,"color":INSTANT_CLUE_BLUE,"name":,"ax":ax}
 		self.updateFigure.emit()
 
 	def addQuadrantLines(self, quadrantCoords):
@@ -757,12 +799,7 @@ class ICChart(QObject):
 			q3 = np.array([(quadrantCoords[1],ylim[0]),(quadrantCoords[1],quadrantCoords[2]), (xlim[1],quadrantCoords[2])])
 			q4 = np.array([(xlim[0],quadrantCoords[2]),(quadrantCoords[0],quadrantCoords[2]), (quadrantCoords[0],ylim[0])])
 			for n,q in enumerate([q1,q2,q3,q4]):
-				l = Line2D(xdata = q[:,0], ydata =  q[:,1], lw=0.75, color = INSTANT_CLUE_BLUE)
-
-				ax.add_artist(l)
-				#save line
-				lineID = getRandomString()
-				self.extraArtists[lineID] = {"artist":l,"color":INSTANT_CLUE_BLUE,"name":"Qaudrant {}".format(n)}
+				self.addLine(ax,q[:,0],q[:,1],"Qaudrant {}".format(n))
 		self.updateFigure.emit()
 
 
@@ -822,9 +859,9 @@ class ICChart(QObject):
 	def addLines(self, lineData):
 		""
 		for n,lineKwargs in lineData.items():
-			if n in self.axisDict:
-				l = Line2D(**lineKwargs)
-				self.axisDict[n].add_artist(l)
+			if n in self.axisDict and "xdata" in lineKwargs and "ydata" in lineKwargs:
+				ax = self.axisDict[n]
+				self.addLine(ax,lineKwargs["xdata"],lineKwargs["ydata"],None)
 		
 	def addTooltip(self):
 		""
@@ -936,6 +973,18 @@ class ICChart(QObject):
 		xLims = np.array([ax.get_xlim() for ax in axes])
 		yLims = np.array([ax.get_ylim() for ax in axes])
 		return axes, xLims, yLims 
+	
+	def getNumberOfAxes(self):
+		""
+		if not hasattr(self,"axisDict"):
+			return 0
+		else:
+			return len(self.axisDict)
+	
+	def getDataForWebApp(self):
+		""
+		
+
 
 	def alignLimitsOfAllAxes(self, updateFigure = True):
 		""
@@ -1110,18 +1159,24 @@ class ICChart(QObject):
 
 	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
+		print("MIRROR")
 		try:
 			markerLegend, sizeLegend, colorLegend, quickSelectLegend = None, None, None, None
 			if sourceAx is None and hasattr(self,"menuClickedInAxis"):
 
 				sourceAx = self.menuClickedInAxis
-			
+			print("aa")
 			axisID = self.getAxisID(sourceAx)
+			print(axisID)
 			targetAx.clear() 
-
-			areaTarget = targetAx.bbox.bounds[2] * targetAx.bbox.bounds[3]
-			areaSource = sourceAx.bbox.bounds[2] * sourceAx.bbox.bounds[3]
-			scaleFactor = (areaSource - areaTarget) / areaSource
+			
+			if self.mC.config.getParam("main.figure.size.scaling"):
+				areaTarget = targetAx.bbox.bounds[2] * targetAx.bbox.bounds[3]
+				areaSource = sourceAx.bbox.bounds[2] * sourceAx.bbox.bounds[3]
+				scaleFactor = (areaSource - areaTarget) / areaSource
+			else:
+				scaleFactor = 1
+				
 			self.mirrorAxisContent(axisID,targetAx, scaleFactor = scaleFactor)
 			
 			if hasattr(self,"colorLegendKwargs"):
@@ -1147,13 +1202,26 @@ class ICChart(QObject):
 				if markerLegend is not None:
 					targetAx.add_artist(markerLegend)
 
+			self.mirrorExtraLines(sourceAx,targetAx)
 			self.mirrorQuickSelectArtists(axisID,targetAx)
 			self.mirrorLimits(sourceAx,targetAx) #deal with user zoom
 			self.mC.mainFrames["right"].mainFigureRegistry.replotLabel(figID,exportAxisID)
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
 
 		except Exception as e:
+			print("an errror in mirroring")
 			print(e)
+
+	def mirrorExtraLines(self,sourceAx,targetAx):
+		""
+		if len(self.extraArtists) > 0:
+			for lineID,lineKwargs in self.extraArtists.items():
+				if lineKwargs["ax"] == sourceAx:
+					#XY = lineKwargs["artist"].get_xydata()
+					#print(XY)
+					l = Line2D(**lineKwargs["lkwargs"])
+					targetAx.add_artist(l)
+
 
 	def mirrorStats(self,targetAx, onlyForID):
 		""
@@ -1272,8 +1340,7 @@ class ICChart(QObject):
 		Define text properties
 		'''
 		textProps = {'x':0,'y':0,
-					"fontproperties":FontProperties(family=self.getParam("annotationFontFamily"),
-										size = self.getParam("annotationFontSize")),
+					"fontproperties": self.getStdFontProps(),
 					'linespacing': 1.2,
 					'visible':False,
 					'zorder':1e9}
@@ -1392,7 +1459,7 @@ class ICChart(QObject):
 		self.dataLoaded.emit(data)
 	
 
-	def setHoverData(self,index=None):
+	def setHoverData(self,index=None,*args,**kwargs):
 		""
 	
 	def setMask(self,dataIndex):
@@ -1561,7 +1628,7 @@ class ICChart(QObject):
 				scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
 				print(scatterSizes)
 
-			elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
+			elif ax in self.quickSelectScatterDataIdx and "idx" in self.quickSelectScatterDataIdx[ax]: #mode == "raw"
 
 				dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
 				scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	

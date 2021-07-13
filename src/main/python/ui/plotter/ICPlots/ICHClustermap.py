@@ -113,7 +113,7 @@ class ICClustermap(ICChart):
         if addLineKwargs and data.shape[0] < self.getParam("quad.linewidth.rowLimit") and data.shape[1] < self.getParam("quad.linewidth.columnLimit"):
 
             colorMeshLineKwargs = dict(
-                    linewidth = 0.01, 
+                    linewidth = 0.005, 
                     linestyle = '-',
 					edgecolor = 'k')
         else:
@@ -138,7 +138,7 @@ class ICClustermap(ICChart):
             dataShape[1] < self.getParam("quad.linewidth.columnLimit"):
 
             colorMeshLineKwargs = dict(
-                    linewidth = 0.01, 
+                    linewidth = 0.005, 
                     linestyle = '-',
 					edgecolor = 'k')
         else:
@@ -154,7 +154,10 @@ class ICClustermap(ICChart):
         ""
         if hasattr(self,"colorMesh"):
             if cmapName is None:
-                cmapName = self.sender().text()
+                if hasattr(self,"sender") and hasattr(self.sender(),"text"):
+                    cmapName = self.sender().text()
+                else:
+                    return
             
             #get map
             cmap = self.mC.colorManager.get_max_colors_from_pallete(cmapName)
@@ -283,6 +286,8 @@ class ICClustermap(ICChart):
                 self.setAxisLimits(self.axisDict["axRowDendro"],
                               data["axisLimits"]["rowDendrogram"]["x"],
                               data["axisLimits"]["rowDendrogram"]["y"])
+                
+                self.axisDict["axRowDendro"].set_navigate(False)
             #add column dendro
             if "axColumnDendro" in self.axisDict:
                 self.addDendrogram(self.axisDict["axColumnDendro"],
@@ -291,6 +296,7 @@ class ICClustermap(ICChart):
                 self.setAxisLimits(self.axisDict["axColumnDendro"],
                               data["axisLimits"]["columnDendrogram"]["x"],
                               data["axisLimits"]["columnDendrogram"]["y"])
+                self.axisDict["axColumnDendro"].set_navigate(False)
             #add colormesh
             self.colorMesh = self.addColorMesh(self.axisDict["axClusterMap"],
                             data["plotData"].values)

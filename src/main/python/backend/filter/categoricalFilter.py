@@ -85,7 +85,8 @@ class CategoricalFilter(object):
             #if no splitString is given, take init param
         if splitString is None:
             splitString = self.splitString
-            
+        if len(columnName) == 0:
+            return getMessageProps("Error..","There was an internal error. Please use the context menu.")
         if dataID in self.sourceData.dfs:
             if isinstance(columnName,str):
                 columnName = [columnName]
@@ -393,6 +394,7 @@ class CategoricalFilter(object):
 
     def subsetDataOnShortcut(self,dataID,columnNames,how="keep",stringValue=""):
         ""
+
         config = self.sourceData.parent.config
         if dataID in self.sourceData.dfs:
             data = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]

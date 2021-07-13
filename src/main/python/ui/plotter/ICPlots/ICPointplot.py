@@ -98,27 +98,9 @@ class ICPointplot(ICChart):
         for ax in self.axisDict.values():
             self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
 
-    # def updateQuickSelectDat2a(self,quickSelectGroup,changedCategory=None):
-	# 	""
-	# 	for ax in self.axisDict.values():
-	# 		if self.isQuickSelectModeUnique():
-    #             return
-	# 			#scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
-
-	# 		elif ax in self.quickSelectScatterDataIdx: #mode == "raw"
-
-	# 			dataIdx = self.quickSelectScatterDataIdx[ax]
-	# 			scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
-	# 			scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
-
-	# 		else:
-				
-	# 			continue
-
-	# 		self.updateQuickSelectScatter(ax, scatterColors = scatterColors, scatterSizes = scatterSizes)
-    
     def setHoverData(self,dataIndex):
         ""
+        coords = np.array([])
         if hasattr(self,"backgrounds"):
             for n, ax in self.axisDict.items():
                 if n in self.data["hoverData"] and ax in self.backgrounds:

@@ -90,8 +90,10 @@ class ICGrouping(object):
             if colName in columnNames.values:
                 return groupName
 
-    def getColumnNames(self):
+    def getColumnNames(self,groupingName = None):
         ""
+        if groupingName is None:
+            groupingName = self.currentGrouping
         cNames = pd.Series()
         cNames = cNames.append(list(self.groups[self.currentGrouping].values()))
         return cNames
@@ -104,13 +106,16 @@ class ICGrouping(object):
             return cNames
         return pd.Series()
 
-    def getColorsForGroupMembers(self):
+    def getColorsForGroupMembers(self, groupingName = None):
         ""
+        
         if not self.currentGrouping in self.groups:
             return None
+        if groupingName is None:
+            groupingName = self.currentGrouping
         groupColors = self.getGroupColors()
         colorMaps = []
-        for groupName, columnNames in self.groups[self.currentGrouping].items():
+        for groupName, columnNames in self.groups[groupingName].items():
             color = groupColors[groupName]
             colorMaps.extend([(columnName,color) for columnName in columnNames.values])
         return dict(colorMaps)
@@ -155,12 +160,10 @@ class ICGrouping(object):
         elif self.currentGrouping is not None:
             groupingColumnNames = self.getColumnNamesFromGroup(self.currentGrouping)
             if any(colName in groupingColumnNames.values for colName in columnNames.values):
-                    columnNameGroupMatches = self.getGroupNameByColumn(groupingName)
-                    annotatedGroupins[groupingName] = columnNames.map(columnNameGroupMatches)
+                    columnNameGroupMatches = self.getGroupNameByColumn(self.currentGrouping)
+                    annotatedGroupins[self.currentGrouping] = columnNames.map(columnNameGroupMatches)
 
         return annotatedGroupins
-
-
 
 
     def getPositiveExclusives(self,dataID = None, columnNames = None):
@@ -214,14 +217,17 @@ class ICGrouping(object):
             colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[self.currentGrouping].keys())])
             return colors
 
-    def getFactorizedColumns(self):
+    def getFactorizedColumns(self, groupingName = None):
         ""
+        groupingName = self.currentGrouping if groupingName is None else groupingName
         factorizedColumns = {}
-        grouping = self.groups[self.currentGrouping]
-        factors = dict([(groupName,n) for n,groupName in enumerate(grouping.keys())])
-        for colName in self.getColumnNames():
+        if groupingName in self.groups:
+        
+            grouping = self.groups[groupingName]
+            factors = dict([(groupName,n) for n,groupName in enumerate(grouping.keys())])
+            for colName in self.getColumnNames():
 
-            factorizedColumns[colName] = factors[self.findGroupNameOfColumn(colName,grouping)]
+                factorizedColumns[colName] = factors[self.findGroupNameOfColumn(colName,grouping)]
 
         return factorizedColumns 
 
@@ -238,6 +244,21 @@ class ICGrouping(object):
         ""
         return dict([(k,len(v)) for k,v in self.groups.items()])
 
+    def getGroupNamesByColumnNames(self,columnNames):
+        ""
+        columnNameMapper = self.getGroupingsByColumnNames(columnNames,True)
+        return columnNameMapper[self.currentGrouping]
+        
     def nameExists(self,groupingName):
         ""
         return groupingName in self.groups
+    
+    def updateGroupingsByColumnNameMapper(self,columnNameMapper):
+        "Updates items in groups based on a columnNameMapper dict (oldName,newName)"
+        prevColumnNames = list(columnNameMapper.keys())
+        newColumnNames = list(columnNameMapper.values())
+        for groupingName, groups in self.groups.items():
+            for groupName, items in groups.items():
+                items.replace(to_replace = prevColumnNames,value = newColumnNames,inplace=True)
+
+    

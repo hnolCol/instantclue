@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-from ..utils import createLabel, createLineEdit, createTitleLabel
+from ..utils import createLabel, createLineEdit, createTitleLabel, createCombobox
 from ..custom.buttonDesigns import ICStandardButton
 
 from collections import OrderedDict 
@@ -37,10 +37,11 @@ class SelectionDialog(QDialog):
             label = createLabel("{} :".format(selectionName))
             label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
             selectionOptions = self.selectionOptions[selectionName]
-            cb = QComboBox()
-            cb.addItems(selectionOptions)
+            cb = createCombobox(self,selectionOptions)
             if selectionName in self.selectionDefaultIndex:
+                
                 cb.setCurrentText(self.selectionDefaultIndex[selectionName])
+               
             self.selectionCombos[selectionName]["label"] = label
             self.selectionCombos[selectionName]["cb"] = cb
 

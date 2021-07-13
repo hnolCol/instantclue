@@ -3,14 +3,14 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
 from .resortableTable import ResortableTable
-from .warnMessage import WarningMessage
+from .warnMessage import WarningMessage, AskQuestionMessage
 
 from ..delegates.dataTreeViewDelegates import *
 from ..utils import createSubMenu, createMenu, createMenus, getStandardFont
 from ..dialogs.selectionDialog import SelectionDialog
 from ..dialogs.ICGrouper import ICGrouper
 from ..dialogs.ICCompareGroups import ICCompareGroups
-from ..dialogs.ICModel import ICModelBase
+from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
 
 #data import 
@@ -42,8 +42,8 @@ dataTypeSubMenu = {
                 "Group Comparison",
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
-        ("Data Format Transformation",["Groupby and Aggregate .."]),
-        ("Filter",["NaN Filter","Outlier"]),
+        ("Data Format Transformation",["Group by and Aggregate .."]),
+        ("Filter",["NaN Filter (rows)","NaN Filter (columns)","Outlier"]),
         ("Clustering",["k-means"]),
         ("Smoothing",["Aggregate rows ..","Rolling window .."]),
         ("Density Estimation", ["Kernel Density"]),
@@ -281,6 +281,7 @@ menuBarItems = [
         "funcKey": "applyFilter",
         "dataType": "Numeric Floats"
     },
+    
     {
         "subM":"Smoothing",
         "name":"IIR Filter",
@@ -328,7 +329,7 @@ menuBarItems = [
                     "addColumns" : True}
     },
     {
-        "subM":"Groupby and Aggregate ..",
+        "subM":"Group by and Aggregate ..",
         "name":"mean",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -338,7 +339,7 @@ menuBarItems = [
                     "otherKwargs": {"metric":"mean"}}
     },
     {
-        "subM":"Groupby and Aggregate ..",
+        "subM":"Group by and Aggregate ..",
         "name":"sum",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -348,7 +349,7 @@ menuBarItems = [
                     "otherKwargs": {"metric":"sum"}}
     },
     {
-        "subM":"Groupby and Aggregate ..",
+        "subM":"Group by and Aggregate ..",
         "name":"median",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -358,7 +359,7 @@ menuBarItems = [
                     "otherKwargs": {"metric":"median"}}
     },
     {
-        "subM":"Groupby and Aggregate ..",
+        "subM":"Group by and Aggregate ..",
         "name":"min",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -368,14 +369,21 @@ menuBarItems = [
                     "otherKwargs": {"metric":"min"}}
     },
     {
-        "subM":"Groupby and Aggregate ..",
-        "name":"median",
+        "subM":"Group by and Aggregate ..",
+        "name":"max",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
                     "requiredColumns": ["groupbyColumn"],
                     "addColumns" : True,
                     "otherKwargs": {"metric":"max"}}
+    },
+    {
+        "subM":"Value Transformation",
+        "name":"Combat (Batch correction)",
+        "funcKey": "runCombat",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"funcKey":"stats::runCombat"}
     },
     {
         "subM":"Value Transformation",
@@ -405,6 +413,15 @@ menuBarItems = [
         "funcKey": "dimReduction::PCA",
         "dataType": "Numeric Floats",
         "fnKwargs":{"returnProjections":True}
+    },
+    {
+        "subM":"Dimensional Reduction",
+        "name":"Linear Discriminant Analysis",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"dimReduction::LDA",
+                    "requiredGrouping": ["Class Labels"],
+                    "otherKwargs": {}}
     },
     # {
     #     "subM":"Dimensional Reduction",
@@ -520,6 +537,20 @@ menuBarItems = [
         "fnKwargs": {"normKey": "Quantile (25 - 75)","axis": 0}
     },
     {
+        "subM":"Normalization (column)",
+        "name":"Adjust Median",
+        "funcKey": "normalizer::normalizeData",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "globalMedian"}
+    },
+    {
+        "subM":"Normalization (column)",
+        "name":"Adjust Group Median",
+        "funcKey": "normalizer::normalizeGroupMedian",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "normGroupColumnMedian"}
+    },
+    {
         "subM":"Change data type to ..",
         "name":"Numeric Floats",
         "funcKey": "data::changeDataType",
@@ -576,6 +607,12 @@ menuBarItems = [
         "fnKwargs": {"how":"keep","stringValue":"-"}
     },
     {
+        "subM":"Filter",
+        "name":"Drop duplicates",
+        "funcKey": "data::removeDuplicates",
+        "dataType": "Categories",
+    },
+    {
         "subM":"Remove",
         "name":"+",
         "funcKey": "filter::subsetShortcut",
@@ -615,43 +652,88 @@ menuBarItems = [
     },
     {
         "subM":"Missing values (NaN)",
-        "name":"Count",
+        "name":"Count (Selection)",
         "funcKey": "data::countNaN",
         "dataType": "Numeric Floats",
     },
-    
     {
-        "subM":"NaN Filter",
+        "subM":"Missing values (NaN)",
+        "name":"Count (Grouping)",
+        "funcKey": "data::countNaN",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"grouping":True}
+    },
+    {
+        "subM":"NaN Filter (rows)",
         "name":"Any == NaN",
         "funcKey": "data::removeNaN",
         "dataType": "Numeric Floats",
     },
     {
-        "subM":"NaN Filter",
+        "subM":"Filter",
+        "name":"Variance Filter (rows)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::filterDataByVariance", 
+                      "info":"Please provide a variance threshold.",
+                      "min": 0.0,
+                      "max": np.inf,
+                      "default" : 0.2,
+                      "requiredFloat":"varThresh"}
+    },
+    {
+        "subM":"Filter",
+        "name":"Variance Filter (columns)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::filterDataByVariance", 
+                      "info":"Please provide a variance threshold.",
+                      "min": 0.0,
+                      "max": np.inf,
+                      "default" : 0.2,
+                      "requiredFloat":"varThresh",
+                      "otherKwargs":{"direction":"columns"}}
+    },
+    {
+        "subM":"NaN Filter (rows)",
         "name":"All == NaN",
         "funcKey": "data::removeNaN",
         "dataType": "Numeric Floats",
         "fnKwargs": {"how":"all"}
     },
     {
-        "subM":"NaN Filter",
+        "subM":"NaN Filter (rows)",
         "name":"Threshold",
         "funcKey": "getUserInput",
         "dataType": "Numeric Floats",
         "fnKwargs" : {"funcKey":"data::removeNaN", 
-                      "info":"Provide the number of non-NaN values.\nIf value < 1 the fraction of selected columns is considered.",
+                      "info":"Provide the number of non-NaN values.\nIf value < 1, the fraction of selected columns is considered.",
                       "min": 0.0,
                       "max": "nColumns",
                       "requiredFloat":"thresh"}
     },
     {
-        "subM":"NaN Filter",
+        "subM":"NaN Filter (columns)",
+        "name":"Any == NaN",
+        "funcKey": "data::removeNaN",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"axis":1}
+    },
+    {
+        "subM":"NaN Filter (columns)",
+        "name":"All == NaN",
+        "funcKey": "data::removeNaN",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"axis":1,"how":"all"}
+    },
+    {
+        "subM":"NaN Filter (rows)",
         "name":"Group positives",
         "funcKey": "grouping::exclusivePositives",
         "dataType": "Numeric Floats",
     },
     {
-        "subM":"NaN Filter",
+        "subM":"NaN Filter (rows)",
         "name":"Group negatives",
         "funcKey": "grouping::exclusiveNegative",
         "dataType": "Numeric Floats",
@@ -891,6 +973,12 @@ menuBarItems = [
     },
     {
         "subM":"Replace NaN by ..",
+        "name":"Group Mean",
+        "funcKey": "data::replaceNaNByGroupMean",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Replace NaN by ..",
         "name":"Smart Group Replace",
         "funcKey": "smartReplace",
         "dataType": "Numeric Floats",
@@ -898,6 +986,12 @@ menuBarItems = [
     {
         "subM":"Kinetic",
         "name":"First Order",
+        "funcKey": "fitModel",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Model Fitting",
+        "name":"Linear fit",
         "funcKey": "fitModel",
         "dataType": "Numeric Floats",
     },
@@ -1109,16 +1203,12 @@ class DataTreeView(QWidget):
             self.groupingName = groupingName
             groupColors = self.mC.grouping.getGroupColors()
             self.model.resetGrouping()
-            print(grouping)
             for groupName, columnNames in grouping.items():
                 #for idx in columnNames.index:
                 modelDataIndex = self.model.getIndexFromNames(columnNames)
-                self.model.setColumnStateByDataIndex(modelDataIndex,True)
-                print(modelDataIndex)
-                print(groupColors)
-                print(groupName)
-                self.model.setGroupingColorByDataIndex(modelDataIndex,groupColors[groupName])
                 
+                self.model.setColumnStateByDataIndex(modelDataIndex,True)
+                self.model.setGroupingColorByDataIndex(modelDataIndex,groupColors[groupName])
                 self.model.setGroupNameByDataIndex(modelDataIndex,groupName)
                 
             self.table.model().completeDataChanged()
@@ -1507,8 +1597,7 @@ class DataTreeViewTable(QTableView):
             self.addRemoveItems(tableIndex)
 
         elif tableColumn == 2:
-            
-            self.applyFilter(tableIndex)
+            self.applyFilter(False,tableIndex)
         elif tableColumn == 3:
         
             self.copyDataToClipboard(tableIndex)
@@ -1583,7 +1672,7 @@ class DataTreeViewTable(QTableView):
                             self.focusRow -= 1
                         self.model().rowRangeChange(self.focusRow,currentFocusRow)
     
-    def rowWiseCalculations(self):
+    def rowWiseCalculations(self,*args,**kwargs):
         ""
         dlg = BasicOperationDialog(self.mC,dataID = self.mC.getDataID(), selectedColumns = self.getSelectedData())
         dlg.exec_()
@@ -1729,7 +1818,7 @@ class DataTreeViewTable(QTableView):
     def summarizeGroups(self,event=None, metric = "min"):
         ""
         if not self.mC.grouping.groupingExists():
-            w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.")
+            w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
             w.exec_()
             return
                 
@@ -1750,7 +1839,7 @@ class DataTreeViewTable(QTableView):
         ""
 
         if self.mC.data.hasData():
-            groupDialog = ICGrouper(self.mC)
+            groupDialog = ICGrouper(self.mC,parent=self)
             groupDialog.exec()
         
 
@@ -1829,11 +1918,14 @@ class DataTreeViewTable(QTableView):
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found."})
        
     def fitModel(self,*args,**kwargs):
-        if True:#not self.mC.grouping.groupingExists():
+        if self.mC.grouping.groupingExists():
             try:
                 #columnNames = self.mC.grouping.getColumnNames()
                 #grouping = self.mC.grouping.getCurrentGrouping()
-                w = ICModelBase(self.mC)
+                if self.sender().text() == "Linear fit":
+                    w = ICLinearFitModel(self.mC)
+                else:
+                    w = ICModelBase(self.mC)
                 w.exec_()
                # fnKwargs = {"columnNames":columnNames,"grouping":grouping}
                 #self.prepareMenuAction("data::smartReplace",fnKwargs,addColumnSelection=False)
@@ -1887,7 +1979,7 @@ class DataTreeViewTable(QTableView):
         quickSelect.updateQuickSelectData(columnName,filterProps)
 
     def getUserInput(self,**kwargs):
-
+        #print(kwargs)
         if "requiredColumns" in kwargs:
          
             askUserForColumns = kwargs["requiredColumns"]
@@ -1929,9 +2021,13 @@ class DataTreeViewTable(QTableView):
             else:
                 defaultValue = (maxValue-minValue)/2
 
+            
             number, ok = QInputDialog().getDouble(self,"Provide float",labelText, defaultValue ,minValue, maxValue, 2 )
             if ok:
-                self.prepareMenuAction(funcKey = kwargs["funcKey"],kwargs = {kwargs["requiredFloat"]:number})
+                fnKwargs = {kwargs["requiredFloat"]:number}
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                self.prepareMenuAction(funcKey = kwargs["funcKey"],kwargs = fnKwargs)
         
         elif "requiredInt" in kwargs:
             
@@ -1960,8 +2056,48 @@ class DataTreeViewTable(QTableView):
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                 self.prepareMenuAction(funcKey = kwargs["funcKey"],kwargs = fnKwargs) 
            
+        elif "requiredGrouping" in kwargs:
+            if self.mC.grouping.groupingExists():
+                try:
+                # columnNames = self.mC.grouping.getColumnNames()
+                    grouping = self.mC.grouping.getCurrentGroupingName()
+                    fnKwargs = {"groupingName":grouping}
+                    if "otherKwargs" in kwargs:
+                        fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                    funcKey = kwargs["funcKey"]
+                    self.prepareMenuAction(funcKey,fnKwargs,addColumnSelection=False,addDataID=True)
+                except Exception as e:
+                    print(e)
 
-    
+            else:
+                w = WarningMessage(infoText="No grouping founds. Please add a grouping first.")
+                w.exec_()
+
+
+    def runCombat(self,**kwargs):
+        ""
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            currentGrouping = self.mC.grouping.getCurrentGroupingName() 
+            
+            selDiag = SelectionDialog(["groupingName"],{"groupingName":groupingNames},{"groupingName":currentGrouping},title="Select Grouping for Batch correction.")
+            
+            if selDiag.exec_() :
+                askProceed = AskQuestionMessage(infoText="Combat is not thread safe resulting in a freeze of the graphical user interface. Proceed?")
+                askProceed.exec_()
+                if askProceed.state:
+                    fnKwargs = selDiag.savedSelection
+                    if "otherKwargs" in kwargs:
+                        fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                    fnKwargs["grouping"] = self.mC.grouping.getGrouping(fnKwargs["groupingName"])
+                    
+                    funcProps = {"key":kwargs["funcKey"],"kwargs":fnKwargs}
+                    funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                    self.mC.sendRequest(funcProps)
+                #self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=fnKwargs, addColumnSelection=False)
+        else:
+            self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found."})
+
     def prepareMenuAction(self,funcKey,kwargs = {},addDataID=True,addColumnSelection=True):
 
         ""

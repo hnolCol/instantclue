@@ -5,6 +5,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import to_hex
 import numpy as np 
 import pandas as pd
+from ...custom.tableviews.ICDataTable import PandaTableDialog
 
 
 class ICClusterplot(ICChart):
@@ -13,7 +14,11 @@ class ICClusterplot(ICChart):
         ""
         super(ICClusterplot,self).__init__(*args,**kwargs)
         self.boxplotItems = {} 
-        
+    
+    def addGraphSpecActions(self,menus):
+        ""
+        menus["main"].addAction("Show data in cluster", self.displayClusterSpecificData)
+    
     def initClusters(self,onlyForID = None, targetAx = None):
         ""
         if self.getParam("clusterplot.type") == "boxplot": 
@@ -28,38 +33,54 @@ class ICClusterplot(ICChart):
             self.colorGroupArtists = OrderedDict()
             self.groupColor = OrderedDict() 
             for n, lineProps in self.data["plotData"].items():
+                
                 if n in self.axisDict and onlyForID is None:
-                    lineCollection = LineCollection(**lineProps,
-                                colors=self.data["facecolors"][n], 
-                                linewidths = self.getParam("clusterplot.linewidth"),
-                                alpha = self.getParam("alpha"))
-                    intID = self.data["dataColorGroups"]["internalID"].iloc[n]
-                    self.colorGroupArtists[intID] = [lineCollection]
-                    self.groupColor[intID] = self.data["facecolors"][n] if isinstance(self.data["facecolors"][n],str) else to_hex(self.data["facecolors"][n][0])
-
+                    lineCollection = LineCollection(
+                                            **lineProps,
+                                            colors=self.data["facecolors"][n], 
+                                            linewidths = self.getParam("clusterplot.linewidth"),
+                                            alpha = self.getParam("alpha")
+                                        )
+             
+                    if not self.getParam("clusterplot.lineplot.color.distance"):
+                        intID = self.data["dataColorGroups"]["internalID"].iloc[n]
+                        self.colorGroupArtists[intID] = [lineCollection]
+                        self.groupColor[intID] = self.data["facecolors"][n] if isinstance(self.data["facecolors"][n],str) else to_hex(self.data["facecolors"][n][0])
+                    
                     self.axisDict[n].add_collection(lineCollection)
-           
+
+                elif onlyForID is not None and targetAx is not None and onlyForID == n:
+                    lineCollection = LineCollection(
+                                        **lineProps,
+                                        colors=self.data["facecolors"][n], 
+                                        linewidths = self.getParam("clusterplot.linewidth"),
+                                        alpha = self.getParam("alpha")
+                                        )
+                    targetAx.add_collection(lineCollection)                    
+        
     def onDataLoad(self, data):
         ""
         try:
             self.data = data
+            
             self.initAxes(data["axisPositions"])
             
             if "tickPositions" in data and "tickLabels" in data:
                 self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90, onlyLastRow=True)
+            
             if "axisLimits" in data:
                 for n,ax in self.axisDict.items():
                     if n in data["axisLimits"]:
                         self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
+            
             if "axisLabels" in data:
-
                 self.setAxisLabels(self.axisDict,data["axisLabels"], onlyLastRowForX=True, onlyFirstColumnForY=True)
          
             self.addTitles()
             self.initClusters()
             self.savePatches()
             self.addExtraLines(self.axisDict,self.data["extraLines"])
-          
+           
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
@@ -67,13 +88,29 @@ class ICClusterplot(ICChart):
                 self.addQuickSelectHoverScatter()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
             self.checkForQuickSelectDataAndUpdateFigure()
+
         except Exception as e:
             print(e)
 
-    def getClusterIDsByDataIndex(self):
 
+    def displayClusterSpecificData(self):
+        ""
+        if hasattr(self,"menuClickedInAxis"):
+            axisID = self.getAxisID(self.menuClickedInAxis)
+            columnName = self.data["clusterLabels"].columns[0]
+            selectedCluster = self.data["clusterLabels"][columnName].unique()[axisID]
+            clusterDataIndex = self.data["clusterLabels"].loc[self.data["clusterLabels"][columnName] == selectedCluster].index
+            dataFrame = self.mC.data.dfs[self.data["dataID"]].loc[clusterDataIndex]
+            dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self.mC, ignoreChanges=True)
+            dlg.exec_()
+            
+
+            
+
+    def getClusterIDsByDataIndex(self):
         ""
         return self.data["clusterLabels"], self.data["dataID"]
+    
 
     def savePatches(self):
         ""
@@ -204,11 +241,12 @@ class ICClusterplot(ICChart):
         ""
         data = self.data
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
-    
         self.addTitles(onlyForID = axisID, targetAx = targetAx)
         self.initClusters(onlyForID=axisID,targetAx=targetAx)
-        self.setFacecolors(onlyForID=axisID)
-
+        if self.getParam("clusterplot.type") == "boxplot":
+            self.setFacecolors(onlyForID=axisID)
+        
+        self.addExtraLines(self.axisDict,self.data["extraLines"],axisID,targetAx)
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)
 
 

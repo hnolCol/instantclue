@@ -312,6 +312,10 @@ class SliceMarksFrame(QWidget):
             dataID = dataFrame.getDataID()
         if columnNames is None:
             columnNames = dataFrame.getDragColumns()
+            if columnNames.index.size > 10:
+                w = WarningMessage(infoText="Please select less than 10 columns.", iconDir = self.mC.mainPath)
+                w.exec_() 
+                return
 
         if dragType is None:
             dragType = dataFrame.getDragType()

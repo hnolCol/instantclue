@@ -9,6 +9,7 @@ from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDFindReplace import FindReplaceDialog
 from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
 from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
+from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
 from ..custom.warnMessage import WarningMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
 
@@ -346,7 +347,17 @@ class CollapsableDataTreeView(QWidget):
         ""
         dlg = ICDMergeDataFrames(mainController = self.mC)
         dlg.exec_()
-    
+
+    def openCorrelateDialog(self,event=None):
+        ""
+        dlg = ICCorrelateDataFrames(mainController=self.mC)
+        dlg.exec_()
+
+    def openFeatureCorrelateDialog(self,event=None):
+        ""
+        dlg = ICCorrelateFeatures(mainController=self.mC)
+        dlg.exec_()
+
     def openSGCCADialog(self,event=None):
         ""
         # dlg = ICMultiBlockSGCCA(mainController = self.mC)
@@ -368,14 +379,21 @@ class CollapsableDataTreeView(QWidget):
                     menuItemName = "{} ({})".format(groupingName,groupSizes[groupingName])
                     action = menus["Grouping .. "].addAction(menuItemName)#
                     action.triggered.connect(lambda _,groupingName = groupingName : self.updateGrouping(groupingName))
-            elif self.mC.data.hasData():
-                action = menus["Grouping .. "].addAction("Add Grouping")
-                action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
 
             if self.mC.data.hasData():
                 #add data frame menu
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)
+
+                action = menus["Data frames .. "].addAction("Correlate")
+                action.triggered.connect(self.openCorrelateDialog)
+
+                action = menus["Data frames .. "].addAction("Correlate features")
+                action.triggered.connect(self.openFeatureCorrelateDialog)
+                
+
+                action = menus["Grouping .. "].addAction("Add Grouping")
+                action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
 
             if False:#self.mC.data.hasTwoDataSets():
                 action = menus["Multi block analysis .."].addAction("SGGCA",self.openSGCCADialog)

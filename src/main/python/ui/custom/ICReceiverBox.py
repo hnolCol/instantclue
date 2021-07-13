@@ -11,10 +11,11 @@ from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLa
 
 class BoxItem(PushHoverButton):
 
-    def __init__(self,itemName = "", parent=None, itemBorder = 5, *args,**kwargs):
+    def __init__(self,itemName = "", parent=None, itemBorder = 5,  *args,**kwargs):
         super(BoxItem,self).__init__(parent=parent,*args,**kwargs)
         self.itemName = itemName
         self.itemBorder = itemBorder
+        
         self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self.setToolTip(itemName)
         self.getWidthAndHeight()
@@ -63,7 +64,8 @@ class BoxItem(PushHoverButton):
             brush = QBrush(QColor("white"))
 
         painter.setBrush(brush)
-        painter.drawRect(rect)
+        if self.drawFrame:
+            painter.drawRect(rect)
 
         painter.drawText(rect,
                          Qt.AlignCenter | Qt.AlignTop, 
@@ -94,6 +96,9 @@ class ItemHolder(QWidget):
     def addItem(self,boxItem):
         ""
         self.layout().addWidget(boxItem)
+    
+    def deleteItem(self,boxItem):
+        boxItem.deleteLater()
 
     def clear(self):
         clearLayout(self.layout())

@@ -3,8 +3,10 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
 from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox
-from ..custom.buttonDesigns import AcceptButton, RefreshButton, ResetButton, BigPlusButton, LabelLikeButton
+from ..custom.buttonDesigns import AcceptButton, RefreshButton, ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
 from ..custom.warnMessage import WarningMessage
+from .ICDSelectItems import ICDSelectItems
+
 #external imports
 import pandas as pd
 import numpy as np 
@@ -19,19 +21,22 @@ LINE_EDIT_STATUS = {"Greater than":(True,False),
                     "n largest":(True,False),
                     "n smallest":(False,True)} 
 
-CB_OPTIONS  = ["Annotate Matches","Subset Matches"]
+CB_OPTIONS  = ["Annotate Matches","Subset Matches","Set NaN","Set NaN in spec. columns"]
 CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.",
-               "Creates a new data frame with rows where numeric filter matches."]
+               "Creates a new data frame with rows where numeric filter matches.",
+               "Values that fulfill the condition are replaced with NaN",
+               "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
 
 
 class NumericFilter(QDialog):
 
-    def __init__(self,mainController, selectedNumericColumn = '', *args, **kwargs):
+    def __init__(self,mainController, selectedNumericColumn = [], *args, **kwargs):
         super(NumericFilter,self).__init__(*args, **kwargs)
 
         self.mC = mainController
         self.dataID = self.mC.mainFrames["data"].getDataID()
         self.numericColumns = self.mC.data.getNumericColumns(self.dataID)
+        
         self.selectedNumericColumn = selectedNumericColumn
         
         self.filterProps = OrderedDict() 
@@ -59,8 +64,8 @@ class NumericFilter(QDialog):
 
         self.addFilterIcon = BigPlusButton(buttonSize=(30,30))
 
-        self.applyButton = QPushButton("Apply")
-        self.closeButton = QPushButton("Close")
+        self.applyButton = ICStandardButton(itemName="Apply")
+        self.closeButton = ICStandardButton(itemName="Close")
 
        
         for n,filtOption in enumerate(CB_OPTIONS):
@@ -100,7 +105,7 @@ class NumericFilter(QDialog):
         hboxB.addWidget(self.applyButton)
         hboxB.addWidget(self.closeButton)
         
-        self.layout().addLayout(hboxB,6,3,1,1)
+        self.layout().addLayout(hboxB,7,3,1,1)
         self.layout().setAlignment(Qt.AlignTop)
 
 
@@ -179,7 +184,10 @@ class NumericFilter(QDialog):
                                                 "Set maximum value\nmax value: {}\nvalid values: {}".format(maxValue,nValues),
                                                 minValue,
                                                 maxValue,
-                                                columnName)                        
+                                                columnName)  
+
+        specColumnLabel = LabelLikeButton(parent = self, text = "Select column(s)", tooltipStr="If set NaN in spec column is selected specific column.\nIf a column is selected multiple times, the nan replacements will be performed in order of listed filter...", itemBorder=5)                     
+        
         resetButton = ResetButton()
 
 
@@ -189,12 +197,16 @@ class NumericFilter(QDialog):
         #delete filter by clicking reset button
         resetButton.clicked.connect(lambda _,filterName = columnName : self.deleteFilter(filterName = filterName))
 
+        #choose specific column
+        specColumnLabel.clicked.connect(lambda _,filterName = columnName :self.chooseSpecColumn(filterName=filterName))
+
         #add items to hbox
         hbox.addWidget(columnLabel)
         hbox.addStretch(1)
         hbox.addWidget(filterLabel)
         hbox.addWidget(minEditValue)
         hbox.addWidget(maxEditValue)
+        hbox.addWidget(specColumnLabel)
         hbox.addWidget(resetButton)
         hbox.setSpacing(4)
         #set outer frame layout
@@ -209,10 +221,35 @@ class NumericFilter(QDialog):
         self.filterProps[columnName]["maxValue"] = maxValue
         self.filterProps[columnName]["filterType"] = filterType
         self.filterProps[columnName]["N"] = nValues
+        self.filterProps[columnName]["specColumns"] = []
         self.updateLineEdits(columnName, filterType)
 
         return outerFrame
     
+    def chooseSpecColumn(self,filterName):
+        ""
+        selectableColumns = pd.DataFrame(self.mC.data.getNumericColumns(self.mC.getDataID()))
+        dlg = ICDSelectItems(data = selectableColumns, selectAll=False, singleSelection=False)
+        # handle position and geomettry
+        senderGeom = self.sender().geometry()
+        bottomRight = self.mapToGlobal(senderGeom.bottomRight())
+        h = dlg.getApparentHeight()
+        dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
+        #handle result
+        if dlg.exec_():
+            selectedColumns = dlg.getSelection()
+            self.filterProps[filterName]["specColumns"] = selectedColumns.values.flatten().tolist()
+            numSelectedColumns = len(self.filterProps[filterName]["specColumns"])
+            if hasattr(self.sender(),"setText"):
+                if numSelectedColumns > 1:
+                    self.sender().setText("{} columns selected".format(numSelectedColumns))
+                else:
+                    self.sender().setText(self.filterProps[filterName]["specColumns"][0][:20])
+        else:
+            if hasattr(self.sender(),"setText"):
+                self.sender().setText("Choose Match column")
+            self.filterProps[filterName]["specColumns"] = []
+
     def createValueLineEdit(self, placeholderText = "", tooltipStr = "", minValue = -np.inf, maxValue = np.inf, columnName = ""):
         
         validator = QDoubleValidator()
@@ -256,11 +293,17 @@ class NumericFilter(QDialog):
             warn.exec_()
             return
 
-        
-        funcProps = {"key":"filter::numericFilter","kwargs":{"dataID":self.dataID,"filterProps":funcProps}}
-        if self.CBFilterOptions["Subset Matches"].checkState():
+        funcProps = {"key":"filter::numericFilter",
+            "kwargs":{
+                "dataID":self.dataID,
+                "filterProps":funcProps,
+                "setNonMatchNan":self.CBFilterOptions["Set NaN"].checkState() or self.CBFilterOptions["Set NaN in spec. columns"].checkState()}}
+        if self.CBFilterOptions["Set NaN in spec. columns"].checkState():
+            funcProps["kwargs"]["selectedColumns"] = selectedColumns = OrderedDict([(k,v["specColumns"]) for k,v in self.filterProps.items()])
+        elif self.CBFilterOptions["Subset Matches"].checkState():
             funcProps["kwargs"]["subsetData"] = True
             funcProps["key"] = "filter::subsetNumericFilter"
+        print(funcProps)
         self.mC.sendRequestToThread(funcProps)
         self.close()
         
@@ -351,8 +394,8 @@ class NumericFilter(QDialog):
     
     def setCBCheckStates(self,event=None):
         ""
-        for cb in self.CBFilterOptions.values():
+        for cbKey,cb in self.CBFilterOptions.items():
             if cb != self.sender():
-                newState = not cb.checkState()
-                self.sender().setCheckState(not newState)
-                cb.setCheckState(newState)
+                cb.setCheckState(False)
+            else:
+                cb.setCheckState(True)

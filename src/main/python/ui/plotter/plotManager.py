@@ -2,7 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from .ICPlots.ICBoxplot import ICBoxplot
 from .ICPlots.ICBarplot import ICBarplot
 from .ICPlots.ICPointplot import ICPointplot
-from .ICPlots.ICScatter import ICScatterPlot
+from .ICPlots.ICScatter import ICScatterPlot, ICMultiScatterPlot
 from .ICPlots.ICPCAPlot import ICPCAPlot
 from .ICPlots.ICHClustermap import ICClustermap
 from .ICPlots.ICSwarmplot import ICSwarmplot
@@ -11,7 +11,7 @@ from .ICPlots.ICLineplot import ICLineplot
 from .ICPlots.ICHistogram import ICHistogram
 from .ICPlots.ICCountplot import ICCountplot
 from .ICPlots.ICXYPlot import ICXYPlot
-from .ICPlots.ICForestplot import ICForestplot
+#from .ICPlots.ICForestplot import ICForestplot
 from .ICPlots.ICWordCloud import ICWordCloud
 from .ICPlots.ICClusterplot import ICClusterplot
 
@@ -19,6 +19,7 @@ plotTypeGraph = {
                 "scatter"       :       ICScatterPlot,
                 "hclust"        :       ICClustermap,
                 "boxplot"       :       ICBoxplot,
+                "mulitscatter"  :       ICMultiScatterPlot,
                 "swarmplot"     :       ICSwarmplot,
                 "barplot"       :       ICBarplot,
                 "pointplot"     :       ICPointplot,
@@ -29,7 +30,7 @@ plotTypeGraph = {
                 "countplot"     :       ICCountplot,
                 "x-ys-plot"     :       ICXYPlot,
                 #"dim-red-plot"  :       ICBarplot,      
-                "forestplot"    :       ICForestplot,
+               # "forestplot"    :       ICForestplot,
                 "wordcloud"     :       ICWordCloud,
                 "clusterplot"   :       ICClusterplot
                 }

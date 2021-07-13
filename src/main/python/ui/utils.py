@@ -1,7 +1,13 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
-import os 
+import os
+
+from numpy import short 
+import hashlib
+import base64 
+import random
+import string
 
 HOVER_COLOR = "#E4DED4"
 WIDGET_HOVER_COLOR = "#B84D29" #red
@@ -17,6 +23,21 @@ headerLabelStyleSheet = """
 
 standardFontSize = 12 
 standardFontFamily = "Helvetica"
+
+
+legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
+
+def getRandomString(N = 20):
+    ""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=N))
+
+def getHashedUrl(url):
+    ""
+    hash = hashlib.md5(url.encode()) # get the hash for the url
+    hash = hash.replace('=','').replace('/','_')  # some cleaning
+    shortUrl = base64.b64encode(hash)
+    
+    return shortUrl
 
 def copyAttributes(obj2, obj1, attr_list):
     for i_attribute  in attr_list:
@@ -36,10 +57,10 @@ def getExtraLightFont(fontSize=12,font="Helvetica"):
     ""
     if isWindows():
         fontSize -= 2
-    font = getStandardFont(fontSize,font)
-    font.setLetterSpacing(QFont.AbsoluteSpacing, 3)
-    font.setWeight(QFont.ExtraLight)
-    return font
+    QFontObject = getStandardFont(fontSize,font)
+    QFontObject.setLetterSpacing(QFont.AbsoluteSpacing, 3)
+    QFontObject.setWeight(QFont.ExtraLight)
+    return QFontObject
 
 def getStandardFont(fontSize = None, font=None):
     ""
@@ -81,15 +102,16 @@ def createTitleLabel(text, fontSize = 18, colorString = "#4F6571"):
     w.setStyleSheet("QLabel {color : "+colorString+"; }")
     return w
 
-def createLineEdit(plateHolderText="",tooltipText="",*args,**kwargs):
+def createLineEdit(placeHolderText="",tooltipText="",*args,**kwargs):
     """
     Creates Line Edit using the standard font.
     Additional args and kwargs will be forwarded to QLineEdit
     """
     w = QLineEdit(*args,**kwargs)
-    w.setPlaceholderText(plateHolderText)
+    w.setPlaceholderText(placeHolderText)
     w.setToolTip(tooltipText)
     w.setFont(getStandardFont())
+    w.setStyleSheet("padding-top: 2px; padding-bottom: 2px")
     return w
 
 def getMessageProps(title,message):

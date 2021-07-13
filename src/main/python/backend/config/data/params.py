@@ -33,7 +33,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.5,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "GUI Settings",
+    "parentType"    :   "Graphical User Interface",
     "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
     },
     {
@@ -42,7 +42,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["Helvetica"],
     "parent"        :   "intern",
-    "parentType"    :   "GUI Settings",
+    "parentType"    :   "Graphical User Interface",
     "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
     },
 
@@ -52,7 +52,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   encodingsCommonInPython,
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Encoding used to read files."
     },
     {
@@ -61,7 +61,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Number of rows to skip"
     }, 
     {
@@ -70,7 +70,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   commonSepartor,
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Separator to find columns in file."
     },
     {
@@ -79,7 +79,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   decimalForFloats,
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Decimal in numbers."
     },
     {
@@ -88,7 +88,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   thoursandsString,
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "None if no thousands separator is present."
     },
     {
@@ -97,7 +97,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Additional na values. If you want to provide multiple value separate them by a semicolon ';'."
     },
 
@@ -108,7 +108,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Load File Settings",
+    "parentType"    :   "Load File",
     "description"   :   "Missing categories will be replaced by this string."
     }, 
     {
@@ -117,7 +117,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Data Settings",
+    "parentType"    :   "Data",
     "description"   :   "If True, viewing the data will use clipping if QuickSelect widgets."
     },
     {
@@ -126,7 +126,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Data Settings",
+    "parentType"    :   "Data",
     "description"   :   "If True, when subsetting data using the QuickFilter Icon (top-left) the given nanString ('-' by default) will be ignored. If False, it will not be ignored."
     },
     {
@@ -135,7 +135,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["or","and"],
     "parent"        :   "intern",
-    "parentType"    :   "Data Settings",
+    "parentType"    :   "Data",
     "description"   :   "Subsetting using useful shortcuts is avaible for categorical columns using the context menu.\nThe operator is used when multiple columns are selected."
     },
     {
@@ -144,7 +144,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Data Settings",
+    "parentType"    :   "Data",
     "description"   :   "Split string to be used when the explode function is applied."
     },
     {
@@ -153,7 +153,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Default color palette used for plots."
     },
     {
@@ -162,7 +162,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "Arrow color.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -172,7 +172,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   arrowOptions,
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "Style of arrow used to annotate scatter plots."
     },
     {
@@ -181,7 +181,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "Font size of annotations."
     },
     {
@@ -190,7 +190,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["monospace","serif","sans-serif","Arial"],
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "Font size of annotations."
     },
     {
@@ -199,7 +199,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["tab","new line","_",";"],
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "How to handle multi line annotations."
     },
     {
@@ -208,7 +208,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Annotation Settings",
+    "parentType"    :   "Annotation",
     "description"   :   "If enabled, annotations will be made in all active scatter plots."
     },
     {
@@ -217,7 +217,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Default color palette used for two color plots such as heatmaps."
     },
     {
@@ -226,7 +226,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Default color palette used for size color maps in heatmaps."
     },
     {
@@ -235,7 +235,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Default color palette used to label selections in Quick Select widget."
     },
     {
@@ -244,7 +244,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Sets alpha of scatter markers."
     },
     {
@@ -253,7 +253,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Sets desaturation of colors."
     },
     {
@@ -262,7 +262,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "colorManager",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Color for nanValues, '-' or custom nanString in plots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -272,7 +272,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Color Settings",
+    "parentType"    :   "Color",
     "description"   :   "Background color for title boxes.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -282,7 +282,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "data",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Sets the default string to replace missing objects in categorical column.\nThis string will also be used when a categorical filtering is applied.",
     },
     {
@@ -291,7 +291,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "categoricalFilter",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Sets the default splitString to find categories in filters.",
     },
     {
@@ -300,7 +300,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "categoricalFilter",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Sets the default minimum string length before the data view is updated.",
     },
     {
@@ -309,7 +309,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["and","or"],
     "parent"        :   "numericFilter",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Sets the default operator for numeric filtering.",
     },
     {
@@ -318,7 +318,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Leading string for column names created by numerical filtering.",
     },
     {
@@ -327,7 +327,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Filter Settings",
+    "parentType"    :   "Filter",
     "description"   :   "Leading string for subsets created by numerical filtering.",
     },
     {
@@ -336,7 +336,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets the background of plot axes.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -346,7 +346,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Enable/disable axis grid.",
     },
     {
@@ -355,7 +355,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["x", "y", "both"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Enable/disable axis grid for specific axis.",
     },
     {
@@ -364,7 +364,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["major", "minor", "both"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Which axis grid lines should be drawn.",
     },
     {
@@ -373,7 +373,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of x- and y-axis labels.",
     },
     {
@@ -382,7 +382,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size axis title labels.",
     },
     {
@@ -391,7 +391,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of x- and y-axis labels.",
     },
     {
@@ -400,7 +400,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [72,800],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets the dpi for png exports.",
     },
     {
@@ -409,7 +409,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of xtick labels.",
     },
     {
@@ -418,7 +418,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of ytick labels.",
     },
     {
@@ -427,7 +427,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["in","out"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of xtick labels.",
     },
     {
@@ -436,7 +436,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["in","out"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets font size of ytick labels.",
     },
     {
@@ -445,7 +445,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets length of xticks.",
     },
     {
@@ -454,7 +454,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets length of yticks.",
     },
     {
@@ -463,7 +463,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets padding of xticks.",
     },
     {
@@ -472,7 +472,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Sets padding of yticks.",
     },
     {
@@ -481,7 +481,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Enable/disable minor ticks on y axis.",
     },
     {
@@ -490,7 +490,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Enable/disable minor ticks on x axis.",
     },   
     {
@@ -499,7 +499,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "Legend font size for legends.",
     },
     {
@@ -508,7 +508,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "Legend font size for main figure exports.",
     },
     {
@@ -517,7 +517,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "Legend font size for legends.",
     },
     {
@@ -526,7 +526,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "Legend font size for main figure exports.",
     },
     {
@@ -535,7 +535,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "Vertical Legend Spacing.",
     },
     {
@@ -544,7 +544,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Legend Settings",
+    "parentType"    :   "Legend",
     "description"   :   "The fractional whitespace inside the legend border. Measured in font-size units.",
     },
 
@@ -555,7 +555,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,42],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "Set fonttype for pdf exports.",
     },
     {
@@ -564,7 +564,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Show outliers in boxplots.",
     },
     {
@@ -573,7 +573,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Splits data based on values in the receiver box 'Categories'.\nIf disabled. the whole dataset will be plotted against the category setups, without splitting before.",
     },
     {
@@ -582,7 +582,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.05,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Linewidth of outliers in boxplots.",
     },
     {
@@ -591,7 +591,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Edge marker color for outliers in boxplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     }, 
@@ -601,7 +601,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Edge marker color for outliers in boxplots.",
     }, 
     {
@@ -610,7 +610,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Edge marker color for outliers in boxplots.",
     },
     {
@@ -619,7 +619,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Whiskers in boxplots (n * IQR). Effects outliers.",
     },
     {
@@ -628,7 +628,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Line style of whiskers in boxplots.",
     },
     {
@@ -637,7 +637,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["-",".","--","-."],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Line style of whiskers in boxplots.",
     },
     {
@@ -646,7 +646,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.05,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Linewidth of whiskers in boxplots.",
     },
     {
@@ -655,7 +655,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Enable/disable caps on boxplot whiskers",
     },
      {
@@ -664,7 +664,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Color for median line in boxplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     }, 
@@ -674,7 +674,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Linewidth of median line in boxplots.",
     },
     {
@@ -683,7 +683,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Enable/disable mean for boxplots",
     },
     {
@@ -692,7 +692,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Marker for mean in boxplots.",
     },
     {
@@ -701,7 +701,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Marker facecolor for mean in boxplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },  
@@ -711,7 +711,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Boxplot Settings",
+    "parentType"    :   "Boxplot",
     "description"   :   "Marker edgeecolor for mean in boxplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },  
@@ -721,7 +721,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "matplotlib",
-    "parentType"    :   "Patch Settings",
+    "parentType"    :   "Patch",
     "description"   :   "Linewidth of patches",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -731,7 +731,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.05, np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Patch Settings",
+    "parentType"    :   "Patch",
     "description"   :   "Linewidth of patches",
     },  
    {
@@ -740,7 +740,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True, False],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Patch Settings",
+    "parentType"    :   "Patch",
     "description"   :   "Force patches such as barplots to draw edgecolors.",
     }, 
     {
@@ -749,7 +749,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "matplotlib",
-    "parentType"    :   "Matplotlib Settings",
+    "parentType"    :   "Matplotlib",
     "description"   :   "With of errorbars in barplots / pointplots.",
     },   
     {
@@ -758,7 +758,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["mean","sum"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Aggregation method for multiple numeric columns encoded as color/size.",
     },
     {
@@ -767,7 +767,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Default size of scatter points in pixel.",
     },
     {
@@ -776,7 +776,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Maximal size of scatter points in pixel when a value is encoded by size.",
     },
     {
@@ -785,7 +785,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Minimal size of scatter points in pixel when a value is encoded by size.",
     },
     {
@@ -794,7 +794,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["None","log2","ln","log10"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Transform numeric values before encoding them as size. Helpful if the range is huge (e.g. > E05).",
     },
     {
@@ -803,7 +803,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Edgecolors of scatter points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -813,7 +813,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Marker facecolor for hover scatter points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -823,7 +823,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Line width of edges of scatter points.",
     },
     {
@@ -832,7 +832,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "Marker for scatter plot. (, equals pixel).",
     },
     {
@@ -841,7 +841,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "If true, all scatter plots will have equal axis limits.",
     },
     {
@@ -850,7 +850,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "If enabled, plots data of each numeric columna against its sorted index.",
     },
     {
@@ -859,8 +859,224 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["ascending","descending"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Scatter Settings",
+    "parentType"    :   "Scatter",
     "description"   :   "If enabled, plots data of each numeric columna against its sorted index.",
+    },
+    {
+    "name"          :   "multi.scatter.interactive",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   ["mean","sum"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enable/Disable interactivity (hover points) for scatter plots. Might be useful for many columns.",
+    },
+    {
+    "name"          :   "multi.scatter.top.right.type",
+    "value"         :   "scatter",
+    "dtype"         :   str,
+    "range"         :   ["scatter","2D-Histogram"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Plot type of the top-right part of the plot.",
+    },
+    {
+    "name"          :   "multi.scatter.bottom.left.type",
+    "value"         :   "scatter",
+    "dtype"         :   str,
+    "range"         :   ["scatter","2D-Histogram"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Plot type of the bottom-left part of the plot.",
+    },
+    {
+    "name"          :   "multi.scatter.diag.type",
+    "value"         :   "kde",
+    "dtype"         :   str,
+    "range"         :   ["label-kde","kde","label"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Plot type of the diagonal of the plot.",
+    },
+    {
+    "name"          :   "multi.scatter.sort.columns.by",
+    "value"         :   "None",
+    "dtype"         :   str,
+    "range"         :   ["None","Grouping","Hierarch. Clustering"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Sorting of the columns. None means no sorting at all (in order of the columns in the reciever box). Grouping indicates that columns are sorted according to the currently selected grouping (if any). Hierarch. Clustering will order the columns accordingly to the clustering results (similiar to the corrmatrix - uses the same settings!)",
+    },
+    {
+    "name"          :   "multi.scatter.add.linregress",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enables/disables linear regression for scatter plots.",
+    },
+    {
+    "name"          :   "multi.scatter.add.lowess",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enables/disables lowess line for scatter plots. For many data points this can take quite some time.",
+    },
+    {
+    "name"          :   "multi.scatter.lowess.it",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "The number of residual-based reweightings to perform.",
+    },
+    {
+    "name"          :   "multi.scatter.lowess.delta",
+    "value"         :   4,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Distance within which to use linear-interpolation instead of weighted regression.",
+    },
+    {
+    "name"          :   "multi.scatter.add.pearson",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enables/disables the addition of the pearson correlation coefficient.",
+    },
+    {
+    "name"          :   "multi.scatter.background.by.pearson",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "If enabled, the background of scatter plots is colored according to the correlation coefficient.",
+    },
+    {
+    "name"          :   "multi.scatter.background.colormap",
+    "value"         :   "Reds",
+    "dtype"         :   str,
+    "range"         :   colorParameterRange,
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Colormap to be used to indicate correlation by background color.",
+    },
+    {
+    "name"          :   "multi.scatter.background.colorScale",
+    "value"         :   "dataMinMax",
+    "dtype"         :   str,
+    "range"         :   ["dataMinMax","0,1","-1,1"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Colormap to be used to indicate correlation by background color.",
+    },
+    {
+    "name"          :   "multi.scatter.add.spearman",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enables/disables the addition of the spearman correlation coefficient.",
+    },
+    {
+    "name"          :   "multi.scatter.add.corr.coeff.to",
+    "value"         :   "all types",
+    "dtype"         :   str,
+    "range"         :   ["all types","scatter","2D-Histogram"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Select plot type to which the correlation coefficient(s) should be added.",
+    },
+    {
+    "name"          :   "multi.scatter.2D.histogram.cmap",
+    "value"         :   "Blues",
+    "dtype"         :   str,
+    "range"         :   colorParameterRange,
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Colormap of the 2D histograms.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.kernel",
+    "value"         :   "gaussian",
+    "dtype"         :   str,
+    "range"         :   ["gaussian", "tophat", "epanechnikov", "exponential", "linear", "cosine"],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Kernal used for kde.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.bandwidth",
+    "value"         :   1.0,
+    "dtype"         :   float,
+    "range"         :   [0.0000001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "bandwidth used for kde.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.grid.search",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Enable/disable grid search. If enabled, the bandwidth setting is ignored.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.grid.search.min",
+    "value"         :   0.05,
+    "dtype"         :   float,
+    "range"         :   [1e-15,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Min value for grid search to determine bandwidth.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.grid.search.max",
+    "value"         :   5,
+    "dtype"         :   float,
+    "range"         :   [1e-15,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Max value for grid search to determine bandwidth.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.grid.n.cross.val",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "Number of cross validations to find best value for bandwidth.",
+    },
+    {
+    "name"          :   "multi.scatter.kde.log.density",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "If enabled, the log density is visualized.",
+    },
+    {
+    "name"          :   "multi.scatter.lowess.frac",
+    "value"         :   0.66,
+    "dtype"         :   float,
+    "range"         :   [0,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Multi Scatter",
+    "description"   :   "The fraction of the data used when estimating each y-value.",
     },
     {
     "name"          :   "selectionRectangleSize",
@@ -868,7 +1084,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.0,0.5],
     "parent"        :   "intern",
-    "parentType"    :   "Select Settings",
+    "parentType"    :   "Select",
     "description"   :   "Size of rectangle. Given in fraction of axis limits. 0 equals to single point selection.",
     },
     {
@@ -877,7 +1093,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Hover/Tooltip Settings",
+    "parentType"    :   "Hover/Tooltip",
     "description"   :   "Facecolor of inactive (mouse not over) artists/items while hovering.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -887,7 +1103,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "statCenter",
-    "parentType"    :   "Correlation Settings",
+    "parentType"    :   "Correlation",
     "description"   :   "Absolute cutoff to filter row correlation matrix.\nSet 0 to disable filtering (NaN will be removed).",
     },
     {
@@ -896,25 +1112,25 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["pearson","kendall","spearman"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Correlation Settings",
+    "parentType"    :   "Correlation",
     "description"   :   "Method to calculate correlation matrix.",
     },
     {
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["euclidean","nanEuclidean","correlation","None"],
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
     "name"          :   "columnMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["euclidean","nanEuclidean","correlation","None"],
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define metric used for column dendrogram. If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -923,7 +1139,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Data with nan might be clustered using the nanEuclidean distance metric. This parameter defines the minimum number of valid values that must exist.",
     },
     {
@@ -932,7 +1148,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define method used for row dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -941,7 +1157,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -950,7 +1166,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
     },
     {
@@ -959,7 +1175,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["raw values","center 0","min = -1, max = 1","custom"],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Method how to calculate color map limits.",
     },
         {
@@ -968,7 +1184,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Enabled if colorMapLimits is set to custom. Minimal value.",
     },
     {
@@ -977,7 +1193,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Enabled if colorMapLimits is set to custom. Maximal value.",
     },
     {
@@ -986,7 +1202,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["pearson","kendall","spearman"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Method how to calculate color map limits.",
     },
     {
@@ -995,7 +1211,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "If less than given value of rows are visible in cluster, label will be added to the top right axis.",
     },
     {
@@ -1004,7 +1220,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "If less than given value of rows are visible in cluster. Lines will be drawn around rectangles.",
     },
     {
@@ -1013,26 +1229,8 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
-    },
-    {
-    "name"          :   "corrmatrix.plot.type.upper.right",
-    "value"         :   "heatmap",
-    "dtype"         :   str,
-    "range"         :   ["heatmap","scatter"],
-    "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
-    "description"   :   "Plot type for correlation matirx. If set to heatmap a common correlation matrix will be plotted. If set to scatter a multi-scatter plot will be displayed.",
-    },
-    {
-    "name"          :   "corrmatrix.plot.type.bottom.left",
-    "value"         :   "heatmap",
-    "dtype"         :   str,
-    "range"         :   ["heatmap","scatter"],
-    "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
-    "description"   :   "Plot type for correlation matirx. If set to heatmap a common correlation matrix will be plotted. If set to scatter a multi-scatter plot will be displayed.",
     },
     {
     "name"          :   "add.column.names.in.emb.name",
@@ -1040,7 +1238,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "If enable, adds the used column names in the name for the embedding."
     },    
     {
@@ -1049,7 +1247,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Dimension of the embedded space."
     },
     {
@@ -1058,7 +1256,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """The perplexity is related to the number of nearest neighbors that 
                            is used in other manifold learning algorithms. Larger datasets usually 
                            require a larger perplexity. Consider selecting a value between 5 and 50. 
@@ -1070,7 +1268,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """Controls how tight natural clusters in the original space are
                            in the embedded space and how much space will be between them. 
                            For larger values, the space between natural clusters will be 
@@ -1086,7 +1284,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "statCenter",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """This determines the number of neighboring points used in local 
                             approximations of manifold structure. Larger values will result 
                             in more global structure being preserved at the loss of detailed 
@@ -1099,7 +1297,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,0.5],
     "parent"        :   "statcenter",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """This controls how tightly the embedding is allowed compress points together. 
                         Larger values ensure embedded points are more evenly distributed, 
                         while smaller values allow the algorithm to optimise more accurately with regard to local structure. 
@@ -1111,7 +1309,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["euclidean","correlation","seuclidean","manhattan","cityblock","braycurtis","cosine","dice","jaccard"],
     "parent"        :   "statcenter",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """This controls how tightly the embedding is allowed compress points together. 
                         Larger values ensure embedded points are more evenly distributed, 
                         while smaller values allow the algorithm to optimise more accurately with regard to local structure. 
@@ -1123,7 +1321,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "statcenter",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """The dimension of the space to embed into. This defaults to 2 to
                         provide easy visualization, but can reasonably be set to any
                         integer value in the range 2 to 100."""
@@ -1134,7 +1332,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """The dimension of the space to embed into. This defaults to 2 to
                         provide easy visualization, but can reasonably be set to any
                         integer value in the range 2 to 100."""
@@ -1145,7 +1343,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "If enabled, the mean is subtracted to scale data."
     },
     {
@@ -1154,7 +1352,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "If enabled, selected columns for PCA are annotated by the grouping. Otherwise test all exisiting groupings if columnNames overlap."
     },
     {
@@ -1163,7 +1361,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "The dimension of the projected subspace."
     },
     {
@@ -1172,7 +1370,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["nearest_neighbors","rbf"],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "The dimension of the projected subspace."
     },
 
@@ -1182,7 +1380,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Number of dimensions in which to immerse the dissimilarities."
     },
     {
@@ -1191,7 +1389,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "If True, perform metric MDS; otherwise, perform nonmetric MDS."
     },
     {
@@ -1200,7 +1398,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Number of neighbors to consider for each point."
     },
     {
@@ -1209,7 +1407,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Number of coordinates for the manifold."
     },
     {
@@ -1218,7 +1416,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["auto", "FW", "D"],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   """
                         ‘auto’ : attempt to choose the best algorithm automatically. 
                         ‘FW’ : Floyd-Warshall algorithm.
@@ -1231,7 +1429,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Number of coordinates for the manifold."
     },
     {
@@ -1240,7 +1438,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Number of neighbors to consider for each point."
     }, 
     {
@@ -1249,7 +1447,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["standard","hessian","modified","ltsa"],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Method for locally linear embedding algorithm."
     },
     {
@@ -1258,7 +1456,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["auto", "brute", "kd_tree", "ball_tree"],
     "parent"        :   "intern",
-    "parentType"    :   "Dimensional Reduction Settings",
+    "parentType"    :   "Dimensional Reduction",
     "description"   :   "Algorithm to use for nearest neighbors search, passed to neighbors."
     },
 
@@ -1268,7 +1466,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Colormap for cluster rectangles."
     }, 
     {
@@ -1277,7 +1475,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust) Settings",
+    "parentType"    :   "Cluster (HClust)",
     "description"   :   "Colormap for color labeling."
     }, 
    
@@ -1287,7 +1485,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["mean","median"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Barplot Settings",
+    "parentType"    :   "Barplot",
     "description"   :   "Metric to calculate bar heights."
     }, 
     {
@@ -1296,7 +1494,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["Std","CI (95%)", "CI (90%)", "CI (85%)","CI (75%)", "SEM-CI (68%)"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Barplot Settings",
+    "parentType"    :   "Barplot",
     "description"   :   "Error value in barplots."
     }, 
     {
@@ -1305,7 +1503,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "intern",
-    "parentType"    :   "Barplot Settings",
+    "parentType"    :   "Barplot",
     "description"   :   "Spacing between major elements measured by their width - e.g. 0.1 means that the border of a box is 0.1 its with. Bars separated by categorical column on x-axis consider the minor spacing."
     }, 
     {
@@ -1314,7 +1512,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "intern",
-    "parentType"    :   "Barplot Settings",
+    "parentType"    :   "Barplot",
     "description"   :   "Spacing between minor bars."
     }, 
     {
@@ -1323,7 +1521,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "data",
-    "parentType"    :   "General Settings",
+    "parentType"    :   "General",
     "description"   :   "Default Directory to save files/images to."
     }, 
     {
@@ -1332,7 +1530,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["split", "records", "index", "columns", "values", "table"],
     "parent"        :   "data",
-    "parentType"    :   "General Settings",
+    "parentType"    :   "General",
     "description"   :   "Default Directory to save files/images to."
     }, 
     {
@@ -1341,7 +1539,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "General Settings",
+    "parentType"    :   "General",
     "description"   :   "Perform transformation in place (no new columns created)"
     }, 
     
@@ -1351,7 +1549,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "grouping",
-    "parentType"    :   "Groups Settings",
+    "parentType"    :   "Groups",
     "description"   :   "Minimum required non-nan values in background to be called significant in target group."
     },
     {
@@ -1360,7 +1558,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   clusterMethodNames,
     "parent"        :   "intern",
-    "parentType"    :   "Clusterplot Settings",
+    "parentType"    :   "Clusterplot",
     "description"   :   "Algorithm used to detect cluster."
     }, 
     {
@@ -1369,7 +1567,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["boxplot","lineplot"],
     "parent"        :   "intern",
-    "parentType"    :   "Clusterplot Settings",
+    "parentType"    :   "Clusterplot",
     "description"   :   "Plot type how detected clusters are represented."
     }, 
     {
@@ -1378,7 +1576,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.001,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Clusterplot Settings",
+    "parentType"    :   "Clusterplot",
     "description"   :   "Line width of lineplots."
     }, 
     {
@@ -1387,7 +1585,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Clusterplot Settings",
+    "parentType"    :   "Clusterplot",
     "description"   :   "If lineplot is selected, color the lines accordingly to the distance to the cluster center (k-means, birch)."
     }, 
     {
@@ -1396,7 +1594,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Clusterplot Settings",
+    "parentType"    :   "Clusterplot",
     "description"   :   "Draw line to indicate cluster center (kmeans, birch)."
     }, 
     {
@@ -1405,7 +1603,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,1],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Transparency for area indicating the IQR (first and third quantile)."
     },  
     {
@@ -1414,7 +1612,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Linewidth for median in lineplots."
     }, 
     {
@@ -1423,7 +1621,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Marker for median line."
     }, 
     {
@@ -1432,7 +1630,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Marker linewidth for median in lineplots."
     }, 
      {
@@ -1441,7 +1639,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Linewidth for QuickSelect items in lineplots."
     }, 
     {
@@ -1450,7 +1648,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Marker for QuickSelect lines."
     }, 
     {
@@ -1459,7 +1657,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Lineplot Settings",
+    "parentType"    :   "Lineplot",
     "description"   :   "Marker linewidth for QuickSelect items in lineplots."
     }, 
     {
@@ -1468,7 +1666,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Number of bins to calculate for a histogram."
     }, 
     {
@@ -1477,7 +1675,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Enable/Disable cumulative histogram."
     }, 
     {
@@ -1486,7 +1684,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Enable/Disable density calculation insteat of frequency."
     }, 
     {
@@ -1495,7 +1693,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["bar", "barstacked", "step", "stepfilled"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Enable/Disable cumulative histogram."
     }, 
     {
@@ -1504,7 +1702,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Enable/Disable log transformation of values before histograms are calculated."
     }, 
     {
@@ -1513,7 +1711,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Linewidth if histtype == step."
     }, 
     {
@@ -1522,7 +1720,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram Settings",
+    "parentType"    :   "Histogram",
     "description"   :   "Enable/Disable sorting of categories on grouping."
     }, 
     {
@@ -1531,7 +1729,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Enable/Disable labeling of bars with counts."
     }, 
     {
@@ -1540,7 +1738,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["none","log2","log10","ln"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Transforms counts for visualization. Labels will show real counts."
     },
     {
@@ -1549,7 +1747,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Colormap used to indicate groups for each caategorical column.."
     },
     
@@ -1559,7 +1757,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Marker symbol for countplots."
     }, 
     {
@@ -1568,7 +1766,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Marker symbol size for countplots."
     }, 
     {
@@ -1577,7 +1775,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Marker symbol facecolor for countplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     }, 
@@ -1587,7 +1785,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Marker symbol edgecolor for countplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     }, 
@@ -1597,7 +1795,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["-",".","--","-."],
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Line style for group indicators countplots."
     }, 
     {
@@ -1606,7 +1804,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Line width for group indicators countplots."
     },
     {
@@ -1615,7 +1813,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Countplot Settings",
+    "parentType"    :   "Countplot",
     "description"   :   "Linecolor for group indicator in countplots.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     }, 
@@ -1625,7 +1823,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [False,True],
     "parent"        :   "intern",
-    "parentType"    :   "Normalization Settings",
+    "parentType"    :   "Normalization",
     "description"   :   "Quantile normalization. Enable/disable scaling of data to unit variance",
     }, 
     {
@@ -1634,7 +1832,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [False,True],
     "parent"        :   "intern",
-    "parentType"    :   "Normalization Settings",
+    "parentType"    :   "Normalization",
     "description"   :   "Quantile normalization. Enable/disable centering of data before scaling.",
     }, 
     {
@@ -1643,7 +1841,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Outlier Settings",
+    "parentType"    :   "Outlier",
     "description"   :   "Removes outlies by calculating the inter qunatile range and multiply with this factor..",
     }, 
     {
@@ -1652,7 +1850,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Outlier Settings",
+    "parentType"    :   "Outlier",
     "description"   :   "If enabled, results with removed outliers (set to NaN) will be copied and concatenated. Otherwise data will just be replaced.",
     }, 
     {
@@ -1661,7 +1859,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (K-Means) Settings",
+    "parentType"    :   "Cluster (K-Means)",
     "description"   :   "If enabled, reports the new space, each dimension is the distance to the cluster centers..",
     }, 
     {
@@ -1670,7 +1868,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (K-Means) Settings",
+    "parentType"    :   "Cluster (K-Means)",
     "description"   :   "Number of clusters. Will be used by the cluster plot.",
     }, 
     {
@@ -1679,7 +1877,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "If enabled, feature selection will create a new subset of the data.",
     }, 
     {
@@ -1688,7 +1886,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.00000001,1],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "Alpha for False positive and false discovery rate calculations for the ANOVA result.",
     }, 
     {
@@ -1697,7 +1895,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "Number of features selected by model (SVM, random forest).",
     }, 
     {
@@ -1706,7 +1904,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "If enabled, scales data before selection by model. (Z-score)",
     }, 
     {
@@ -1715,7 +1913,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.0000001,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive. The penalty is a squared l2 penalty. (from sklearn website)",
     }, 
     {
@@ -1724,7 +1922,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [10,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "The number of trees in the forest.",
     }, 
     {
@@ -1733,7 +1931,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "The minimum number of samples required to split an internal node.",
     }, 
     {
@@ -1742,7 +1940,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "Features with a training-set variance lower than this threshold will be removed.",
     }, 
     {
@@ -1751,7 +1949,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "Number of cross validations performed.",
     }, 
     {
@@ -1760,7 +1958,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Feature Selection Settings",
+    "parentType"    :   "Feature Selection",
     "description"   :   "The minimum number of features to be selected.",
     }, 
     {
@@ -1769,7 +1967,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HDBSCAN) Settings",
+    "parentType"    :   "Cluster (HDBSCAN)",
     "description"   :   "The minimum cluster size.",
     }, 
     {
@@ -1778,7 +1976,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HDBSCAN) Settings",
+    "parentType"    :   "Cluster (HDBSCAN)",
     "description"   :   "The larger the value of min_samples you provide, the more conservative the clustering – more points will be declared as noise, and clusters will be restricted to progressively more dense areas.",
     }, 
     {
@@ -1787,7 +1985,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HDBSCAN) Settings",
+    "parentType"    :   "Cluster (HDBSCAN)",
     "description"   :   "Selecting a value for cluster_selection_epsilon helps us to merge clusters in these regions. Or in other words, it ensures that clusters below the given threshold are not split up any further.",
     }, 
     {
@@ -1796,7 +1994,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","+","s",".","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Add Swarm Settings",
+    "parentType"    :   "Add Swarm",
     "description"   :   "Marker for swarms that are added to charts (boxplot, barplot, violinplot)."
     }, 
     {
@@ -1805,7 +2003,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [1.0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Add Swarm Settings",
+    "parentType"    :   "Add Swarm",
     "description"   :   "Size of swarms that are added to charts (boxplot, barplot, violinplot). The default swarm size (no addition) is set by the parameter scatterSize (Scatter Settings).",
     }, 
     {
@@ -1814,7 +2012,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Add Swarm Settings",
+    "parentType"    :   "Add Swarm",
     "description"   :   "Facecolor of swarm scatter points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -1824,7 +2022,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.0001,1],
     "parent"        :   "intern",
-    "parentType"    :   "Add Swarm Settings",
+    "parentType"    :   "Add Swarm",
     "description"   :   "Transparancy of swarms that are added to charts (boxplot, barplot, violinplot).",
     },
     {
@@ -1833,7 +2031,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Pointplot Settings",
+    "parentType"    :   "Pointplot",
     "description"   :   "If x axis category can be transformed to numeric values using the split param (below), then scale the x axis ticks correctly.",
     },
     {
@@ -1842,7 +2040,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Pointplot Settings",
+    "parentType"    :   "Pointplot",
     "description"   :   "String used to extract numeric data from categories.",
     },
     {
@@ -1851,7 +2049,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Pointplot Settings",
+    "parentType"    :   "Pointplot",
     "description"   :   "Split index to find numeric values. Example '5_min' - using split string '_' and index 0 will yield 5",
     },
     {
@@ -1860,7 +2058,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Main Figure Settings",
+    "parentType"    :   "Main Figure",
     "description"   :   "Enable/Disable scaling if scatter point sizes by calculating the ratio between axes (main vs export).",
     },
     {
@@ -1869,7 +2067,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "QuickSelect Settings",
+    "parentType"    :   "QuickSelect",
     "description"   :   "Default separator used to identify unique categories.",
     },
         {
@@ -1878,7 +2076,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "QuickSelect Settings",
+    "parentType"    :   "QuickSelect",
     "description"   :   "Upon loading saved selected lists and/or pasting a list of strings, quick select items are compare with or without case sensititivy.",
     },
     {
@@ -1887,7 +2085,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, numeric pairs are separeted into differen axis.",
     },
     {
@@ -1896,7 +2094,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, data will be plotted against the index. If this option is enabled, it overwrites the single.x option below.",
     },
     {
@@ -1905,7 +2103,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, the first column is used as a common x axis. If disabled, eevery second column will be considered as a x-axis.",
     },
     {
@@ -1914,7 +2112,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, each data point (row) is indicated by a marker.",
     },
     {
@@ -1923,7 +2121,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, plot plots vertical lines at each x location from the baseline to y, and places a marker there.",
     },
     {
@@ -1932,7 +2130,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "Baseline location in stemplot.",
     },
     {
@@ -1941,7 +2139,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","P","s","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, each data point (row) is indicated by a marker.",
     },
     {
@@ -1950,7 +2148,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "Marker size.",
     },
     {
@@ -1959,7 +2157,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "Stroke width of markers.",
     },
     {
@@ -1968,7 +2166,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["solid","dashed","dotted","dashdot","dashed","densely dotted","dashdotdotted"],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "If enabled, each data point (row) is indicated by a marker.",
     },
     {
@@ -1977,7 +2175,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "Linewidth in XY plots.",
     },
     {
@@ -1986,7 +2184,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,1],
     "parent"        :   "intern",
-    "parentType"    :   "XYPlot Settings",
+    "parentType"    :   "XYPlot",
     "description"   :   "Transparancy of xy plot items.",
     },
     {
@@ -1995,7 +2193,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "If true, it is assumed that you provided numeric columns for (mean,CI_lower,CI_upper).",
     },
     {
@@ -2004,7 +2202,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Size of forestplot marker.",
     },
     {
@@ -2013,7 +2211,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "If true, the circles of the mean will be colored using the currently selected colormap. If false the color given by forest.plot.marker.color is used.",
     },
     {
@@ -2022,7 +2220,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot marker points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -2032,7 +2230,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","P","s","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Marker type in forest plots.",
     },
     {
@@ -2041,7 +2239,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot marker points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -2051,7 +2249,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Linewidth of forestplot lines.",
     },
     {
@@ -2060,7 +2258,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot lower boundmarker points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -2070,7 +2268,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot upper boundmarker points.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -2080,7 +2278,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["o","P","s","<",">","^","v",",","h"],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Marker type in forest plots.",
     },
     {
@@ -2089,7 +2287,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Add a vertical line at x-value one.",
     },
     {
@@ -2098,7 +2296,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["oddsRatio","riskRatio","logOddsRatio"],
     "parent"        :   "intern",
-    "parentType"    :   "Forestplot Settings",
+    "parentType"    :   "Forestplot",
     "description"   :   "Ratio to plot in the forest plot.",
     },
     {
@@ -2107,7 +2305,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "If enabled, frequencies are determined by using each row as a unique value. You can split categories based on a string (set split string, for GOTerms for example to ';'."
     },
     {
@@ -2116,7 +2314,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "If categories_to_frequencies is enabled, unique values are found by splitting row strings by this string."
     },
     {
@@ -2125,7 +2323,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Minimal font size used.",
     },
     {
@@ -2134,7 +2332,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Maximal font size used.",
     },
     {
@@ -2143,7 +2341,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Maximal number of words.",
     },
     {
@@ -2152,7 +2350,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "regExMatch",
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Background color of word cloud.",
     "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
     },
@@ -2162,7 +2360,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Whether to remove trailing 's' from words. Ignore if generate_from_frequencies is True."
     },
     {
@@ -2171,7 +2369,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "WordCloud Settings",
+    "parentType"    :   "WordCloud",
     "description"   :   "Whether to include numbers as phrases or not. Ignore if generate_from_frequencies is True."
     },
     {
@@ -2180,7 +2378,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   MTMethods,
     "parent"        :   "intern",
-    "parentType"    :   "Multiple Testing Correction Settings",
+    "parentType"    :   "Multiple Testing Correction",
     "description"   :   "Default method for multiple testing correction."
     },
     {
@@ -2189,7 +2387,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Multiple Testing Correction Settings",
+    "parentType"    :   "Multiple Testing Correction",
     "description"   :   "If True, categorical column will be added indicating by '+' if hypothesis can be rejected for given alpha."
     },
     {
@@ -2198,7 +2396,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0,1],
     "parent"        :   "intern",
-    "parentType"    :   "Multiple Testing Correction Settings",
+    "parentType"    :   "Multiple Testing Correction",
     "description"   :   "FWER, family-wise error rate."
     },
     ]

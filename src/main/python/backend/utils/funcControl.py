@@ -21,7 +21,13 @@ addDataAndRefresh = [
 #
 funcPropControl = {
     
-    "addDataFrame":
+    "addDataFrame": #will be removed soon.
+        {
+            "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
+            "completedRequest": 
+                            addDataAndRefresh
+        },
+    "data::addDataFrame":
         {
             "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
             "completedRequest": 
@@ -127,6 +133,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"renameColumns","requiredKwargs":["dataID","columnNameMapper"]},
             "completedRequest":[
+                {"obj":"self","fn":"updateGroupingsByColumnNameMapper","objName":"grouping","requiredKwargs":["columnNameMapper"]},
                 updateTreeView,
                 {"obj":"self","fn":"renameColumns","objKey":"middle","objName":"mainFrames","requiredKwargs":["columnNameMapper"]},
                 sendMessageProps]   
@@ -151,14 +158,17 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"factorizeColumns","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":refreshColumnView
         },
-        
+    "data::filterDataByVariance":
+        {
+            "threadRequest":{"obj":"data","fn":"filterDataByVariance","requiredKwargs":["dataID","columnNames","varThresh"]},
+            "completedRequest":addDataAndRefresh
+        },
     
     "data::setClippingMask":
         {
             "threadRequest":{"obj":"data","fn":"setClippingByFilter","requiredKwargs":["dataID","filterProps","checkedLabels","columnName"]},
             "completedRequest":[
                 {"obj":"self","fn":"setMask","objKey":"middle","objName":"mainFrames","requiredKwargs":["maskIndex"]},
-                {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]},
                 sendMessageProps]   
         },
     "data::resetClipping":
@@ -295,7 +305,10 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"removeNaN","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":
-                    [sendMessageProps]
+                    [
+                    {"obj":"grouping","fn":"checkGroupsForExistingColumnNames","requiredKwargs":["columnNames"]},
+                    updateTreeView,
+                    sendMessageProps]
         },
     "data::rowWiseCalculations":
         {
@@ -310,6 +323,21 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView
         },
+     "data::correlateDataFrames":
+        {
+            "threadRequest":{"obj":"data","fn":"correlateDfs","requiredKwargs":[]},
+            "completedRequest":
+                    addDataAndRefresh
+        },   
+
+
+     "data::correlateFeaturesOfDataFrames":
+        {
+            "threadRequest":{"obj":"data","fn":"correlateFeaturesDfs","requiredKwargs":[]},
+            "completedRequest":
+                    addDataAndRefresh
+        },  
+        
      "data::mergeDataFrames":
         {
             "threadRequest":{"obj":"data","fn":"mergeDfs","requiredKwargs":["mergeParams"]},
@@ -368,6 +396,14 @@ funcPropControl = {
                 [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
                 sendMessageProps]
         },
+
+    "data::replaceNaNByGroupMean":
+        {
+            "threadRequest":{"obj":"data","fn":"fillNaNByGroupMean","requiredKwargs":["dataID"]},
+            "completedRequest":
+                refreshColumnView
+        },
+
 
     "data::replaceGroupOutlierWithNaN":
         {
@@ -478,6 +514,20 @@ funcPropControl = {
                     
         },
 
+    "data::removeDuplicates":
+        {
+            "threadRequest":{"obj":"data","fn":"removeDuplicates","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest": addDataAndRefresh      
+        },
+    
+    "normalizer::normalizeGroupMedian":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeGroupMedian","requiredKwargs":["dataID","normKey"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
     "normalizer::normalizeData":
         {
             "threadRequest":{"obj":"normalizer","fn":"normalizeData","requiredKwargs":["dataID","columnNames","normKey"]},
@@ -493,6 +543,13 @@ funcPropControl = {
                 updateTreeView,
                 sendMessageProps]       
         },
+    "dimReduction::LDA":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runLDA","requiredKwargs":["dataID","groupingName"]},
+            "completedRequest":
+                addDataAndRefresh
+        },
+
     "dimReduction::TSNE":
         {
             "threadRequest":{"obj":"statCenter","fn":"runTSNE","requiredKwargs":["dataID","columnNames"]},
@@ -540,6 +597,12 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView          
         },
+    "stats::runCombat": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runBatchCorrection","requiredKwargs":["dataID", "groupingName","grouping"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },
     
 
         
@@ -565,6 +628,8 @@ funcPropControl = {
                 sendMessageProps
             ]           
         },  
+
+    
     "plotter:addLowessFit": 
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getLowessLine","requiredKwargs":["dataID","numericColumnPairs"]},
@@ -613,6 +678,18 @@ funcPropControl = {
                 sendMessageProps
             ]           
         },
+    "plotter:getNearestNeighbors": 
+        {
+            "threadRequest":{"obj":"plotterBrain","fn":"getNearestNeighborConnections","requiredKwargs":["dataID","numericColumnPairs"]},
+            "completedRequest":[
+                {"obj":"self","fn":"addLineCollections","objKey":"middle","objName":"mainFrames","requiredKwargs":["lineCollections"]},
+                {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]},
+                sendMessageProps
+            ]           
+        },
+
+
+        
 
     "plotter:getScatterMarkerGroups":
         {

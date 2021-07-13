@@ -280,7 +280,6 @@ class DataHandleFrame(QFrame):
         for filePath in files:
             if os.path.exists(filePath):
                 fileName = removeFileExtension(Path(filePath).name)
-                print(fileName)
                 self.mC.config.setParam("WorkingDirectory",os.path.dirname(filePath))
                 funcProps = dict()
                 funcProps["key"] = "data::addDataFrameFromTxtFile"
@@ -344,15 +343,15 @@ class DataHandleFrame(QFrame):
             warn  = WarningMessage(infoText="No data found. Please load data first.",iconDir = self.mC.mainPath)
             warn.exec_()
             return
-        try:
-            dataID = self.getDataID()
-            columnNames = self.mC.data.getPlainColumnNames(dataID)
-            useClipping = self.mC.config.getParam("data.view.ignore.clipping")
-            dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
-            dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self)
-            dlg.exec_()
-        except Exception as e:
-            print(e)
+       
+        dataID = self.getDataID()
+        columnNames = self.mC.data.getPlainColumnNames(dataID)
+        useClipping = self.mC.config.getParam("data.view.use.clipping")
+        dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = useClipping)["fnKwargs"]["data"]
+
+        dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self)
+        dlg.exec_()
+        
 
     def updateFilter(self,boolIndicator,resetData=False):
 
@@ -373,21 +372,18 @@ class DataHandleFrame(QFrame):
             self.dataTreeView.updateDfs(dfs,selectLastDf)
 
     def updateDataInQuickSelect(self,data):
-        """ """
+        ""
         self.qS.addData(data)
 
     def updateColorAndSizeInQuickSelect(self,checkedColors=None,checkedSizes=None):
         ""
-        
         self.qS.updateColorsAndSizes(checkedColors,checkedSizes)
       
-      
-    def sendToThread(self,funcProps):
         
-        try:
-            self.mC.sendRequestToThread(funcProps)
-        except Exception as e:
-            print(e)   
+    def sendToThread(self,funcProps):
+        ""
+        self.mC.sendRequestToThread(funcProps)
+       
 
     def __layout(self):
         ""

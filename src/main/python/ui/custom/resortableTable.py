@@ -167,6 +167,11 @@ class ResortTableWidget(QTableView):
             tableIndex = self.model().index(idx,0)
             self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
     
+    def getSelectedRows(self):
+        ""
+        return self.selectionModel().selectedRows()
+
+
 class ResortTableModel(QAbstractTableModel):
     
     def __init__(self, parent=None, inputLabels = pd.Series(), title = "Data"):

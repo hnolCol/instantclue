@@ -34,9 +34,7 @@ class ICXYPlot(ICChart):
         elif onlyForID in self.data["lines"]:
             for m,l in enumerate(self.data["lines"][onlyForID]):
                 if isinstance(l,Line2D):
-                    print(self.data["lineKwargs"][onlyForID][m]["props"])
                     targetAx.add_line(Line2D(**self.data["lineKwargs"][onlyForID][m]["props"]))
-                    print("done")
                 elif isinstance(l,LineCollection):
                     targetAx.add_collection(LineCollection(**self.data["lineKwargs"][onlyForID][m]["props"]))
 
@@ -51,7 +49,6 @@ class ICXYPlot(ICChart):
         ""
         try:
             self.data = data
-           
             self.initAxes(data["axisPositions"])
             self.setAxisLabels(self.axisDict,self.data["axisLabels"])
             self.initXYPlot()
@@ -118,6 +115,7 @@ class ICXYPlot(ICChart):
         "changed category is encoded in a internalID"
         if "linesByInternalID" in self.data and changedCategory in self.data["linesByInternalID"]:
             l = self.data["linesByInternalID"][changedCategory]
+            
             changedColor = colorGroup.loc[colorGroup["internalID"] == changedCategory]["color"].values[0]
             if hasattr(l,"set_color"):
                 l.set_color(changedColor)

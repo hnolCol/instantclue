@@ -179,6 +179,7 @@ class MatplotlibFigure(QWidget):
             
     def setCategoryIndexMatch(self,categoryIndexMatch,categoryEncoded="color"):
         ""
+        
         exists, graph = self.mC.getGraph()
         if exists:
             if categoryEncoded == "QuickSelect":
@@ -213,6 +214,7 @@ class MatplotlibFigure(QWidget):
 
     def updateQuickSelectSelectionInGraph(self,propsData):
         ""
+        
         exists, graph = self.mC.getGraph()
         if exists:
            
@@ -221,7 +223,7 @@ class MatplotlibFigure(QWidget):
                 graph.updateQuickSelectItems(propsData)
                 
                 graph.updateFigure.emit()
-            
+        
 
     def updateReceiverBoxItems(self):
         ""
@@ -296,7 +298,7 @@ class MatplotlibFigure(QWidget):
         self.mC.resetStatisticTable.emit()
         self.mC.resetMarkerTable.emit()
 
-    def updateFigure(self, newPlot = False,**kwargs):
+    def updateFigure(self, newPlot = False,*args,**kwargs):
         "Update Figure (e.g. redraw)."
         exists,graph = self.mC.getGraph()
         if exists:
@@ -321,6 +323,13 @@ class MatplotlibFigure(QWidget):
         exists,graph = self.mC.getGraph()
         if exists and graph.hasScatters():
             graph.addLines(lineData)
+    
+    def addLineCollections(self,lineCollections):
+        ""
+        exists,graph = self.mC.getGraph()
+        if exists:
+            graph.addLineCollections(lineCollections)
+
 
     def activateHoverInScatter(self):
         ""
@@ -370,15 +379,23 @@ class MatplotlibFigure(QWidget):
         ""
         setattr(self,"isPlotting",isPlotting)
     
-
     def setMask(self,maskIndex):
         ""
         if maskIndex is None:
             self.resetMask()
-        exists, graph = self.mC.getGraph()
-        if exists:
-            self.ICPlotter.graph.setMask(maskIndex)
+        else:
+            exists, graph = self.mC.getGraph()
+            if exists:
+                graph.setMask(maskIndex)
+            
        
     def resetMask(self):
         ""
-        self.ICPlotter.graph.resetMask()
+        exists, graph = self.mC.getGraph()
+        if exists:
+            graph.resetMask()
+
+    def handleMaskChange(self):
+        ""
+        if not self.areReceiverBoxesEmpty():
+            self.recieverBoxItemsChanged(alreadyChecked=True) 

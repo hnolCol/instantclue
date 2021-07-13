@@ -44,12 +44,14 @@ def combineStrings(self, row , nanObjectString = "-"):
 def getNumberFromTimeString(timeString):
     ""
     t = np.nan
-    if " " in timeString and np.char.isnumeric(timeString.split(" ")[0]):
-        t = float(timeString.split(" ")[0])
+    timeString = timeString.replace("min","").replace("h","").replace("s","")
 
-    elif np.char.isnumeric(timeString):
+    if np.char.isnumeric(timeString):
 
         t = float(timeString)
+
+    elif " " in timeString and np.char.isnumeric(timeString.split(" ")[0]):
+        t = float(timeString.split(" ")[0])
     
     return t 
 
@@ -57,10 +59,9 @@ def getMessageProps(title,message):
     ""
     return {"messageProps":{"title":title,"message":message}}
 
-
 def getRandomString(N = 20):
     ""
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=N))
+    return ''.join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=N))
 
 def mergeListToString(listItem,joinString = ";"):
     ""

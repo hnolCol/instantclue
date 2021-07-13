@@ -38,6 +38,7 @@ activity is performed like:
 """
 
 import numpy as np
+from pandas.core.algorithms import isin
 from scipy.signal import lfilter
 from sklearn.neighbors import KernelDensity
 from sklearn.feature_selection import VarianceThreshold
@@ -51,7 +52,7 @@ from sklearn.linear_model import BayesianRidge
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.neighbors import KNeighborsRegressor
-
+from sklearn.feature_selection import VarianceThreshold
 from threadpoolctl import threadpool_limits
 
 from ..utils.stringOperations import getMessageProps, mergeListToString, findCommonStart, getRandomString
@@ -193,6 +194,7 @@ class DataCollection(object):
 				return rKwargs
 			elif isinstance(df,pd.DataFrame):
 				return self.addDataFrame(df,fileName=fileName, cleanObjectColumns = True)
+	
 
 	def addDataFrame(self,dataFrame, dataID = None, fileName = '', 
 							cleanObjectColumns = False):
@@ -201,6 +203,7 @@ class DataCollection(object):
 		'''
 		if dataID is None:
 			dataID  = self.get_next_available_id()
+		dataFrame = self.checkForInternallyUsedColumnNames(dataFrame)
 		self.dfs[dataID] = dataFrame
 		self.extractDataTypeOfColumns(dataID)
 		self.rename_data_frame(dataID,fileName)
@@ -219,37 +222,58 @@ class DataCollection(object):
 				"dfs":self.fileNameByID
 			}
 	
+	def checkForInternallyUsedColumnNames(self,dataFrame):
+		""
+		FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer"]
+		columnNamesToChange = [colName for colName in dataFrame.columns if colName in FORBIDDEN_COLUMN_NAMES]
+		columnNamesNoChangeRequired = [colName for colName in dataFrame.columns if colName not in FORBIDDEN_COLUMN_NAMES]
+		if len(columnNamesToChange) == 0:
+			return dataFrame
+		else:
+			columnNameMapper = {} 
+			for colName in columnNamesToChange:
+				n = 0
+				originalColName = str(colName)
+				while colName in FORBIDDEN_COLUMN_NAMES or colName in columnNameMapper.values() or colName in columnNamesToChange or colName in columnNamesNoChangeRequired:
+					
+					colName = "{}_{}".format(originalColName,n)
+					n += 1 
+
+				columnNameMapper[originalColName] = colName
+
+			dataFrame = dataFrame.rename(columns=columnNameMapper)
+			return dataFrame
+
 	def getQuickSelectData(self,dataID,filterProps):
 		""
 		if dataID in self.dfs:
 			if all(filterProp in filterProps for filterProp in ["columnName","mode","sep"]):
 				columnName = filterProps["columnName"]
-				try:
-					if filterProps["mode"] == "unique":
-						
-						sep = filterProps["sep"]
-						#getUniqueCategroies returns a data frame, therefore index column 
-						#to get a pandas Series (QuickSelect Model works with series)
-						data = self.categoricalFilter.getUniqueCategories(dataID,columnName,splitString=sep)
-						if isinstance(data,dict):
-							return data
-						elif isinstance(data,pd.DataFrame):
-							data = data[columnName]
-						else:
-							return errorMessage	
-						
-					else:
-
-						if columnName in self.dfs[dataID].columns:
-							data = self.getDataByColumnNames(dataID,[columnName])["fnKwargs"]["data"][columnName]
-						else:
-							data = pd.Series()
+				
+				if filterProps["mode"] == "unique":
 					
-					return {"messageProps":{"title":"Quick Select {}".format(columnName),
-											"message":"Data were added to the Quick Select widget"},
-							"data":data}
-				except Exception as e:
-					print(e)
+					sep = filterProps["sep"]
+					#getUniqueCategroies returns a data frame, therefore index column 
+					#to get a pandas Series (QuickSelect Model works with series)
+					data = self.categoricalFilter.getUniqueCategories(dataID,columnName,splitString=sep)
+					if isinstance(data,dict):
+						return data
+					elif isinstance(data,pd.DataFrame):
+						data = data[columnName]
+					else:
+						return errorMessage	
+					
+				else:
+
+					if columnName in self.dfs[dataID].columns:
+						data = self.getDataByColumnNames(dataID,[columnName])["fnKwargs"]["data"][columnName]
+					else:
+						data = pd.Series()
+				
+				return {"messageProps":{"title":"Quick Select {}".format(columnName),
+										"message":"Data were added to the Quick Select widget"},
+						"data":data}
+			
 		return errorMessage
 
 	def groupbyAndAggregate(self,dataID,columnNames,groupbyColumn,metric="mean"):
@@ -263,7 +287,7 @@ class DataCollection(object):
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
 			aggregatedData = data.groupby(by=groupbyColumn,sort=False).aggregate(metric)
 			aggregatedData = aggregatedData.reset_index()
-			return self.addDataFrame(aggregatedData,fileName = "groupAgg({}):{}".format(self.getFileNameByID(dataID),groupbyColumn))
+			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),groupbyColumn))
 		else:
 			return errorMessage
 
@@ -403,7 +427,6 @@ class DataCollection(object):
 			
 			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
-			
 			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
 		localTime = time.localtime()
 		current_time = time.strftime("%H:%M:%S", localTime)
@@ -524,12 +547,13 @@ class DataCollection(object):
 		count = 0
 		evalColumnName = columnName
 		while evalColumnName in columnList:
-			if "_" in evalColumnName and evalColumnName[-2].isdigit() and evalColumnName.split("_")[-1].isdigit():
+			if "_" in evalColumnName and evalColumnName[-2:].isdigit() and evalColumnName.split("_")[-1].isdigit():
 				removeChar = len(evalColumnName.split("_")[-1])
-			
 				count += 1
-				evalColumnName = columnName[:-removeChar] + "{:02d}".format(int(columnName.split("_")[-1]) + count)
-				
+				try:
+					evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(int(float(evalColumnName.split("_")[-1])) + count)
+				except Exception as e:
+					evalColumnName = "{}_{:02d}".format(evalColumnName, count)
 			else:
 				evalColumnName = "{}_{:02d}".format(evalColumnName, count)
 			
@@ -640,6 +664,7 @@ class DataCollection(object):
 			return self.dfs[dataID].columns
 		else:
 			return []
+
 	def getDataDescription(self,dataID,columnNames):
 		""
 		return self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"].describe()
@@ -651,6 +676,7 @@ class DataCollection(object):
 		'''
 		if isinstance(columnNames,pd.Series):
 			columnNames = columnNames.values.tolist()
+	
 		fnComplete = {"fnName":"set_data","fnKwargs":{"data":self.getDataByDataID(dataID,rowIdx,ignore_clipping)[columnNames]}}
 		return fnComplete
 
@@ -685,6 +711,14 @@ class DataCollection(object):
 			return self.dfs[dataID]
 		else:
 			return self.dfs[dataID].loc[rowIdx,:]
+
+	def getDataByColumnNameForWebApp(self,dataID,columnName):
+		""
+
+		data = self.getDataByColumnNames(dataID,[columnName])["fnKwargs"]["data"]
+		data = data.rename(columns={columnName:"text"})
+		data["idx"] = data.index
+		return data.to_json(orient="records")
 
 	def getNaNString(self):
 		""
@@ -794,8 +828,8 @@ class DataCollection(object):
 	def getColorDictsByFilter(self,dataID,columnName,filterProps, checkedLabels, checkedDataIndex = None, checkedSizes = None, userColors = None, useBlit = False):
 		"Color Data by Using the Quick Select Widget"
 		if dataID in self.dfs:
+				
 				self.resetClipping(dataID)
-
 				
 				colorData, quickSelectColor, idxByCheckedLabel = self.colorManager.colorDataByMatch(dataID,columnName,
 														colorMapName = "quickSelectColorMap",
@@ -804,7 +838,7 @@ class DataCollection(object):
 														checkedSizes = checkedSizes,
 														userColors = userColors,
 														splitString = filterProps["sep"] if "sep" in filterProps else None)
-
+				
 				funcProps =  {}#getMessageProps("Updated","Quick Selection Color Data Updated.")
 				funcProps["propsData"] = colorData
 				if filterProps["mode"] == "raw":
@@ -847,9 +881,11 @@ class DataCollection(object):
 
 				funcProps["categoryEncoded"] = "QuickSelect"
 				funcProps["ommitRedraw"] = useBlit
-				#print(funcProps["ommitRedraw"])
+				
 				
 				return funcProps
+		else:
+			return errorMessage
 
 	def getDataValue(self,dataID,columnName,dataIndex,splitString = None):
 		""
@@ -883,6 +919,14 @@ class DataCollection(object):
 			funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 			funcProps["dataID"] = dataID
 			return funcProps
+	
+	def joinColumnToData(self,dataFrame,dataID,columnName):
+		"Plain return"
+		print(dataFrame,dataID,columnName)
+		if dataID in self.dfs and columnName not in dataFrame.columns and columnName in self.dfs[dataID].columns:
+			columnData = self.dfs[dataID][columnName]
+			return dataFrame.join(columnData)
+
 
 	def setClipping(self, dataID, rowIdxBool):
 		'''
@@ -892,12 +936,9 @@ class DataCollection(object):
 		self.clippings[dataID] = rowIdxBool	
 
 	#def unstack
-
-
 	def resetClipping(self,dataID):
 		""
 		if dataID in self.clippings:
-
 			del self.clippings[dataID]
 			return getMessageProps("Clipping reset.",
 										"Clipping was removed. No Selection in Quick Select.")
@@ -1348,52 +1389,65 @@ class DataCollection(object):
 		return newColumnNames
 		
 		
-	def drop_columns_with_nan(self,columnLabelList,how,thresh=None):
-		'''
-		Drops columns with NaN
-		'''
-		if isinstance(columnLabelList,list):
-			pass
-		elif isinstance(columnLabelList,str):
-			columnLabelList = [columnLabelList]
-		
-		cleanedDf = self.df[columnLabelList].dropna(how = how, thresh = thresh,axis=1) 
-		
-		return cleanedDf.columns.values.tolist()
-		
-	def countNaN(self,dataID, columnNames):
+	def countNaN(self,dataID, columnNames, grouping = None):
 		""
 		if dataID in self.dfs:
+			if grouping is None:
+				data = self.dfs[dataID][columnNames].isnull().sum(axis=1)
+				return self.addColumnData(dataID,"count(nan):{}".format(mergeListToString(columnNames)),data)
+			else:
+				grouping = self.parent.grouping.getCurrentGrouping() 
+				groupingName = self.parent.grouping.getCurrentGroupingName()
+				columnNames = self.parent.grouping.getColumnNames(groupingName)
+				X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+				countData = pd.DataFrame(index=X.index, columns = ["count(nan):{}".format(groupName) for groupName in grouping.keys()])
+				for groupName, columnNames in grouping.items():
+					
+					countData["count(nan):{}".format(groupName)] = X[columnNames].isnull().sum(axis=1)
+				
+				return self.joinDataFrame(dataID,countData)
 
-			data = self.dfs[dataID][columnNames].isnull().sum(axis=1)
-			return self.addColumnData(dataID,"count(nan){}".format(mergeListToString(columnNames)),data)
 		else:
 			return getMessageProps("Error ..","DataID not found.")
 
 
-	def removeNaN(self, dataID, columnNames, how = "any", thresh = None):
+
+	def removeNaN(self, dataID, columnNames, how = "any", thresh = None, axis=0,*args,**kwargs):
 		""
 		if dataID in self.dfs:
-			
-			if how in ["all","any"]:
-				dataRows = self.dfs[dataID].index.size
-				if thresh is not None:
+			if axis == 0:
+				if how in ["all","any"]:
+					dataRows = self.dfs[dataID].index.size
+					if thresh is not None:
 
-					if thresh < 1:
-						thresh = int(columnNames.size * thresh)
+						if thresh < 1:
+							thresh = int(columnNames.size * thresh)
+						else:
+							thresh = int(thresh)
+
+						self.dfs[dataID].dropna(subset = columnNames, thresh = thresh, inplace = True)
+
 					else:
-						thresh = int(thresh)
+						
+						self.dfs[dataID].dropna(subset = columnNames, how = how, inplace = True)
+					#get number of removed NaNs
+					nRemovedRows = dataRows - self.dfs[dataID].index.size 
+					return getMessageProps("Removed ..","NaN were removed from data.\nIn total: {}".format(nRemovedRows))
 
-					self.dfs[dataID].dropna(subset = columnNames, thresh = thresh, inplace = True)
+				return getMessageProps("Error ..","No useful value for attribute 'how'.")
+			
+			else:
 
-				else:
-					
-					self.dfs[dataID].dropna(subset = columnNames, how = how, inplace = True)
-				#get number of removed NaNs
-				nRemovedRows = dataRows - self.dfs[dataID].index.size 
-				return getMessageProps("Removed ..","NaN were removed from data.\nIn total: {}".format(nRemovedRows))
-
-			return getMessageProps("Error ..","No useful value for attribute 'how'.")
+				cleanedDf = self.dfs[dataID][columnNames].dropna(how=how,axis="columns")
+				removedColumns = columnNames.loc[columnNames.isin(cleanedDf.columns.values)]
+				columnNames = [colName for colName in self.getPlainColumnNames(dataID) if colName not in columnNames.values] + cleanedDf.columns.values.tolist()
+				self.dfs[dataID] = self.dfs[dataID][columnNames]
+				#update columns names
+				self.extractDataTypeOfColumns(dataID)
+				funcProps = getMessageProps("Columns removed.","Column evaluated and removed.")
+				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+				funcProps["columnNames"] = removedColumns
+				return funcProps
 		else:
 			return errorMessage
 
@@ -1632,7 +1686,41 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
+	def filterDataByVariance(self,dataID,columnNames,varThresh=0.0,direction = "row"):
+		""
+		X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=False)["fnKwargs"]["data"]
+		if direction == "row":
+			varThresh = VarianceThreshold(threshold=varThresh).fit(X.values.T)
+			support = varThresh.get_support()
+			df = self.getDataByDataID(dataID).loc[support,:]
+			return self.addDataFrame(df,fileName="varRowThresh:({})".format(self.getFileNameByID(dataID)))
+		else:
+			varThresh = VarianceThreshold(threshold=varThresh).fit(X.values)
+			support = varThresh.get_support()
+			df = self.getDataByDataID(dataID).loc[:,support]
+			return self.addDataFrame(df,fileName="varColThresh:({})".format(self.getFileNameByID(dataID)))
+
+	def fillNaNByGroupMean(self,dataID,columnNames = None):
+		""
+		if not self.parent.grouping.groupingExists():
+			return getMessageProps("Error","No grouping found.")
+		grouping = self.parent.grouping.getCurrentGrouping() 
+		groupingName = self.parent.grouping.getCurrentGroupingName()
+		columnNames = self.parent.grouping.getColumnNames(groupingName)
+		X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+		replacedData = pd.DataFrame(index=X.index, columns = ["nanByGroupMean:{}".format(colName) for colName in X.columns])
+		for groupName, groupColumns in grouping.items():
+			groupColumnsForReplacedData = ["nanByGroupMean:{}".format(colName) for colName in groupColumns]
+			groupData = X[groupColumns]
+			#boolIdx = groupData.isna().sum(axis=1) > 1
+
+			arr = groupData.values
+			nanMean = np.nanmean(arr,axis=1, keepdims = True)
+			#nanMean[boolIdx.values] = np.nan
+			replacedData.loc[X.index,groupColumnsForReplacedData] = np.where(np.isnan(arr),nanMean,arr)
 		
+		return self.joinDataFrame(dataID,replacedData.astype(float))
+
 
 	def fillNaNBySmartReplace(self,dataID,columnNames,grouping,**kwargs):
 		""
@@ -1666,6 +1754,14 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
+	def removeDuplicates(self,dataID,columnNames):
+		""
+		if dataID in self.dfs:
+			df = self.dfs[dataID].drop_duplicates(subset=columnNames.values)
+			fileName = self.getFileNameByID(dataID)
+			return self.addDataFrame(df,fileName="dropDup:({})".format(fileName))
+		else:
+			return errorMessage
 
 	def replaceSelectionOutlierWithNaN(self,dataID,columnNames):
 		""
@@ -1684,17 +1780,16 @@ class DataCollection(object):
 				Q1 = Q[0,:].reshape(X.shape[0],1)
 				M = Q[1,:].reshape(X.shape[0],1)
 				Q3 = Q[2,:].reshape(X.shape[0],1)
-				IQR = Q3-Q1
+				IQR = np.abs(Q3-Q1)
 
 				outlierBool = np.logical_or(X > M + m * IQR, X < M - m * IQR)
 				X[outlierBool] = np.nan
 				if copy:
-					
 					cleanData[cleanColumns] = X 
 					return self.joinDataFrame(dataID,cleanData)
 				else:
 					self.dfs[dataID][columnNames] =  X
-					return getMessageProps("Done ..","Outlier replaced with NaN.")
+					return getMessageProps("Done ..","Outlier replaced with NaN. Dataframe updated.")
 
 			except Exception as e:
 				print(e)
@@ -1702,7 +1797,7 @@ class DataCollection(object):
 	def replaceGroupOutlierWithNaN(self,dataID,grouping):
 		""
 		if dataID in self.dfs:
-			try:
+			
 				m = self.parent.config.getParam("outlier.iqr.multiply")
 				copy = self.parent.config.getParam("outlier.copy.results")
 				if copy: 
@@ -1720,12 +1815,15 @@ class DataCollection(object):
 					Q1 = Q[0,:].reshape(X.shape[0],1)
 					M = Q[1,:].reshape(X.shape[0],1)
 					Q3 = Q[2,:].reshape(X.shape[0],1)
-					IQR = Q3-Q1
+					IQR = np.abs(Q3-Q1)
 
 					outlierBool = np.logical_or(X > M + m * IQR, X < M - m * IQR)
 					
-					if not copy:
-						self.dfs[dataID][columnNames].loc[outlierBool] = np.nan
+					if not copy:		
+						X = self.dfs[dataID][columnNames].values
+						X[outlierBool] = np.nan
+						self.dfs[dataID].loc[:,columnNames] = X
+						
 					else:
 						X[outlierBool] = np.nan
 						cleanData[cleanColumns[n]] = X 
@@ -1734,8 +1832,7 @@ class DataCollection(object):
 					return getMessageProps("Done ..","Outlier replaced with NaN.")
 				else:
 					return self.joinDataFrame(dataID,cleanData)
-			except Exception as e:
-				print(e)
+			
 			
 			
 		else:
@@ -1745,10 +1842,16 @@ class DataCollection(object):
 		""
 		
 		X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+		
+		#find indices to be replaced
 		if fillBy == "Row mean":
-			self.dfs[dataID].loc[X.index,X.columns] = X.apply(lambda row: row.fillna(row.mean()), axis = 1)
+			arr = X.values
+			nanMean = np.nanmean(arr,axis=1, keepdims = True)
+			self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMean,arr)
 		elif fillBy == "Row median":
-			self.dfs[dataID].loc[X.index,X.columns] = X.apply(lambda row: row.fillna(row.median()), axis = 1)
+			arr = X.values
+			nanMedian = np.nanmedian(arr,axis=1, keepdims = True)
+			self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMedian.reshape(-1,1),arr)
 		elif fillBy == "Column median":
 			self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.median()) 
 		elif fillBy == "Column mean":
@@ -1887,6 +1990,28 @@ class DataCollection(object):
 
 		return np.nan, np.nan
 
+
+	def setDataByIndexNaN(self,dataID,filterIdx,selectedColumns):
+		""
+		if dataID in self.dfs:
+			print(selectedColumns)
+			if selectedColumns is None:
+				X = self.dfs[dataID][list(filterIdx.keys())]
+				for columnName, idx in filterIdx.items():
+					X.loc[idx,columnName] = np.nan
+				X.columns = ["numFil:NaN::{}".format(colName) for colName in X.columns]
+			elif isinstance(selectedColumns,dict):
+				totalColumns = np.unique(list(selectedColumns.values())).tolist()
+				print(totalColumns)
+				X = self.dfs[dataID][totalColumns]
+				for columnName, idx in filterIdx.items():
+					if columnName in selectedColumns:
+						X.loc[idx,selectedColumns[columnName]] = np.nan
+
+			return self.joinDataFrame(dataID,X)
+		else:
+			return errorMessage
+
 	def subsetDataByIndex(self, dataID, filterIdx, subsetName):
 		""
 		if dataID in self.dfs:
@@ -1895,7 +2020,6 @@ class DataCollection(object):
 		else:
 			return errorMessage
 			
-		
 	def get_data_as_list_of_tuples(self, columns, data = None):
 		'''
 		Returns data as list of tuples. Can be used for Lasso contains events.
@@ -2160,6 +2284,43 @@ class DataCollection(object):
 			return errorMessage
 
 
+	def correlateDfs(self,corrParams):
+		""
+		dataID1 = corrParams["dataID1"]
+		dataID2 = corrParams["dataID2"]
+		columnNames1 = corrParams["columnNames1"] if not corrParams["columnNames1"].empty else self.getNumericColumns(dataID1)
+		columnNames2 = corrParams["columnNames2"] if not corrParams["columnNames2"].empty else self.getNumericColumns(dataID2)
+		ignoreIndex = corrParams["ignoreIndex"]
+		if dataID1 in self.dfs and dataID2 in self.dfs:
+
+			df = self.getDataByColumnNames(dataID=dataID1,columnNames=columnNames1)["fnKwargs"]["data"]
+			otherDf = self.getDataByColumnNames(dataID=dataID2,columnNames=columnNames2)["fnKwargs"]["data"]
+			if ignoreIndex and corrParams["axis"] == 1:
+				df.columns = np.arange(df.columns.size)
+				otherDf.columns = np.arange(otherDf.columns.size)
+			print(df, otherDf)
+			print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
+			return {}
+		else:
+			return errorMessage
+
+
+	def correlateFeaturesDfs(self,corrParams):
+		""
+		dataID1 = corrParams["dataID1"]
+		dataID2 = corrParams["dataID2"]
+		columnNames1 = corrParams["columnNames1"] if not corrParams["columnNames1"].empty else self.getNumericColumns(dataID1)
+		columnNames2 = corrParams["columnNames2"] if not corrParams["columnNames2"].empty else self.getNumericColumns(dataID2)
+		if dataID1 in self.dfs and dataID2 in self.dfs:
+			df = self.getDataByColumnNames(dataID=dataID1,columnNames=columnNames1)["fnKwargs"]["data"]
+			otherDf = self.getDataByColumnNames(dataID=dataID2,columnNames=columnNames2)["fnKwargs"]["data"]
+			
+			if df.shape[0] == otherDf.shape[0]:
+				result = self.statCenter.correleateColumnsOfTwoDfs(df,otherDf)
+				result = result.reset_index()
+				return self.addDataFrame(result,fileName="Correlated")
+		else:
+			return errorMessage
 
 	def mergeDfs(self,mergeParams, how = "left", indicator = True):
 		""
@@ -2292,8 +2453,9 @@ class DataCollection(object):
 	def transposeDataFrame(self,dataID, columnNames = None, columnLabel = None):
 		""
 		if dataID in self.dfs:
-			newColumnNames = self.dfs[dataID][columnLabel].values
-			if np.unique(newColumnNames).size != columnNames.size:
+
+			newColumnNames = self.dfs[dataID][columnLabel].values.flatten()
+			if columnNames is not None and np.unique(newColumnNames).size != columnNames.size:
 				newColumnNames = ["{}_{}".format(newColumnNames[n],n) for n in np.arange(newColumnNames.size)]
 
 			if columnLabel is not None:
@@ -2308,7 +2470,7 @@ class DataCollection(object):
 			dataT.columns = newColumnNames
 			dataT = dataT.reset_index()
 
-			return self.addDataFrame(dataT,"t:{}".format(self.getFileNameByID(dataID)))
+			return self.addDataFrame(dataT,fileName="t:{}".format(self.getFileNameByID(dataID)))
 
 		return errorMessage
 

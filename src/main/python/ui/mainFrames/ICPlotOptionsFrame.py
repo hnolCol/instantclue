@@ -227,8 +227,6 @@ class PlotOptionFrame(QWidget):
         ""
         if mainFID in self.mainFigureDialogs:
             self.mainFigureDialogs[mainFID].raise_()
-           
-
 
     def changeXYParams(self,paramName,actionName):
         ""
@@ -347,12 +345,15 @@ class PlotOptionFrame(QWidget):
         ""
         self.mainFigureRegistry = mainFigureRegistry
         for ID,fig in mainFigures.items():
-            self.openMainFigure(mainFigure=fig, figureID = ID)
+            
+            mainFigure = self.openMainFigure(mainFigure=fig, figureID = ID)
+            mainFigure.restoreFigurePropsFromRegistry()
             #mainFigure.updateComboSettings(mainFigureComboSettings[ID])
             
 
     def openMainFigure(self,event=None,mainFigure=None, figureID = None):
         ""
+       
         mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure, figureID = figureID)
         mainFigure.show()
         self.mainFigureDialogs[mainFigure.figureID] = mainFigure

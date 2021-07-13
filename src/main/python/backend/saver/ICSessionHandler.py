@@ -22,12 +22,21 @@ class ICSessionHandler(object):
             return False, "No data loaded."
 
         #get main figures
-        mainFigures = self.mC.mainFrames["right"].mainFigureRegistry.getMainFiguresByID()
+        
        # print(mainFigures)
         mainFigureRegistry = self.mC.mainFrames["right"].mainFigureRegistry
+        mainFigureRegistry.removeLabels()
+        mainFigures = self.mC.mainFrames["right"].mainFigureRegistry.getMainFiguresByID()
+       
         comboSettings = []#self.mC.mainFrames["right"].mainFigureRegistry.getMainFigureCurrentSettings() 
        # print(mainFigureRegistry.mainFigureTemplates)
-        combinedObj = {"dfs":dataFrames,"dfID":currentDataFrameID,"dfsName":dataFrameNames,"mainFigures":mainFigures,"mainFigureRegistry":mainFigureRegistry,"mainFigureComboSettings":comboSettings}
+        combinedObj = {
+                    "dfs":dataFrames,
+                    "dfID":currentDataFrameID,
+                    "dfsName":dataFrameNames,
+                    "mainFigures":mainFigures,
+                    "mainFigureRegistry":mainFigureRegistry,
+                    "mainFigureComboSettings":comboSettings}
        # print(combinedObj)
         with open(sessionPath,"wb") as icSession:
             pickle.dump(combinedObj,icSession)
@@ -49,4 +58,6 @@ class ICSessionHandler(object):
         response["mainFigures"] = combinedObj["mainFigures"] #cannot be done from WorkingThread
         response["mainFigureRegistry"] = combinedObj["mainFigureRegistry"]
         response["mainFigureComboSettings"] = []#combinedObj["mainFigureComboSettings"]
+        print("this is in saved",combinedObj["mainFigureRegistry"].mainFigureTemplates)
+        print(combinedObj["mainFigures"])
         return response

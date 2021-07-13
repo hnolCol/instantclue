@@ -2,18 +2,22 @@
 
 
 
+from numpy.lib.function_base import diff
 import pandas as pd 
 import numpy as np 
 
 from sklearn.preprocessing import scale, minmax_scale, robust_scale
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
+from ..utils.stringOperations import getMessageProps
+
 funcKeys = {
         "Standardize (Z-Score)" : "calculateZScore",
         "Scale (0 - 1)" : "minMaxNorm",
         "Quantile (25 - 75)" : "calculateQuantiles", 
         "loessRowNorm" : "fitCorrectLoess",
-        "loesColNorm" : "globalLoessCorrection"
+        "loesColNorm" : "globalLoessCorrection",
+        "globalMedian" : "globalMedian"
          }
 
 
@@ -23,11 +27,13 @@ class Normalizer(object):
 
         self.sourceData = sourceData
 
-    def normalizeData(self, dataID, normKey, columnNames, **kwargs):
+    def normalizeData(self, dataID, normKey, columnNames = [], **kwargs):
         ""
         if dataID in self.sourceData.dfs:
             if normKey in funcKeys and hasattr(self,funcKeys[normKey]):
                 return getattr(self,funcKeys[normKey])(dataID,columnNames, **kwargs)
+            elif hasattr(self,normKey):
+                return getattr(self,normKey)(dataID,**kwargs)
 
 
     def calculateZScore(self,dataID, columnNames,axis=1):
@@ -71,8 +77,27 @@ class Normalizer(object):
 
         return self.sourceData.joinDataFrame(dataID,transformedValues)
 
-    def fitLowess(self,y,x,**kwargs):
+    def normalizeGroupMedian(self,dataID,**kwargs):
         ""
+        if not self.sourceData.parent.grouping.groupingExists():
+            return getMessageProps("No Grouping","No Grouping set.")
+        groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
+        grouping = self.sourceData.parent.grouping.getCurrentGrouping() 
+        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
+
+        X = self.sourceData.dfs[dataID][columnNames]
+        transformedValues = pd.DataFrame(index = X.index, columns = ["groupColMedian:{}".format(colName) for colName in columnNames])
+        for groupName, groupColumns in grouping.items():
+            columnMedians = X[groupColumns].median()
+            groupMedian = np.nanmedian(columnMedians.values)
+            distToGroupMedian = columnMedians.values - groupMedian
+            normColumnNames = ["groupColMedian:{}".format(colName) for colName in groupColumns]
+            transformedValues[normColumnNames] = X[groupColumns].subtract(distToGroupMedian, axis="columns")
+
+        return self.sourceData.joinDataFrame(dataID,transformedValues)
+
+    def fitLowess(self,y,x,**kwargs):
+        "Should not be here - move function"
         fit = lowess(y,x,**kwargs, return_sorted=False)
         yMedian = np.nanmedian(y)
         
@@ -88,6 +113,21 @@ class Normalizer(object):
         transformedValues = pd.DataFrame(Y, index= data.index, columns = transformedColumnNames)
         return self.sourceData.joinDataFrame(dataID,transformedValues)
             
+    
+    def globalMedian(self,dataID,columnNames, axis=1,*args,**kwargs):
+        ""
+        data = self.sourceData.dfs[dataID][columnNames]
+        globalMedian = np.nanmedian(data.values)
+        diffToColumnMedain = np.nanmedian(data.values,axis=0) - globalMedian
+        print(diffToColumnMedain)
+        print(globalMedian)
+        print(np.subtract(data.values,diffToColumnMedain))
+        transformedColumnNames = ["medianCorr:{}".format(colName) for colName in columnNames.values]
+        transformedValues = pd.DataFrame(np.subtract(data.values,diffToColumnMedain),index=data.index,columns=transformedColumnNames)
+        print(transformedValues)
+        return self.sourceData.joinDataFrame(dataID,transformedValues)
+
+
        # lowessLine = lowess(y,x, it=it, frac=frac)
 
 # def transform_data(self,columnNameList,transformation):

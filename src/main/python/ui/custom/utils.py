@@ -7,8 +7,23 @@ from .buttonDesigns import LabelLikeButton
 import numpy as np
 
 INSTANT_CLUE_ANAYLSIS = [
-    {"Model":["Axes Diagonal","Line (slope=1)","Line (y = m*x + b)","Quadrant Lines","Line from file","Line from clipboard","lowess","linear fit"]},
-    {"Compare two groups":["t-test","Welch-test","Wilcoxon","(Whitney-Mann) U-test"]},
+                    {"Model":
+                    [
+                        "Axes Diagonal",
+                        "Line (slope=1)",
+                        "Line (y = m*x + b)",
+                        "Quadrant Lines",
+                        "Line from file",
+                        "Line from clipboard",
+                        "lowess",
+                        "linear fit"]},
+                    {"Compare two groups":
+                    [
+                        "t-test",
+                        "Welch-test",
+                        "Wilcoxon",
+                        "(Whitney-Mann) U-test"]},
+
     #{"Compare multiple groups":["1W-ANOVA","1W-ANOVA (rep. measures)"]},
    # {"Dimensional Reduction":}
    # {"Transformation":["TSNE","PCA"]},
@@ -166,6 +181,7 @@ class LabelLikeCombo(LabelLikeButton):
         
         super(LabelLikeCombo,self).__init__(*args,**kwargs)
         self.items = items
+        self.itemID = None
         self.addMenu()
         self.clicked.connect(self.castMenu)
     
@@ -173,6 +189,8 @@ class LabelLikeCombo(LabelLikeButton):
         ""
         self.menu = createMenu(parent = self.parent())
         for itemID, itemName in self.items.items():
+                if self.itemID is None:
+                    self.itemID = itemID
                 action = self.menu.addAction(itemName)
                 action.triggered.connect(lambda _, ID = itemID,text = itemName : self.emitSignal(ID,text))
 
@@ -184,9 +202,14 @@ class LabelLikeCombo(LabelLikeButton):
         topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
         #cast menu
         self.menu.popup(topLeft)
+    
+    def getItemID(self):
+        ""
+        return self.itemID
            
     def emitSignal(self,itemID,itemText):
         ""
+        self.itemID = itemID
         self.setText(itemText)
         self.selectionChanged.emit((itemID,itemText))
        

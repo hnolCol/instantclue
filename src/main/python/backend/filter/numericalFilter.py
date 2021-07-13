@@ -45,17 +45,25 @@ class NumericFilter(object):
         self.operator = operator
     
 
-    def applyFilter(self, dataID, filterProps, subsetData = False):
+    def applyFilter(self, dataID, filterProps, setNonMatchNan = False, subsetData = False, selectedColumns = None):
         ""
-        arr = np.array([])
+        print(selectedColumns)
+        if setNonMatchNan:
+            filterIdx = dict()
+        else:
+            arr = np.array([])
         for columnName, filterProp in filterProps.items():            
             filterType = filterProp["filterType"]
             if filterType in funcFilter:
                 data = self.sourceData.dfs[dataID][columnName]
                 idx = getattr(self,funcFilter[filterType])(data,filterProp)
-                arr = np.append(arr,idx.values)
-                
-        if self.operator == "or":
+                if setNonMatchNan:
+                    filterIdx[columnName] = idx
+                else:
+                    arr = np.append(arr,idx.values)
+        if setNonMatchNan:
+            pass       
+        elif self.operator == "or":
             filterIdx = np.unique(arr)
         elif self.operator == "and":
             filterIdx, counts = np.unique(arr, return_counts=True)
@@ -65,7 +73,6 @@ class NumericFilter(object):
         columnNameStr = []
         for columnName, filterProp in filterProps.items():
             filterType = filterProp["filterType"]
-            funcColumnName[filterType]
             if filterType in minMaxForColumnName:
                 columnNameStr.append("{}".format(columnName) + funcColumnName[filterType].format(filterProp[minMaxForColumnName[filterType]]))
             else:
@@ -78,6 +85,11 @@ class NumericFilter(object):
                                                 self.sourceData.getFileNameByID(dataID))
 
             return self.sourceData.subsetDataByIndex(dataID, filterIdx, subsetName)
+
+        elif setNonMatchNan:
+
+            return self.sourceData.setDataByIndexNaN(dataID,filterIdx,selectedColumns)
+
         else:
             annotationColumnName = "{}({})".format(self.sourceData.parent.config.getParam("leading.string.numeric.filter")," ".join(columnNameStr))
             return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)

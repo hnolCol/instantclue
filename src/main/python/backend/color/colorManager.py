@@ -139,7 +139,7 @@ class ColorManager(object):
                     return colorData, None, None
 
             elif checkedLabels is not None:
-                
+               
                 nColors = checkedLabels.index.size
                 colorPalette = sns.color_palette(colorMap,nColors,desat=self.desat).as_hex()
                 idxByCheckedLabel = {}
@@ -150,6 +150,7 @@ class ColorManager(object):
                         #print(color)
                     else:
                         color = rgbToHex(colorPalette[n])
+                    
                     boolIdx = self.sourceData.categoricalFilter.searchCategory(dataID,columnName,checkedLabels.loc[idx])
                     
                     idxByCheckedLabel[checkedLabels.loc[idx]] = [idx for idx in boolIdx.index if boolIdx.loc[idx]]
@@ -164,7 +165,7 @@ class ColorManager(object):
                             colorData.loc[boolIdx,"size"] = checkedSizes.loc[idx]
                         else:
                             colorData.loc[boolIdx,"size"] = self.defaultScatterSize 
-
+                
                 return colorData, pd.Series(colorPalette,index = checkedLabels.index), idxByCheckedLabel
 
             return None, None, None
@@ -250,12 +251,16 @@ class ColorManager(object):
         ""
         return self.colorMap
 
-    def matchColorsToValues(self,arr = None, colorMapName = None):
+    def matchColorsToValues(self,arr = None, colorMapName = None, vmin = None, vmax = None):
         ""
         cmap, colors = self.get_max_colors_from_pallete(colorMapName,returnColors=True)
-        norm = Normalize(vmin=np.nanmin(arr), vmax=np.nanmax(arr), clip=True)
+        if vmin is None or vmax is None:
+            vmin = np.nanmin(arr)
+            vmax = np.nanmax(arr)
+        norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
         mapper = cm.ScalarMappable(norm=norm, cmap=cmap)
         colorMap = mapper.to_rgba(arr)
+        
         return colorMap, colors 
         
 

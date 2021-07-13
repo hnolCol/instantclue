@@ -29,7 +29,8 @@ class CollapsButton(QPushButton):
                 font = None,
                 mouseTracking = True,
                 fontSize = 12,
-                widgetHeight = 30):
+                widgetHeight = 30
+                ):
 
         super(CollapsButton,self).__init__(parent)
         self.oldRect = None
@@ -230,14 +231,16 @@ class PushHoverButton(QPushButton):
                       text = None,
                       callback = None, 
                       txtColor = "black",
-                      tooltipStr = None):
-        super(PushHoverButton,self).__init__(parent)
+                      drawFrame = True,
+                      tooltipStr = None,*args,**kwargs):
+        super(PushHoverButton,self).__init__(parent,*args,**kwargs)
 
         self.mouseOver = False
         self.funcKey = funcKey
         self.callback = callback
         self.txtColor = txtColor
         self.getDragType = getDragType
+        self.drawFrame = drawFrame
         self.setAcceptDrops(acceptDrops)
         self.acceptedDragTypes = acceptedDragTypes
         self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
@@ -259,11 +262,13 @@ class PushHoverButton(QPushButton):
         adjRect = rect
         adjRect.adjust(0.5,0.5,-0.5,-0.5)
         #painter.drawRoundedRect(adjRect,4,4)
-        painter.drawRect(adjRect)
+        if self.drawFrame:
+            painter.drawRect(adjRect)
        
         if self.text is not None:
             painter.drawText(2,12,self.text)
 
+        #return rect
 
     def getStandardFont(self, fontSize = 12):
         ""
@@ -448,11 +453,15 @@ class ICStandardButton(PushHoverButton):
         ""
         #get rect props
         rect, h, w, x0, y0 = self.getRectProps(event)
+        
         #setup painter
         
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing,True)
-        pen = QPen(QColor("black"))
+        if self.isEnabled():
+            pen = QPen(QColor("black"))
+        else:
+            pen = QPen(QColor("grey"))
         brush = QBrush(QColor("white"))
         pen.setWidthF(0.5)
         painter.setBrush(brush)
@@ -461,7 +470,10 @@ class ICStandardButton(PushHoverButton):
         painter.drawRect(rect)
 
         if self.mouseOver: 
-            pen = QPen(QColor(INSTANT_CLUE_BLUE))
+            if self.isEnabled():
+                pen = QPen(QColor(INSTANT_CLUE_BLUE))
+            else:
+                pen = QPen(QColor("lightgrey"))
            
         pen.setWidthF(0.5)
         painter.setPen(pen)
@@ -1251,16 +1263,18 @@ class ResetButton(PushHoverButton):
     def paintEvent(self, e):
 
         super().paintEvent(e)
+        rect = e.rect()
+        rect.adjust(0.5,0.5,-0.5,-0.5)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing,True)
-        centerPoint = e.rect().center()
-        pen = QPen(QColor(self.penColor))
+        centerPoint = rect.center()
+        pen = QPen(QColor(self.penColor if not self.mouseOver else INSTANT_CLUE_BLUE))
         pen.setWidthF(self.strokeWidth)
         pen.setCapStyle(Qt.RoundCap)
         painter.setPen(pen)
         x0 = centerPoint.x()
         y0 = centerPoint.y()
-        h = e.rect().height()/4
+        h = rect.height()/4
         painter.drawLine(QLineF(x0-h,y0-h,x0+h,y0+h))
         painter.drawLine(QLineF(x0+h,y0-h,x0-h,y0+h))
         
@@ -1598,7 +1612,7 @@ class AnnotateButton(PushHoverButton):
     
     def createData(self):
         ""
-        self.circleData = np.random.normal(size=(self.numCircles,2), scale = 0.7)
+        self.circleData = np.random.normal(size=(self.numCircles,2), scale = 0.4)
 
     def sizeHint(self):
         ""

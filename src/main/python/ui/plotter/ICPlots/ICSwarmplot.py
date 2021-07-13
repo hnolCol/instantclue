@@ -73,14 +73,10 @@ class ICSwarmplot(ICChart):
             self.initScatterPlots()
             self.addTitles()
             self.adjustAxisLimits(self.axisDict,data["axisLimits"])
-            qsData = self.getQuickSelectData()
-            if qsData is not None:
-                self.mC.quickSelectTrigger.emit()
-            else:
-                self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-                self.setDataInSizeTable(self.data["dataSizeGroups"],title= self.data["colorCategoricalColumn"])
-
-            self.updateFigure.emit()
+            self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
+            self.setDataInSizeTable(self.data["dataSizeGroups"],title= self.data["colorCategoricalColumn"])
+            self.checkForQuickSelectDataAndUpdateFigure()
+            
         except Exception as e:
             print(e)
     

@@ -3,7 +3,7 @@ import matplotlib.patches as patches
 import numpy as np
 from operator import itemgetter
 from matplotlib.font_manager import FontProperties
-
+import time
 arrow_args = dict(arrowstyle="-", color = "0.5", connectionstyle = "arc3")#"angle3,angleA=90,angleB=0")
 
 def xLim_and_yLim_delta(ax):
@@ -153,6 +153,7 @@ class ICScatterAnnotations(object):
             annotObject = ax.annotate(**textProps, ha='left', **self.getAnnotationProps())
             self.parent.saveAnnotations(self.ax,key,annotObject,textProps)
            
+    
 
     def addAnnotationFromDf(self,dataFrame, redraw = True):
         '''
@@ -208,7 +209,7 @@ class ICScatterAnnotations(object):
         '''
         if self.parent.getToolbarState() is not None:
             return
-        if event.inaxes is None:
+        if event.inaxes is None and event.inaxes != self.ax:
             return 
         if event.button in [2,3]: ## mac is 2 and windows 3..
             self.remove_clicked_annotation(event)
@@ -220,29 +221,44 @@ class ICScatterAnnotations(object):
         '''
         self.addAnnotationFromDf(self.data)
 
+    def eventInBBox(self,bboxbounds,eventXY):
+        ""
+        x0,y0,w,h = bboxbounds
+        xE,yE = eventXY
+        
+        if xE > x0 and xE < x0+w and yE > y0 and yE < y0+h:
+            return True
+        return False
+
     def remove_clicked_annotation(self,event):
         '''
         Removes annotations upon click from dicts and figure
         does not redraw canvas
         '''
       #  self.plotter.castMenu = True
+        if self.ax != event.inaxes:
+            return
         toDelete = None
         annotationObjects = self.parent.getAnnotationTextObjs(self.ax)
+        annotationBbox = self.parent.getAnnotationBbox(self.ax)
+        xyE = (event.x,event.y)
         if annotationObjects is not None:
             for key,madeAnnotation  in annotationObjects.items():
-                if madeAnnotation.contains(event)[0]:
-                    #self.plotter.castMenu = False
+                bboxBounds = annotationBbox[key]#madeAnnotation.get_window_extent().bounds
+                if self.eventInBBox(bboxBounds,xyE):
                     madeAnnotation.remove()
                     toDelete = key
                     break
+                
             if toDelete is not None:
                 self.parent.deleteAnnotation(self.ax,toDelete)
-               # del self.selectionLabels[toDelete] 
-               # del self.madeAnnotations[toDelete] 
+  
                 self.eventOverAnnotation = False
                 self.justDeletedAnnotation = True
+                
                 self.parent.updateFigure.emit()		
-
+            
+            
     def removeAnnotations(self):
         '''
         Removes all annotations. Might be called from outside to let 
