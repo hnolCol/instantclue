@@ -17,3 +17,5 @@ src/website/
 src/main/python/dist/
 src/main/python/build/
 src/main/python/env
+src/main/python/my_log.txt
+src/main/python/conf/current.ic
