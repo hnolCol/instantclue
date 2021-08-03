@@ -37,6 +37,8 @@ activity is performed like:
    The liver filter is a dialog window. If closed, all masking is lost.
 """
 
+from math import isnan
+from numba.np.ufunc import parallel
 import numpy as np
 from pandas.core.algorithms import isin
 from scipy.signal import lfilter
@@ -69,6 +71,9 @@ import itertools
 #from modules.dialogs.categorical_filter import categoricalFilter
 #from modules.utils import *
 import time
+import numba as nb
+from numba import prange, jit
+
 from matplotlib.colors import to_hex
 
 def z_score(x):
@@ -76,6 +81,68 @@ def z_score(x):
 	std = x.std() 
 	vector = (x-mean)/std
 	return vector
+
+
+@jit(fastmath=True)
+def pearsonByRowsTwoArray(X,Y):
+	r = 0
+	nRows = X.shape[0] * Y.shape[0]
+	A = np.empty(shape=(nRows,1), dtype=np.float64)
+	for n in range(X.shape[0]):
+		x = X[n,:]
+		for m in range(Y.shape[0]):
+			y = Y[m,:]
+			nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
+			x = X[n,nonNaNIdx]
+			y = Y[m,nonNaNIdx]
+			xx = x - np.mean(x)
+			yy = y - np.mean(y)
+			
+			ssX = np.sum(xx**2)
+			ssY = np.sum(yy**2)
+			xy = np.sum([x*y for x,y in zip(xx,yy)])
+			A[r] = xy / np.sqrt(ssX * ssY)
+			r+=1
+	return A 
+
+def pearsonByRowsTwoArrayN(X,Y):
+	r = 0
+	nRows = X.shape[0] * Y.shape[0]
+	A = np.zeros(shape=(nRows,1))
+	for n in range(X.shape[0]):
+		x = X[n,:].flatten()
+		for m in range(Y.shape[0]):
+			y = Y[m,:].flatten()
+
+			A[r] = _pearson(x,y)
+			r+=1
+	return A 
+
+
+def corr2_coeff(A, B):
+	# Rowwise mean of input arrays & subtract from input arrays themeselves
+	nRows = A.shape[0] * B.shape[0]
+	X = np.zeros(shape=(nRows,1))
+
+	A_mA = A - np.nanmean(A, axis=1)[:, None]
+	B_mB = B - np.nanmean(B,axis=1)[:, None]
+	print(A_mA)
+	
+	#mulSum = np.nansum(mul, axis=1)
+	# Sum of squares across rows
+	ssA = np.nansum(A_mA**2,axis=1)
+	ssB = np.nansum(B_mB**2, axis=1)
+	r = 0
+	for n in range(A.shape[0]):
+		for m in range(B.shape[0]):
+
+			xy = np.sum([x*y for x,y in zip(A_mA[n],B_mB[m]) if not np.isnan(x) and not np.isnan(y)])
+
+			X[r] =   xy / np.sqrt(ssA[n] * ssB[m])
+			r+=1
+	return X
+
+
 
 errorMessage = {"messageProps":{"title":"Error","message":"There was an error loading the file."}}
 sepConverter = {"tab":"\t","space":"\s+"}
@@ -2304,13 +2371,64 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-
-	def correlateFeaturesDfs(self,corrParams):
-		""
+	def _getCorrParamFromDict(self,corrParams):
 		dataID1 = corrParams["dataID1"]
 		dataID2 = corrParams["dataID2"]
 		columnNames1 = corrParams["columnNames1"] if not corrParams["columnNames1"].empty else self.getNumericColumns(dataID1)
 		columnNames2 = corrParams["columnNames2"] if not corrParams["columnNames2"].empty else self.getNumericColumns(dataID2)
+
+		return dataID1,dataID2,columnNames1,columnNames2
+	
+	def correlateEachFeatureOfTwoDfs(self,corrParams):
+		""
+		dataID1,dataID2,columnNames1,columnNames2 = self._getCorrParamFromDict(corrParams)
+		if any(x.size < 3 for x in [columnNames2,columnNames1]):
+			return getMessageProps("Error..","Each data frame must have more than three columns.")
+		else:
+			df1 = self.getDataByColumnNames(dataID=dataID1,columnNames=columnNames1)["fnKwargs"]["data"].dropna(thresh=3)
+			df2 = self.getDataByColumnNames(dataID=dataID2,columnNames=columnNames2)["fnKwargs"]["data"].dropna(thresh=3)
+
+			catCol1 = self.getCategoricalColumns(dataID1)
+			catCol2 = self.getCategoricalColumns(dataID2)
+
+			catData1 = self.getDataByColumnNames(dataID=dataID1,columnNames=catCol1)["fnKwargs"]["data"].loc[df1.index,:]
+			catData2 = self.getDataByColumnNames(dataID=dataID2,columnNames=catCol2)["fnKwargs"]["data"].loc[df2.index,:]
+
+
+
+			#
+			t1 = time.time()
+			# nRows = df1.shape[0] * df2.shape[0]
+			# A = np.zeros(shape=(nRows,1))
+			A = pearsonByRowsTwoArray(df1.values,df2.values)
+			# print("jit",time.time()-t1)
+			print(A)
+			print("==")
+			# t1 = time.time()
+			# A = pearsonByRowsTwoArrayN(df1.values,df2.values)
+			# print(A)
+			# A = corr2_coeff(df1.values,df2.values)
+			# print(A)
+			# #A = A.flatten(order="F")
+			
+			
+			catRep2 = np.repeat(catData1.values,df2.index.size,axis=0)
+			catRep1 = np.tile(catData2.values,(df1.index.size,1))
+
+			print(catRep1)
+			print(catRep2)
+			columnNames = ["r"] + ["{}_x".format(colName) for colName in catData2.columns.tolist()] + ["{}_y".format(colName) for colName in catData1.columns.tolist()]
+			resultDf = pd.concat([
+				pd.DataFrame(A,columns=["r"]),
+				pd.DataFrame(catRep1, columns = catData2.columns),
+				pd.DataFrame(catRep2, columns= catData1.columns)], axis=1, ignore_index=True)
+			resultDf.columns = columnNames 
+			return self.addDataFrame(resultDf,fileName="rowByRowCorr:{}:{}".format(self.getFileNameByID(dataID1),self.getFileNameByID(dataID2)))
+
+	def correlateFeaturesDfs(self,corrParams):
+		""
+		dataID1,dataID2,columnNames1,columnNames2 = self._getCorrParamFromDict(corrParams)
+
 		if dataID1 in self.dfs and dataID2 in self.dfs:
 			df = self.getDataByColumnNames(dataID=dataID1,columnNames=columnNames1)["fnKwargs"]["data"]
 			otherDf = self.getDataByColumnNames(dataID=dataID2,columnNames=columnNames2)["fnKwargs"]["data"]

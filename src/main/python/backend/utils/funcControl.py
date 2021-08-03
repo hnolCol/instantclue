@@ -333,7 +333,7 @@ funcPropControl = {
 
      "data::correlateFeaturesOfDataFrames":
         {
-            "threadRequest":{"obj":"data","fn":"correlateFeaturesDfs","requiredKwargs":[]},
+            "threadRequest":{"obj":"data","fn":"correlateEachFeatureOfTwoDfs","requiredKwargs":[]},#correlateFeaturesDfs
             "completedRequest":
                     addDataAndRefresh
         },  
