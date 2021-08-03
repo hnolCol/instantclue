@@ -83,13 +83,12 @@ def z_score(x):
 	return vector
 
 
-@jit(fastmath=True)
+
 def pearsonByRowsTwoArray(X,Y):
 	r = 0
 	nRows = X.shape[0] * Y.shape[0]
 	A = np.empty(shape=(nRows,1), dtype=np.float64)
 	for n in range(X.shape[0]):
-		x = X[n,:]
 		for m in range(Y.shape[0]):
 			y = Y[m,:]
 			nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
@@ -2394,29 +2393,12 @@ class DataCollection(object):
 			catData1 = self.getDataByColumnNames(dataID=dataID1,columnNames=catCol1)["fnKwargs"]["data"].loc[df1.index,:]
 			catData2 = self.getDataByColumnNames(dataID=dataID2,columnNames=catCol2)["fnKwargs"]["data"].loc[df2.index,:]
 
-
-
-			#
-			t1 = time.time()
-			# nRows = df1.shape[0] * df2.shape[0]
-			# A = np.zeros(shape=(nRows,1))
 			A = pearsonByRowsTwoArray(df1.values,df2.values)
-			# print("jit",time.time()-t1)
-			print(A)
-			print("==")
-			# t1 = time.time()
-			# A = pearsonByRowsTwoArrayN(df1.values,df2.values)
-			# print(A)
-			# A = corr2_coeff(df1.values,df2.values)
-			# print(A)
-			# #A = A.flatten(order="F")
 			
 			
 			catRep2 = np.repeat(catData1.values,df2.index.size,axis=0)
 			catRep1 = np.tile(catData2.values,(df1.index.size,1))
-
-			print(catRep1)
-			print(catRep2)
+			
 			columnNames = ["r"] + ["{}_x".format(colName) for colName in catData2.columns.tolist()] + ["{}_y".format(colName) for colName in catData1.columns.tolist()]
 			resultDf = pd.concat([
 				pd.DataFrame(A,columns=["r"]),
