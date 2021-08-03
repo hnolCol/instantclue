@@ -93,7 +93,10 @@ class scatterPlot(object):
 
 	def addQuickSelectScatter(self):
 		""
-		self.quickSelectScatter = self.ax.scatter([],[],**self.scatterKwargs)
+		qsScatterKwargs = self.hoverKwargs.copy()
+		qsScatterKwargs["marker"] = self.scatterKwargs["marker"]
+		self.quickSelectScatter = self.ax.scatter([],[], **qsScatterKwargs)
+		
 
 	def setQuickSelectScatterData(self,dataIndex,propsData):
 		"Update Quick Slect Data - called if new item was selected in QS"
@@ -194,7 +197,7 @@ class scatterPlot(object):
 		# 	if self.quickSelectScatter.get_visible():
 		# 		self.quickSelectScatter.set_visible(False)
 
-		if self.hoverScatter.get_visible():
+		if self.interactive and hasattr(self,"hoverScatter") and self.hoverScatter.get_visible():
 			self.hoverScatter.set_visible(False)
 			#if self.toolTipsActive:
 			#	self.tooltip.set_visible(False)				
@@ -209,6 +212,7 @@ class scatterPlot(object):
 		""
 		if not self.adjustLimits:
 			return
+		self.data[self.numericColumns] = self.data[self.numericColumns].astype(float)
 		#self.ax.axis('scaled')
 		if self.multiScatter:
 			xMin = np.nanmin(self.data[self.numericColumns[0::2]].values)
@@ -236,11 +240,11 @@ class scatterPlot(object):
 		self.ax.add_artist(self.selectRectangle)
 		
 
-	def add_hover_point(self, addCircle = True):
+	def add_hover_point(self, addRectangle = True):
 		'''
 		'''
 
-		if addCircle:
+		if addRectangle:
 			self.addSelectRectangle()
 		
 		self.hoverScatter = self.ax.scatter([],[],**self.hoverKwargs)
@@ -305,7 +309,7 @@ class scatterPlot(object):
 	
 	def setSelecRectInvisible(self):
 		""
-		if self.selectRectangle.get_visible():
+		if self.interactive and self.selectRectangle.get_visible():
 			self.selectRectangle.set_visible(False)
 			
 	def setSelectRectangleData(self, event):
@@ -524,7 +528,8 @@ class scatterPlot(object):
 		'''
 		Update artists using blit.
 		'''
-		hoverPoints = self.hoverScatter
+		if not self.interactive:
+			return
 		if hasattr(self,'background') == False:
 			self.background =  self.plotter.f.canvas.copy_from_bbox(self.ax.bbox)
 
@@ -540,9 +545,9 @@ class scatterPlot(object):
 
 		if not onlyCirle and self.idxData is not None and not onWidgetLeave:
 			#hover points are always visible
-			hoverPoints.set_visible(True)
+			self.hoverScatter.set_visible(True)
 			try:
-				self.ax.draw_artist(hoverPoints)
+				self.ax.draw_artist(self.hoverScatter)
 			except Exception as e:
 				self.add_hover_point(addCircle=False)
 			if self.toolTipsActive:

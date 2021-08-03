@@ -92,10 +92,11 @@ class ICQuickSelectTable(ICColorSizeTableBase):
             graph.setHoverObjectsInvisible()
             graph.setLegendInvisible()
             graph.setQuickSelectScatterInvisible()
-            self.model.completeDataChanged()
             #update figure and reset table
             graph.updateFigure.emit()
-            self.reset()
+
+        
+        self.reset()
     
 
 class QuickSelectTableModel(QAbstractTableModel):

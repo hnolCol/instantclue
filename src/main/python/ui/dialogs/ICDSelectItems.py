@@ -8,11 +8,13 @@ from ..custom.buttonDesigns import ResetButton, AcceptButton, CheckButton
 import pandas as pd
 
 class ICDSelectItems(QDialog):
-    def __init__(self, data = pd.DataFrame(), stretch = True, *args, **kwargs):
+    def __init__(self, data = pd.DataFrame(), stretch = True, selectAll = True, singleSelection = False, *args, **kwargs):
         super(ICDSelectItems, self).__init__(*args, **kwargs)
     
         self.data = data
         self.stretch = stretch
+        self.selectAll = selectAll
+        self.singleSelection = singleSelection
         self.__windowUpdate()
         self.__controls()
         self.__layout()
@@ -25,14 +27,14 @@ class ICDSelectItems(QDialog):
         self.table = PandaTable(parent=self)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
-        self.model = SelectablePandaModel(parent=self.table, df = self.data)
+        self.model = SelectablePandaModel(parent=self.table, df = self.data, singleSelection=self.singleSelection)
         self.table.setModel(self.model)
         if self.stretch:
             self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
-       
-        self.selectCB = QCheckBox("Select all")
-        self.selectCB.setTristate(False)
-        self.selectCB.stateChanged.connect(self.manageSelection)
+        if self.selectAll:
+            self.selectCB = QCheckBox("Select all")
+            self.selectCB.setTristate(False)
+            self.selectCB.stateChanged.connect(self.manageSelection)
 
         self.okButton = AcceptButton()
         self.okButton.setFixedSize(QSize(15,15))
@@ -44,7 +46,8 @@ class ICDSelectItems(QDialog):
         self.setLayout(QGridLayout())
         self.layout().setContentsMargins(3,3,3,3)
         self.layout().addWidget(self.table,0,0,1,3)
-        self.layout().addWidget(self.selectCB,1,0)
+        if self.selectAll:
+            self.layout().addWidget(self.selectCB,1,0)
         self.layout().addWidget(self.okButton,1,1)
         self.layout().addWidget(self.cancelButton,1,2)
         

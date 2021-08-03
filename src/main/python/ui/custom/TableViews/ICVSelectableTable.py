@@ -2,8 +2,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
+
+
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createMenu, createSubMenu, getStandardFont
+from ...utils import INSTANT_CLUE_BLUE, TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createLineEdit, createTitleLabel, getMessageProps, createMenu, createSubMenu, getStandardFont
+
 from ..warnMessage import AskQuestionMessage
 
 #external imports
@@ -21,16 +24,21 @@ contextMenuData = OrderedDict([
 
 class PandaTable(QTableView):
     
-    def __init__(self, parent=None, mainController = None,  cornerButton = True, hideMenu = False):
+    def __init__(self, parent=None, mainController = None,  cornerButton = True, hideMenu = False, rightClickOnHeaderCallBack = None, onHoverCallback = None):
         super(PandaTable, self).__init__(parent)
         self.highlightRow = None
         self.setMouseTracking(True)
         self.setShowGrid(True)
         self.shiftHold = False
+        self.rightClickOnHeaderCallBack = rightClickOnHeaderCallBack
+        self.onHoverCallback = onHoverCallback
 
         self.mC = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.verticalHeader().setDefaultSectionSize(15)
+        self.horizontalHeader().sectionClicked.connect(self.headerClicked)
+        self.horizontalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.horizontalHeader().customContextMenuRequested.connect(self.handleHeaderRightClick)
         if not hideMenu:
             self.setContextMenuPolicy(Qt.CustomContextMenu)
             self.customContextMenuRequested.connect( self.showHeaderMenu )
@@ -60,7 +68,37 @@ class PandaTable(QTableView):
 
         menus["main"].exec_(QCursor.pos()+QPoint(3,3))
 
-  
+    def handleHeaderRightClick(self, point):
+        ""
+        if self.rightClickOnHeaderCallBack is not None:
+            idxClicked = self.horizontalHeader().logicalIndexAt(point)
+            self.rightClickOnHeaderCallBack(idxClicked)
+       # print(self.mapToGlobal(self.horizontalHeader().sectionPosition(idxClicked)))
+        # self.horizontalHeader().setStyleSheet( "QVerticalHeaderView { margin-bottom: 25px}" )
+        # self.horizontalHeader().setFixedHeight(50)
+        # width = self.horizontalHeader().sectionSize(idxClicked)
+        # headerPos = self.mapToGlobal(self.horizontalHeader().pos())        
+        # posY = headerPos.y() + self.horizontalHeader().height()
+        # posX = headerPos.x() + self.horizontalHeader().sectionViewportPosition(idxClicked)       
+        # #menu.exec_(QPoint(posX, posY))
+        # #self.setStyleSheet("QTableView {margin-top: 25px}")
+        # menu = createMenu(parent=self)
+        # ql = createLineEdit("Search..")
+        # ql.setMinimumWidth(width)
+        # ql.setMaximumWidth(width)
+        # wAction = QWidgetAction(self)
+        # wAction.setDefaultWidget(ql)
+        # menu.addAction(wAction)
+        # menu.exec_(QPoint(posX,posY-25))
+        # self.horizontalHeader().setStyleSheet( "QVerticalHeaderView { margin-bottom: 0px}" )
+        # #self.setStyleSheet("QTableView {margin-top: 0px}")
+        # self.horizontalHeader().setFixedHeight(20)
+
+    def headerClicked(self,columnIndex):
+        ""
+        if hasattr(self.model(),"sortByColumnIndex"):
+            self.model().sortByColumnIndex(columnIndex)
+
     def getSelectedRows(self):
         ""
         return self.selectionModel().selectedRows()
@@ -126,8 +164,12 @@ class PandaTable(QTableView):
             
         else:
             eventIndex = self.mouseEventToIndex(event)
-            self.highlightRow  = eventIndex.row() 
-            self.model().completeDataChanged() 
+            if self.highlightRow != eventIndex.row():
+                self.highlightRow  = eventIndex.row() 
+                if self.onHoverCallback is not None and self.highlightRow > -1:
+                    dataIndex = self.model().getRowDataIndexByTableIndex(eventIndex)
+                    self.onHoverCallback(self.highlightRow, dataIndex)
+                self.model().completeDataChanged() 
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
@@ -184,9 +226,15 @@ class PandaModel(QAbstractTableModel):
     def __init__(self, df = pd.DataFrame(), parent=None):
         super(PandaModel, self).__init__(parent)
         self.initData(df)
+        self.sortMemory = dict()
+        self.highlightBackgroundHeaderColors = dict() 
+        
 
     def initData(self,df):
+        ""
         self.df = df.copy()
+        self.__df = df.copy() 
+        self.filters = pd.DataFrame(index=self.df.index)
 
     def rowCount(self, parent=QModelIndex()):
         
@@ -198,17 +246,29 @@ class PandaModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
+        columnIndex = index.column()
+        rowIndex = index.row()
         if not index.isValid(): 
             return QVariant()
         elif role == Qt.DisplayRole:
-            return str(self.df.iloc[index.row(),index.column()])
+            return str(self.df.iloc[rowIndex ,columnIndex])
         
         elif role == Qt.FontRole:
             return self.getFont()
         
         elif role == Qt.BackgroundRole:
-            
-            return QBrush(QColor("white"))#TABLE_ODD_ROW_COLOR
+           # print(self.df.iloc[index.row(),index.column()] == "+")
+            if self.df.iloc[rowIndex,columnIndex] == "+":
+                    return QBrush(QColor(INSTANT_CLUE_BLUE))
+            elif columnIndex in self.highlightBackgroundHeaderColors:
+                return QBrush(QColor(self.highlightBackgroundHeaderColors[columnIndex]))
+            return QBrush(QColor("white"))
+
+        elif role == Qt.ForegroundRole:
+            if self.df.iloc[rowIndex,columnIndex] == "+":
+                return QColor("white")
+            else:
+                return QColor("black")
             
     def setData(self,index,value,role):
         ""
@@ -218,7 +278,25 @@ class PandaModel(QAbstractTableModel):
             
             self.dataChanged.emit(index,index)
             return True
-            
+
+    def sortByColumnIndex(self,columnIndex):
+        ""
+        columnName = self.getColumnNameByColumnIndex(columnIndex)
+        if columnName is None: return
+        if columnIndex not in self.sortMemory:
+                self.df = self.df.sort_values(by = columnName)
+                self.sortMemory[columnIndex] = "ascending"
+        elif self.sortMemory[columnIndex] == "ascending":
+            self.df = self.df.sort_values(by = columnName, ascending=False)
+            self.sortMemory[columnIndex] = "descending"
+        elif self.sortMemory[columnIndex] == "descending":
+            self.df = self.df.sort_index()
+            del self.sortMemory[columnIndex]
+
+        self.completeDataChanged()
+        self.completeHeaderDataChanged()
+        
+    
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return str(self.df.columns[col])
@@ -226,7 +304,8 @@ class PandaModel(QAbstractTableModel):
             return str(self.df.index[col])
         elif role == Qt.BackgroundRole:
             if orientation == Qt.Horizontal:
-
+                if col in self.highlightBackgroundHeaderColors:
+                    return QBrush(QColor(self.highlightBackgroundHeaderColors[col]))
                 return QBrush(QColor("lightgrey"))
             else:
                 return QBrush(QColor("lightgrey"))
@@ -239,11 +318,78 @@ class PandaModel(QAbstractTableModel):
             font = getStandardFont()
             return font
         return None
+
+    def setNumericFilterByColumnIndex(self,columnIndex,minValue,maxValue,tagID):
+        ""
+        columnName = self.getColumnNameByColumnIndex(columnIndex)
+        if columnName is not None:
+            boolIdx = self.__df[columnName].between(minValue,maxValue)
+            boolIdx.name = tagID
+            self.filters = self.filters.join(boolIdx)
+            self.updateFilter() 
+
+    def setFilterByColumnIndex(self,columnIndex,filterString,tagID,exactMatch=False):
+        ""
+        columnName = self.getColumnNameByColumnIndex(columnIndex)
+        if columnName is not None:
+            if exactMatch:
+                boolIdx = self.__df[columnName] == filterString
+            else:
+                boolIdx = self.__df[columnName].str.contains(filterString,regex=False).sort_values(ascending=False)
+            boolIdx.name = tagID
+            self.filters = self.filters.join(boolIdx)
+            self.updateFilter() 
+
+    def updateFilter(self):
+        "Update data frame based on filtering"
+        if self.filters.columns.size == 0:
+            self.df = self.__df
+        else:
+            boolIdx = self.filters.index[self.filters.sum(axis=1).values == self.filters.columns.size]
+            self.df = self.__df.loc[boolIdx]
+
+    def removeFilter(self,tagID):
+        "Drop filter and updates the dataframe."
+        if tagID in self.filters.columns:
+            self.filters = self.filters.drop(tagID, axis="columns")
+            self.updateFilter()
+        
+    def getCurrentShape(self):
+        ""
+        return self.df.shape
     
+    def setHighlightBackground(self,columnIndex,hexColor):
+        ""
+        self.highlightBackgroundHeaderColors[columnIndex] = hexColor
+    
+    def getHighlightBackgroundcolor(self,columnIndex):
+        ""
+        if columnIndex in self.highlightBackgroundHeaderColors:
+            return self.highlightBackgroundHeaderColors[columnIndex]
+
+    def getNumberOfHighlightedBackgrounds(self):
+        ""
+        return len(self.highlightBackgroundHeaderColors)
+    
+    def removeHighlightBackground(self,columnIndex):
+        if columnIndex in self.highlightBackgroundHeaderColors:
+            del self.highlightBackgroundHeaderColors[columnIndex]
+
+    def getColumnNameByColumnIndex(self,columnIndex):
+        ""
+        if columnIndex < self.df.columns.size:
+            return self.df.columns[columnIndex]
+
     def getColumnNameByTableIndex(self,index):
         ""
         columnName = self.df.columns[index.column()]
         return columnName
+
+    def getDataTypeByColumnIndex(self,columnIndex):
+        ""
+        columnName = self.getColumnNameByColumnIndex(columnIndex)
+        if columnName is not None:
+            return self.df[columnName].dtype
 
     def getFont(self):
         ""
@@ -254,8 +400,28 @@ class PandaModel(QAbstractTableModel):
         return self.df.index[index.row()]
 
     def updateData(self,value,index):
-        ""
-        self.df.iloc[index.row(),index.column()] = value
+        """
+        Updates data in df. Checks if data type is matched. 
+        Changing the datatype is not prevented.
+        """
+        columnName = self.df.columns[index.column()]
+        dtype = self.df.dtypes.loc[columnName]
+        try:
+            if dtype == np.float64:
+                v = float(value)
+            elif dtype == np.int64:
+                v = int(value)
+            else:
+                v = value
+        except:
+            
+            if hasattr(self.parent(),"mC") and hasattr(self.parent().mC,"sendToWarningDialog"):
+                self.parent().mC.sendToWarningDialog(
+                    infoText="Input could not be interpretet as required data type ({}).".format(dtype),parent=self.parent()
+                )
+            return
+
+        self.df.iloc[index.row(),index.column()] = v
 
     def getSelectedRows(self,selectedRows="all"):
         ""
@@ -277,6 +443,10 @@ class PandaModel(QAbstractTableModel):
     def completeDataChanged(self):
         ""
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
+
+    def completeHeaderDataChanged(self):
+        ""
+        self.headerDataChanged.emit(Qt.Vertical,0,self.rowCount()-1)
     
     def updateDataFrame(self,df):
         ""
@@ -291,12 +461,13 @@ class PandaModel(QAbstractTableModel):
 
 class SelectablePandaModel(PandaModel):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, singleSelection = False, *args, **kwargs):
 
         super(SelectablePandaModel,self).__init__(*args, **kwargs)
         self.setCheckedSeries()
         self._df = self.df.copy()
         self.lastClicked = None
+        self.singleSelection = singleSelection
         
 
     def data(self, index, role=Qt.DisplayRole): 
@@ -323,6 +494,7 @@ class SelectablePandaModel(PandaModel):
 
                 return QBrush(QColor(HOVER_COLOR))
             else:
+                
                 return QBrush(QColor("white"))
        
     def setData(self,index,value,role):
@@ -335,6 +507,7 @@ class SelectablePandaModel(PandaModel):
             #this model uses first column to check complet row
             indexBottomRight = self.index(index.row(),self.columnCount())
             self.setCheckState(index)
+            
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
@@ -355,6 +528,8 @@ class SelectablePandaModel(PandaModel):
     def setCheckState(self,tableIndex):
         "Sets check state by table index."
         try:
+            if self.singleSelection:
+                self.setCheckedSeries()
             dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
             newState = not self.checkedLabels.loc[dataIndex]
             
@@ -420,14 +595,16 @@ class SelectablePandaModel(PandaModel):
 
 class MultiColumnSelectablePandaModel(PandaModel):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, selectionCallBack = None, *args, **kwargs):
 
         super(MultiColumnSelectablePandaModel,self).__init__(*args, **kwargs)
         self.setCheckedSeries()
+        self.selectionCallBack = selectionCallBack
     
     def initData(self,df):
         self.df = df
         self._df = self.df.copy()
+        self.setCheckedSeries()
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
@@ -467,18 +644,23 @@ class MultiColumnSelectablePandaModel(PandaModel):
         if role == Qt.CheckStateRole:
             #this model uses first column to check complet row
             indexBottomRight = self.index(index.row(),self.columnCount())
-            self.setCheckState(index)
+            _, dataIndex, columnIndex = self.setCheckState(index)
+            if self.selectionCallBack is not None:
+                self.selectionCallBack(dataIndex,columnIndex)
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
     def getCheckStateByDataIndex(self,dataIndex,columnName):
         "Returns current check state by data row index"
+        if columnName not in self.checkedLabels.columns:
+            return False
         return self.checkedLabels[columnName].loc[dataIndex] == 1
 
     def getCheckStateByTableIndex(self,tableIndex):
         "Returns current check state by table index"
         dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
         columnName = self.getColumnNameByTableIndex(tableIndex)
+       
         return self.getCheckStateByDataIndex(dataIndex,columnName)
 
     def getCheckedData(self):
@@ -496,7 +678,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
         columnName = self.getColumnNameByTableIndex(tableIndex)
         newState = not self.checkedLabels[columnName].loc[dataIndex]
         self.checkedLabels.loc[dataIndex,columnName] = newState
-        return newState
+        return newState, dataIndex, tableIndex.column()
 
     def setCheckStateByDataIndex(self,dataIndex):
         ""
@@ -510,7 +692,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
         else:
             self.checkedLabels = pd.DataFrame(np.zeros(shape=(self.rowCount(),self.columnCount())), index=self._df.index, columns=self._df.columns)
             self.checkedLabels = self.checkedLabels.astype(bool)
-
+        
     def setAllCheckStates(self,newState):
         ""
         if newState:
@@ -519,6 +701,12 @@ class MultiColumnSelectablePandaModel(PandaModel):
         else:
             self.setCheckedSeries()
 
+    def setCheckStateByColumnNameAndIndex(self,columnNameIndexMapper,selecteded = True):
+        ""
+        if isinstance(columnNameIndexMapper,dict):
+            for columnName, idx in columnNameIndexMapper.items():
+                if columnName in self.checkedLabels.columns:
+                    self.checkedLabels.loc[idx,columnName] = selecteded
 
     def flags(self,index):
         if pd.isna(self.df.iloc[index.row(),index.column()]):

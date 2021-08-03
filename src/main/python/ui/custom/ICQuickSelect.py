@@ -5,8 +5,7 @@ from PyQt5.QtWidgets import *
 from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.quickSelectDialog import QuickSelectDialog
-from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont
-from .warnMessage import WarningMessage
+from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont, legendLocations
 import os
 import pandas as pd
 import numpy as np
@@ -172,6 +171,8 @@ class QuickSelect(QWidget):
         self.quickSelectProps["filterProps"] = filterProps
         self.sendToThreadFn(funcProps)
 
+
+
     def showCheckedLabels(self):
         ""
         self.sender().toggleState()
@@ -195,6 +196,7 @@ class QuickSelect(QWidget):
             self.selectionMode = "mask"
             self.annotateButton.setState(False)
             self.maskButton.setState(True)
+            self.resetGraphItems()
             self.updateMode() 
 
     def setAnnotateMode(self,event=None):
@@ -208,6 +210,8 @@ class QuickSelect(QWidget):
             self.annotateButton.setState(True)
             self.maskButton.setState(False)
             self.updateMode() 
+
+            
 
     def setCheckStateByDataIndex(self,dataIndex):
         ""
@@ -242,9 +246,8 @@ class QuickSelect(QWidget):
             else:
 
                 funcProps = self.getAnnotateProps() 
-            
-            self.sendToThreadFn(funcProps)
-            
+            self.mC.sendRequestToThread(funcProps)
+           
             return True
         except Exception as e:
             print(e)
@@ -260,7 +263,7 @@ class QuickSelect(QWidget):
             funcProps["kwargs"]["userColors"] = self.model.getUserDefinedColors()
         if self.quickSelectProps["filterProps"]["mode"] == "raw":
             funcProps["kwargs"]["checkedDataIndex"] = self.model.checkedLabels
-    
+        
         return funcProps
 
     def getMaskingProps(self):
@@ -593,9 +596,8 @@ class QuickSelect(QWidget):
     def resetView(self,event=None, updatePlot = True):
         ""
         self.model.resetView()
-        if self.selectionMode == "mask":
-            if "dataID" in self.quickSelectProps and updatePlot:
-                self.resetClipping()
+        if "dataID" in self.quickSelectProps and updatePlot:
+            self.resetClipping()
         #reset size and color tables
         
         self.quickSelectProps.clear()
@@ -1222,7 +1224,7 @@ class QuickSelectTableView(QTableView):
                 if len(savedSelections) == 0:
                     subMenus = ["Selection from ..","Export selection"]
                 else:
-                    subMenus = ["Load","Delete","Selection from ..","Export selection"]
+                    subMenus = ["Load","Delete","Selection from ..","Export selection","Add filter legend"]
                 menus = createSubMenu(subMenus=subMenus)
 
                 for savedSel in savedSelections:
@@ -1232,6 +1234,8 @@ class QuickSelectTableView(QTableView):
                 for readType in ["Clipboard","Text/CSV file"]:
                     menus["Selection from .."].addAction(readType, self.readSelection)
 
+                for legendLocation in legendLocations:
+                    menus["Add filter legend"].addAction(legendLocation,lambda loc = legendLocation : self.addLegendForMasking(loc))
                 
                 menus["Export selection"].addAction("To clipboard", self.exportSelectionClipboard)
                 menus["Export selection"].addAction("To clipboard (all columns)", self.exportSelectionClipboard)
@@ -1270,6 +1274,10 @@ class QuickSelectTableView(QTableView):
                     dataIndex = self.model().getDataIndex(tableIndex.row())
                     self.model().setSize(dataIndex,sizeInt)
         
+
+    def addLegendForMasking(self,loc):
+        ""
+        print(loc)
 
     def mouseMoveEvent(self,event):
         ""

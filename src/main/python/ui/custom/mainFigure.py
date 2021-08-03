@@ -4,6 +4,9 @@ from PyQt5.QtCore import *
 
 from ..utils import createMenu, createTitleLabel, createLabel, createSubMenu, createMenus
 from .buttonDesigns import BigPlusButton, ResetButton, RefreshButton
+from .warnMessage import AskQuestionMessage
+
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.pyplot import figure
@@ -44,6 +47,8 @@ class MainFigureRegistry(object):
     def initiate(self, figureId = None):
         '''
         '''
+        if not hasattr(self,"mainFigures"):
+            self.mainFigures = {}
         if figureId is None:
             self.mainFigureId += 1
             self.exportDetails[self.mainFigureId] = {}
@@ -63,11 +68,10 @@ class MainFigureRegistry(object):
         ""
         if not hasattr(self,"mainFigures"):
             self.mainFigures = {} 
-        
         if figureId not in self.mainFigures:
             self.mainFigures[figureId] = {}
+        if figureId not in self.mainFigureTemplates:
             self.mainFigureTemplates[figureId] = {}
-
 
     def store_export(self,axisID,figureId,plotCount,subplotNum,exportId,boxBool,gridBool):
         '''
@@ -85,15 +89,18 @@ class MainFigureRegistry(object):
         '''
         self.exportDetails[figureId][axisID] = {'path':imagePath}
 
-    def store_figure(self,figure,templateClass):
+    def store_figure(self,figure,templateClass,figureID = None):
         '''
         Store in different dict, since we cannot pickle the
         figure in a canvas.
         '''
+        if figureID is None:
+            figureID = self.mainFigureId 
         if not hasattr(self,"mainFigures"):
             self.mainFigures = {}
-        self.mainFigures[self.mainFigureId]['figure'] = figure
-        self.mainFigures[self.mainFigureId]['template'] = templateClass
+            self.mainFigures[figureID] = {}
+        self.mainFigures[figureID]['figure'] = figure
+        self.mainFigures[figureID]['template'] = templateClass
 
 
     def store_figure_text(self,figureId,id,props):
@@ -140,9 +147,8 @@ class MainFigureRegistry(object):
         '''
         if how == 'add':
             self.mainFigureTemplates[figureId][axisID] = params
-            self.update_menu(params['ax'],axisID,figureId,params['axisLabel'])
-
-
+           # self.update_menu(params['ax'],axisID,figureId,params['axisLabel'])
+       
         elif how == 'delete':
             params =  self.mainFigureTemplates[figureId][axisID]
             #self.analyze.menuCollection['main_figure_menu'].delete('Figure {} - Subplot {}'.format(figureId,params['axisLabel']))
@@ -169,6 +175,16 @@ class MainFigureRegistry(object):
             del self.mainFigures[figureId]
 
         self.update_menus()
+    
+    def getParams(self,figureID):
+        ""
+        # print("param request",figureID)
+        # print(self.mainFigureTemplates)
+        if figureID in self.mainFigureTemplates:
+            return self.mainFigureTemplates[figureID]
+        else:
+            {}
+
 
     def update_menu_label(self,old,new):
         '''
@@ -205,6 +221,11 @@ class MainFigureRegistry(object):
             label = self.mainFigureTemplates[figID][axisID]["axisLabel"]
             self.mainFigures[figID]['template'].addAxisLabel(ax,axisID,label)
 
+    def removeLabels(self):
+        ""
+        for figID in self.mainFigures.keys():
+            self.mainFigures[figID]['template'].removeAxisLabels()
+
     #def getMenu(self):
             
         
@@ -222,15 +243,14 @@ class MainFigureRegistry(object):
 
     def __getstate__(self):
         '''
-        Cant pickle menu since it is a tkinter menu object.
-        We need to remove it before pickle
+        We need to reove certain params before pickle
         '''
         for figureId, axisDict in self.mainFigureTemplates.items():
             for axisID, params in axisDict.items():
                 if 'ax' in params: # if user saves session twice this will be gone already
                     del params['ax']
         state = self.__dict__.copy()
-        for attr in ['analyze','mainFigures']:
+        for attr in ['mainFigures']:
             if attr in state:
                 del state[attr]
         return state
@@ -252,13 +272,15 @@ class MainFigure(QDialog):
         
         self.mC = mainController
         self.figSize = figSize
-
+        
         self.__defineVars(figureID=figureID)
         self.__controls(mainFigure)
         self.__layout()
         self.__connectEvents()
         #store figure in registry
-        self.mainFigureCollection.store_figure(self.figure,self)
+        
+        self.mainFigureCollection.store_figure(self.figure,self,figureID)
+        
 
     def __controls(self,mainFigure=None):
         # a figure instance to plot on
@@ -370,7 +392,7 @@ class MainFigure(QDialog):
             self.figureID = figureID
         #add axis props
         self.axisID = 0
-        self.figureProps = OrderedDict() 
+        self.figureProps = OrderedDict()
         self.textsAdded = {}
         self.axisLabels = {}
         self.axisItems = OrderedDict()
@@ -411,14 +433,15 @@ class MainFigure(QDialog):
                                                 rowspan=rowSpan,colspan=colSpan)
 
         ax = self.figure.add_subplot(subplotspec)
+        
         self.saveAxisProps(ax,axisParams,addToId = addToId)
 
         if addToId:
             axisID = self.axisID
             self.addAxisLabel(ax, axisID, label = subplotLabel)
         else:
-                self.addAxisLabel(ax, axisID,
-                                label = self.figureProps[axisID]['axisLabel'])
+            self.addAxisLabel(ax, axisID,
+                    label = self.figureProps[axisID]['axisLabel'])
         if redraw:
             self.updateFigure.emit()
             self.updateAxisParams(axisParams)
@@ -494,9 +517,10 @@ class MainFigure(QDialog):
     def clearFigure(self,event=None):
         ""
         if len(self.figureProps) > 0:
-            qm = QMessageBox(parent=self)
-            ret = qm.question(self,'', "Are you sure to reset the figure?", qm.Yes | qm.No)
-            if ret == qm.Yes:
+            
+            askQ = AskQuestionMessage(title="Question",infoText = "Are you sure to reset the figure?", iconDir = self.mC.mainPath)
+            askQ.exec_()
+            if askQ.state:
                 self.figure.clf()
                 self.updateFigure.emit()
                 self.resetAxisProps()
@@ -548,7 +572,6 @@ class MainFigure(QDialog):
         '''
         Get the id of an axes. ax is a matplotlib axis object.
         '''
-
         for axisID,props in self.figureProps.items():
             if props['ax'] == axClicked:
                 return axisID
@@ -683,6 +706,31 @@ class MainFigure(QDialog):
                                     int(float(self.gridProps["Columns:"][1].currentText())),
                                     1,0,1,1,'Z'])
 
+    def removeAxisLabels(self):
+        "When figure is stored, axis label is removed first"
+        for axisID, label in self.axisLabels.items():
+            label.remove()
+
+    def restoreFigurePropsFromRegistry(self):
+        ""
+        props = self.mainFigureCollection.getParams(self.figureID)
+        
+        for axisID,params in props.items():
+            self.figureProps[axisID] = {} 
+            self.figureProps[axisID]["axisParams"] = params['axisParams']
+            self.figureProps[axisID]["axisLabel"] = params['axisLabel']
+            self.figureProps[axisID]["ax"] = self.findAxByLabel(axisID)
+
+            self.axisItems[axisID] = {}
+            self.addAxisLabel(self.figureProps[axisID]["ax"],axisID,self.figureProps[axisID]["axisLabel"])
+            self.mainFigureCollection.update_params(self.figureID,axisID,self.figureProps[axisID])
+        print(self.figureProps)
+
+    def findAxByLabel(self,axisID):
+        ""
+        for ax in self.figure.axes:
+            if str(axisID) == ax.get_label():
+                return ax
 
     def saveAxisProps(self,ax,axisParams,addToId = True):
         '''
@@ -696,6 +744,7 @@ class MainFigure(QDialog):
         if addToId:
             self.axisID += 1
         axisID = self.axisID
+        ax.set_label(axisID)
         self.figureProps[axisID] = {}
         self.figureProps[axisID]['ax'] = ax
         self.figureProps[axisID]['axisParams'] = axisParams

@@ -15,6 +15,7 @@ class ConfigDialog(QDialog):
     def __init__(self,mainController,*args, **kwargs):
         super(ConfigDialog,self).__init__(*args, **kwargs)
         self.setMinimumSize(QSize(350,420))
+        
         self.mC = mainController
 
         self.__controls()
@@ -61,10 +62,11 @@ class ConfigDialog(QDialog):
         gridBox.setColumnStretch(3,0)
         gridBox.setContentsMargins(2,2,2,2)
 
+        
+        gridBox.addWidget(self.propCombo,4,0,1,4)
+        gridBox.addWidget(self.itemFrame,5,0,1,4)
+        
         self.layout().addLayout(gridBox)
-        self.layout().addWidget(self.propCombo)
-        self.layout().addWidget(self.itemFrame)
-        self.layout().addStretch(1)
 
     def __connectEvents(self):
         """Connect events to functions"""

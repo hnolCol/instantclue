@@ -2,6 +2,8 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from matplotlib.pyplot import text
+
 
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
@@ -21,11 +23,12 @@ from backend.saver.ICSessionHandler import ICSessionHandler
 
 from backend.plotting.plotterCalculations import PlotterBrain
 
-from ui.custom.utils import QVLine, QHLine
-from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton       
-from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize
+    
+from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
 from ui.custom.ICWelcomeScreen import ICWelcomeScreen
+from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
+from ui.dialogs.ICAppValidation import ICValidateEmail
 
 import sys, os
 import numpy as np
@@ -36,6 +39,11 @@ import webbrowser
 import requests
 import warnings
 from multiprocessing import freeze_support
+import base64
+import json 
+
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Cipher import PKCS1_OAEP
 
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
@@ -87,7 +95,12 @@ menuBarItems = [
     },
     {
         "subM":"About",
-        "name":"Cite us",
+        "name":"Cite us (orig)",
+        "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
+    },
+    {
+        "subM":"About",
+        "name":"Cite us (extend.)",
         "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
     },
     {
@@ -95,7 +108,6 @@ menuBarItems = [
         "name":"v. {}".format(__VERSION__),
         "fn": lambda : pd.DataFrame([__VERSION__]).to_clipboard(index=False,header=False)
     },
-
     {
         "subM":"File",
         "name":"Load file(s)",
@@ -120,6 +132,16 @@ menuBarItems = [
         "subM":"Log",
         "name":"Save log",
         "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
+    },
+        {
+        "subM":"Share",
+        "name":"Validate App",
+        "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
+    },
+    {
+        "subM":"Share",
+        "name":"Copy App ID",
+        "fn": {"obj":"self","fn":"copyAppIDToClipboard"}
     }
 ] + exampleFuncs 
 
@@ -143,7 +165,7 @@ class InstantClue(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(self.mainPath,"icons","instantClueLogo.png")))
         
         self.config = Config(mainController = self)
-        
+        self.version = __VERSION__
         self._setupFontStyle()
         #set up data collection
         self._setupData()
@@ -179,6 +201,18 @@ class InstantClue(QMainWindow):
         
         self.mainFrames["sliceMarks"].threadWidget.setMaxThreadNumber(self.threadpool.maxThreadCount())
 
+        self._connectSignals()
+        
+        self.quickSelectTrigger.connect(self.mainFrames["data"].qS.updateDataSelection)
+        self.setAcceptDrops(True)
+        self.acceptDrop = False
+        #update parameters saved in parents (e.g data, plotter etc)
+        self.config.updateAllParamsInParent()
+
+        #self.validateApp()
+
+    def _connectSignals(self):
+        "Connects signals using the resetting of the tables defined in the sliceMarks frame."
         self.resetGroupColorTable.connect(self.mainFrames["sliceMarks"].colorTable.reset)
         self.resetGroupSizeTable.connect(self.mainFrames["sliceMarks"].sizeTable.reset)
         self.resetLabelTable.connect(self.mainFrames["sliceMarks"].labelTable.reset)
@@ -186,13 +220,6 @@ class InstantClue(QMainWindow):
         self.resetStatisticTable.connect(self.mainFrames["sliceMarks"].statisticTable.reset)
         self.resetMarkerTable.connect(self.mainFrames["sliceMarks"].markerTable.reset)
         self.resetQuickSelectTable.connect(self.mainFrames["sliceMarks"].quickSelectTable.removeFromGraph)
-        
-        self.quickSelectTrigger.connect(self.mainFrames["data"].qS.updateDataSelection)
-        self.setAcceptDrops(True)
-        self.acceptDrop = False
-
-        self.config.updateAllParamsInParent()
-
 
     def _setupData(self):
         ""
@@ -223,6 +250,7 @@ class InstantClue(QMainWindow):
         self.numericFilter = self.data.numericFilter
     
     def _setupNormalizer(self):
+
         self.normalizer = self.data.normalizer
 
     def _setupStatistics(self):
@@ -241,11 +269,10 @@ class InstantClue(QMainWindow):
 
         self.data.setPlotter(self.mainFrames["middle"].ICPlotter)
 
-
     def _addMenu(self):
-        ""
+        "Main window menu."
         self.subMenus = {}
-        subMenus = ["File","Log","Help","About"]
+        subMenus = ["File","Log","Share","Help","About"]
         for subM in subMenus:
             self.subMenus[subM] = QMenu(subM,self)
             self.menuBar().addMenu(self.subMenus[subM])
@@ -272,7 +299,7 @@ class InstantClue(QMainWindow):
         
 
     def _createSubMenu(self,subMenuName,parentMenu):
-
+        "Add a sub menu to a parent menu."
         if parentMenu in self.subMenus:
             parentMenu = self.subMenus[parentMenu]
             self.subMenus[subMenuName] = QMenu(subMenuName,parentMenu)
@@ -281,14 +308,15 @@ class InstantClue(QMainWindow):
 
     def progress_fn(self, n):
         ""
-        pass
+        
+        
  
     def print_output(self, s):
         ""
-        pass
+        
 
     def errorInThread(self, errorType = None, v = None, e = None):
-        ""
+        "Error message if something went wrong in the calculation."
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
     def _getObjFunc(self,fnProps):
@@ -297,6 +325,9 @@ class InstantClue(QMainWindow):
             if "objKey" in fnProps and "objName" in fnProps:
                 subObj = getattr(self,fnProps["objName"])[fnProps["objKey"]]
                 fn = getattr(subObj,fnProps["fn"])
+            elif "objName" in fnProps:
+                #objKey not in fnProps
+                fn = getattr(getattr(self,fnProps["objName"]),fnProps["fn"])
             else:
                 fn = getattr(self,fnProps["fn"])
         else:
@@ -336,10 +367,14 @@ class InstantClue(QMainWindow):
                 #finnaly execute the function
                 fn(**kwargs)
             except Exception as e:
+                print("ERRRO")
+                print(fn)
+                print(fnComplete)
                 print(e)
+        
     
     def _threadFinished(self,threadID):
-        ""
+        "Indicate in the ui that a thread finished."
         self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
     
     def isPlottingThreadRunning(self):
@@ -363,7 +398,10 @@ class InstantClue(QMainWindow):
                     data = fn(**funcProps["kwargs"])
                     if data is not None:
                         self._threadComplete({"funcKey":funcKey,"data":data })
-
+                else:
+                    print("not all kwargs found.")
+                    print(fnRequest["requiredKwargs"])
+                    print(funcProps["kwargs"])
         except Exception as e:
             print(e)
     
@@ -437,13 +475,21 @@ class InstantClue(QMainWindow):
         """Overwrite close event"""
        
         msgText = "Are you sure you want to exit Instant Clue? Please confirm?"
-        reply = QMessageBox.question(self, 'Message', 
-                     msgText, QMessageBox.Yes, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.config.saveParameters()
-            event.accept()
-        else:
+        
+        w = AskQuestionMessage(
+            parent=self,
+            infoText = msgText, 
+            title="Question",
+            iconDir = self.mainPath,
+            yesCallback = lambda e = event: self.saveParameterAndClose(e))
+        w.exec_()
+        if w.state is None:
             event.ignore()
+
+    def saveParameterAndClose(self, event):
+        ""
+        self.config.saveParameters()
+        event.accept()
 
     def getUserLoginInfo(self):
         "Visionary ..."
@@ -465,18 +511,114 @@ class InstantClue(QMainWindow):
                 "time"          :   time.time(),
                 "timeFrmt"      :   datetime.now().strftime("%d-%m-%Y :: %H:%M:%S")
                 }
-
+        id = getRandomString()
+        
         r = requests.post(URL, json = jsonData)
 
         if r.ok:
             self.sendMessageRequest({"title":"Done","message":"Text entry transfered to WebApp. "})
 
+    def checkAppIDForCollision(self,b64EncAppID):
+        "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided."
+        URL = "http://127.0.0.1:5000/api/v1/app/id/exists"
+        
+        r = requests.get(URL,params={"app-id":b64EncAppID})
+        if r.status_code == 200:
+            validID = json.loads(r.json())["valid"] == "True"
+            return validID, False
+        else:
+            return False,True
+
+    def encryptStringWithPublicKey(self, byteToEntrypt):
+        ""
+        publickKeyPath = os.path.join(self.mainPath,"conf","key","receiver.pem")
+        if os.path.exists(publickKeyPath):
+            privateKeyString = RSA.import_key(open(publickKeyPath).read())
+            encryptor = PKCS1_OAEP.new(privateKeyString)
+            encrypted = encryptor.encrypt(byteToEntrypt)
+            b64EncStr = base64.b64encode(encrypted).decode("utf-8")
+            return b64EncStr 
+
+
+    def validateApp(self):
+        ""
+        
+        
+        appIDPath, validPath = self.appIDFound()
+        
+       
+        if not validPath:
+            appIDValid = False
+            while not appIDValid:
+                #create app ID
+                appID = getRandomString(20).encode("utf-8")
+                #encrypt appid for sending
+                b64EncAppID = self.encryptStringWithPublicKey(appID)
+                #check for collision
+                appIDValid, httpRequestFailed = self.checkAppIDForCollision(b64EncAppID)
+                if httpRequestFailed:
+                    self.sendMessageRequest({"title":"Error..","message":"HTTP Request failed. App could not be validated."})
+                    return
+
+            self.saveAppID(appIDPath,b64EncAppID)
+        #valEmailDialog = ICValidateEmail(mainController=self)
+        #valEmailDialog.exec_()
+            
+    
+            
+            
+
+
+
+
+           # if b64EncStr is not None:
+            #    requests.put(URL,json={"app-id":b64EncStr})
+           # else:
+            #    self.sendMessageRequest({"title":"Error..","message":"Private key not found.."})
+        
+        
+
+            #requests.post(URL,json={"app-id":b64_encStr})
+
+
+    def isValidated(self):
+        ""
+
+
+    def appIDFound(self):
+        ""
+        appIDPath = self.getAppIDPath()
+        return appIDPath, os.path.exists(appIDPath)
+
+    def saveAppID(self,appIDPath, b64EncStr):
+        ""
+        with open(appIDPath,"w") as f:
+            f.write(b64EncStr)
+
+    def getAppIDPath(self):
+        ""
+        return os.path.join(self.mainPath,"conf","key","app_id")
+
+    def getAppID(self):
+        ""
+        appIDPath = self.getAppIDPath()
+        with open(appIDPath,"r") as f:
+            b64EncStr = f.read()
+            return b64EncStr
+
     def getDataID(self):
         ""
         return self.mainFrames["data"].getDataID()
 
-    def getGraph(self):
+    def copyAppIDToClipboard(self):
         ""
+        appID = self.getAppID()
+        if appID is not None:
+            pd.DataFrame([appID]).to_clipboard(index=False,header=False, excel=False)
+            self.sendMessageRequest({"title":"Copied","message":"Encrypted App ID has been copied."})
+
+    def getGraph(self):
+        "Returns the graph object from the figure mainFrame (middle)."
         graph = None
         exists = hasattr(self.mainFrames["middle"].ICPlotter,"graph")
         if exists:
@@ -484,23 +626,21 @@ class InstantClue(QMainWindow):
         return exists, graph
 
     def getTreeView(self,dataHeader = "Numeric Floats"):
-        ""
+        "Returns the tree view for a specific data type"
         return self.mainFrames["data"].getTreeView(dataHeader)
 
     def getPlotType(self):
-        ""
+        "Returns the the current plot type as a string"
         return self.mainFrames["right"].getCurrentPlotType()
 
     def groupingActive(self):
-        ""
+        "Returns bools, indicating if grouping is active."
         return self.getTreeView().table.isGroupigActive()
 
     def isDataLoaded(self):
-        ""
+        "Checks if there is any data loaded."
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
 
-# def createLabel(text,tooltipText = None, :
-#     ""
     def sendMessageRequest(self,messageProps = dict()):
         "Display message on user screen in the top right corner"
         # check if all keys present
@@ -509,12 +649,19 @@ class InstantClue(QMainWindow):
                 messageProps["title"],
                 messageProps["message"])
 
+    def sendToWarningDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
+        ""
+        w = WarningMessage(title="Warning", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable, *args,**kwargs)
+        w.exec_()
+
+    def sendToInformationDialog(self,infoText="",textIsSelectable=False):
+        ""
+        w = WarningMessage(title="Information", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable)
+        w.exec_()
+
     def _setupStyle(self):
-    #   defaultColors = ["#A0D4CB",WIDGET_HOVER_COLOR,"#397546"]
-    #     else:
-    #         defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546"]
-
-
+        "Style setup of the graphical user interface."
+        
         self.setWindowTitle("Instant Clue")
         self.setStyleSheet(" QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 0px}")
         self.setStyleSheet("""
@@ -622,16 +769,19 @@ class InstantClue(QMainWindow):
                 """)
 
 class MainWindowSplitter(QWidget):
-
+    "Main Window Splitter to separate ui in different frames."
     def __init__(self, parent):
         super(MainWindowSplitter, self).__init__(parent)
+
+        self.mC = self.parent()
         self.__controls()
         self.__layout()
 
+
     def __controls(self):
         "Creates widgets"
-        mainController = self.parent()
-        self.ICwelcome = ICWelcomeScreen(parent=self)
+        
+        self.ICwelcome = ICWelcomeScreen(parent=self,version=__VERSION__)
         self.mainSplitter = QSplitter(Qt.Horizontal)
         mainWindowWidth = self.parent().frameGeometry().width()
         sizeCalculation = []
@@ -639,13 +789,13 @@ class MainWindowSplitter(QWidget):
         mainFrameProps = [("data",0.25),("sliceMarks",0.1),("middle",0.55),("right",0.1)]
         for layoutId, sizeFrac in mainFrameProps:
             if layoutId == "data":
-                w = DataHandleFrame(self, mainController = mainController)
+                w = DataHandleFrame(self, mainController = self.mC)
             elif layoutId == "sliceMarks":
-                w = SliceMarksFrame(self, mainController = mainController)
+                w = SliceMarksFrame(self, mainController = self.mC)
             elif layoutId == "middle":
-                w = MatplotlibFigure(self, mainController= mainController)
+                w = MatplotlibFigure(self, mainController= self.mC)
             elif layoutId == "right":
-                w = PlotOptionFrame(self, mainController= mainController)
+                w = PlotOptionFrame(self, mainController= self.mC)
             self.mainFrames[layoutId] = w 
             self.mainSplitter.addWidget(w)
             sizeCalculation.append(int(mainWindowWidth * sizeFrac*1000)) #hack, do not know why it is not working properly with small numbers
@@ -665,15 +815,25 @@ class MainWindowSplitter(QWidget):
         ""
         return self.mainFrames
 
-    def welcomeScreenDone(self):
+    def showMessageForNewVersion(self,releaseURL):
         ""
+        w = AskQuestionMessage(
+            parent=self,
+            infoText = "A new version of Instant Clue is available. Download now?", 
+            title="Information",
+            iconDir = self.mC.mainPath,
+            yesCallback = lambda : webbrowser.open(releaseURL))
+        w.show()
+
+    def welcomeScreenDone(self):
+        "Indicate layout changes once Welcome Screen finished."
         self.layout().removeWidget(self.ICwelcome)
         self.layout().addWidget(self.mainSplitter)
         self.ICwelcome.deleteLater()
 
 
 def main():
-
+    "Start the main window."
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")

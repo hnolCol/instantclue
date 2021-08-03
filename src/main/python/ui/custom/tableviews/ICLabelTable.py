@@ -6,6 +6,7 @@ from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
+from .ICDataTable import ICLabelDataTableDialog
 import pandas as pd
 import numpy as np
 
@@ -49,15 +50,11 @@ class ICLabelTable(ICColorSizeTableBase):
             graph.removeColumnNameFromTooltip(columnName)
 
     def removeLabelsFromGraph(self):
-        ""
+        "Removes Annotations from Graph"
         exists, graph =  self.mC.getGraph()
         if exists:
-           # columnName = self.model.getCurrentGroup()
-        #    print(columnName)
             graph.removeAnnotationsFromGraph()
             
-
-
     def updateLabelInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -68,27 +65,59 @@ class ICLabelTable(ICColorSizeTableBase):
             print(e)
 
     def setLabelInAllPlots(self):
-        ""
+        "Enables labeling data rows in multiple graphs (e.g. scatter)"
         exists, graph =  self.mC.getGraph()
         try:
             if exists:
                 graph.setLabelInAllPlots()
         except Exception as e:
             print(e)
-
-    def removeFromGraph(self):
+    
+    def showAnnotationsInDataTable(self):
         ""
         exists, graph =  self.mC.getGraph()
-        try:
-            if exists:
-                if self.header == "Labels":
-                    graph.removeLabels()
-                elif self.header == "Tooltip":
-                    graph.removeTooltip()
-                self.reset()
-        except Exception as e:
-            print(e)
+        if exists:
+            idxByAx = graph.getAnnotationIndices()
+            nAxes = graph.getNumberOfAxes()
+            newColumnNames = ["{}:{}_{}".format(ax.get_xlabel(),ax.get_ylabel(),n) for n,ax in enumerate(idxByAx.keys())]
+            idxMapper = dict([(newColumnNames[n],idx) for  n,idx in enumerate(idxByAx.values())])
+            columnNames = self.model.getLabels().values.flatten().tolist()
+            #get data by column Names (label data)
+            data = self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"]
+            dataIndices = data.index
+            #pool the annotation data
+            data = data.values.astype(np.str)
+            if data.shape[1] > 1:
+                data = np.apply_along_axis(' ; '.join, 1, data)
+            if nAxes > 1:
+                data = np.tile(data,(1,nAxes))
+            dlg = ICLabelDataTableDialog(df = pd.DataFrame(data,columns=newColumnNames,index=dataIndices), mainController=self.mC, modelKwargs = {"selectionCallBack":self.annotationSelected}, tableKwargs = {"onHoverCallback":self.onHover})
+            dlg.model.setCheckStateByColumnNameAndIndex(idxMapper)
+            dlg.exec_() 
 
+    def onHover(self,tableRow,dataIndex):
+        ""
+        exists, graph =  self.mC.getGraph()
+        if exists:
+            graph.setHoverData([dataIndex])
+
+    def annotationSelected(self,dataIndex,columnIndex):
+        ""
+        _, graph =  self.mC.getGraph()
+        if hasattr(graph,"annotateInAxByDataIndex"):
+            graph.annotateInAxByDataIndex(columnIndex,dataIndex)
+            graph.updateFigure.emit() 
+
+    def removeFromGraph(self):
+        "Remove labels/tooltips from graph"
+        exists, graph =  self.mC.getGraph()
+        if exists:
+            if self.header == "Labels":
+                graph.removeLabels()
+            elif self.header == "Tooltip":
+                graph.removeTooltip()
+            self.reset()
+    
 
 class LabelTableModel(QAbstractTableModel):
     
@@ -251,8 +280,6 @@ class LabelTable(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
 
-        
-
         self.rowHeight      =   rowHeight
         self.rightClick     =   False
         self.mouseOverItem  =   None
@@ -269,18 +296,19 @@ class LabelTable(QTableView):
     def createMenu(self):
         ""
         menu = createSubMenu(None,[])
+        parent = self.parent() 
+        menu["main"].addAction("Disable",parent.removeFromGraph)
         
-        menu["main"].addAction("Disable",self.parent().removeFromGraph)
-        
-        if self.parent().header == "Labels":
+        if parent.header == "Labels":
             _, graph = self.mC.getGraph()
             if hasattr(graph,"isAnnotationInAllPlotsEnabled"):
                 enabled = graph.isAnnotationInAllPlotsEnabled()
                 menu["main"].addAction("{} annotations in all subplots".format("Disable" if enabled else "Enable"),self.parent().setLabelInAllPlots)
-                menu["main"].addAction("Remove Labels",self.parent().removeLabelsFromGraph)
-            menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
+                menu["main"].addAction("Remove Labels",parent.removeLabelsFromGraph)
+            menu["main"].addAction("Select Annotations in Data",parent.showAnnotationsInDataTable)
+            menu["main"].addAction("Save to xlsx",parent.saveModelDataToExcel)
         else:
-            menu["main"].addAction("Hide selected label",self.parent().hideLabel)
+            menu["main"].addAction("Hide selected label",parent.hideLabel)
             
 
         self.menu = menu["main"]

@@ -3,8 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-import sys
-import datetime
+
 import pandas as pd
 import numpy as np
 from collections import OrderedDict

@@ -1,5 +1,6 @@
 #
 from PyQt5.QtCore import QObject, pyqtSignal
+from matplotlib.pyplot import axis, scatter
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
@@ -45,7 +46,7 @@ class ICScatterPlot(ICChart):
                                 scatterPlots = self.scatterPlots,
                                 labelInAllPlots = self.getParam("annotate.in.all.plots")
                                 )
-          
+            self.initAnnotations()
             labelData = pd.DataFrame() 
             labelData["columnName"] = labelColumnNames
             self.setDataInLabelTable(labelData,title="Annotation Labels")
@@ -60,6 +61,14 @@ class ICScatterPlot(ICChart):
                 annotation.disconnectEventBindings()
             self.annotations.clear()
 
+    def disconnectBindings(self):
+        ""
+        super().disconnectBindings()
+        for scatterPlot in self.scatterPlots.values():
+            scatterPlot.disconnectBindings()
+        if hasattr(self,"annotations"):
+            for annotation in self.annotations.values():
+                annotation.disconnectEventBindings()
 
     def getGraphSpecMenus(self):
         ""
@@ -67,14 +76,13 @@ class ICScatterPlot(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        # menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
-        # menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
-        # menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
-        # menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
+        
         if self.preventQuickSelectCapture:
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:
             menus["main"].addAction("Stop QuickSelect Capture", self.stopQuickSelectCapture)
+        
+        menus["main"].addAction("Connect nearest neighbors",self.getNearestNeighborLines)
 
     def addTooltip(self, tooltipColumnNames,dataID):
         ""
@@ -88,14 +96,7 @@ class ICScatterPlot(ICChart):
         except Exception as e:
             print(e)
 
-    def disconnectBindings(self):
-        ""
-        super().disconnectBindings()
-        for scatterPlot in self.scatterPlots.values():
-            scatterPlot.disconnectBindings()
-        if hasattr(self,"annotations"):
-            for annotation in self.annotations.values():
-                annotation.disconnectEventBindings()
+    
         
     def initScatterPlots(self, onlyForID = None, targetAx = None, scaleFactor = None):
         ""
@@ -120,6 +121,7 @@ class ICScatterPlot(ICChart):
             columnPair = self.data["columnPairs"][onlyForID]
             if scaleFactor is not None and "size" in self.scatterPlots[columnPair].data:
                 self.scatterPlots[columnPair].data["size"] = scaleFactor * self.scatterPlots[columnPair].data["size"]
+                
 
             scatterPlot(self,
                         data = self.scatterPlots[columnPair].data,
@@ -148,15 +150,24 @@ class ICScatterPlot(ICChart):
         if "axisTitles" in self.data:
             self.addTitles(data["axisTitles"])
 
-        qsData = self.getQuickSelectData()
         if self.getParam("scatter.equal.axis.limits"):
             self.alignLimitsOfAllAxes(updateFigure=False)
+
+        if "dataColorGroups" in self.data:
+            self.setDataInColorTable(self.data["dataColorGroups"], 
+                                    title = "Scatter Points")
+
+        if "dataSizeGroups" in self.data:
+            self.setDataInSizeTable(self.data["dataSizeGroups"],
+                                    title="Scatter Points")
+
+        #annotate data that are selected by user in QuickSelect widget
+        qsData = self.getQuickSelectData()
         if qsData is not None:
             self.mC.quickSelectTrigger.emit()
         else:
-            self.setDataInColorTable(self.data["dataColorGroups"], title = "Scatter Points")
-            self.setDataInSizeTable(self.data["dataSizeGroups"],title="Scatter Points")
             self.updateFigure.emit()
+
     
     def setHoverData(self,dataIndex, sender = None):
         "Sets hover data in scatter plots"
@@ -262,31 +273,25 @@ class ICScatterPlot(ICChart):
         else:
             dataIndex = self.getDataIndexOfQuickSelectSelection()
             intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
-
+        
         for scatterPlot in self.scatterPlots.values():
             if hasattr(scatterPlot,"quickSelectScatter"):
-                
                 scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
                 self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
                 self.quickSelectScatterDataIdx[scatterPlot.ax] = {"idx":dataIndex,"coords":pd.DataFrame(intIDMatch,columns=["intID"])}
-
         self.updateFigure.emit()
             
     def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
         ""
         for scatterPlot in self.scatterPlots.values():
             ax = scatterPlot.ax
-            
             if self.isQuickSelectModeUnique():
-
                 scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
-
             else:
                 if ax in self.quickSelectScatterDataIdx:
-                    dataIdx = self.quickSelectScatterDataIdx[ax]
+                    dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
                     scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
                     scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
-                
             scatterPlot.updateQuickSelectScatter(scatterColors,scatterSizes)
 
         self.updateFigure.emit()
@@ -357,8 +362,25 @@ class ICScatterPlot(ICChart):
         for annotation in self.annotations.values():
             if annotation != sender:
                 annotation.addAnnotations(idx)
-    
-    def saveAnnotations(self,ax,idx,annotationText,annotationProps):
+
+    def annotateInAxByDataIndex(self,axisID,idx):
+        ""
+        if hasattr(self,"selectedLabels"):
+        #axisID = self.getAxisID(ax) 
+            ax = self.axisDict[axisID]
+            if idx in self.selectedLabels[ax]:
+
+                annotObjects = self.getAnnotationTextObjs(ax)
+                annotObj = annotObjects[idx]
+                annotObj.remove()
+                self.deleteAnnotation(ax,idx)
+                self.updateFigure.emit()
+                return
+        
+        columnPair = self.data["columnPairs"][axisID]
+        self.annotations[columnPair].addAnnotations([idx]) #expect a list/pd.Series
+
+    def initAnnotations(self):
         ""
         if not hasattr(self,"selectedLabels"):
             self.selectedLabels = dict() 
@@ -366,15 +388,37 @@ class ICScatterPlot(ICChart):
             self.addedAnnotations = dict() 
         if not hasattr(self,"annotationProps"):
             self.annotationProps = dict()
+        if not hasattr(self,"annotationBbox"):
+            self.annotationBbox = dict()
 
-        if not ax in self.selectedLabels:
+        for ax in self.axisDict.values():
+            self.checkAxInAnnotationDicts(ax)
+    
+    def checkAxInAnnotationDicts(self,ax):
+        ""
+        if ax not in self.selectedLabels:
             self.selectedLabels[ax] = []
+        if ax not in self.addedAnnotations:
             self.addedAnnotations[ax] = {}
+        if ax not in self.annotationProps:
             self.annotationProps[ax] = {}
+        if ax not in self.annotationBbox:
+            self.annotationBbox[ax] = {} 
+
+    def saveAnnotations(self,ax,idx,annotationText,annotationProps):
+        ""
         
+        self.checkAxInAnnotationDicts(ax)
         self.selectedLabels[ax].append(idx)
         self.addedAnnotations[ax][idx] = annotationText
         self.annotationProps[ax][idx] = annotationProps
+        self.annotationBbox[ax][idx] = annotationText.get_window_extent().bounds
+
+    def getAnnotationIndices(self):
+        ""
+        if not hasattr(self,"selectedLabels"):
+            return dict() 
+        return self.selectedLabels
     
     def deleteAnnotation(self,ax,idxToDelete):
         ""
@@ -385,6 +429,8 @@ class ICScatterPlot(ICChart):
                 del self.addedAnnotations[ax][idxToDelete]
             if ax in self.annotationProps and idxToDelete in self.annotationProps[ax]:
                 del self.annotationProps[ax][idxToDelete]
+            if ax in self.annotationBbox and idxToDelete in self.annotationBbox[ax]:
+                del self.annotationBbox[ax][idxToDelete]
 
     def removeSavedAnnotations(self):
         ""
@@ -408,24 +454,63 @@ class ICScatterPlot(ICChart):
         if hasattr(self,"annotationProps"):
             if ax in self.annotationProps:
                 return self.annotationProps[ax]
+    
+    def getAnnotationBbox(self,ax):
+        ""
+        if hasattr(self,"annotationBbox"):
+            if ax in self.annotationBbox:
+                return self.annotationBbox[ax]
+       
 
     def getAnnotationTextObjs(self,ax):
         ""
         if hasattr(self,"addedAnnotations"):
             if ax in self.addedAnnotations:
                 return self.addedAnnotations[ax]
-
-    def removeAnnotationsFromGraph(self):
+    
+    def getDataForWebApp(self):
         ""
-        try:
-            if hasattr(self,"annotations") and isinstance(self.annotations,dict) and len(self.annotations) > 0:
-                for annotation in self.annotations.values():
-                    annotation.removeAnnotations()
+        if hasattr(self,"menuClickedInAxis"):
 
-            self.removeSavedAnnotations()
+            sourceAx = self.menuClickedInAxis
+            axisID = self.getAxisID(sourceAx)
+            
+            columnPair = self.data["columnPairs"][axisID]
+            if columnPair in self.scatterPlots:
+                scatterData = self.scatterPlots[columnPair].data.dropna(subset=columnPair)
+                scatterData["idx"] = scatterData.index
+                if "size" not in scatterData.columns:
+                    scatterData["size"] = [self.getParam("scatterSize")] * scatterData.index.size
+                scatterData["size"] = np.sqrt(scatterData["size"])
+                if "color" not in scatterData.columns:
+                    scatterData["color"] = [self.getParam("nanColor")] * scatterData.index.size
+
+                xLimit = self.getAxisLimit(sourceAx,which="x")
+                yLimit = list(self.getAxisLimit(sourceAx,which="y"))
+                yLimit.reverse() #reverse limits for svg based positions(d3)
+
+                annotatedIdx = self.getAnnotatedLabels(sourceAx)
+                annotationProps = self.getAnnotationTextProps(sourceAx)
+
+                return (scatterData, 
+                            list(columnPair), 
+                            {"xDomain":list(xLimit),"yDomain":yLimit},
+                            annotatedIdx,
+                            annotationProps
+                            )
+        
+
+    def removeAnnotationsFromGraph(self, update = True):
+        ""
+       
+        if hasattr(self,"annotations") and isinstance(self.annotations,dict) and len(self.annotations) > 0:
+            for annotation in self.annotations.values():
+                annotation.removeAnnotations()
+
+        self.removeSavedAnnotations()
+        if update:
             self.updateFigure.emit()
-        except Exception as e:
-            print(e)
+        
 
     def updateAnnotationPosition(self,ax,keyClosest,xyRectangle):
         ""
@@ -450,3 +535,167 @@ class ICScatterPlot(ICChart):
     def startQuickSelectCapture(self):
         ""
         self.preventQuickSelectCapture = False
+
+
+
+class ICMultiScatterPlot(ICChart):
+    ""
+    def __init__(self,*args,**kwargs):
+        ""
+        super(ICMultiScatterPlot,self).__init__(*args,**kwargs)
+
+        self.scatterPlots = dict()
+        self.requiredKwargs = ["axisPositions","dataColorGroups","dataSizeGroups","scatterColumnPairs"]
+
+    def addLinearRegression(self):
+        ""
+        if len(self.data["linRegFit"]) > 0:
+            
+            for axisID, lineData in self.data["linRegFit"].items():
+                if axisID in self.axisDict:
+                    self.addLine(
+                            ax = self.axisDict[axisID],
+                            xdata = lineData[0],
+                            ydata = lineData[1],
+                            name = "linRegress_{}".format(axisID)
+                            )
+    def addLowessLine(self):
+        ""
+        if len(self.data["lowessFit"]) > 0:
+            
+            for axisID, lineData in self.data["lowessFit"].items():
+                if axisID in self.axisDict:
+                    self.addLine(
+                            ax = self.axisDict[axisID],
+                            xdata = lineData[:,0],
+                            ydata = lineData[:,1],
+                            name = "lowessRegress_{}".format(axisID)
+                            )
+
+
+    def disconnectBindings(self):
+        ""
+        super().disconnectBindings()
+        for scatterPlot in self.scatterPlots.values():
+            scatterPlot.disconnectBindings()
+        if hasattr(self,"annotations"):
+            for annotation in self.annotations.values():
+                annotation.disconnectEventBindings()
+
+
+    def initScatterPlots(self, onlyForID = None, targetAx = None, scaleFactor = None):
+        ""
+        if len(self.data["scatterColumnPairs"]) > 0:
+            if onlyForID is None:
+                #clear saved scatters
+                self.scatterPlots.clear()
+                #init scatters
+                self.scatterKwargs = self.getScatterKwargs()
+                for n,ax in self.axisDict.items():
+                    if n in self.data["scatterColumnPairs"]:
+                        columnPair = self.data["scatterColumnPairs"][n]
+                        data = self.data["plotData"]
+                        #print(self.data)
+                        if "propsData" in self.data:
+                            data = data.join(self.data["propsData"])
+                        self.scatterPlots[columnPair] = scatterPlot(
+                                                self,
+                                                data = data,
+                                                plotter = self.p,
+                                                ax = ax,
+                                                numericColumns = list(columnPair),
+                                                dataID = self.data["dataID"],
+                                                scatterKwargs = self.scatterKwargs,
+                                                hoverKwargs = self.getHoverKwargs(),
+                                                interactive = self.getParam("multi.scatter.interactive")
+                                                )
+    def initBackgrounds(self):
+        ""
+        if len(self.data["backgroundColors"]) > 0:
+            for  nA, backgroundColor in self.data["backgroundColors"].items():
+                if nA in self.axisDict:
+                    ax = self.axisDict[nA]
+                    ax.set_facecolor(backgroundColor)
+
+    def initLabels(self):
+        ""
+        
+        if len(self.data["labelData"]) > 0:
+            for nAx, labelData in self.data["labelData"].items():
+                ax = self.axisDict[nAx]
+                self.addText(ax,axisTransform=True,stdTextFont=True,**labelData)
+                
+    def initKdePlots(self):
+        ""
+        if len(self.data["kdeData"]) > 0:
+            for n,kdeData in self.data["kdeData"].items():
+                self.addLine(self.axisDict[n],kdeData["xx"],kdeData["yKde"],"kdeLine")
+                self.setAxisLimits(self.axisDict[n],kdeData["xLimit"],kdeData["yLimit"])
+
+    def init2DHistograms(self):
+        "Creates density plots on"
+        if len(self.data["histogramData"]) > 0:
+            for n, data in self.data["histogramData"].items():
+                self.axisDict[n].pcolormesh(data["meshX"], data["meshY"], data["H"],cmap=self.getParam("multi.scatter.2D.histogram.cmap"))
+
+    def onDataLoad(self, data):
+        if not all(kwarg in data for kwarg in self.requiredKwargs):
+            return
+        self.data = data
+        #create axis and adjust borders
+        self.initAxes(data["axisPositions"])
+        self.initBackgrounds()
+        self.initScatterPlots()
+        self.initKdePlots()
+        self.initLabels()
+        self.init2DHistograms()
+
+        self.addLinearRegression()
+        self.addLowessLine()
+        #check quick select
+        qsData = self.getQuickSelectData()
+        if "categoryIndexMatch" in self.data and self.data["categoryIndexMatch"] is not None:
+            self.setColorCategoryIndexMatch(self.data["categoryIndexMatch"])
+        if "dataColorGroups" in self.data:
+            self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorTitle"])
+        if "dataSizeGroups" in self.data:
+            self.setDataInSizeTable(self.data["dataSizeGroups"],title="Scatter Points")
+
+        if qsData is not None:
+            self.mC.quickSelectTrigger.emit()
+        else:
+            self.updateFigure.emit()
+#
+    def setHoverData(self,dataIndex, sender = None):
+        "Sets hover data in scatter plots"
+        for scatterPlot in self.scatterPlots.values():
+            if sender is None:
+                scatterPlot.setHoverData(dataIndex)
+            elif sender != scatterPlot:
+                scatterPlot.setHoverData(dataIndex)
+        
+    def updateBackgrounds(self, redraw = False):
+        "Updates backgrounds in scatter plot. Required to enabled blitting"
+        for scatterPlot in self.scatterPlots.values():
+            scatterPlot.updateBackground(redraw=redraw)
+
+    def updateGroupColors(self,colorGroup, changedCategory = None):
+        "Update color by changes by the user in the color table."      
+        if len(colorGroup.index) == 1 and colorGroup.iloc[0,1] == "":
+            for scatterPlot in self.scatterPlots.values():
+                scatterPlot.updateColorData(colorGroup["color"].values[0])
+            self.updateFigure.emit()
+        
+        elif self.colorCategoryIndexMatch is not None:
+            
+            if changedCategory in self.colorCategoryIndexMatch:
+                    
+                        idx = self.colorCategoryIndexMatch[changedCategory]
+                        dataBool = colorGroup["internalID"] == changedCategory 
+                        color = colorGroup.loc[dataBool,"color"].values[0]
+                        self.updateScatterPropSection(idx,color,"color")
+                    
+            if hasattr(self,"colorLegend"):
+                self.addColorLegendToGraph(colorGroup,update=False, title = self.getTitleOfColorTable())
+                
+            self.updateFigure.emit()

@@ -11,7 +11,8 @@ from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
 
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
-
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.multitest import multipletests
@@ -27,6 +28,8 @@ import numpy as np
 #from cvae import cvae
 import fastcluster
 from collections import OrderedDict
+#pycombat import
+from combat.pycombat import pycombat
 
 clusteringMethodNames = OrderedDict([
                             ("kmeans",KMeans),
@@ -79,6 +82,15 @@ class StatisticCenter(object):
 
         return True, "Check done.."
 
+    def correleateColumnsOfTwoDfs(self,df1,df2):
+        ""
+        n = len(df1)
+        v1, v2 = df1.values, df2.values
+        sums = np.multiply.outer(np.nansum(v2,axis=0), np.nansum(v1,axis=0))
+        stds = np.multiply.outer(np.nanstd(v2,axis=0), np.nanstd(v1,axis=0))
+        return pd.DataFrame((v2.T.dot(v1) - sums / n) / stds / n,
+                            df2.columns, df1.columns)
+
     def getNJobs(self):
         ""
         return self.n_jobs
@@ -104,6 +116,33 @@ class StatisticCenter(object):
 
         return X,dataPassed,msg, dataIndex
 
+    def runLDA(self,dataID,groupingName):
+        ""
+        config = self.sourceData.parent.config 
+        grouping = self.sourceData.parent.grouping
+        grouping.setCurrentGrouping(groupingName)
+        
+        columnNames = grouping.getColumnNames(groupingName)
+        groupingAnnotation = grouping.getGroupNamesByColumnNames(columnNames)
+        print(groupingAnnotation)
+        if len(columnNames) > 0:
+            X = self.getData(dataID,columnNames.values).dropna()
+            Y = groupingAnnotation.values.flatten()
+            XT = X.values.T
+            XT = StandardScaler().fit_transform(XT)
+            print(XT,Y)
+            LDA = LinearDiscriminantAnalysis()
+            LDA.fit(XT,Y)
+            
+            X_TRANFORMED = LDA.transform(XT)
+            print(X_TRANFORMED.shape)
+            XX = pd.DataFrame(X_TRANFORMED, columns = ["Comp{}".format(n) for n in range(2)])
+            XX["index"] = columnNames
+            print(LDA.coef_)
+            self.sourceData.addDataFrame(XX,fileName="LDA:({})".format(self.sourceData.getFileNameByID(dataID)))
+            return self.sourceData.addDataFrame(XX,fileName="LDA:({})".format(self.sourceData.getFileNameByID(dataID)))
+        else:
+            return getMessageProps("Error..","No column names in grouping.")
     
     def runLinearRegression(self,dataID, columnNames):
         '''
@@ -123,7 +162,7 @@ class StatisticCenter(object):
         return [x1,x2],[y1,y2],slope, intercept, r_value, p_value, std_err
 
 
-    def runLowess(self,dataID,columnNames):
+    def runLowess(self,dataID,columnNames,it=None,frac=None,*args,**kwargs):
         '''
         Calculates lowess line from dataFrame input
         '''
@@ -132,15 +171,16 @@ class StatisticCenter(object):
         x = data.iloc[:,0].values
         y = data.iloc[:,1].values
 
-        lenX = x.size
-        if lenX > 1000:
-            it = 3
-            frac = 0.65
-        else:
-            it = 1
-            frac = 0.3
+        if it is None and frac is None:
+            lenX = x.size
+            if lenX > 1000:
+                it = 3
+                frac = 0.65
+            else:
+                it = 1
+                frac = 0.3
             
-        lowessLine = lowess(y,x, it=it, frac=frac)
+        lowessLine = lowess(y,x, it=it, frac=frac,*args,**kwargs)
 
         return lowessLine
 
@@ -311,7 +351,7 @@ class StatisticCenter(object):
                 
             return getMessageProps("Error ..",errMsg)
 
-    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["T: PG.Genes"]):
+    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["Gene names"]):
         """
         Calculates correlation between all rows.
         Correlation coefficients will be filterd for NaN and threshold specified by
@@ -334,21 +374,25 @@ class StatisticCenter(object):
         corrMatrix.index = catData.values
         corrMatrix.columns = catData.values
         #move to long format
-        corrMatrix = corrMatrix.unstack().reset_index()
+        corrMatrixLong = corrMatrix.unstack().reset_index()
+        #add prev index
+        numberOfFeatures = corrMatrix.index.size
+        longFormatSize = corrMatrixLong.index.size
+        corrMatrixLong["Index"] = np.tile(data.index,int(longFormatSize/numberOfFeatures))
         #remove nana
-        corrMatrix = corrMatrix.dropna()
+        corrMatrixLong = corrMatrixLong.dropna()
         if self.corrMethod in self.corrCoeffName:
             coeffName = self.corrCoeffName[self.corrMethod]
         else:
             coeffName = "CorrCoeff"
-        corrMatrix.columns = ["Level 0","Level 1",coeffName]
+        corrMatrixLong.columns = ["Level 0","Level 1",coeffName,"Index"]
 
         if self.absCorrCoeff > 0: 
-            boolIdx = np.abs(corrMatrix["r"].values) > self.absCorrCoeff
-            corrMatrix = corrMatrix.loc[boolIdx,]
+            boolIdx = np.abs(corrMatrixLong["r"].values) > self.absCorrCoeff
+            corrMatrixLong = corrMatrixLong.loc[boolIdx,]
         baseFileName = self.sourceData.getFileNameByID(dataID)
 
-        return self.sourceData.addDataFrame(corrMatrix,fileName="corrMatrix::{}".format(baseFileName))
+        return self.sourceData.addDataFrame(corrMatrixLong,fileName="corrMatrix::{}".format(baseFileName))
 
     def runFeatureSelection(self,dataID,columnNames, grouping, groupFactors, model = "Random Forest", createSubset=False, RFECV = False):
         "Selects features based on model"
@@ -458,7 +502,8 @@ class StatisticCenter(object):
     def fitModel(self, dataID, columnNames, timeGrouping, compGrouping, replicateGrouping = "None", model="First Order Kinetic", normalization = "None", transformation = "None", sortTimeGroup = True, addDataAUC = True, addFitAUC = True):
         "Fit Model to Data"
         
-        def _calcLineRegress(row, xValues,addDataAUC, addFitAUC):
+        def _calcLineRegress(row, xValues,addDataAUC, addFitAUC, addHalfLife = True):
+            
             r = linregress(x = xValues, y=row)
             lRegress = r._asdict()
             if addDataAUC:
@@ -467,8 +512,9 @@ class StatisticCenter(object):
                 x = np.linspace(np.nanmin(xValues), np.nanmax(xValues), num = 200)
                 y = x * r.slope + r.intercept
                 lRegress["fitAUC"] = np.trapz(y,x)
-            t12 = np.log(2)/r.slope * (-1)
-            lRegress["halfLife"] = t12 if t12 > 0 else np.nan
+            if addHalfLife:
+                t12 = np.log(2)/r.slope * (-1)
+                lRegress["halfLife"] = t12 if t12 > 0 else np.nan
             
             return pd.Series(lRegress)
 
@@ -476,7 +522,7 @@ class StatisticCenter(object):
             ""
             def f(x,k):
                 return 1 - np.exp(-(k+corrK)*x)
-            print(corrK)
+            #print(corrK)
             popt, pcov = curve_fit(f,xValues,row)
             r = {"k":popt[0]}
             return pd.Series(r)
@@ -486,7 +532,6 @@ class StatisticCenter(object):
             xtime = [(getNumberFromTimeString(groupName),groupColumns.values) for groupName,groupColumns in timeGrouping.items()]
             if sortTimeGroup:
                 xtime.sort(key=lambda x:x[0])
-
             xtime = OrderedDict(xtime)
             data = self.getData(dataID,np.unique(columnNames))
             #transform
@@ -498,15 +543,14 @@ class StatisticCenter(object):
 
             if compGrouping == "None" or compGrouping is None:
 
-                compGrouping = {"selectedColumns":pd.Series(columnNames)} 
+                compGrouping = {"raw":pd.Series(columnNames)} 
            
             for groupNameComp, groupColumnsComp in compGrouping.items():
             
                 for repID, replicateColumns in replicateGrouping.items():
-                    
                     groupColumnsCompPerReplicate = [colName for colName in groupColumnsComp.values if colName in replicateColumns.values]
                     timeValues = [getKeyMatchInValuesFromDict(groupColumn,xtime) for groupColumn in  groupColumnsCompPerReplicate]
-                    #remove vcolumns where not time was submitted
+                    #remove vcolumns where no time was submitted
                     timeValueColumns = OrderedDict([(groupColumnsCompPerReplicate[n],timeValue) for n,timeValue in enumerate(timeValues) if timeValue is not None])
                     #if len(timeValueColumns) < 2: #no regression performed with less than 2 timepoints
                     #   continue
@@ -530,15 +574,14 @@ class StatisticCenter(object):
 
                     #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
                     dataSubset = dataSubset.dropna()
-                    
                     #corrK = 0.0303 if groupNameComp == "C" else 0
-                    X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcLineRegress(row,xValues,addDataAUC,addFitAUC), axis=1)
-                    #X = dataSubset.apply(lambda row, xValues = list(timeValueColumns.values()) : _calcIncrease(row,xValues,corrK), axis=1)
-                   #
-                    #print(X)
+                    addt12 = model == "First Order Kinetic"
+                    xValues = list(timeValueColumns.values())
+                    X = dataSubset.apply(lambda row : _calcLineRegress(row,xValues,addDataAUC,addFitAUC,addHalfLife=addt12), axis=1)
+
                     X.index = dataSubset.index
+                    X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" and len(replicateGrouping) == 1 else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
                     
-                    X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
                     if normalization != "None":
                         dataSubset.columns = ["norm:fitModel:{}".format(colName) for colName in dataSubset.columns]
                         self.sourceData.joinDataFrame(dataID,dataSubset)
@@ -553,7 +596,22 @@ class StatisticCenter(object):
             return getMessageProps("Error..","Time group could not be interpreted.")
           
        
+    def runBatchCorrection(self,dataID, groupingName,grouping):
+        ""
+        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
+        data = self.getData(dataID,columnNames).dropna() 
+        factorizedColumns = self.sourceData.parent.grouping.getFactorizedColumns(groupingName)
+        batchIdx = [factorizedColumns[colName] for colName in columnNames if colName in factorizedColumns]
+        XCorrected = pycombat(data,batchIdx)
+        #attach all other data
+        rawDf = self.sourceData.dfs[dataID]
+        columnsToJoin = [colName for colName in rawDf.columns if colName not in XCorrected.columns]
+        XCorrected = XCorrected.join(rawDf[columnsToJoin],how="inner")
+        fileName = self.sourceData.getFileNameByID(dataID)
         
+        return self.sourceData.addDataFrame(XCorrected,fileName = "combat({})".format(fileName))
+
+    
     def runKMeansElbowMethod(self,dataID,columnNames,kMax = 20):
         ""
         with threadpool_limits(limits=1, user_api='blas'):

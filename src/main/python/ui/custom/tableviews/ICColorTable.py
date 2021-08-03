@@ -173,8 +173,6 @@ class ICColorTable(ICColorSizeTableBase):
             self.title = self.titleEdit.text()
             self.titleEdit.hide()
             self.titleLabel.setText(self.titleEdit.text())
-            #save name
-            #self.groupItems[groupID]["name"] = edit.text()
             self.titleLabel.show()
 
     @pyqtSlot()
@@ -502,10 +500,11 @@ class ColorTable(QTableView):
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
-        menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
+        
         
         
         if self.model() is not None and hasattr(self.model(),"isEditable") and self.model().isEditable: #if editable - add the option to choose color from palette
+            menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
             colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
             for col in colors:
                 pixmap = QPixmap(20,20)
@@ -517,7 +516,9 @@ class ColorTable(QTableView):
                 i.addPixmap(pixmap)
                 pq.end()
                 action.setIcon(i)
-                
+        else:
+            menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) .."])
+
         for legendLoc in legendLocations:
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
             menu["Add Legend at (-NaN Color) .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(ignoreNaN = True,legendKwargs = {"loc":lloc}))
@@ -526,7 +527,8 @@ class ColorTable(QTableView):
         menu["main"].addAction("Remove", self.parent().removeFromGraph)
         menu["main"].addAction("Copy to clipboard",self.parent().copyToClipboard)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
-        menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
+        if "Subset by .." in menu:
+            menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
         self.menu = menu["main"]
     
 

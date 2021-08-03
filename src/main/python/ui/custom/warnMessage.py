@@ -2,13 +2,15 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
-import os 
-from ..utils import createTitleLabel
+import os
 
+from matplotlib.pyplot import text 
+from ..utils import createTitleLabel, createLabel
+from .buttonDesigns import ICStandardButton
 
 class MessageBase(QDialog):
     ""
-    def __init__(self,parent=None,iconName = "warnIcon.svg", title = "Warning", infoText = "", iconDir = ".", *args,**kwargs):
+    def __init__(self,parent=None,iconName = "warnIcon.svg", title = "Warning", infoText = "", iconDir = ".", textIsSelectable=False, *args,**kwargs):
         super(MessageBase,self).__init__(parent,*args,**kwargs)
         
         self.iconName = iconName
@@ -16,7 +18,8 @@ class MessageBase(QDialog):
         self.infoText = infoText
         self.iconDir = iconDir
         self.state = None
-        self.setMinimumWidth(350)
+        self.textIsSelectable = textIsSelectable
+        self.setMinimumWidth(360)
         self.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Fixed)
 
         self.__controls()
@@ -40,7 +43,9 @@ class MessageBase(QDialog):
         self.logoLabel.setAlignment(Qt.AlignVCenter)
 
         #setup info label
-        self.infoLabel = QLabel(self.infoText)
+        self.infoLabel = createLabel(self.infoText)
+        if self.textIsSelectable:
+            self.infoLabel.setTextInteractionFlags(Qt.TextSelectableByMouse) 
         self.infoLabel.setWordWrap(True)
         self.infoLabel.setAlignment(Qt.AlignRight  | Qt.AlignVCenter)
     
@@ -93,23 +98,27 @@ class WarningMessage(MessageBase):
         ""
         
         #setup ok button
-        self.okButton = QPushButton("Ok")
+        self.okButton = ICStandardButton("Ok")
         self.okButton.clicked.connect(self.acknowledge)       
 
     def __layout(self):
         ""
         
         mainFLayout = self.mainFrame.layout()
-        mainFLayout.addWidget(self.okButton,3,3)
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.okButton)
+
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
   
 
 
 class AskQuestionMessage(MessageBase):
 
-    def __init__(self,parent=None,*args,**kwargs):
+    def __init__(self,yesCallback = None,parent=None,*args,**kwargs):
         ""
         super(AskQuestionMessage,self).__init__(parent,*args,**kwargs)
         
+        self.yesCallback = yesCallback
         self.__controls()
         self.__layout()  
 
@@ -117,21 +126,28 @@ class AskQuestionMessage(MessageBase):
         ""
         
         #setup ok button
-        self.yesButton = QPushButton("Yes")
+        self.yesButton = ICStandardButton("Yes")
         self.yesButton.clicked.connect(self.changeState)  
 
-        self.noButton = QPushButton("No")    
+        self.noButton = ICStandardButton("No")    
         self.noButton.clicked.connect(lambda _: self.resetState(close=True))
 
     def __layout(self):
         ""
         
         mainFLayout = self.mainFrame.layout()
-        
-        mainFLayout.addWidget(self.yesButton,3,2)
-        mainFLayout.addWidget(self.noButton,3,3)
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.yesButton)
+        hbox.addWidget(self.noButton)
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
+      
   
     def changeState(self,event = None, newState = True):
         ""
-        self.setState(newState)
-        self.close()
+        if self.yesCallback is not None:
+            self.setState(newState)
+            self.yesCallback() 
+            self.close() 
+        else:
+            self.setState(newState)
+            self.close()
