@@ -24,13 +24,15 @@ class ICAppValidator(object):
     def checkAppIDForCollision(self,b64EncAppID):
         "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided. The chances are however vereeery looow :) "
         URL = "http://127.0.0.1:5000/api/v1/app/id/exists"
-        
-        r = requests.get(URL,params={"app-id":b64EncAppID})
-        if r.status_code == 200:
-            validID = json.loads(r.json())["valid"] == "True"
-            return validID, False
-        else:
-            return False,True
+        try:
+            r = requests.get(URL,params={"app-id":b64EncAppID})
+            if r.status_code == 200:
+                validID = json.loads(r.json())["valid"] == "True"
+                return validID, False
+            else:
+                return False,True
+        except:
+            return False, True
 
     def copyAppIDToClipboard(self):
         ""
