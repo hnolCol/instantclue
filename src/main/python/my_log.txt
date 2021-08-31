@@ -7,8 +7,8 @@
 }
 {
     "data::addDataFrameFromTxtFile": {
-        "pathToFile": "examples\\PenguinData.txt",
-        "fileName": "PenguinData"
+        "pathToFile": "examples/Tutorial_Data_02.txt",
+        "fileName": "Tutorial_Data_02"
     }
 }
 {
@@ -17,13 +17,22 @@
     }
 }
 {
+    "data::getColumnNamesByDataID": {
+        "dataID": "t:Tutorial_Data_02"
+    }
+}
+{
     "plotter:getData": {
-        "dataID": "DataFrame: 1",
+        "dataID": "t:Tutorial_Data_02",
         "numericColumns": [
-            "culmen_length_mm",
-            "culmen_depth_mm",
-            "flipper_length_mm",
-            "body_mass_g"
+            "NSRP1_0",
+            "CDK1_1",
+            "HDLBP_2",
+            "-_3",
+            "-_4",
+            "IGLC3;IGLC2;IGLC1;IGLC6_5",
+            "IGHG3_6",
+            "IGHM_7"
         ],
         "categoricalColumns": [],
         "plotType": "boxplot"
@@ -31,14 +40,18 @@
 }
 {
     "plotter:getData": {
-        "dataID": "DataFrame: 1",
+        "dataID": "t:Tutorial_Data_02",
         "numericColumns": [
-            "culmen_length_mm",
-            "culmen_depth_mm",
-            "flipper_length_mm",
-            "body_mass_g"
+            "NSRP1_0",
+            "CDK1_1",
+            "HDLBP_2",
+            "-_3",
+            "-_4",
+            "IGLC3;IGLC2;IGLC1;IGLC6_5",
+            "IGHG3_6",
+            "IGHM_7"
         ],
         "categoricalColumns": [],
-        "plotType": "clusterplot"
+        "plotType": "barplot"
     }
 }

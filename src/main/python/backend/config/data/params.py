@@ -1581,7 +1581,7 @@ DEFAULT_PARAMETER = [
     }, 
     {
     "name"          :   "clusterplot.lineplot.color.distance",
-    "value"         :   False,
+    "value"         :   True,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",

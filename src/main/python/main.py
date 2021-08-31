@@ -477,7 +477,7 @@ class InstantClue(QMainWindow):
                     worker.signals.error.connect(self.errorInThread)
                     self.threadpool.start(worker)
                     self.mainFrames["sliceMarks"].threadWidget.addActiveThread(threadID, funcKey)
-                    #self.logger.add(funcKey,funcProps["kwargs"])
+                    self.logger.add(funcKey,funcProps["kwargs"])
                     #Count.setText(str(self.threadpool.activeThreadCount()))
                 
                 else:

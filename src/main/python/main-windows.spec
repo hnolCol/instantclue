@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['C:\\Users\\HNolte\\Documents\\GitHub\\instantclue\\src\\main\\python'],
+             pathex=['C:\\Users\\HNolte\\Downloads\\instantclue-QTInstantClue\\src\\main\\python'],
              binaries=[],
              datas=[],
              hiddenimports=['pynndescent','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
