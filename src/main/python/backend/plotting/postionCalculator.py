@@ -3,7 +3,7 @@ import numpy as np
 from collections import OrderedDict
 from ..utils.stringOperations import getRandomString
 
-def getAxisPostistion(n,nRows = None, nCols = None, maxCol = 4):
+def getAxisPosition(n,nRows = None, nCols = None, maxCol = 4):
     ""
     if nRows is None:
         if n < maxCol:
@@ -32,7 +32,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
 
     if not splitByCategories and nCatCols > 0:
 
-        axisPostions = getAxisPostistion(n = nNumCols, maxCol=2)
+        axisPostions = getAxisPosition(n = nNumCols, maxCol=2)
 
         uniqueValueIndex = {}
         tickPositionByUniqueValue = {}
@@ -130,7 +130,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     
     elif nCatCols == 0:
 
-        axisPostions = getAxisPostistion(n = 1, maxCol=maxColumns)# dict([(n,[1,1,n+1]) for n in range(1)])
+        axisPostions = getAxisPosition(n = 1, maxCol=maxColumns)# dict([(n,[1,1,n+1]) for n in range(1)])
         widthBox = 0.75
         tickValues = np.arange(nNumCols) + widthBox
         tickPositions = {0:tickValues}
@@ -154,7 +154,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
 
     elif nCatCols == 1:
 
-        axisPostions = getAxisPostistion(n = 1)
+        axisPostions = getAxisPosition(n = 1)
         colorCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
         colors,_ = sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
         nColorCats = colorCategories.size
@@ -218,7 +218,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickLabels = {}
         groupNames = {}
         
-        axisPostions = getAxisPostistion(n = len(numericColumns))
+        axisPostions = getAxisPosition(n = len(numericColumns))
         #first category splis data on x axis
         #xAxisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
        # nXAxisCats = xAxisCategories.size
@@ -321,7 +321,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         axisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[2])
         NNumCol = len(numericColumns)
 
-        axisPostions = getAxisPostistion(n = axisCategories.size *  NNumCol, maxCol = axisCategories.size)
+        axisPostions = getAxisPosition(n = axisCategories.size *  NNumCol, maxCol = axisCategories.size)
         #print(axisPostions)
         #get color cats
         colorCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])

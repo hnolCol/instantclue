@@ -631,6 +631,7 @@ class QuickSelect(QWidget):
     def hasData(self):
         ""
         return self.model.rowCount() > 0
+        
 
     def resetClipping(self):
         "Resets Clipping"

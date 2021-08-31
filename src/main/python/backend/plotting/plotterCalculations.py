@@ -3,15 +3,13 @@ import numpy as np
 from numpy.core import numeric
 from numpy.lib.histograms import histogram 
 import pandas as pd 
-from PyQt5.QtCore import QRectF
-from PyQt5.QtGui import QColor, QBrush
+
 from matplotlib.colors import to_hex
-from matplotlib.pyplot import axis, boxplot, scatter, stem
 #backend imports
 from backend.utils.stringOperations import getReadableNumber
 from ..utils.stringOperations import getMessageProps, getReadableNumber, getRandomString, mergeListToString
 from ..utils.misc import scaleBetween, replaceKeyInDict
-from .postionCalculator import calculatePositions, getAxisPostistion
+from .postionCalculator import calculatePositions, getAxisPosition
 
 from threadpoolctl import threadpool_limits
 from statsmodels.stats.contingency_tables import Table2x2
@@ -127,10 +125,11 @@ class PlotterBrain(object):
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         subplotBorders = dict(wspace=0.15, hspace = 0.0,bottom=0.15,right=0.95,top=0.95)
-        axisDict = getAxisPostistion(2, maxCol = 1)
+        axisDict = getAxisPosition(2, maxCol = 1)
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
         groupSizes = groupbyCatColumns.size().sort_values(ascending=False).reset_index(name='counts')
+        
         #
       #  print(groupSizes)
         colorGroups["group"] = categoricalColumns
@@ -191,8 +190,9 @@ class PlotterBrain(object):
             "barLabels" : yCountValues,
             "hoverData" : hoverData,
             "colorCategoricalColumn" : "Categorical Columns",
-            "dataColorGroups": colorGroups
-
+            "dataColorGroups": colorGroups,
+            "chartData" : groupSizes
+ 
             
         }}
 
@@ -309,7 +309,7 @@ class PlotterBrain(object):
 
                 faceColors = dict([(n,colorMap[uniqueCluster]) for n,uniqueCluster in enumerate(uniqueClusters)])
         
-        axisPositions = getAxisPostistion(nClusters,maxCol=self.maxColumns)
+        axisPositions = getAxisPosition(nClusters,maxCol=self.maxColumns)
         axisLabels = dict([(n,{"x":"","y":"Value"}) for n in range(nClusters)])#
         axisTitles = dict([(n,"{} n:{}".format(uniqueCluster,np.sum(clusterLabels[columnName] == uniqueCluster))) for n,uniqueCluster in enumerate(uniqueClusters)])
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
@@ -410,7 +410,7 @@ class PlotterBrain(object):
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         if len(categoricalColumns) == 0:
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             quantiles = np.nanquantile(data.values,[0,0.25,0.5,0.75,1],axis=0)
             xValues = np.arange(len(numericColumns))
             plotData = {0:[{"quantiles":quantiles,"xValues":xValues,"color":self.sourceData.colorManager.nanColor}]}
@@ -430,7 +430,7 @@ class PlotterBrain(object):
 
         elif len(categoricalColumns) == 1:
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             plotData = {0:[]}
             colorCategoricalColumn = categoricalColumns[0]
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)            
@@ -461,7 +461,7 @@ class PlotterBrain(object):
         elif len(categoricalColumns) == 2:
             subplotBorders = dict(wspace=0.10, hspace = 0.1,bottom=0.05,right=0.95,top=0.95)
             splitCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1]) 
-            axisPositions = getAxisPostistion(splitCategories.size,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(splitCategories.size,maxCol=self.maxColumns)
             plotData = dict([(n,[]) for n in axisPositions.keys()])
 
             colorCategoricalColumn = categoricalColumns[0]
@@ -525,7 +525,7 @@ class PlotterBrain(object):
 
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         subplotBorders = dict(wspace=0.175, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-        axisPositions = getAxisPostistion(len(numericColumns),maxCol=self.maxColumns)
+        axisPositions = getAxisPosition(len(numericColumns),maxCol=self.maxColumns)
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         
         if len(categoricalColumns) == 0:
@@ -832,6 +832,11 @@ class PlotterBrain(object):
         scaleXAxis = self.sourceData.parent.config.getParam("scale.numeric.x.axis")
         splitString = self.sourceData.parent.config.getParam("split.string.x.category")
         splitIndex = self.sourceData.parent.config.getParam("split.string.index")
+        faceAndLineColorSame = self.sourceData.parent.config.getParam("pointplot.line.marker.same.color")
+        lineWidth = self.sourceData.parent.config.getParam("pointplot.line.width")
+        errorColorAsLineColor = self.sourceData.parent.config.getParam("pointplot.error.bar.color.as.line")
+        errorEdgeColorAsLineColor = self.sourceData.parent.config.getParam("pointplot.edgecolor.as.line")
+        errorLineWidth = self.sourceData.parent.config.getParam("pointplot.error.line.width")
         axisLimits = {}
         tickLabels = {}
         tickPositions = {}
@@ -841,12 +846,13 @@ class PlotterBrain(object):
         lineKwargs = OrderedDict()
         errorKwargs = OrderedDict()
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
-        
+        markerSize = self.sourceData.parent.config.getParam("pointplot.marker.size")
+
         #get raw data
         rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         if len(categoricalColumns) == 0:
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             colorList = self.sourceData.colorManager.getNColorsByCurrentColorMap(N=len(numericColumns))
             
             hoverData[0] = rawData
@@ -867,17 +873,20 @@ class PlotterBrain(object):
                     line2D = {}
                     error2D = {}
                     line2D["marker"] = "o"
+                    line2D["color"] = colorList[m] if faceAndLineColorSame else "black"
+                    line2D["linewidth"] = lineWidth
                     line2D["markerfacecolor"] = colorList[m]
-                    line2D["markeredgecolor"] = rcParams["patch.edgecolor"]
+                    line2D["markeredgecolor"] = colorList[m] if errorEdgeColorAsLineColor else rcParams["patch.edgecolor"]
                     line2D["markeredgewidth"] = rcParams["patch.linewidth"]
-                    line2D["markersize"] = np.sqrt(50)
+                    line2D["markersize"] = markerSize
                     line2DKwargs.append(line2D)
 
                     error2D["x"] = [m]
                     error2D["y"] = [columnMeans[m]]
                     error2D["yerr"] = [errorValues[m]]
-                    error2D["elinewidth"] = rcParams["patch.linewidth"]
-                    error2D["ecolor"] = rcParams["patch.edgecolor"]
+                    error2D["elinewidth"] = errorLineWidth
+                    
+                    error2D["ecolor"] = colorList[m] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
@@ -891,13 +900,12 @@ class PlotterBrain(object):
                 colorGroups["group"] = numericColumns
                 colorGroups["internalID"] = [getRandomString() for n in range(len(numericColumns))]
                 axisLabels[n] = {"x":"","y":"Value"}
-
             colorCategoricalColumn = "Numeric Columns"
         
         elif len(categoricalColumns) == 1 and len(numericColumns) == 1:
             
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             #get unique categories
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -932,17 +940,20 @@ class PlotterBrain(object):
                     line2D = {}
                     error2D = {}
                     line2D["marker"] = "o"
+                    line2D["color"] = colors[category] if faceAndLineColorSame else "black"
+                    line2D["linewidth"] = lineWidth
                     line2D["markerfacecolor"] = colors[category]
-                    line2D["markeredgecolor"] = rcParams["patch.edgecolor"]
+                    line2D["markeredgecolor"] = colors[category] if errorEdgeColorAsLineColor else rcParams["patch.edgecolor"]
                     line2D["markeredgewidth"] = rcParams["patch.linewidth"]
-                    line2D["markersize"] = np.sqrt(50)
+                    line2D["markersize"] = markerSize
                     line2DKwargs.append(line2D)
 
                     error2D["x"] = [tickPos[m]]
                     error2D["y"] = [columnMeans[m]]
                     error2D["yerr"] = [errorValues[m]]
-                    error2D["elinewidth"] = rcParams["patch.linewidth"]
-                    error2D["ecolor"] = rcParams["patch.edgecolor"]
+                    error2D["elinewidth"] = errorLineWidth
+                    
+                    error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
@@ -957,7 +968,7 @@ class PlotterBrain(object):
         
         elif len(categoricalColumns) == 1 and len(numericColumns) > 1:
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(1,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
 
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -986,21 +997,22 @@ class PlotterBrain(object):
                     line2D = {}
                     error2D = {}
                     line2D["marker"] = "o"
-                    line2D["color"] = "black"
+                    line2D["color"] = colors[category] if faceAndLineColorSame else "black"
                     line2D["linestyle"] = "-"
-                    line2D["linewidth"] = 0.5
+                    line2D["linewidth"] = lineWidth
                     line2D["aa"] = True
                     line2D["markerfacecolor"] = colors[category]
-                    line2D["markeredgecolor"] = rcParams["patch.edgecolor"]
+                    line2D["markeredgecolor"] = colors[category] if errorEdgeColorAsLineColor else rcParams["patch.edgecolor"]
                     line2D["markeredgewidth"] = rcParams["patch.linewidth"]
-                    line2D["markersize"] = np.sqrt(self.sourceData.parent.config.getParam("scatterSize"))
+                    line2D["markersize"] = markerSize
                     line2DKwargs.append(line2D)
 
                     error2D["x"] = np.arange(len(numericColumns))#line2D["xdata"]
                     error2D["y"] = np.array([meanErrorData[category][numColumn]["value"] for numColumn in numericColumns])#groupMeans.loc[category ,:].values#line2D["ydata"]
                     error2D["yerr"] = np.array([meanErrorData[category][numColumn]["error"] for numColumn in numericColumns])
-                    error2D["elinewidth"] = rcParams["patch.linewidth"]
-                    error2D["ecolor"] = rcParams["patch.edgecolor"]
+                    error2D["elinewidth"] = errorLineWidth
+                    
+                    error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
@@ -1014,7 +1026,7 @@ class PlotterBrain(object):
             
             nNumCols = len(numericColumns)
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(nNumCols,maxCol=self.maxColumns)
+            axisPositions = getAxisPosition(nNumCols,maxCol=self.maxColumns)
 
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -1075,20 +1087,21 @@ class PlotterBrain(object):
                     error2D = {}
 
                     line2D["marker"] = "o"
-                    line2D["color"] = "black"
+                    line2D["color"] = colors[category] if faceAndLineColorSame else "black"
                     line2D["linestyle"] = "-"
-                    line2D["linewidth"] = 0.5
+                    line2D["linewidth"] = lineWidth
                     line2D["markerfacecolor"] = colors[category]
-                    line2D["markeredgecolor"] = rcParams["patch.edgecolor"]
+                    line2D["markeredgecolor"] = colors[category] if errorEdgeColorAsLineColor else rcParams["patch.edgecolor"]
                     line2D["markeredgewidth"] = rcParams["patch.linewidth"]
-                    line2D["markersize"] = np.sqrt(self.sourceData.parent.config.getParam("scatterSize"))
+                    line2D["markersize"] = markerSize
                     line2DKwargs.append(line2D)
 
                     error2D["x"] = x
                     error2D["y"] = y
                     error2D["yerr"] = e
-                    error2D["elinewidth"] = rcParams["patch.linewidth"]
-                    error2D["ecolor"] = rcParams["patch.edgecolor"]
+                    error2D["elinewidth"] = errorLineWidth
+                    
+                    error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
@@ -1110,7 +1123,7 @@ class PlotterBrain(object):
             NNumCol = len(numericColumns)
             #create axis
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
-            axisPositions = getAxisPostistion(n = axisCategories.size *  NNumCol, maxCol = axisCategories.size)
+            axisPositions = getAxisPosition(n = axisCategories.size *  NNumCol, maxCol = axisCategories.size)
             nColorCats = colorCategories.size
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -1123,8 +1136,7 @@ class PlotterBrain(object):
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             #create groupby 
-            colorGroupby = rawData.groupby(categoricalColumns[0],sort=False)
-            xAxisGroupby = rawData.groupby(categoricalColumns[1],sort=False)
+            
             axisGroupby = rawData.groupby(categoricalColumns[2],sort=False)
             
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
@@ -1182,9 +1194,9 @@ class PlotterBrain(object):
                             line2D["marker"] = "o"
                             line2D["color"] = "black"
                             line2D["linestyle"] = "-"
-                            line2D["linewidth"] = 0.5
+                            line2D["linewidth"] = lineWidth
                             line2D["markerfacecolor"] = colors[colorCategory]
-                            line2D["markeredgecolor"] = rcParams["patch.edgecolor"]
+                            line2D["markeredgecolor"] = colors[colorCategory] if errorEdgeColorAsLineColor else rcParams["patch.edgecolor"]
                             line2D["markeredgewidth"] = rcParams["patch.linewidth"]
                             line2D["markersize"] = np.sqrt(self.sourceData.parent.config.getParam("scatterSize"))
                             line2DKwargs.append(line2D)
@@ -1192,8 +1204,9 @@ class PlotterBrain(object):
                             error2D["x"] = x
                             error2D["y"] = y
                             error2D["yerr"] = e
-                            error2D["elinewidth"] = rcParams["patch.linewidth"]
-                            error2D["ecolor"] = rcParams["patch.edgecolor"]
+                            error2D["elinewidth"] = errorLineWidth
+                            
+                            error2D["ecolor"] = colors[colorCategory] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                             line2DErrorKwargs.append(error2D)
                     lineKwargs[nAxis] = line2DKwargs
                     errorKwargs[nAxis] = line2DErrorKwargs
@@ -1610,7 +1623,7 @@ class PlotterBrain(object):
         internalIDs = []
 
         if  self.sourceData.parent.config.getParam("forest.plot.calculated.data"):
-            axisPositions = getAxisPostistion(1) 
+            axisPositions = getAxisPosition(1) 
             #categorical columns -> names of variables -> yticks
             categoricalData = data[categoricalColumns[0]].values.flatten()
             colors, _ = self.sourceData.colorManager.createColorMapDict(categoricalData, as_hex=True)
@@ -1657,7 +1670,7 @@ class PlotterBrain(object):
                     faceColors[0][rowName] = colors[rowName]
         else:
 
-            axisPositions = getAxisPostistion(len(numericColumns))
+            axisPositions = getAxisPosition(len(numericColumns))
             
             colors, layer = self.sourceData.colorManager.createColorMapDict(categoricalColumns, as_hex=True)
             if useColorMap:
@@ -1786,7 +1799,7 @@ class PlotterBrain(object):
 
                 if len(categoricalColumns) == 1:
                     numOfAxis = len(numericColumnPairs) * numUniqueCat
-                    axisPositions = getAxisPostistion(numOfAxis,maxCol=numUniqueCat)
+                    axisPositions = getAxisPosition(numOfAxis,maxCol=numUniqueCat)
                     requiredColumns = []
                     for numCols in numericColumnPairs:
                         for uniqueValue in uniqueValuesCat1:
@@ -1818,13 +1831,13 @@ class PlotterBrain(object):
                             axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
                             axisID += 1  
                     
-                   # axisPositions = getAxisPostistion(len(numericColumnPairs),nCols=numUniqueCat)
+                   # axisPositions = getAxisPosition(len(numericColumnPairs),nCols=numUniqueCat)
                 elif len(categoricalColumns) == 2:
                     uniqueValuesCat2 = data[categoricalColumns[1]].unique() 
                     numUniqueCat2 = uniqueValuesCat2.size
 
                     numOfAxis = numUniqueCat * numUniqueCat2 * len(numericColumnPairs)
-                    axisPositions = getAxisPostistion(numOfAxis,maxCol=numUniqueCat)
+                    axisPositions = getAxisPosition(numOfAxis,maxCol=numUniqueCat)
                     requiredColumns = []
                     for numCols in numericColumnPairs:
                         for uniqueValueCat2 in uniqueValuesCat2:
@@ -2152,7 +2165,7 @@ class PlotterBrain(object):
         
         
         nAxis = int(nNumCols ** 2)
-        axisPositions = getAxisPostistion(nAxis, maxCol=nNumCols)
+        axisPositions = getAxisPosition(nAxis, maxCol=nNumCols)
         subplotBorders = dict(wspace=0.1, hspace = 0.1, bottom=0.15,right=0.95,top=0.95)
         #numericColumnPairs =  list(itertools.product(numericColumns,2))  #list(zip(numericColumns[0::2], numericColumns[1::2]))
         columnPairs = self._buildColumnPairs(numericColumns)
@@ -2298,7 +2311,7 @@ class PlotterBrain(object):
         returnKwargs["lineCollections"] = lineCollections
         return returnKwargs
 
-    def getSizeGroupsForScatter(self,dataID, sizeColumn = None, sizeColumnType = None):
+    def getSizeGroupsForScatter(self,dataID, sizeColumn = None, sizeColumnType = None, sizesSetByUser = None):
         ""
         #at the moment similiar to columnColor - merge
         if sizeColumn is None:
@@ -2321,22 +2334,22 @@ class PlotterBrain(object):
             else:
                 rawSizeData = rawData[sizeColumnName]
 
+            
             sizeCategories = rawSizeData.unique()
             nCategories = sizeCategories.size
             scaleSizes = np.linspace(0.2,1,num=nCategories,endpoint=True)
             sizeMap = dict(zip(sizeCategories,scaleSizes))
             sizeMap = replaceKeyInDict(self.sourceData.replaceObjectNan,sizeMap,0.1)
-
+           
             scaledSizedata = rawSizeData.map(sizeMap)
-            
+           
             sizeData = scaledSizedata.values * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize
 
             sizeGroupData["size"] = scaleSizes * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize
             sizeGroupData["group"] = sizeCategories
             sizeGroupData["internalID"] = [getRandomString() for n in sizeGroupData.index]
 
-
-            categoryIndexMatch = dict([(intID,rawData[rawData.values == category].index) for category, intID in zip(sizeGroupData["group"].values,
+            categoryIndexMatch = dict([(intID,rawData[rawSizeData == category].index) for category, intID in zip(sizeGroupData["group"].values,
                                                                                                                     sizeGroupData["internalID"].values)])
           #  print(sizeGroupData)  
            # print(propsData)  
@@ -2706,7 +2719,7 @@ class PlotterBrain(object):
             sizeGroupsData["group"] = colorCategories
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
 
-            axisPostions = getAxisPostistion(len(numericColumns),maxCol=self.maxColumns)
+            axisPostions = getAxisPosition(len(numericColumns),maxCol=self.maxColumns)
             catGroupby = rawData.groupby(categoricalColumns, sort=False)
 
             #plot data
@@ -2795,7 +2808,7 @@ class PlotterBrain(object):
             sizeGroupsData["group"] = colorCategories
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
 
-            axisPostions = getAxisPostistion(n = axisCategories.size *  numNumColumns, maxCol = axisCategories.size)
+            axisPostions = getAxisPosition(n = axisCategories.size *  numNumColumns, maxCol = axisCategories.size)
             catGroupby = rawData.groupby(categoricalColumns, sort=False)
 
             #plot data
@@ -3026,7 +3039,7 @@ class PlotterBrain(object):
     def getWordCloud(self,dataID,numericColumns,categoricalColumns):
         ""
         
-        axisPostions = getAxisPostistion(1)
+        axisPostions = getAxisPosition(1)
         rawData = self.sourceData.getDataByColumnNames(dataID,categoricalColumns)["fnKwargs"]["data"]
         config =  self.sourceData.parent.config
         splitString = config.getParam("word.cloud.split_string")
@@ -3096,7 +3109,7 @@ class PlotterBrain(object):
             numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
         
         separatePairs = config.getParam("xy.plot.separate.column.pairs")
-        axisPostions = getAxisPostistion(1 if not separatePairs else len(numericColumnPairs))
+        axisPostions = getAxisPosition(1 if not separatePairs else len(numericColumnPairs))
         if len(categoricalColumns) == 0:
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(numericColumnPairs))
             colorGroupsData["group"] = ["{}:{}".format(*columnPair) if "ICIndex" not in columnPair[0] else "{}".format(columnPair[1]) for columnPair in numericColumnPairs]

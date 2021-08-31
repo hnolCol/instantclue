@@ -42,10 +42,8 @@ from numba.np.ufunc import parallel
 import numpy as np
 from pandas.core.algorithms import isin
 from scipy.signal import lfilter
-from sklearn.neighbors import KernelDensity
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.preprocessing import scale
-from itertools import compress, chain
+
+from itertools import compress, chain, groupby
 import pandas as pd
 
 from sklearn.experimental import enable_iterative_imputer  # noqa
@@ -55,7 +53,12 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.neighbors import KernelDensity
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.preprocessing import scale
 from threadpoolctl import threadpool_limits
+
+from scipy.stats import pearsonr
 
 from ..utils.stringOperations import getMessageProps, mergeListToString, findCommonStart, getRandomString
 from ..filter.categoricalFilter import CategoricalFilter
@@ -70,11 +73,36 @@ from collections import OrderedDict
 import itertools
 #from modules.dialogs.categorical_filter import categoricalFilter
 #from modules.utils import *
-import time
+
 import numba as nb
 from numba import prange, jit
 
 from matplotlib.colors import to_hex
+import time
+import re 
+import os 
+
+
+def fasta_iter(fasta_name):
+    """
+    modified from Brent Pedersen
+    Correct Way To Parse A Fasta File In Python
+    given a fasta file. yield tuples of header, sequence
+    """
+    
+    fh = open(fasta_name)
+    faiter = (x[1] for x in itertools.groupby(fh, lambda line: line[0] == ">"))
+
+    for header in faiter:
+        # drop the ">"
+        headerStr = header.__next__()[1:].strip()
+
+        # join all sequence lines to one.
+        seq = "".join(s.strip() for s in faiter.__next__())
+
+        yield (headerStr, seq)
+
+
 
 def z_score(x):
 	mean = x.mean()
@@ -85,23 +113,23 @@ def z_score(x):
 
 
 def pearsonByRowsTwoArray(X,Y):
-	r = 0
+	idx = 0
 	nRows = X.shape[0] * Y.shape[0]
-	A = np.empty(shape=(nRows,1), dtype=np.float64)
+	A = np.empty(shape=(nRows,2), dtype=np.float64)
 	for n in range(X.shape[0]):
 		for m in range(Y.shape[0]):
 			y = Y[m,:]
 			nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
 			x = X[n,nonNaNIdx]
 			y = Y[m,nonNaNIdx]
-			xx = x - np.mean(x)
-			yy = y - np.mean(y)
+			if x.size > 2 and y.size > 2:
+				r,p = pearsonr(x,y)
 			
-			ssX = np.sum(xx**2)
-			ssY = np.sum(yy**2)
-			xy = np.sum([x*y for x,y in zip(xx,yy)])
-			A[r] = xy / np.sqrt(ssX * ssY)
-			r+=1
+				A[idx,:] = [r,p]
+				
+			else:
+				A[idx,:] = [np.nan,np.nan]
+			idx+=1
 	return A 
 
 def pearsonByRowsTwoArrayN(X,Y):
@@ -290,7 +318,7 @@ class DataCollection(object):
 	
 	def checkForInternallyUsedColumnNames(self,dataFrame):
 		""
-		FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer"]
+		FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer","None"]
 		columnNamesToChange = [colName for colName in dataFrame.columns if colName in FORBIDDEN_COLUMN_NAMES]
 		columnNamesNoChangeRequired = [colName for colName in dataFrame.columns if colName not in FORBIDDEN_COLUMN_NAMES]
 		if len(columnNamesToChange) == 0:
@@ -700,6 +728,35 @@ class DataCollection(object):
 			if naFill is None:
 				naFill = self.replaceObjectNan
 			self.dfs[dataID][columnLabelList] = self.dfs[dataID][columnLabelList].fillna(naFill)
+
+	
+	def filterFastaFileByColumnIDs(self,dataID,columnNames,fastaFile):
+		"Take a list of ids and match them to a fasta file. The new file is create in the original fasta."
+		uniprotTargetList = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"].values[:,0]
+		fastaBaseFile = os.path.basename(fastaFile)
+		dirname = os.path.dirname(fastaFile)
+		filteredFastFile = "{}_filtered({}).fasta".format(fastaBaseFile,columnNames.values[0])
+		filteredFastaPath = os.path.join(dirname,filteredFastFile)
+		regExpStr = self.parent.config.getParam("reg.exp.fasta.filter")
+		escape = self.parent.config.getParam("reg.exp.escape")
+		if escape:
+			regExpStr = re.escape(regExpStr)
+		nMatches  = 0 
+		with open(filteredFastaPath,"w") as f:
+
+			for headerStr,seq in fasta_iter(fastaFile):
+				match = re.search(regExpStr, headerStr)
+				uniprotID = match.group(1)
+				
+				if uniprotID in uniprotTargetList:
+		
+					f.write(">"+headerStr+"\n")
+					f.write(seq+"\n")
+					nMatches += 1
+
+
+		return getMessageProps("Done..","Fasta file filtered and saved. {} id matched.\nThe path to the file: {}".format(nMatches,filteredFastaPath))
+
 
 	def getGroupsbByColumnList(self,dataID, columnList, sort = False, as_index = True):
 		'''
@@ -2021,7 +2078,13 @@ class DataCollection(object):
 		else:
 			return []
 			
-	
+	def getNonFloatColumns(self,dataID):
+		""
+		if dataID in self.dfs:
+			return pd.concat([self.dfsDataTypesAndColumnNames[dataID]["Categories"] , self.dfsDataTypesAndColumnNames[dataID]["Integers"] ])
+		else:
+			return []
+
 	def getNumericColumns(self,dataID):
 		'''
 		Returns columns names that are float and integers
@@ -2399,9 +2462,9 @@ class DataCollection(object):
 			catRep2 = np.repeat(catData1.values,df2.index.size,axis=0)
 			catRep1 = np.tile(catData2.values,(df1.index.size,1))
 			
-			columnNames = ["r"] + ["{}_x".format(colName) for colName in catData2.columns.tolist()] + ["{}_y".format(colName) for colName in catData1.columns.tolist()]
+			columnNames = ["r","p"] + ["{}_x".format(colName) for colName in catData2.columns.tolist()] + ["{}_y".format(colName) for colName in catData1.columns.tolist()]
 			resultDf = pd.concat([
-				pd.DataFrame(A,columns=["r"]),
+				pd.DataFrame(A,columns=["r","p"]),
 				pd.DataFrame(catRep1, columns = catData2.columns),
 				pd.DataFrame(catRep2, columns= catData1.columns)], axis=1, ignore_index=True)
 			resultDf.columns = columnNames 

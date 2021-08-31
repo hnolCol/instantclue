@@ -20,6 +20,7 @@ from backend.utils.stringOperations import getRandomString
 from backend.utils.Logger import ICLogger
 from backend.config.config import Config
 from backend.saver.ICSessionHandler import ICSessionHandler
+from backend.webapp.ICAppValidator import ICAppValidator
 
 from backend.plotting.plotterCalculations import PlotterBrain
 
@@ -39,11 +40,7 @@ import webbrowser
 import requests
 import warnings
 from multiprocessing import freeze_support
-import base64
-import json 
 
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
 
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
@@ -133,16 +130,37 @@ menuBarItems = [
         "name":"Save log",
         "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
     },
-        {
+    {
         "subM":"Share",
         "name":"Validate App",
         "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
     },
     {
         "subM":"Share",
+        "name":"Add app id",
+        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    },
+    {
+        "subM":"Share",
         "name":"Copy App ID",
-        "fn": {"obj":"self","fn":"copyAppIDToClipboard"}
+        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    },
+    {
+        "subM":"Share",
+        "name":"Manage Graphs",
+        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    },
+    {
+        "subM":"Share",
+        "name":"Retrieve Data",
+        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    },
+    {
+        "subM":"Share",
+        "name":"Display shared charts",
+        "fn": {"obj":"webAppComm","fn":"displaySharedCharts"}
     }
+    
 ] + exampleFuncs 
 
 
@@ -184,6 +202,9 @@ class InstantClue(QMainWindow):
         self.notification = Notification()
         #set up logger 
         self.logger = ICLogger(self.config,__VERSION__)
+        #setup web app communication
+        self.webAppComm = ICAppValidator(self)
+        
 
         _widget = QWidget()
         _layout = QVBoxLayout(_widget)
@@ -208,7 +229,7 @@ class InstantClue(QMainWindow):
         self.acceptDrop = False
         #update parameters saved in parents (e.g data, plotter etc)
         self.config.updateAllParamsInParent()
-
+        #self.webAppComm.getChartsByAppID()
         #self.validateApp()
 
     def _connectSignals(self):
@@ -367,7 +388,6 @@ class InstantClue(QMainWindow):
                 #finnaly execute the function
                 fn(**kwargs)
             except Exception as e:
-                print("ERRRO")
                 print(fn)
                 print(fnComplete)
                 print(e)
@@ -377,10 +397,6 @@ class InstantClue(QMainWindow):
         "Indicate in the ui that a thread finished."
         self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
     
-    def isPlottingThreadRunning(self):
-        ""
-        
-
     def sendRequest(self,funcProps):
         ""
         try:
@@ -518,104 +534,11 @@ class InstantClue(QMainWindow):
         if r.ok:
             self.sendMessageRequest({"title":"Done","message":"Text entry transfered to WebApp. "})
 
-    def checkAppIDForCollision(self,b64EncAppID):
-        "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided."
-        URL = "http://127.0.0.1:5000/api/v1/app/id/exists"
-        
-        r = requests.get(URL,params={"app-id":b64EncAppID})
-        if r.status_code == 200:
-            validID = json.loads(r.json())["valid"] == "True"
-            return validID, False
-        else:
-            return False,True
-
-    def encryptStringWithPublicKey(self, byteToEntrypt):
-        ""
-        publickKeyPath = os.path.join(self.mainPath,"conf","key","receiver.pem")
-        if os.path.exists(publickKeyPath):
-            privateKeyString = RSA.import_key(open(publickKeyPath).read())
-            encryptor = PKCS1_OAEP.new(privateKeyString)
-            encrypted = encryptor.encrypt(byteToEntrypt)
-            b64EncStr = base64.b64encode(encrypted).decode("utf-8")
-            return b64EncStr 
-
-
-    def validateApp(self):
-        ""
-        
-        
-        appIDPath, validPath = self.appIDFound()
-        
-       
-        if not validPath:
-            appIDValid = False
-            while not appIDValid:
-                #create app ID
-                appID = getRandomString(20).encode("utf-8")
-                #encrypt appid for sending
-                b64EncAppID = self.encryptStringWithPublicKey(appID)
-                #check for collision
-                appIDValid, httpRequestFailed = self.checkAppIDForCollision(b64EncAppID)
-                if httpRequestFailed:
-                    self.sendMessageRequest({"title":"Error..","message":"HTTP Request failed. App could not be validated."})
-                    return
-
-            self.saveAppID(appIDPath,b64EncAppID)
-        #valEmailDialog = ICValidateEmail(mainController=self)
-        #valEmailDialog.exec_()
-            
-    
-            
-            
-
-
-
-
-           # if b64EncStr is not None:
-            #    requests.put(URL,json={"app-id":b64EncStr})
-           # else:
-            #    self.sendMessageRequest({"title":"Error..","message":"Private key not found.."})
-        
-        
-
-            #requests.post(URL,json={"app-id":b64_encStr})
-
-
-    def isValidated(self):
-        ""
-
-
-    def appIDFound(self):
-        ""
-        appIDPath = self.getAppIDPath()
-        return appIDPath, os.path.exists(appIDPath)
-
-    def saveAppID(self,appIDPath, b64EncStr):
-        ""
-        with open(appIDPath,"w") as f:
-            f.write(b64EncStr)
-
-    def getAppIDPath(self):
-        ""
-        return os.path.join(self.mainPath,"conf","key","app_id")
-
-    def getAppID(self):
-        ""
-        appIDPath = self.getAppIDPath()
-        with open(appIDPath,"r") as f:
-            b64EncStr = f.read()
-            return b64EncStr
 
     def getDataID(self):
         ""
         return self.mainFrames["data"].getDataID()
 
-    def copyAppIDToClipboard(self):
-        ""
-        appID = self.getAppID()
-        if appID is not None:
-            pd.DataFrame([appID]).to_clipboard(index=False,header=False, excel=False)
-            self.sendMessageRequest({"title":"Copied","message":"Encrypted App ID has been copied."})
 
     def getGraph(self):
         "Returns the graph object from the figure mainFrame (middle)."

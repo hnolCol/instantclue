@@ -4,17 +4,15 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from ..dialogs.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
-from ..dialogs.ICCategoricalFilter import CategoricalFilter
 from ..custom.ICCollapsableFrames import CollapsableFrames
-from ..custom.buttonDesigns import DataHeaderButton, CollapsButton
+from ..custom.buttonDesigns import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
-from ..custom.ICDataTreeView import DataTreeView
 from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, SubsetDataButton, ViewDataButton
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
-from ..utils import removeFileExtension, areFilesSuitableToLoad, createLabel
+from ..utils import removeFileExtension, areFilesSuitableToLoad
 from ..custom.warnMessage import WarningMessage
 
 
@@ -348,8 +346,11 @@ class DataHandleFrame(QFrame):
         columnNames = self.mC.data.getPlainColumnNames(dataID)
         useClipping = self.mC.config.getParam("data.view.use.clipping")
         dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = useClipping)["fnKwargs"]["data"]
+        self.openDataFrameinDialog(dataFrame)
 
-        dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self)
+    def openDataFrameinDialog(self,dataFrame,*args,**kwargs):
+        ""
+        dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self,*args,**kwargs)
         dlg.exec_()
         
 

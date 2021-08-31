@@ -25,11 +25,12 @@ class ICPointplot(ICChart):
                 elif onlyForID is None and n in self.axisDict:
                     errorData = self.data["errorData"][n]
                     for eKwargs, lKwargs in zip(errorData,lineData):
-                        line, _, _ = self.axisDict[n].errorbar(**eKwargs,**lKwargs)
+                        line, errorCaps, errorBarRangeLine = self.axisDict[n].errorbar(**eKwargs,**lKwargs)
                         internalID = self.getInternalIDByColor(lKwargs["markerfacecolor"])
                         if internalID not in self.pointplotItems:
                             self.pointplotItems[internalID] = []
-                        self.pointplotItems[internalID].append(line)
+                        self.pointplotItems[internalID].extend([line,errorBarRangeLine,errorCaps])
+                        
                         self.axisDict[n].add_artist(line)
         except Exception as e:
             print(e)
@@ -77,7 +78,14 @@ class ICPointplot(ICChart):
                 for l in lines:
                     boolIdx = colorGroup["internalID"].values ==  changedCategory
                     newColor = colorGroup.loc[boolIdx,"color"].values[0]
-                    l.set_markerfacecolor(newColor)
+                    if isinstance(l,tuple): #errorbar collection
+                            for el in l:
+                                el.set_color(newColor)
+                    else:
+                        l.set_markerfacecolor(newColor)
+                        if self.getParam("pointplot.line.marker.same.color"):
+                                l.set_color(newColor)
+                    
         else:
             for color, group, internalID in colorGroup.values:
                 if internalID in self.pointplotItems:
@@ -85,7 +93,13 @@ class ICPointplot(ICChart):
                     for l in lines:
                        # boolIdx = colorGroup["internalID"].values ==  changedCategory
                         #newColor = colorGroup.loc[boolIdx,"color"].values[0]
-                        l.set_markerfacecolor(color)
+                        if isinstance(l,tuple): #errorbar collection
+                            for el in l:
+                                el.set_color(color)
+                        else:
+                            l.set_markerfacecolor(color)
+                            if self.getParam("pointplot.line.marker.same.color"):
+                                l.set_color(color)
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
         self.updateFigure.emit()
@@ -95,8 +109,9 @@ class ICPointplot(ICChart):
         if not hasattr(self,"backgrounds"):
             self.backgrounds = {}
         self.backgrounds.clear() 
-        for ax in self.axisDict.values():
-            self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
+        if hasattr(self.p.f.canvas,"copy_from_bbox"):
+            for ax in self.axisDict.values():
+                self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
 
     def setHoverData(self,dataIndex):
         ""

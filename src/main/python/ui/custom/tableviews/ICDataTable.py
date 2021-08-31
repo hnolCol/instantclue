@@ -140,6 +140,7 @@ class PandaTableDialog(QDialog):
         ""
     
         backgroundColor = self.model.getHighlightBackgroundcolor(self.idxClicked)
+        columnName = self.model.getColumnNameByColumnIndex(self.idxClicked)
         if backgroundColor is None:
             nHighlightedColors = self.model.getNumberOfHighlightedBackgrounds()
             backgroundColor = headercolors[nHighlightedColors % len(headercolors)]
@@ -153,7 +154,7 @@ class PandaTableDialog(QDialog):
             self.searchWithTags.hideLineEdit()
         else:
                    
-            tagID = self.searchWithTags.addTag("{}-{}".format(minValue,maxValue),backgroundColor)
+            tagID = self.searchWithTags.addTag("{}:{}-{}".format(columnName,minValue,maxValue),backgroundColor)
             self.table.model().layoutAboutToBeChanged.emit()
             self.table.model().setNumericFilterByColumnIndex(self.idxClicked,minValue,maxValue,tagID)
             self.table.model().layoutChanged.emit()
@@ -181,7 +182,6 @@ class PandaTableDialog(QDialog):
                 self.searchWithTags.hideLineEdit()
                 self.searchWithTags.showNumericFilter()
                 self.searchWithTags.setFocusToMin()
-                print("NUMERIC FILTER")
         
     def sendMessage(self, messageProps):
         ""

@@ -15,6 +15,10 @@ addDataAndRefresh = [
                 updateTreeView,
                 sendMessageProps]
 
+addDataOrShow = [
+                {"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
+                {"obj":"self","fn":"openDataFrameinDialog","objKey":"data","objName":"mainFrames","requiredKwargs":["dataFrame"]},
+                sendMessageProps]
 #addDataAndRefresh = [
  #               {"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
  #               sendMessageProps]
@@ -152,6 +156,11 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"duplicateColumns","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":refreshColumnView
+        },
+    "data::filterFasta":
+        {
+            "threadRequest":{"obj":"data","fn":"filterFastaFileByColumnIDs","requiredKwargs":["dataID","columnNames","fastaFile"]},
+            "completedRequest":[sendMessageProps]
         },
     "data::factorizeColumns":
         {
@@ -543,6 +552,14 @@ funcPropControl = {
                 updateTreeView,
                 sendMessageProps]       
         },
+    "statistic::calculateAUC":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"calculateAUCFromGraph","requiredKwargs":["dataID","numericColumnPairs","chartData"]},
+            "completedRequest":
+                addDataOrShow
+        },
+
+        
     "dimReduction::LDA":
         {
             "threadRequest":{"obj":"statCenter","fn":"runLDA","requiredKwargs":["dataID","groupingName"]},

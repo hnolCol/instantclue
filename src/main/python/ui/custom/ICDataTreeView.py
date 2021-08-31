@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
 from .resortableTable import ResortableTable
-from .warnMessage import WarningMessage, AskQuestionMessage
+from .warnMessage import WarningMessage, AskQuestionMessage, AskForFile
 
 from ..delegates.dataTreeViewDelegates import *
 from ..utils import createSubMenu, createMenu, createMenus, getStandardFont
@@ -59,12 +59,12 @@ dataTypeSubMenu = {
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
-        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter"]), #"(Prote-)omics-toolkit"
+        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]), #
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
-       # ("(Prote-)omics-toolkit", ["Match to db.."])
+        #("(Prote-)omics-toolkit", ["Fasta"])
         ]
 }
 
@@ -97,7 +97,12 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"1W-ANOVA"}
     },
-    
+    {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"Filter fasta by ids",
+        "funcKey": "filterFasta",
+        "dataType": "Categories",
+    },
     # {
     #     "subM":"Multiple Groups",
     #     "name":"2W-ANOVA",
@@ -1798,6 +1803,26 @@ class DataTreeViewTable(QTableView):
             indices = self.selectionModel().selectedRows()
         return self.model().getSelectedData(indices)
 
+    def filterFasta(self, event=None,*args,**kwargs):
+        ""
+
+        dlg = AskForFile(placeHolderEdit="Select fasta file.")
+        if dlg.exec_():
+            columnNames = self.getSelectedData()
+            if columnNames.index.size == 0:
+                self.mC.sendToWarningDialog(infoText = "Select a column containing the identifiers you want to filter on.")
+                return
+            funcProps = {
+                    "key":"data::filterFasta",
+                    "kwargs":{
+                        "columnNames":columnNames,
+                        "fastaFile" : dlg.state
+                        }
+                    } 
+            
+            self.sendToThread(funcProps = funcProps, addDataID=True)
+
+        
    
 
     def compareGroups(self, event=None, test = None, *args, **kwargs):

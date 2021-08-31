@@ -2026,6 +2026,60 @@ DEFAULT_PARAMETER = [
     "description"   :   "Transparancy of swarms that are added to charts (boxplot, barplot, violinplot).",
     },
     {
+    "name"          :   "pointplot.line.marker.same.color",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "If True, markerface color and line color will be the same.",
+    },
+    {
+    "name"          :   "pointplot.line.width",
+    "value"         :   2.0,
+    "dtype"         :   float,
+    "range"         :   [0.001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "Line width of the line connecting points of the same category.",
+    },  
+    {
+    "name"          :   "pointplot.marker.size",
+    "value"         :   8,
+    "dtype"         :   float,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "Size of markers in points.",
+    },  
+    {
+    "name"          :   "pointplot.error.line.width",
+    "value"         :   0.5,
+    "dtype"         :   float,
+    "range"         :   [0.001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "Line width of the error line for each point.",
+    },  
+    {
+    "name"          :   "pointplot.error.bar.color.as.line",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "If True, the error bar line color equals the line connecting points of the same category.",
+    }, 
+    {
+    "name"          :   "pointplot.edgecolor.as.line",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Pointplot",
+    "description"   :   "If True, the edge color equals the line connecting points of the same category.",
+    }, 
+    {
     "name"          :   "scale.numeric.x.axis",
     "value"         :   False,
     "dtype"         :   bool,
@@ -2399,6 +2453,33 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Multiple Testing Correction",
     "description"   :   "FWER, family-wise error rate."
     },
+    {
+    "name"          :   "reg.exp.fasta.filter",
+    "value"         :   "\|(.*)\|",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Fasta file filtering",
+    "description"   :   "The regular expression to identify the id to match in a fasta file. \|(.*)\| is the standard for uniprot ids."
+    },
+    {
+    "name"          :   "reg.exp.escape",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Fasta file filtering",
+    "description"   :   "If True, regular expression will use re.escape."
+    },
+    {
+    "name"          :   "source.data.filter.logical.op",
+    "value"         :   "and",
+    "dtype"         :   str,
+    "range"         :   ["and","or"],
+    "parent"        :   "intern",
+    "parentType"    :   "Source file filtering",
+    "description"   :   "Spreadsheet like filtering in the source table. Use 'and' if each of the filter criteria match or 'or' if only one should match."
+    }
     ]
     
 

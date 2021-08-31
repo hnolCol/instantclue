@@ -69,6 +69,26 @@ class StatisticCenter(object):
 
         self.corrCoeffName = {"pearson":"r","spearman":"rho","kendall":"rho"}
 
+    def calculateAUCFromGraph(self,dataID,numericColumnPairs,chartData, replicateColumn = "None", addAsDataFrame = True):
+        ""
+        R = pd.DataFrame(columns=["xColumn","yColumn","AUC"])
+        for xColumn,yColumn in numericColumnPairs:
+            X = chartData[[xColumn,yColumn]].dropna().values
+            if X.shape[0] > 1:
+                AUC = np.trapz(X[:,1],X[:,0])
+                R = R.append({"xColumn":xColumn,"yColumn":yColumn,"AUC":AUC},ignore_index=True)
+        
+        fileName="AUCData ({})".format(self.sourceData.getFileNameByID(dataID))
+        rows, columns = R.shape
+        if addAsDataFrame:
+            return self.sourceData.addDataFrame(R, fileName = fileName)
+        else:
+            return {"messageProps":
+				{"title":"Data Frame Added {}".format(fileName),
+				"message":"AUC results added.\nShape (rows x columns) is {} x {}".format(rows,columns)},
+				"dataFrame" : R
+			}
+
     def checkData(self,X):
         
         if X.empty:

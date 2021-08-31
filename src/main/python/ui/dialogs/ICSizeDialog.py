@@ -9,6 +9,7 @@ import numpy as np
 
 widgetParamMatches = [
     {"label": "Size of scatter points:", "paramName": "scatterSize"},
+    {"label": "Size in pointplots:", "paramName": "pointplot.marker.size"},
     {"label": "Min scatter point in range:", "paramName": "minScatterSize"},
     {"label": "Max scatter point in range:", "paramName": "maxScatterSize"},
     {"label":"Add swarm scatter size", "paramName": "swarm.scatterSize"},

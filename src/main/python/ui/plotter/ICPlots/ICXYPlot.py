@@ -1,6 +1,7 @@
 
 
 from .ICChart import ICChart
+from ...dialogs.ICAUCCalculation import ICDAUCDialog
 from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.collections import LineCollection
@@ -14,7 +15,9 @@ class ICXYPlot(ICChart):
 
         self.xyplotItems = dict() 
 
-
+    def addGraphSpecActions(self,menus):
+        ""
+        menus["main"].addAction("Area under curve", self.openAUCCalcDialog)
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
         ""
@@ -88,6 +91,12 @@ class ICXYPlot(ICChart):
                     else:
                         self.p.f.canvas.blit(ax.bbox)
     
+
+    def openAUCCalcDialog(self,e=None):
+        ""
+        dlg = ICDAUCDialog(self.mC,self.data["dataID"],self.data["numericColumnPairs"],self.data["hoverData"])
+        dlg.exec_()
+
     def updateQuickSelectItems(self,propsData=None):
         
        # colorData = self.getQuickSelectData()
