@@ -166,11 +166,10 @@ class PlotOptionFrame(QWidget):
         self.typeMenus["barplot"] = menu["main"]
 
         #pointplot menu 
-        menu = createSubMenu(subMenus=["Error bars .. ","Dodge .. "])
+        menu = createSubMenu(subMenus=["Error bars .. "])
         for errorType in ["Std","CI (95%)", "CI (90%)", "CI (85%)","CI (75%)"]:
             menu["Error bars .. "].addAction(errorType, self.setPlotError)
-        menu["Dodge .. "].addAction("True", self.setDodge)
-
+       
         self.typeMenus["pointplot"] = menu["main"]
 
         #add swarmplot menu
@@ -395,15 +394,15 @@ class PlotOptionFrame(QWidget):
                         iconDir = self.mC.mainPath)
                 w.exec_() 
 
-    def setDodge(self,event=None):
-        ""
-        plt = self.mC.mainFrames["middle"].plotter
-        currentValue = plt.getDodge()
-        if self.sender().text() == "True":
-            self.sender().setText("False")
-        else:
-            self.sender().setText("True")
-        plt.setDodge(not currentValue)
+    # def setDodge(self,event=None):
+    #     ""
+    #     plt = self.mC.mainFrames["middle"].plotter
+    #     currentValue = plt.getDodge()
+    #     if self.sender().text() == "True":
+    #         self.sender().setText("False")
+    #     else:
+    #         self.sender().setText("True")
+    #     plt.setDodge(not currentValue)
     
 
     def showCorrResults(self,event=None):

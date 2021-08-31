@@ -162,7 +162,7 @@ class ICSearchWithTags(QWidget):
         tagWidget = Tag(tagID,tagName,backgroundColor=backgroundColor,resetCallback=self.onTagDelete)
         self.tagLayout.addWidget(tagWidget)
         self.tags[tagID] = tagWidget
-        self.setToolTip("ID: {}\n{}".format(tagID,toolTipStr))
+        self.setToolTip("{}\nID: {}\n{}".format(tagName,tagID,toolTipStr))
         return tagID
     
     def removeTag(self,tagID):

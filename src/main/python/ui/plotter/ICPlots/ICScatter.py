@@ -222,6 +222,7 @@ class ICScatterPlot(ICChart):
             if changedCategory is not None and changedCategory in self.sizeCategoryIndexMatch:
 
                 idx = self.sizeCategoryIndexMatch[changedCategory]
+                
                 dataBool = sizeGroup["internalID"] == changedCategory
                 size = sizeGroup.loc[dataBool,"size"].values[0]
                 self.updateScatterPropSection(idx,size,"size")

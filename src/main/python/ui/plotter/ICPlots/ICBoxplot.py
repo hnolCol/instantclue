@@ -160,8 +160,9 @@ class ICBoxplot(ICChart):
         if not hasattr(self,"backgrounds"):
             self.backgrounds = {}
         self.backgrounds.clear() 
-        for ax in self.axisDict.values():
-            self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
+        if hasattr(self.p.f.canvas,"copy_from_bbox"):
+            for ax in self.axisDict.values():
+                self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
 
     def setHoverData(self,dataIndex):
         ""

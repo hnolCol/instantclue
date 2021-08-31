@@ -26,6 +26,7 @@ class ConfigDialog(QDialog):
     
     def __controls(self):
         """Init widgets"""
+        print(self.mC.config.getParentTypes())
         propItems = sorted(self.mC.config.getParentTypes())
         self.titleLabel = createTitleLabel("Configurations")
         self.infoLabel = createLabel("Changed parameters are automatically saved.")

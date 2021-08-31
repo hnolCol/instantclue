@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 import os
 
 from matplotlib.pyplot import text 
-from ..utils import createTitleLabel, createLabel
+from ..utils import createTitleLabel, createLabel, createLineEdit
 from .buttonDesigns import ICStandardButton
 
 class MessageBase(QDialog):
@@ -39,7 +39,7 @@ class MessageBase(QDialog):
             pixmap = QPixmap(pathToSVG)
             self.logoLabel.setPixmap(pixmap)
         else:
-            self.logoLabel.setText("NoIconFound")
+            self.logoLabel.setText("...")
         self.logoLabel.setAlignment(Qt.AlignVCenter)
 
         #setup info label
@@ -110,6 +110,101 @@ class WarningMessage(MessageBase):
 
         mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
   
+class AskStringMessage(MessageBase):
+
+    def __init__(self,q ="",defaultText="",parent=None,passwordMode = False, *args,**kwargs):
+
+        super(AskStringMessage,self).__init__(parent, infoText = q, title = "Question",*args,**kwargs)
+       
+        self.text = defaultText
+        self.pwMode = passwordMode
+        self.__controls()
+        self.__layout()  
+        self.__connectEvents()
+    
+    def __controls(self):
+        ""
+        
+        self.lineEdit = createLineEdit()
+        if self.pwMode:
+            self.lineEdit.setEchoMode(QLineEdit.Password)
+        self.okButton = ICStandardButton("Ok")
+
+    def __layout(self):
+        ""
+        hbox = QVBoxLayout()
+        
+        hbox.addWidget(self.lineEdit)
+        hbox.addWidget(self.okButton,Qt.AlignRight)
+
+        mainFLayout = self.mainFrame.layout()
+        
+
+        mainFLayout.addLayout(hbox,3,1,1,2,Qt.AlignRight)
+
+    def __connectEvents(self):
+        ""
+        self.okButton.clicked.connect(self.accept)
+        self.lineEdit.textChanged.connect(self.lineEditting)
+
+    def lineEditting(self, lineEditText):
+        ""
+        self.text = lineEditText
+
+class AskForFile(MessageBase):
+    ""
+
+    def __init__(self,placeHolderEdit = "Select file.",parent=None,*args,**kwargs):
+        super(AskForFile,self).__init__(parent,title="Select file.",*args,**kwargs)
+        
+        self.placeHolderEdit = placeHolderEdit
+        self.__controls()
+        self.__layout()
+
+    def __controls(self):
+        ""
+
+        self.fileLineEdit = createLineEdit(self.placeHolderEdit)
+        self.selectButton = ICStandardButton("...")
+        self.selectButton.clicked.connect(self.openFileDialog)
+        self.yesButton = ICStandardButton("Okay")
+        self.yesButton.clicked.connect(self.changeState)  
+
+        self.noButton = ICStandardButton("Cancel")    
+        self.noButton.clicked.connect(self.close)
+    
+    def __layout(self):
+        ""
+
+        mainFLayout = self.mainFrame.layout()
+        hboxFile = QHBoxLayout()
+        hboxFile.addWidget(self.fileLineEdit)
+        hboxFile.addWidget(self.selectButton)
+        hbox = QHBoxLayout()
+        hbox.addWidget(self.yesButton)
+        hbox.addWidget(self.noButton)
+        mainFLayout.addLayout(hboxFile,3,0,1,3,Qt.AlignLeft)
+        mainFLayout.addLayout(hbox,4,0,1,3,Qt.AlignRight)
+
+
+    def changeState(self,event=None):
+        ""
+        currentPath = self.fileLineEdit.text()
+        if not os.path.exists(currentPath):
+            w = WarningMessage(infoText = "Path does not exist. Changed after Selection?")
+            w.exec_()
+        else:
+            self.setState(currentPath)
+            self.accept() 
+
+    def openFileDialog(self):
+        ""
+        filePath, _ = QFileDialog.getOpenFileName(self,
+                                "QFileDialog.getOpenFileName()", 
+                                "",
+                                "Fasta Files (*.fasta)")
+        if filePath:
+            self.fileLineEdit.setText(filePath)
 
 
 class AskQuestionMessage(MessageBase):

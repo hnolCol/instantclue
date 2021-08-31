@@ -14,6 +14,10 @@ class ICCountplot(ICChart):
         ""
         super(ICCountplot,self).__init__(*args,**kwargs)
 
+    def addGraphSpecActions(self,menus):
+        ""
+        menus["main"].addAction("Show count data", self.openCountDataInDialog)
+
 
     def addHoverLine(self):
         ""
@@ -186,6 +190,14 @@ class ICCountplot(ICChart):
             if self.isLiveGraphActive():
                 self.sendIndexToLiveGraph(dataIndex)
 
+    def openCountDataInDialog(self):
+        ""
+        if "chartData" in self.data:
+            self.mC.mainFrames["data"].openDataFrameinDialog(self.data["chartData"],
+                                                            ignoreChanges=True, 
+                                                            headerLabel="Count plot data.", 
+                                                            tableKwargs={"forwardSelectionToGraph":False})
+        
     def updateHoverLineData(self,ax, idx):
         ""
         self.p.f.canvas.restore_region(self.axBackground[ax])

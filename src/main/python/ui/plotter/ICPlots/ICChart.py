@@ -188,7 +188,10 @@ class ICChart(QObject):
 		""
 		qsData = self.getQuickSelectData()
 		if qsData is not None:
-			self.mC.quickSelectTrigger.emit()
+			if self.mC.mainFrames["data"].qS.selectionMode == "mask":
+				self.updateFigure.emit()
+			else:
+				self.mC.quickSelectTrigger.emit()
 		else:
 			self.updateFigure.emit()
 

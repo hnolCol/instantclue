@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 #ui utils
 from ...utils import INSTANT_CLUE_BLUE, TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createLineEdit, createTitleLabel, getMessageProps, createMenu, createSubMenu, getStandardFont
 
-from ..warnMessage import AskQuestionMessage
+from ..warnMessage import AskQuestionMessage, AskStringMessage
 
 #external imports
 import pandas as pd 
@@ -17,16 +17,19 @@ from collections import OrderedDict
 contextMenuData = OrderedDict([
             ("deleteRows",{"label":"Delete Row(s)","fn":"deleteRows"}),
             ("copyRows",{"label":"Copy Row(s)","fn":"copyRows"}),
-            ("copyData",{"label":"Copy Data Frame","fn":"copyDf"})
+            ("copyData",{"label":"To Clipboard","fn":"copyDf"}),
+            ("addDataFrame",{"label":"Add data","fn":"addDf"})
+
         ])
 
 
 
 class PandaTable(QTableView):
     
-    def __init__(self, parent=None, mainController = None,  cornerButton = True, hideMenu = False, rightClickOnHeaderCallBack = None, onHoverCallback = None):
+    def __init__(self, parent=None, mainController = None,  cornerButton = True, hideMenu = False, rightClickOnHeaderCallBack = None, onHoverCallback = None, forwardSelectionToGraph =True):
         super(PandaTable, self).__init__(parent)
         self.highlightRow = None
+        self.forwardSelectionToGraph = forwardSelectionToGraph 
         self.setMouseTracking(True)
         self.setShowGrid(True)
         self.shiftHold = False
@@ -60,9 +63,9 @@ class PandaTable(QTableView):
     def showHeaderMenu( self, point ):
         """ """  
         menu = createMenu(parent=self)     
-        menus = createSubMenu(menu,subMenus=["File .. "])
+        menus = createSubMenu(menu,subMenus=["Export.."])
         for k, v in contextMenuData.items():
-            action = menus["File .. "].addAction(v["label"])
+            action = menus["main"].addAction(v["label"])
             fn = getattr(self,v["fn"])
             action.triggered.connect(fn)
 
@@ -131,6 +134,16 @@ class PandaTable(QTableView):
             print(e)
 
 
+    def addDf(self,e=None):
+        ""
+        
+        dialog = AskStringMessage(q="Please provide a file name")
+        if dialog.exec_():
+            fileName = dialog.text
+            funcKey = "data::addDataFrame"
+            funcKwargs = {"dataFrame":self.model().getCurrentData(),"fileName":fileName}
+            self.mC.sendRequestToThread({"key":funcKey,"kwargs":funcKwargs}) 
+
     def copyDf(self,e=None):
         ""
         self.copyRows(selectedRows="all")
@@ -193,7 +206,7 @@ class PandaTable(QTableView):
         
     def markSelectionInDataAndSetLabel(self,dataIndex):
         ""
-        if self.mC is not None and hasattr(self.mC,"getGraph"):
+        if self.mC is not None and hasattr(self.mC,"getGraph") and self.forwardSelectionToGraph:
             exists,graph = self.mC.getGraph()
             if exists:
                 graph.setHoverData(dataIndex)
@@ -345,7 +358,11 @@ class PandaModel(QAbstractTableModel):
         if self.filters.columns.size == 0:
             self.df = self.__df
         else:
-            boolIdx = self.filters.index[self.filters.sum(axis=1).values == self.filters.columns.size]
+            print(self.parent().mC.config.getParam("source.data.filter.logical.op"))
+            if self.parent().mC.config.getParam("source.data.filter.logical.op") == "and":
+                boolIdx = self.filters.index[self.filters.sum(axis=1).values == self.filters.columns.size]
+            else:
+                boolIdx = self.filters.index[self.filters.sum(axis=1).values > 0]
             self.df = self.__df.loc[boolIdx]
 
     def removeFilter(self,tagID):
@@ -374,6 +391,11 @@ class PandaModel(QAbstractTableModel):
     def removeHighlightBackground(self,columnIndex):
         if columnIndex in self.highlightBackgroundHeaderColors:
             del self.highlightBackgroundHeaderColors[columnIndex]
+
+    def getCurrentData(self):
+        "Returns data even if filtering is applied."
+        return self.df.copy()
+
 
     def getColumnNameByColumnIndex(self,columnIndex):
         ""
