@@ -2588,7 +2588,12 @@ class PlotterBrain(object):
                     #get kernel data
                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                     #get random x position around 0 to spread data
-                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                    allSame = np.all(kdeData == kdeData[0])
+                    if allSame:
+                        kdeData = np.zeros(shape=kdeData.size)
+                    else:
+                        kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                    
                     kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                     kdeData = kdeData + tickPositions[0][n]
                     #save data
@@ -2756,7 +2761,12 @@ class PlotterBrain(object):
                                 
                                 kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                 #get random x position around 0 to spread data between - and + kdeData
-                                kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                allSame = np.all(kdeData == kdeData[0])
+                                if allSame:
+                                    kdeData = np.zeros(shape=kdeData.size)
+                                else:
+                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                
                                 kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                 kdeData = kdeData + positions[nColCat]
                                 data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -2858,7 +2868,12 @@ class PlotterBrain(object):
                                 else:
                                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                     #get random x position around 0 to spread data between - and + kdeData
-                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                    allSame = np.all(kdeData == kdeData[0])
+                                    if allSame:
+                                        kdeData = np.zeros(shape=kdeData.size)
+                                    else:
+                                        kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                                    
                                     kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                     kdeData = kdeData + positions[nColCat]
                                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])

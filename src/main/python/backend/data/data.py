@@ -252,6 +252,29 @@ class DataCollection(object):
 
 		return funcProps
 
+	def addIndexColumn(self,dataID,*args,**kwargs):
+		""
+		if dataID in self.dfs:
+			dfShape, rowIdx = self.getDataFrameShape(dataID)
+			numRows, numColumns = dfShape
+			columnName = "Index"
+			idxData = pd.DataFrame(np.arange(numRows), index=rowIdx, columns=[columnName])
+			return self.joinDataFrame(dataID,idxData)
+		else:
+			return errorMessage
+	
+	def addGroupIndexColumn(self,dataID,columnNames,*args,**kwargs):
+		""
+		if dataID in self.dfs:
+			dfShape, rowIdx = self.getDataFrameShape(dataID)
+			columnNames = columnNames.values.tolist()
+			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
+			dataGroupby = data.groupby(columnNames,sort=False).cumcount()
+			newColumnName = "groupIndex:({})".format(mergeListToString(columnNames))
+			idxData = pd.DataFrame(dataGroupby.values,index=dataGroupby.index, columns=[newColumnName])
+			return self.joinDataFrame(dataID,idxData)
+		
+
 	def addDataFrameFromTxtFile(self,pathToFile,fileName,loadFileProps = None, returnPlainDf = False):
 		"Load Data frame from txt file"
 		try:
@@ -369,6 +392,17 @@ class DataCollection(object):
 						"data":data}
 			
 		return errorMessage
+
+	def getDataFrameShape(self,dataID):
+		""
+		if dataID in self.dfs:
+			if dataID in self.clippings:
+				rowIdx = self.clippings[dataID]
+				self.dfs.loc[rowIdx,:].shape, rowIdx
+			else:
+				return self.dfs[dataID].shape, self.dfs[dataID].index
+		else:
+			return (0,0)
 
 	def groupbyAndAggregate(self,dataID,columnNames,groupbyColumn,metric="mean"):
 		"""

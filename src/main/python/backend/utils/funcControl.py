@@ -157,6 +157,17 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"duplicateColumns","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":refreshColumnView
         },
+    "data::addIndexColumn":
+        {
+            "threadRequest":{"obj":"data","fn":"addIndexColumn","requiredKwargs":["dataID"]},
+            "completedRequest":refreshColumnView
+        },
+    "data::addGroupIndexColumn":
+        {
+            "threadRequest":{"obj":"data","fn":"addGroupIndexColumn","requiredKwargs":["dataID"]},
+            "completedRequest":refreshColumnView
+        },
+
     "data::filterFasta":
         {
             "threadRequest":{"obj":"data","fn":"filterFastaFileByColumnIDs","requiredKwargs":["dataID","columnNames","fastaFile"]},

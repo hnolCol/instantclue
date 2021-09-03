@@ -645,6 +645,18 @@ menuBarItems = [
     },
     {
         "subM":"Column operation ..",
+        "name":"Add index column",
+        "funcKey": "data::addIndexColumn",
+        "dataType": "All",
+    },
+    {
+        "subM":"Column operation ..",
+        "name":"Add group index column",
+        "funcKey": "data::addGroupIndexColumn",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"Column operation ..",
         "name":"Factorize column(s)",
         "funcKey": "data::factorizeColumns",
         "dataType": "Categories",
