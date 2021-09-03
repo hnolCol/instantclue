@@ -618,9 +618,9 @@ class SubsetDataButton(PushHoverButton):
         super(SubsetDataButton,self).__init__(parent,*args,**kwargs)
         self.displayColors = ["white",INSTANT_CLUE_BLUE,"#A0D4CB"]
     
-    def sizeHint(self):
-        ""
-        return QSize(35,35) 
+    # def sizeHint(self):
+    #     ""
+    #     return QSize(35,35) 
 
     def paintEvent(self,event):
         ""
@@ -659,14 +659,14 @@ class SubsetDataButton(PushHoverButton):
             # draw split data sets
             border = h/28
             borderBetween = h/12
-            widthForSets = (w - 2*border - 2*borderBetween) / 3
-            y = y0 + h/7
+            widthForSets = (w - 2*border - 3*borderBetween) / 3
+            y = y0 + h/5
             colors  = self.displayColors if not self.mouseOver else self.displayColors[::-1]
             for n in range(3):
                 b = QBrush(QColor(colors[n]))
                 painter.setBrush(b)
                 x = border + border + n * widthForSets + n * borderBetween
-                painter.drawRoundedRect(QRectF(x,y,widthForSets,h/3.5),1,1)
+                painter.drawRoundedRect(QRectF(x,y,widthForSets,h/5),1,1)
 
         except Exception as e:
             print(e)

@@ -8,7 +8,7 @@ from ..custom.ICCollapsableFrames import CollapsableFrames
 from ..custom.buttonDesigns import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
-from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, SubsetDataButton, ViewDataButton
+from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, ViewDataButton
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
@@ -140,14 +140,7 @@ class DataHandleFrame(QFrame):
 
         viewDataButton = ViewDataButton(self, tooltipStr="View selected data.")
         viewDataButton.clicked.connect(self.showData)
-        subsetDataButton = SubsetDataButton(#DropButton(parent=self,
-            callback = self.subsetData,
-            getDragType= self.getDragType,
-            acceptDrops= True,
-            tooltipStr = """Drop categorical columns to split data on unique values.
-                            NaN Object String ('-') will be ignored by default."\n
-                            Can be controlled using the parameter 'data.quick.subset.ignore.nanString' in 'Data Settings'"""
-            )
+
 
         
         vbox1.addWidget(loadDataButton)
@@ -157,7 +150,7 @@ class DataHandleFrame(QFrame):
         vbox1.addWidget(saveSessionButton)
         vbox1.addStretch(3)
         vbox1.addWidget(viewDataButton)
-        vbox1.addWidget(subsetDataButton)
+       # vbox1.addWidget(subsetDataButton)
         #vbox1.addStretch(1)
         loadDataButton.clicked.connect(self.askForFile)
         vbox2 = QVBoxLayout()
@@ -287,13 +280,6 @@ class DataHandleFrame(QFrame):
                 #self.mC.ICDataManger.loadDf.emit(filePath,fileName,loadFileProps)
                 
                 self.mC.sendRequestToThread(funcProps)
-
-    def subsetData(self):
-        ""
-        columnNames = self.getDragColumns()
-        dataID = self.getDataID()
-        funcProps = {"key":"filter::splitDataFrame","kwargs":{"dataID" : dataID,"columnNames":columnNames}}
-        self.mC.sendRequestToThread(funcProps)
 
     def deleteData(self):
         ""

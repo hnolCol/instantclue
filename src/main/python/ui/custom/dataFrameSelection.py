@@ -65,7 +65,7 @@ class CollapsableDataTreeView(QWidget):
         self.hideSC = ViewHideIcon(self)
         self.hideSC.clicked.connect(self.hideShortCuts)
         #export 
-        self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file.", buttonSize=(15,15))
+        self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file. Right-click to see more options (Excel, Json, Markdown).", buttonSize=(15,15))
         self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
         self.exportButton.clicked.connect(self.exportData)
         self.exportButton.customContextMenuRequested.connect(self.exportMenu)
