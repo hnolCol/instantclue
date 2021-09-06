@@ -259,6 +259,7 @@ class SliceMarksFrame(QWidget):
         self.selectButton.clicked.connect(self.chooseSelectMode)
         self.colorButton.clicked.connect(self.chooseColor)
         self.sizeButton.clicked.connect(self.chooseSize)
+        self.labelButton.clicked.connect(lambda: self.mC.getTable("labelTable").showAnnotationsInDataTable())
         #self.filterButton.clicked.connect(self.applyFilter)
 
 

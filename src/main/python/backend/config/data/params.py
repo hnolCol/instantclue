@@ -2464,7 +2464,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "reg.exp.escape",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",

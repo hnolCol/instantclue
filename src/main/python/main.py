@@ -2,7 +2,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from matplotlib.pyplot import text
+from matplotlib.pyplot import get, text
 
 
 from ui.notifications.messageWindow import Notification
@@ -397,6 +397,12 @@ class InstantClue(QMainWindow):
         "Indicate in the ui that a thread finished."
         self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
     
+
+    def getTable(self,tableName):
+        ""
+        if hasattr(self.mainFrames["sliceMarks"],tableName):
+            return getattr(self.mainFrames["sliceMarks"],tableName)
+
     def sendRequest(self,funcProps):
         ""
         try:

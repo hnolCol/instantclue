@@ -76,7 +76,7 @@ class ICLabelTable(ICColorSizeTableBase):
     def showAnnotationsInDataTable(self):
         ""
         exists, graph =  self.mC.getGraph()
-        if exists:
+        if exists and hasattr(graph,"getAnnotationIndices"):
             idxByAx = graph.getAnnotationIndices()
             nAxes = graph.getNumberOfAxes()
             newColumnNames = ["{}:{}_{}".format(ax.get_xlabel(),ax.get_ylabel(),n) for n,ax in enumerate(idxByAx.keys())]

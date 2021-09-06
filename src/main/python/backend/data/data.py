@@ -256,7 +256,7 @@ class DataCollection(object):
 		""
 		if dataID in self.dfs:
 			dfShape, rowIdx = self.getDataFrameShape(dataID)
-			numRows, numColumns = dfShape
+			numRows, _ = dfShape
 			columnName = "Index"
 			idxData = pd.DataFrame(np.arange(numRows), index=rowIdx, columns=[columnName])
 			return self.joinDataFrame(dataID,idxData)

@@ -439,7 +439,7 @@ class StatisticCenter(object):
                                     scale=scaleData)
                     else:
                         rowBools, featureImportance = self.featureSelection.selectFeaturesByRF(X,Y,{"n_estimators":nTrees,"min_samples_split":min_samples_split},scale=scaleData)
-                    print(featureImportance)
+                   # print(featureImportance)
                     idx = data.index[rowBools]
                     if createSubset:
                         subsetName = "FSelRF:({})".format(self.sourceData.getFileNameByID(dataID))
