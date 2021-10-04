@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 # internal imports
-from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton
+from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton, SubsetDataButton
 from ui.custom.tableviews.ICColorTable import ICColorTable 
 from ui.custom.tableviews.ICSizeTable import ICSizeTable
 from ui.custom.tableviews.ICLabelTable import ICLabelTable
@@ -172,6 +172,13 @@ class SliceMarksFrame(QWidget):
 
         self.filterButton = FilterButton(self, callback=self.applyFilter, getDragType = self.getDragType ,acceptDrops=True ,tooltipStr=SLICE_MARKS_TOOLTIPSTR["filter"], acceptedDragTypes= ["Categories" , "Numeric Floats"])
         self.selectButton = SelectButton(self, tooltipStr=SLICE_MARKS_TOOLTIPSTR["select"])
+        self.subsetDataButton = SubsetDataButton(#DropButton(parent=self,
+            callback = self.subsetData,
+            getDragType= self.getDragType,
+            acceptDrops= True,
+
+            tooltipStr = "Subset Data\nDrop categorical columns to split data on unique values.\nNaN Object String ('-') will be ignored by default.\nCan be controlled using the parameter 'data.quick.subset.ignore.nanString' in 'Data Settings'"
+                )
         self.tableScrollArea = QScrollArea(parent = self)
         self.colorTable = ICColorTable(mainController=self.mC)
         self.quickSelectTable = ICQuickSelectTable(mainController=self.mC)
@@ -204,8 +211,9 @@ class SliceMarksFrame(QWidget):
         topGrid = QGridLayout()
         topGrid.setContentsMargins(2,2,2,2)
         topGrid.setSpacing(10)
-        topGrid.addWidget(self.filterButton,0,1)
+        topGrid.addWidget(self.filterButton,0,2)
         topGrid.addWidget(self.selectButton,0,0)
+        topGrid.addWidget(self.subsetDataButton,0,1)
         topGrid.setAlignment(Qt.AlignCenter)
 
         bottomGrid = QGridLayout()
@@ -219,7 +227,7 @@ class SliceMarksFrame(QWidget):
         bottomGrid.setAlignment(Qt.AlignCenter)
        
 
-        self.layout().addWidget(QLabel("Slice"))
+        self.layout().addWidget(QLabel("Slice data"))
         self.layout().addLayout(topGrid)
         self.layout().addWidget(QLabel("Marks"))
         self.layout().addLayout(bottomGrid)
@@ -251,6 +259,7 @@ class SliceMarksFrame(QWidget):
         self.selectButton.clicked.connect(self.chooseSelectMode)
         self.colorButton.clicked.connect(self.chooseColor)
         self.sizeButton.clicked.connect(self.chooseSize)
+        self.labelButton.clicked.connect(lambda: self.mC.getTable("labelTable").showAnnotationsInDataTable())
         #self.filterButton.clicked.connect(self.applyFilter)
 
 
@@ -273,6 +282,13 @@ class SliceMarksFrame(QWidget):
         if action:
             self.adjustSelectMode(mode = action.text())
 
+    def subsetData(self):
+        ""
+        columnNames = self.mC.mainFrames["data"].getDragColumns()
+        dataID = self.mC.getDataID()
+        funcProps = {"key":"filter::splitDataFrame","kwargs":{"dataID" : dataID,"columnNames":columnNames}}
+        self.mC.sendRequestToThread(funcProps)
+
     def findSendersBottomLeft(self):
         ""
         #find bottom left corner
@@ -282,6 +298,7 @@ class SliceMarksFrame(QWidget):
         if hasattr(self.sender(),"mouseOver"):
             self.sender().mouseOver = False
         return bottomLeft
+
     def chooseColor(self,event=None):
         ""
         bottomLeft = self.findSendersBottomLeft()

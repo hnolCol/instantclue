@@ -95,7 +95,7 @@ class ICGrouping(object):
         if groupingName is None:
             groupingName = self.currentGrouping
         cNames = pd.Series()
-        cNames = cNames.append(list(self.groups[self.currentGrouping].values()))
+        cNames = cNames.append(list(self.groups[groupingName].values()))
         return cNames
     
     def getColumnNamesFromGroup(self, groupName):

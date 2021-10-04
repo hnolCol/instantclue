@@ -180,7 +180,7 @@ class PandaTableDialog(QDialog):
                 
             else:
                 self.searchWithTags.hideLineEdit()
-                self.searchWithTags.showNumericFilter()
+                self.searchWithTags.showNumericFilter(columnName)
                 self.searchWithTags.setFocusToMin()
         
     def sendMessage(self, messageProps):

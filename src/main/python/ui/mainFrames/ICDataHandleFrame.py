@@ -8,7 +8,7 @@ from ..custom.ICCollapsableFrames import CollapsableFrames
 from ..custom.buttonDesigns import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
-from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, SubsetDataButton, ViewDataButton
+from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, ViewDataButton
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
@@ -140,14 +140,7 @@ class DataHandleFrame(QFrame):
 
         viewDataButton = ViewDataButton(self, tooltipStr="View selected data.")
         viewDataButton.clicked.connect(self.showData)
-        subsetDataButton = SubsetDataButton(#DropButton(parent=self,
-            callback = self.subsetData,
-            getDragType= self.getDragType,
-            acceptDrops= True,
-            tooltipStr = """Drop categorical columns to split data on unique values.
-                            NaN Object String ('-') will be ignored by default."\n
-                            Can be controlled using the parameter 'data.quick.subset.ignore.nanString' in 'Data Settings'"""
-            )
+
 
         
         vbox1.addWidget(loadDataButton)
@@ -157,7 +150,7 @@ class DataHandleFrame(QFrame):
         vbox1.addWidget(saveSessionButton)
         vbox1.addStretch(3)
         vbox1.addWidget(viewDataButton)
-        vbox1.addWidget(subsetDataButton)
+       # vbox1.addWidget(subsetDataButton)
         #vbox1.addStretch(1)
         loadDataButton.clicked.connect(self.askForFile)
         vbox2 = QVBoxLayout()
@@ -205,6 +198,11 @@ class DataHandleFrame(QFrame):
         "Send copy data request to thread"
         funcProps = {"key":"data::copyDataFrameSelection","kwargs":{}}
         self.dataTreeView.sendToThread(funcProps,addSelectionOfAllDataTypes=True,addDataID=True)
+
+    def copyDataFrameToClipboard(self,e=None):
+        "Copy data frame to clipbaord. Active clipping will NOT be ignored."
+        funcProps = {"key":"data:copyDataToClipboard","kwargs":{"dataID":self.mC.getDataID()}} 
+        self.mC.sendRequestToThread(funcProps)
 
     def getSelectedColumns(self,dataType="all"):
         "Get Selected columns"
@@ -288,13 +286,6 @@ class DataHandleFrame(QFrame):
                 
                 self.mC.sendRequestToThread(funcProps)
 
-    def subsetData(self):
-        ""
-        columnNames = self.getDragColumns()
-        dataID = self.getDataID()
-        funcProps = {"key":"filter::splitDataFrame","kwargs":{"dataID" : dataID,"columnNames":columnNames}}
-        self.mC.sendRequestToThread(funcProps)
-
     def deleteData(self):
         ""
         if not self.mC.data.hasData():
@@ -367,10 +358,10 @@ class DataHandleFrame(QFrame):
         #update grouping
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 
-    def updateDataFrames(self,dfs,selectLastDf=True):
+    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None):
         ""
         if isinstance(dfs,dict):
-            self.dataTreeView.updateDfs(dfs,selectLastDf)
+            self.dataTreeView.updateDfs(dfs,selectLastDf,specificIndex=dataComboboxIndex)
 
     def updateDataInQuickSelect(self,data):
         ""
@@ -415,4 +406,4 @@ class DataHandleFrame(QFrame):
         fileName,_ = QFileDialog.getOpenFileName(self,"Load Instant Clue Session",workingDir,"Instant Clue File (*.ic)")
         if fileName is not None and fileName != "":
             self.mC.sendRequestToThread(funcProps = {"key":"session::load","kwargs":{"sessionPath":fileName}})
-            self.mC.sendMessageRequest({"title":"Saved ..","message":"Session loaded."})
+            

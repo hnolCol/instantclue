@@ -60,7 +60,8 @@ plotFnDict = {
     "forestplot" : "getForestplotProps",
     "wordcloud"  : "getWordCloud",
     "clusterplot" : "getClusterProps",
-    "mulitscatter" : "getScatterCorrMatrix"
+    "mulitscatter" : "getScatterCorrMatrix",
+    "proteinpeptideplot" : "getProteinPeptideProps"
 }
 
 line_kwargs = dict(linewidths=.45, colors='k')
@@ -120,7 +121,7 @@ class PlotterBrain(object):
             graphData["plotType"] = plotType
             return graphData
 
-    def getCountplotProps(self,dataID, numericColumns, categoricalColumns):
+    def getCountplotProps(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
@@ -196,7 +197,7 @@ class PlotterBrain(object):
             
         }}
 
-    def getClusterLineplots(self,clusterLabels, data, numericColumns, columnName):
+    def getClusterLineplots(self,clusterLabels, data, numericColumns, columnName,*args,**kwargs):
         ""
         plotData = {}
         quickSelect = {}
@@ -210,7 +211,7 @@ class PlotterBrain(object):
             quickSelect[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns]
         return plotData, quickSelect, groupby
 
-    def getClusterBoxplots(self,clusterLabels, data, numericColumns, columnName):
+    def getClusterBoxplots(self,clusterLabels, data, numericColumns, columnName,*args,**kwargs):
         ""
         plotData = {}
         quickSelect = {}
@@ -232,7 +233,7 @@ class PlotterBrain(object):
                             "Min ({})".format(getReadableNumber(minV))]
         return groupNames
 
-    def getClusterProps(self, dataID, numericColumns, categoricalColumns):
+    def getClusterProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         clusterCenters = None
         #get config 
@@ -347,7 +348,7 @@ class PlotterBrain(object):
             "quickSelect" : qSData
         }}
 
-    def getBarplotProps(self, dataID, numericColumns, categoricalColumns):
+    def getBarplotProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
         if len(categoricalColumns) > 3:
@@ -362,7 +363,7 @@ class PlotterBrain(object):
         colorGroups, \
         faceColors, \
         colorCategoricalColumn, \
-        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns,splitByCategories= splitByCats)
+        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns,splitByCategories= splitByCats)
             
 
         filteredData = OrderedDict()
@@ -400,7 +401,7 @@ class PlotterBrain(object):
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
 
-    def getLineplotProps(self,dataID,numericColumns,categoricalColumns):
+    def getLineplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         minQ = np.inf
         maxQ = -np.inf
@@ -515,7 +516,7 @@ class PlotterBrain(object):
                 "colorCategoricalColumn" : colorCategoricalColumn}
                 }
 
-    def getHistogramProps(self,dataID,numericColumns,categoricalColumns):
+    def getHistogramProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         #get raw data
         patches = {}
@@ -696,7 +697,7 @@ class PlotterBrain(object):
         
         return np.append(x,y,axis=1)
 
-    def getViolinProps(self,dataID,numericColumns, categoricalColumns):
+    def getViolinProps(self,dataID,numericColumns, categoricalColumns,*args,**kwargs):
         ""    
         # axisPostions = dict([(n,[1,1,n+1]) for n in range(1)])
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
@@ -715,7 +716,7 @@ class PlotterBrain(object):
         colorGroups, \
         faceColors, \
         colorCategoricalColumn, \
-        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines = calculatePositions(
+        xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(
                                                                                 dataID,
                                                                                 self.sourceData,
                                                                                 numericColumns,
@@ -771,7 +772,7 @@ class PlotterBrain(object):
                 "colorCategoricalColumn" : colorCategoricalColumn,
                 "dataID":dataID}}
 
-    def getBoxplotProps(self, dataID, numericColumns, categoricalColumns):
+    def getBoxplotProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
@@ -782,7 +783,7 @@ class PlotterBrain(object):
 
         plotCalcData, axisPositions, boxPositions, tickPositions, tickLabels, colorGroups, \
             faceColors, colorCategoricalColumn, xWidth, axisLabels, axisLimits, \
-                axisTitles, groupNames, verticalLines = calculatePositions(dataID,
+                axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(dataID,
                                                                     self.sourceData,
                                                                     numericColumns,
                                                                     categoricalColumns,
@@ -800,6 +801,10 @@ class PlotterBrain(object):
             filteredData[n] = plotData
 
         
+        #get data to display
+
+
+
         #print(axisPositions)
         
     
@@ -817,10 +822,11 @@ class PlotterBrain(object):
                 "subplotBorders":subplotBorders,
                 "colorCategoricalColumn" : colorCategoricalColumn,
                 "verticalLines" : verticalLines,
+                "groupedPlotData" : groupedPlotData,
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
         
-    def getPointplotProps(self,dataID,numericColumns,categoricalColumns):
+    def getPointplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         """
         If categoricalColmns == 0 
         
@@ -1266,8 +1272,6 @@ class PlotterBrain(object):
         return meanErrorData, minValue, maxValue, maxError
 
 
-
-
     def _getBoxplotTooltips(self,data,numericColumns):
         ""
         tooltipsStr = {}
@@ -1281,6 +1285,11 @@ class PlotterBrain(object):
             tooltipsStr[columnName] = baseStr
         return tooltipsStr
             
+
+    def getProteinPeptideProps(self, proteinDataID, peptideDataID, proteinColumnNames, peptideColumnNames):
+        ""
+
+
 
     def getBoxplotProps2(self, dataID, numericColumns, categoricalColumns):
         ""
@@ -1337,11 +1346,11 @@ class PlotterBrain(object):
 
         return quantiles, IQR, upperBound, lowerBound
 
-    def getCorrmatrixProps(self,dataID,numericColumns, categoricalColumns):
+    def getCorrmatrixProps(self,dataID,numericColumns, categoricalColumns, figureSize = None, *args,**kwargs):
         ""
-        return self.getHeatmapProps(dataID,numericColumns,categoricalColumns,True)
+        return self.getHeatmapProps(dataID,numericColumns,categoricalColumns, True, figureSize=figureSize)
 
-    def getHeatmapProps(self,dataID, numericColumns, categoricalColumns, corrMatrix = False, grouping = {"k":"j","kk":"jjj"}):
+    def getHeatmapProps(self,dataID, numericColumns, categoricalColumns, corrMatrix = False, grouping = {},figureSize = None,*args,**kwargs):
         ""
         rowMaxD = None
         colMaxD = None
@@ -1387,10 +1396,12 @@ class PlotterBrain(object):
 
 
             axisDict = self.getClusterAxes(numericColumns, 
+                    figureSize = figureSize,
                     corrMatrix=corrMatrix, 
                     rowOn = rowMetric != "None" and rowMethod != "None", 
                     columnOn =  columnMethod != "None" and columnMetric != "None",
-                    grouping = grouping)
+                    grouping = grouping,
+                    )
            # print(axisDict)
             
 
@@ -1457,7 +1468,7 @@ class PlotterBrain(object):
                 "columnNames":numericColumns}
                 }
     
-    def addDendrogram(self,dendrogram,rotate):
+    def addDendrogram(self,dendrogram,rotate,*args,**kwargs):
         '''
         Idea is from the seaborn package.
         '''
@@ -1516,20 +1527,67 @@ class PlotterBrain(object):
         '''
         return sch.fcluster(linkage,maxD,'distance')	
 
-    def getClusterAxes(self, numericColumns, corrMatrix=False, rowOn = True,columnOn = True ,grouping = {}):
+    def getClusterAxes(self, numericColumns, figureSize, corrMatrix=False, rowOn = True,columnOn = True ,grouping = {}):
         ""
         x0,y0 = 0.10,0.15
         x1,y1 = 0.95,0.95
+        labelHeight = 0.15
         width = x1-x0
-        height = y1-y0
-        multWidth = 0.4
+        if corrMatrix:
+            height = y1-y0-labelHeight
+        else:
+            height = y1-y0
+        
+        #multWidth = 0.4
+        pixelFigureWidth = figureSize.width()
+        pixelFigureHeight = figureSize.height()
+        pixelPerColumn = self.sourceData.parent.config.getParam("pixel.width.per.column")
+        maxPixelForHeatmap = (width - 0.1) * pixelFigureWidth #0.1 = min margin
+        maxPixelHeightHeatmap = height * pixelFigureHeight
+        
+        if not corrMatrix:
+            heightMain = height * 0.8 
+     
+        
+        if maxPixelForHeatmap < len(numericColumns) * pixelPerColumn:
+            clusterMapWidth = 0.75
+            widthInPixel = maxPixelForHeatmap
+        else:
+            widthInPixel = len(numericColumns) * pixelPerColumn
+            clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
+            
+
+        if corrMatrix:
+            
+            if widthInPixel <= maxPixelHeightHeatmap:
+               
+                heightInPixel = widthInPixel
+                heightMain = height * widthInPixel/maxPixelHeightHeatmap
+                
+            else:
+                widthInPixel = maxPixelHeightHeatmap 
+                clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
+                heightMain = height * widthInPixel/maxPixelHeightHeatmap
+        
+                
+          
+            # pixelFigureHeight 
+            # ## to produce a corr matrix in the topleft corner of the graph
+            # heightMain = height * 0.5
+          #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
+            
+            y0 = 1 - heightMain - 0.22 #bit of margin
+            
+            
+
+        #widthPer pixelWidth / len(numericColumns)
         #correctHeight = 1
         # emperically determined to give almost equal width independent of number of columns 
 			
-        addFactorMainWidth =  -0.15+len(numericColumns) * 0.008 
+        
 		
-        clusterMapWidth = width*multWidth+addFactorMainWidth
-        rowDendroWidth = width * 0.13 if rowOn else 0
+        #clusterMapWidth = 10 * len(numericColumns)
+        rowDendroWidth = width * 0.08 if rowOn else 0
         if columnOn:
             if rowDendroWidth > 0:
                 columnDendroHeight = rowDendroWidth
@@ -1544,18 +1602,8 @@ class PlotterBrain(object):
            
         else:
             groupingAxHeight = 0
-
-        if clusterMapWidth > 0.75:
-            clusterMapWidth = 0.75
 				
-        if corrMatrix:
-            ## to produce a corr matrix in the topleft corner of the graph
-            heightMain = height * 0.5
-            y0 = 0.4
-            height = y1-y0
-            
-        else:
-            heightMain = height * 0.8 
+
             
         axisDict = dict() 
 
@@ -1587,18 +1635,18 @@ class PlotterBrain(object):
                                     heightMain]		
         
         axisDict["axColormap"] =    [x0,
-                                    y0+height*0.84,
-                                    width*0.025,
-                                    height*0.12]	
+                                    y1-0.15,
+                                    0.02,
+                                    0.1]	
         
         return axisDict
 
-    def getDimRedProps(self,dataID,numericColumns,categoricalColumns):
+    def getDimRedProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         return {"data":{}}
 
 
-    def getForestplotProps(self,dataID,numericColumns,categoricalColumns):
+    def getForestplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         tickLabels = {}
         tickPositions = {}
@@ -1729,7 +1777,7 @@ class PlotterBrain(object):
                 }
         
 
-    def getPCAProps(self,dataID,numericColumns,categoricalColumns):
+    def getPCAProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         subplotBorders = dict(wspace=0.30, hspace = 0.30,bottom=0.15,right=0.95,top=0.95)
         #data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
@@ -1760,7 +1808,7 @@ class PlotterBrain(object):
 
         return data,numericColumnPairs
 
-    def getScatterProps(self,dataID, numericColumns, categoricalColumns):
+    def getScatterProps(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         
         try:
@@ -2099,7 +2147,7 @@ class PlotterBrain(object):
         return labelData
 
  
-    def getScatterCorrMatrix(self,dataID, numericColumns, categoricalColumns):
+    def getScatterCorrMatrix(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
         """
         Provide required information to plot a scatter matrix. 
         Several options are taken from the config settings. 
@@ -2284,21 +2332,21 @@ class PlotterBrain(object):
 
     def getNearestNeighborConnections(self,dataID,numericColumnPairs,numberNearestNeighbors=3):
         ""
-        print(numericColumnPairs)
-        print(np.array(numericColumnPairs))
+        # print(numericColumnPairs)
+        # print(np.array(numericColumnPairs))
         columnNames = pd.Series(np.array(numericColumnPairs).flatten()).unique()
-        print(columnNames)
+        # print(columnNames)
         rawData = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
-        print(rawData)
+        # print(rawData)
         lineCollections = {}
         for n,columnPair in enumerate(numericColumnPairs):
             X = rawData[list(columnPair)].dropna().values
-            print(X)
+           # print(X)
             euclideanDistanceMatrix = squareform(pdist(X, 'euclidean'))
 
             # select the kNN for each datapoint
             neighbors = np.sort(np.argsort(euclideanDistanceMatrix, axis=1)[:, 0:numberNearestNeighbors])
-            print(neighbors)
+           # print(neighbors)
             N = neighbors.shape[0]
             coordinates = np.zeros((N, numberNearestNeighbors, 2, 2))
             for i in np.arange(N):
@@ -2415,14 +2463,17 @@ class PlotterBrain(object):
     def getLowessLine(self,dataID,numericColumnPairs):
         ""
         lineData = {}
+        areaData = {}
         for n,numColumns in enumerate(numericColumnPairs):
 
             lowessFit = self.sourceData.statCenter.runLowess(dataID,list(numColumns))
 
             lineKwargs = {"xdata":lowessFit[:,0],"ydata":lowessFit[:,1]}
             lineData[n] = lineKwargs
+            areaData[n] = {"x" : lowessFit[:,0], "y1": lowessFit[:,2], "y2":lowessFit[:,3], "facecolor":"lightgrey","edgecolor":"None","alpha":0.5}
         funcProps = getMessageProps("Done..","Lowess line added.")
         funcProps["lineData"] = lineData
+        funcProps["areaData"] = areaData
         return funcProps
 
     def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None):
@@ -2540,7 +2591,7 @@ class PlotterBrain(object):
 
 
 
-    def getSwarmplotProps(self,dataID,numericColumns,categoricalColumns):
+    def getSwarmplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         #subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
         multiScatterKwargs = {}
@@ -2588,7 +2639,12 @@ class PlotterBrain(object):
                     #get kernel data
                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                     #get random x position around 0 to spread data
-                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                    allSame = np.all(kdeData == kdeData[0])
+                    if allSame:
+                        kdeData = np.zeros(shape=kdeData.size)
+                    else:
+                        kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                    
                     kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                     kdeData = kdeData + tickPositions[0][n]
                     #save data
@@ -2756,7 +2812,12 @@ class PlotterBrain(object):
                                 
                                 kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                 #get random x position around 0 to spread data between - and + kdeData
-                                kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                allSame = np.all(kdeData == kdeData[0])
+                                if allSame:
+                                    kdeData = np.zeros(shape=kdeData.size)
+                                else:
+                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                
                                 kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                 kdeData = kdeData + positions[nColCat]
                                 data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -2858,7 +2919,12 @@ class PlotterBrain(object):
                                 else:
                                     kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                     #get random x position around 0 to spread data between - and + kdeData
-                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
+                                    allSame = np.all(kdeData == kdeData[0])
+                                    if allSame:
+                                        kdeData = np.zeros(shape=kdeData.size)
+                                    else:
+                                        kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                                    
                                     kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
                                     kdeData = kdeData + positions[nColCat]
                                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -3036,7 +3102,7 @@ class PlotterBrain(object):
         
         return completeKwargs
 
-    def getWordCloud(self,dataID,numericColumns,categoricalColumns):
+    def getWordCloud(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         
         axisPostions = getAxisPosition(1)
@@ -3076,7 +3142,7 @@ class PlotterBrain(object):
                 "axisPositions":axisPostions}
                 }
 
-    def getXYPlotProps(self,dataID,numericColumns,categoricalColumns):
+    def getXYPlotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         "Returns plot properties for a XY plot"
         colorGroupsData = pd.DataFrame() 
         axisLabels = {}

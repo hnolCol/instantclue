@@ -9,7 +9,7 @@ from matplotlib.pyplot import scatter
 from matplotlib.text import Text
 from matplotlib.offsetbox import AnchoredText
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+import matplotlib.pyplot as plt
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
@@ -103,6 +103,34 @@ class ICChart(QObject):
 						)
 
 		cax.add_artist(at)
+
+	def addCrossLine(self, xCrossCoord, yCrossCoord):
+		""
+		self.addVerticalLine(xCrossCoord)
+		self.addHorizontalLine(yCrossCoord)
+
+	
+	def addVerticalLine(self,xCoord):
+		""
+		lKwags = self.getBasicLineKwargs()
+		for n,ax in self.axisDict.items():
+			xLine = self.addVLine(ax,xCoord,**lKwags.copy())
+			self.saveLine(xLine,ax,lKwags.copy(),"VLine({}-{})".format(n,xCoord))
+	
+	def addHorizontalLine(self,yCoord):
+		""
+		lKwags = self.getBasicLineKwargs()
+		for n,ax in self.axisDict.items():
+			xLine = self.addHLine(ax,yCoord,**lKwags.copy())
+			self.saveLine(xLine,ax,lKwags.copy(),"HLine({}-{})".format(n,yCoord))		
+
+	def addVLine(self,ax,xCoord,*args,**kwargs):
+		""
+		return ax.axvline(xCoord,*args,**kwargs)
+	
+	def addHLine(self,ax,yCoord,*args,**kwargs):
+		""
+		return ax.axhline(yCoord,*args,**kwargs)
 
 	def addExtraLines(self,axisDict,extraLines,onlyForID = None, targetAx = None):
 		""
@@ -470,7 +498,7 @@ class ICChart(QObject):
 	def getSubMenus(self):
 		""
 
-		return ["To main figure","To WebApp","Axis limits .."]
+		return ["To main figure","Axis limits .."]
 
 	def addMainFigActions(self,menu):
 		""
@@ -481,14 +509,14 @@ class ICChart(QObject):
 
 	def addAppActions(self,menus):
 		""
-		loggedIn, userProjects = self.mC.getUserLoginInfo()
-		if loggedIn and "To WebApp" in menus:
-			for project in userProjects:
-				projectName = project["name"]
-				action = menus["To WebApp"].addAction(projectName)
-				action.triggered.connect(lambda chk, projectParams = project: self.sendToWebApp(projectParams))
-		else:
-			menus["To WebApp"].addAction("Login")
+		# loggedIn, userProjects = self.mC.getUserLoginInfo()
+		# if loggedIn and "To WebApp" in menus:
+		# 	for project in userProjects:
+		# 		projectName = project["name"]
+		# 		action = menus["To WebApp"].addAction(projectName)
+		# 		action.triggered.connect(lambda chk, projectParams = project: self.sendToWebApp(projectParams))
+		# else:
+		# 	menus["To WebApp"].addAction("Login")
 		
 
 	def sendToWebApp(self, projectParams):
@@ -599,6 +627,35 @@ class ICChart(QObject):
 
 		ax.add_artist(l)
 		#save line
+		self.saveLine(l,ax,lKwargs,name)
+
+	def addArea(self,areaData):
+		""
+		#
+		print(areaData)
+		for n,areaKwargs in areaData.items():
+			if n in self.axisDict:
+				ax = self.axisDict[n]
+				poly = ax.fill_between(**areaKwargs)
+				self.saveArea(poly,ax,areaKwargs,None)
+
+
+	def saveArea(self,poly,ax,areaKwargs,name):
+		"Saves an area artist. Mainly if graph is mirrored to main figure."
+		areaID = getRandomString()
+		self.extraArtists[areaID] = {
+			"artist":poly,
+			"color":INSTANT_CLUE_BLUE,
+			"name":"Area({})".format(areaID) if name is None else name,
+			"ax":ax,
+			"areaKwargs":areaKwargs}
+
+
+	def getBasicLineKwargs(self):
+		""
+		return {"lw":0.75,"color":INSTANT_CLUE_BLUE}
+
+	def saveLine(self,l,ax,lKwargs,name):
 		lineID = getRandomString()
 		self.extraArtists[lineID] = {
 			"artist":l,
@@ -1218,12 +1275,16 @@ class ICChart(QObject):
 	def mirrorExtraLines(self,sourceAx,targetAx):
 		""
 		if len(self.extraArtists) > 0:
-			for lineID,lineKwargs in self.extraArtists.items():
-				if lineKwargs["ax"] == sourceAx:
+			for aristID,artistKwargs in self.extraArtists.items():
+				if artistKwargs["ax"] == sourceAx:
 					#XY = lineKwargs["artist"].get_xydata()
 					#print(XY)
-					l = Line2D(**lineKwargs["lkwargs"])
-					targetAx.add_artist(l)
+					if "lkwargs" in artistKwargs:
+						l = Line2D(**artistKwargs["lkwargs"])
+						targetAx.add_artist(l)
+					elif "areaKwargs" in artistKwargs:
+						targetAx.fill_between(**artistKwargs["areaKwargs"])
+
 
 
 	def mirrorStats(self,targetAx, onlyForID):

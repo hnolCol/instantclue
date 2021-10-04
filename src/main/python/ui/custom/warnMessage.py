@@ -136,10 +136,7 @@ class AskStringMessage(MessageBase):
         
         hbox.addWidget(self.lineEdit)
         hbox.addWidget(self.okButton,Qt.AlignRight)
-
         mainFLayout = self.mainFrame.layout()
-        
-
         mainFLayout.addLayout(hbox,3,1,1,2,Qt.AlignRight)
 
     def __connectEvents(self):

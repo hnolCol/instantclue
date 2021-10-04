@@ -100,8 +100,6 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Load File",
     "description"   :   "Additional na values. If you want to provide multiple value separate them by a semicolon ';'."
     },
-
-    
     {
     "name"          :   "Object Replace String",
     "value"         :   "-",
@@ -117,7 +115,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Data",
+    "parentType"    :   "Data View",
     "description"   :   "If True, viewing the data will use clipping if QuickSelect widgets."
     },
     {
@@ -126,7 +124,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Data",
+    "parentType"    :   "Data View",
     "description"   :   "If True, when subsetting data using the QuickFilter Icon (top-left) the given nanString ('-' by default) will be ignored. If False, it will not be ignored."
     },
     {
@@ -135,7 +133,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["or","and"],
     "parent"        :   "intern",
-    "parentType"    :   "Data",
+    "parentType"    :   "Data View",
     "description"   :   "Subsetting using useful shortcuts is avaible for categorical columns using the context menu.\nThe operator is used when multiple columns are selected."
     },
     {
@@ -144,7 +142,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Data",
+    "parentType"    :   "Data View",
     "description"   :   "Split string to be used when the explode function is applied."
     },
     {
@@ -1079,6 +1077,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "The fraction of the data used when estimating each y-value.",
     },
     {
+    "name"          :   "lowess.show.ci",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Models (Graphs)",
+    "description"   :   "If enabled, the confidence interval of the lowess fit is shown.",
+    },
+    {
     "name"          :   "selectionRectangleSize",
     "value"         :   0.05,
     "dtype"         :   float,
@@ -1170,6 +1177,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
     },
     {
+    "name"          :   "pixel.width.per.column",
+    "value"         :   20,
+    "dtype"         :   int,
+    "range"         :   [5,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Width of columns in pixel. If the numer of columns times the width is bigger than the available space the column width will be adjusted.",
+    },
+    {
     "name"          :   "colorMapLimits",
     "value"         :   "raw values",
     "dtype"         :   str,
@@ -1241,6 +1257,15 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Dimensional Reduction",
     "description"   :   "If enable, adds the used column names in the name for the embedding."
     },    
+    {
+    "name"          :   "lda.n.components",
+    "value"         :   3,
+    "dtype"         :   int,
+    "range"         :   [1,100],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction",
+    "description"   :   "Number of components for the dimensional reduction."
+    },
     {
     "name"          :   "tsne.n.components",
     "value"         :   2,
@@ -1328,7 +1353,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "pca.n.components",
-    "value"         :   2,
+    "value"         :   3,
     "dtype"         :   int,
     "range"         :   [1,100],
     "parent"        :   "intern",
@@ -1336,6 +1361,15 @@ DEFAULT_PARAMETER = [
     "description"   :   """The dimension of the space to embed into. This defaults to 2 to
                         provide easy visualization, but can reasonably be set to any
                         integer value in the range 2 to 100."""
+    },
+    {
+    "name"          :   "lda.scale",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Dimensional Reduction",
+    "description"   :   "If enabled, the mean is subtracted to scale data for least descriminant analysis."
     },
     {
     "name"          :   "pca.scale",
@@ -2464,7 +2498,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "reg.exp.escape",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
@@ -2477,7 +2511,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["and","or"],
     "parent"        :   "intern",
-    "parentType"    :   "Source file filtering",
+    "parentType"    :   "Data View",
     "description"   :   "Spreadsheet like filtering in the source table. Use 'and' if each of the filter criteria match or 'or' if only one should match."
     }
     ]

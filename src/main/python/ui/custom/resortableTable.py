@@ -3,16 +3,16 @@ import sys
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
-from ..utils import createTitleLabel, HOVER_COLOR
+from ..utils import createLabel, createTitleLabel, HOVER_COLOR
 import pandas as pd
 import numpy as np
 
 
 class ResortableTable(QDialog):
 
-    def __init__(self,inputLabels, *args,**kwargs):
+    def __init__(self,inputLabels, deleteItems = False, *args,**kwargs):
         super(ResortableTable,self).__init__(*args, **kwargs)
-
+        self.deleteItems = deleteItems
         self.savedData = None
         if self.prepareData(inputLabels):
             self.__controls()
@@ -22,7 +22,7 @@ class ResortableTable(QDialog):
     def __controls(self):
         ""
         self.titleLabel = createTitleLabel("Use Drag & Drop to sort items.",fontSize=15)
-
+        self.infoLabel = createLabel("Use DEL or backspace to delete a selection. Graph will update only after closing this dialog window.")
         self.table = ResortTableWidget(parent = self )
         self.model = ResortTableModel(parent=self.table, inputLabels = self.inputLabels)
         self.table.setModel(self.model)
@@ -36,6 +36,7 @@ class ResortableTable(QDialog):
 
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.titleLabel)
+        self.layout().addWidget(self.infoLabel)
         self.layout().addWidget(self.table)
 
         hbox = QHBoxLayout()
@@ -167,6 +168,12 @@ class ResortTableWidget(QTableView):
             tableIndex = self.model().index(idx,0)
             self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
     
+    def keyPressEvent(self,e):
+        ""
+        if e.key() in [Qt.Key_Delete, Qt.Key_Backspace]:
+            idx = self.getSelectedRows() 
+            self.model().deleteRowsByTableIndex(idx)
+
     def getSelectedRows(self):
         ""
         return self.selectionModel().selectedRows()
@@ -225,7 +232,15 @@ class ResortTableModel(QAbstractTableModel):
         if role == Qt.EditRole:
     
             return True
-            
+    
+    def deleteRowsByTableIndex(self,tableIndexes):
+        "Remove rows by table index"
+        tableIdxs = [tidx.row() for tidx in tableIndexes]
+        boolIdx = np.array([idx in tableIdxs for idx,_ in enumerate(self._labels.index)])
+        self.layoutAboutToBeChanged.emit()
+        self.initData(self._labels.loc[~boolIdx])
+        self.layoutChanged.emit()
+
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return str(self.title)

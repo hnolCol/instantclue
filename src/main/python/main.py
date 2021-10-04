@@ -2,7 +2,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from matplotlib.pyplot import text
+from matplotlib.pyplot import get, text
 
 
 from ui.notifications.messageWindow import Notification
@@ -340,6 +340,12 @@ class InstantClue(QMainWindow):
         "Error message if something went wrong in the calculation."
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
+    def getFigureSize(self):
+        ""
+        canvasSize = self.mainFrames["middle"].canvas.sizeHint()
+        print(canvasSize)
+        return canvasSize
+
     def _getObjFunc(self,fnProps):
         ""
         if fnProps["obj"] == "self":
@@ -397,6 +403,12 @@ class InstantClue(QMainWindow):
         "Indicate in the ui that a thread finished."
         self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
     
+
+    def getTable(self,tableName):
+        ""
+        if hasattr(self.mainFrames["sliceMarks"],tableName):
+            return getattr(self.mainFrames["sliceMarks"],tableName)
+
     def sendRequest(self,funcProps):
         ""
         try:

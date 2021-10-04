@@ -137,10 +137,12 @@ class ICSearchWithTags(QWidget):
         self.lineEdit.show() 
         self.cb.show()
     
-    def showNumericFilter(self):
+    def showNumericFilter(self, columnName = " "):
         ""
         self.lineEditMax.show()
+        self.lineEditMax.setPlaceholderText("max ({})".format(columnName))
         self.lineEditMin.show()
+        self.lineEditMin.setPlaceholderText("min ({})".format(columnName))
     
     def hideNumericFilter(self):
         ""

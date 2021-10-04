@@ -2,7 +2,7 @@
 
 #Instant Clue Specific color maps
 
-Set7 = ["#f0f0f1","#99999c","#f0ab04","#3b9673","#11395d","#bc3618"]
+Set7 = ["#f0f0f1","#99999c","#3b9673","#f0ab04","#11395d","#bc3618"]
 
 Set4 = ['#D1D3D4','#6D6E71','#EE3124','#FCB74A','#2E5FAC','#9BD5F4',
           '#068135','#91CA65']
@@ -15,7 +15,7 @@ Set6 = ["#444444", "#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 tenenH = ['#c92a17','#a6621c','#a4c4d0','#585b7b','#e0cdc9']
 darj = ['#e30d2b','#008a76','#e19e23','#e47820','#5facc8']
 moon = ['#8c191e','#e3b20e','#967129','#85b0a5','#dfccab']
-acqua = ['#75a9b6','#4587a1','#daba31','#d19c17','#d42e16']
+acqua = ['#75a9b6','#4587a1','#d19c17','#daba31','#d42e16']
 ## standard repartoire of seabrn/matplotlib color palettes in Instant Clue                                 
 
 oneColorSeq = ['Greys','Blues','Blues_r','Greens','Purples','Reds',"Reds_r"]

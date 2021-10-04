@@ -3,12 +3,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-
-import pandas as pd
 import numpy as np
 from collections import OrderedDict
 
-import seaborn as sns
 
 class CollapsableFrames(QWidget):
     def __init__(self,buttonDesign, buttonMenu = None, parent = None, animationDuration = 550, spacing = 0):

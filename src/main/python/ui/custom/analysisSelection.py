@@ -116,6 +116,26 @@ class AnalysisSelection(QWidget):
 
                     graph.addLinearLine(m,b) #default values are m = 1, b = 0
                     graph.updateFigure.emit()
+            elif task == "Cross":
+                askCrossData = ICDataInput(mainController=self.mC, title = "Provide the x- and y-axis coordinates for the cross.",valueNames = ["x","y"], valueTypes = {"x":float,"y":float})
+                if askCrossData.exec_():
+                        xCrossCoord, yCrossCoord = askCrossData.providedValues["x"], askCrossData.providedValues["y"]
+                        graph.addCrossLine(xCrossCoord, yCrossCoord)
+                        graph.updateFigure.emit() 
+            
+            elif task == "Vertical Line":
+                askVLineData = ICDataInput(mainController=self.mC, title = "Provide the x-axis coordinate for the line.",valueNames = ["x"], valueTypes = {"x":float})
+                if askVLineData.exec_():
+                    xCoord = askVLineData.providedValues["x"]
+                    graph.addVerticalLine(xCoord)
+                    graph.updateFigure.emit() 
+            elif task == "Horizontal Line":
+                askHLineData = ICDataInput(mainController=self.mC, title = "Provide the y-axis coordinate for the line.",valueNames = ["y"], valueTypes = {"y":float})
+                if askHLineData.exec_():
+                    xCoord = askHLineData.providedValues["y"]
+                    graph.addHorizontalLine(xCoord)
+                    graph.updateFigure.emit() 
+
             elif task == "Quadrant Lines":
                 reqFloats = ["x_min","x_max","y_min","y_max"]
                 askQuadData = ICDataInput(mainController=self.mC,title = "Provide x and y axis quadrant limits",valueNames = reqFloats, 

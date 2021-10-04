@@ -2,13 +2,13 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from matplotlib.pyplot import title 
-from ..custom.buttonDesigns import ICStandardButton
+from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
 from ..custom.warnMessage import AskStringMessage
-
+from .ICDSelectItems import ICDSelectItems
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
 
 import requests
-
+import pandas as pd 
 
 class ICShareGraph(QDialog):
     ""
@@ -36,7 +36,11 @@ class ICShareGraph(QDialog):
         self.infoTextEdit.setPlaceholderText("Enter information of the experiment / project ..")
         self.markDownCheckbox = QCheckBox("Text is markdown style")
         self.enableLabel = createLabel("Enable on web-graph:")
-        self.searchableColumn = createCombobox(self, items=self.mC.data.getCategoricalColumns(dataID=self.mC.getDataID()))
+  #self.searchableColumn = createCombobox(self, items=self.mC.data.getCategoricalColumns(dataID=self.mC.getDataID()))
+        self.selectSearchableLabel = createLabel("Searchable columns:")
+        self.searchableColumns = LabelLikeButton(parent = self, text = "Select column(s)", tooltipStr="Select columns that should be selectable in the web application for searching..", itemBorder=5)                     
+
+        
         self.qsCheckbox = QCheckBox("Quick Select")
         self.dataDownloadCheckbox = QCheckBox("Data Download")
         self.dataDownloadCheckbox.setToolTip("If enabled, users can enter the graphID and download the data directly in InstantClue. Please note that if you dont set a password, users can still download the data using the API. It is recommended to enable this.")
@@ -61,7 +65,8 @@ class ICShareGraph(QDialog):
         grid.addWidget(self.infoTextEdit)
         grid.addWidget(self.markDownCheckbox)
         grid.addWidget(self.doiEdit)
-        grid.addWidget(self.searchableColumn)
+        grid.addWidget(self.selectSearchableLabel)
+        grid.addWidget(self.searchableColumns)
         grid.addWidget(self.enableLabel)
         grid.addWidget(self.dataDownloadCheckbox)
         grid.addWidget(self.validCombo)
@@ -85,11 +90,32 @@ class ICShareGraph(QDialog):
 
         self.closeButton.clicked.connect(self.close)
         self.applyButton.clicked.connect(self.shareGraph)
+        #choose specific column
+        self.searchableColumns.clicked.connect(self.chooseSearchableColumns)
         
 
     def closeEvent(self,event=None):
         "Overwrite close event"
         event.accept()
+
+    def chooseSearchableColumns(self, e = None):
+        selectableColumns = pd.DataFrame(self.mC.data.getCategoricalColumns(self.mC.getDataID()))
+        dlg = ICDSelectItems(data = selectableColumns, selectAll=False, singleSelection=False)
+        # handle position and geomettry
+        senderGeom = self.sender().geometry()
+        bottomRight = self.mapToGlobal(senderGeom.bottomRight())
+        h = dlg.getApparentHeight()
+        dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
+        #handle result
+        if dlg.exec_():
+            selectedColumns = dlg.getSelection()
+            self.selectedSearchableColumns = selectedColumns.values.flatten().tolist()
+            numColumnsSelected = len(self.selectedSearchableColumns)
+            if hasattr(self.sender(),"setText"):
+                if numColumnsSelected > 1:
+                    self.sender().setText("{} columns selected".format(numColumnsSelected))
+                else:
+                    self.sender().setText(self.selectedSearchableColumns[0][:20])
 
     def collectProjectInfoData(self):
         ""
@@ -127,7 +153,7 @@ class ICShareGraph(QDialog):
     def shareGraph(self):
         ""
         if self.requiredWidgetsFilled():
-            URL = "http://127.0.0.1:5000/api/v1/graph"
+            URL = "https://www.instantclue.de/api/v1/graph"
             appID = self.mC.webAppComm.getAppID()
             exists, graph = self.mC.getGraph()
             if exists:
@@ -135,7 +161,7 @@ class ICShareGraph(QDialog):
                 data, columnNames, graphLimits,annotatedIdx,annotationProps = graph.getDataForWebApp()
                 
                 
-                searchColumnName = self.searchableColumn.currentText()
+                searchColumnName = self.selectedSearchableColumns[0]
 
                 graphProps["xLabel"] = columnNames[0]
                 graphProps["yLabel"] = columnNames[1]
@@ -145,15 +171,14 @@ class ICShareGraph(QDialog):
                 graphProps["searchColumnName"] = searchColumnName
                 graphProps["hoverColumnName"] = searchColumnName
                 graphProps["hoverColor"] = self.mC.config.getParam("scatter.hover.color")
-
-
+                graphProps["valid"] = self.validCombo.currentText()
                 
                 searchData = self.mC.data.getDataByColumnNameForWebApp(self.mC.getDataID(),searchColumnName)
                 data = self.mC.data.joinColumnToData(data,self.mC.getDataID(),searchColumnName)
                 if data is not None:
                     try:
                         r = requests.put(URL,json={
-                            "app-id":appID,
+                            "appID":appID,
                             "data":data.to_json(orient="records"),
                             "graph-props":graphProps,
                             "search-data":searchData}
@@ -161,9 +186,8 @@ class ICShareGraph(QDialog):
                     except:
                         self.mC.sendToInformationDialog(infoText="Error in http request. Server not reachable.")
                         return
-                        
                     if r.status_code == 200:
-                        self.mC.sendToInformationDialog("Graph shared succesfully. You can now access the graph using:\n\n http://instantclue.age.mpg.de/s/{}\n\nThe link is valid for the time duration of: {}".format(r.text.replace('"',""),self.validCheckbox.currentText()),textIsSelectable=True)
+                        self.mC.sendToInformationDialog("Graph shared succesfully. You can now access the graph using:\n\n https://www.instantclue.de/s/{}\n\nThe link is valid for the time duration of: {}".format(r.text.replace('"',""),self.validCombo.currentText()),textIsSelectable=True)
                         
 
     def updateGraphSelectionChanged(self,currentIdx):

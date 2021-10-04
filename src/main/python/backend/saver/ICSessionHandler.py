@@ -1,5 +1,6 @@
 
 import os, sys
+import re
 import pandas as pd
 import pickle 
 from ..utils.stringOperations import getMessageProps
@@ -11,8 +12,8 @@ class ICSessionHandler(object):
 
     def saveSession(self,sessionPath, overwrite = False):
         "Saves session"
-        if not overwrite and os.path.exists(sessionPath):
-            return False, "Session exists."
+        # if not overwrite and os.path.exists(sessionPath):
+        #     return False, "Session exists."
         #data frames
         dataFrames = self.mC.data.dfs
         #names of data farmes
@@ -28,15 +29,35 @@ class ICSessionHandler(object):
         mainFigureRegistry.removeLabels()
         mainFigures = self.mC.mainFrames["right"].mainFigureRegistry.getMainFiguresByID()
        
+        #get data from graph
+        exists, graph = self.mC.getGraph()
+        if exists:
+                
+                plotType = graph.plotType
+                graphData = graph.data
+        else:
+            plotType = None
+            graphData = {}
+
+        #get current dataset index
+        comboboxIndex = self.mC.mainFrames["data"].dataTreeView.getDfIndex()
+        print(comboboxIndex)
+        #receiverBoxState 
+        receiverBoxItems = self.mC.mainFrames["middle"].getReceiverBoxItems()
+        
         comboSettings = []#self.mC.mainFrames["right"].mainFigureRegistry.getMainFigureCurrentSettings() 
        # print(mainFigureRegistry.mainFigureTemplates)
         combinedObj = {
                     "dfs":dataFrames,
                     "dfID":currentDataFrameID,
                     "dfsName":dataFrameNames,
+                    "graphData": graphData,
+                    "currentPlotType" : plotType,
                     "mainFigures":mainFigures,
                     "mainFigureRegistry":mainFigureRegistry,
-                    "mainFigureComboSettings":comboSettings}
+                    "mainFigureComboSettings":comboSettings,
+                    "dataComboboxIndex" : comboboxIndex,
+                    "receiverBoxItems":receiverBoxItems}
        # print(combinedObj)
         with open(sessionPath,"wb") as icSession:
             pickle.dump(combinedObj,icSession)
@@ -58,6 +79,15 @@ class ICSessionHandler(object):
         response["mainFigures"] = combinedObj["mainFigures"] #cannot be done from WorkingThread
         response["mainFigureRegistry"] = combinedObj["mainFigureRegistry"]
         response["mainFigureComboSettings"] = []#combinedObj["mainFigureComboSettings"]
-        print("this is in saved",combinedObj["mainFigureRegistry"].mainFigureTemplates)
-        print(combinedObj["mainFigures"])
+
+        response["dataComboboxIndex"] = combinedObj["dataComboboxIndex"]
+
+        if "graphData" in combinedObj and "currentPlotType" in combinedObj and combinedObj["currentPlotType"] is not None:
+            response["graphData"] = combinedObj["graphData"]
+            response["plotType"] = combinedObj["currentPlotType"]
+
+        if "receiverBoxItems" in combinedObj:
+            response["receiverBoxItems"] = combinedObj["receiverBoxItems"]
+            
+
         return response

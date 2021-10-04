@@ -130,7 +130,7 @@ class CategoricalFilter(object):
 
         if isinstance(searchString,np.ndarray):
             searchString = searchString.tolist()
-        
+     
         if len(searchString) == 0:
             
             return np.ones(shape=self.sourceData.dfs[dataID].index.size,dtype=np.bool)
@@ -251,6 +251,7 @@ class CategoricalFilter(object):
         # use class splitString if None given
         if splitString is None:
             splitString = self.splitString
+        
         if filterType not in ["category","string","multiColumnCategory"]:
             return getMessageProps("Error ..","Unknown filter type selected.")
 
@@ -277,6 +278,7 @@ class CategoricalFilter(object):
 
         else:
             self.liveSearchData = searchData
+            #print(self.liveSearchData)
             self.filterProps = {"type":filterType,"dataID":dataID,"columnNames":columnNames,"splitString":splitString}
             self.savedLastString = ''
             return filterType
@@ -319,7 +321,8 @@ class CategoricalFilter(object):
                 dataToSearch = self.liveSearchData
                 resetDataInView = True
 
-			
+            #print(dataToSearch)
+      
             if inputIsRegEx:
                 regExp = re.escape(searchString)
             else:

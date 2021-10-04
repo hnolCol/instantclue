@@ -29,7 +29,26 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     axisTitles = {}
     verticalLines = {}
     data = sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
+    if nCatCols == 0:
+        
+        groupedPlotData = data.describe()
+        # print(groupedPlotData)
+        # print(groupedPlotData.loc[["25%","75%"],:].diff())
+        if data.index.size > 1:
+            IQR = pd.Series(groupedPlotData.loc[["25%","75%"],:].diff().dropna(how="all").values.flatten(), index=groupedPlotData.columns, name="IQR")
+            groupedPlotData = groupedPlotData.append(IQR)
 
+    elif splitByCategories:
+        
+        groupedPlotData = data.groupby(by=categoricalColumns,sort=False).describe()
+
+        columnNamesForIQR = [colName for colName in groupedPlotData.columns if "75%" in colName or "25%" in colName]
+        IQR = groupedPlotData[columnNamesForIQR].diff(axis=1)
+        #filter for every second column 
+        IQR = IQR[IQR.columns[1::2]]
+        IQR.columns = [(colName[0],"IQR") for colName in columnNamesForIQR[1::2]]
+        groupedPlotData = groupedPlotData.join(IQR)
+   
     if not splitByCategories and nCatCols > 0:
 
         axisPostions = getAxisPosition(n = nNumCols, maxCol=2)
@@ -66,6 +85,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         colorCategoricalColumn = "\n".join(categoricalColumns)
         #get data bool index
 
+        groupedPlotData = []
         
         offset = 0 + border + widthBox/2
         tickPositionByUniqueValue["Complete"] = offset
@@ -92,7 +112,11 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
             faceColors[n] = []
             groupNames[n] = []
             # add complete data
-            filteredData.append(data[numericColumn].dropna())
+            X = data[numericColumn].dropna()
+            filteredData.append(X)
+            describedX = X.describe()
+            describedX = describedX.append(pd.Series(describedX["75%"]-describedX["25%"],index=["IQR"], name=numericColumn))
+            groupedPlotData.append(describedX)
             boxPositions[n].append(tickPositionByUniqueValue["Complete"] )
             tickPositions[n].append(tickPositionByUniqueValue["Complete"] )
             faceColors[n].append(colors["Complete"])
@@ -115,7 +139,12 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                             "x":tickBoxPos - widthBox/2 - widthBox/4})
                     if uniqueValueFilteredData.index.size > 0:
                         filteredData.append(uniqueValueFilteredData)
-                        
+                        uniqueValueDescribed = uniqueValueFilteredData.describe()
+                        dataColumnName = "{}:{}:{}".format(numericColumn,categoricalColumn,uniqueValue)
+                        uniqueValueDescribed.name = dataColumnName 
+                        #append IQR
+                        uniqueValueDescribed = uniqueValueDescribed.append(pd.Series(uniqueValueDescribed["75%"]-uniqueValueDescribed["25%"],index=["IQR"], name=dataColumnName ))
+                        groupedPlotData.append(uniqueValueDescribed)
                         boxPositions[n].append(tickBoxPos)
                         tickPositions[n].append(tickBoxPos)
                         faceColors[n].append(fc)
@@ -127,6 +156,8 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickLabels = dict([(n,flatUniqueValues) for n in range(nNumCols)])
         axisLabels = dict([(n,{"x":"Categories","y":numericColumn}) for n,numericColumn in enumerate(numericColumns)])
         axisLimits = dict([(n,{"xLimit" : (0,offset),"yLimit":None}) for n in range(nNumCols)])
+       
+        groupedPlotData = pd.concat(groupedPlotData,axis=1)
     
     elif nCatCols == 0:
 
@@ -141,7 +172,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         colorGroups["group"] = colors.keys() 
         colorGroups["internalID"] = [getRandomString() for n in colors.values()]
 
-        faceColors = {0: colors.values()}
+        faceColors = {0: list(colors.values())}
         tickLabels = {0:numericColumns}
         filteredData = [data[numericColumn].dropna() for numericColumn in numericColumns]
         groupNames = {0:numericColumns}
@@ -151,6 +182,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         axisLabels = {0:{"x":"","y":"value"}}
         colorCategoricalColumn = "Numeric Columns"
         axisLimits[0] = {"xLimit" :  (tickValues[0]- widthBox,tickValues[-1] + widthBox), "yLimit" : None} 
+        
 
     elif nCatCols == 1:
 
@@ -391,10 +423,12 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         "yLimit":(globalMin-yMargin,globalMax+yMargin),
                         "xLimit":(catBoxPositions[0] - widthBox, catBoxPositions[-1] + widthBox)
                         }
-                    
-                        
+    
+    
+    groupedPlotData["metric"] = groupedPlotData.index    
+
     return plotData, axisPostions, boxPositions, tickPositions, \
-            tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines
+            tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData
 
 
           

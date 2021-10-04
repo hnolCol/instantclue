@@ -12,7 +12,7 @@ from ..dialogs.ICGrouper import ICGrouper
 from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
-
+from ..dialogs.ICDSelectItems import ICDSelectItems
 #data import 
 from backend.config.data.params import MTMethods
 
@@ -64,7 +64,7 @@ dataTypeSubMenu = {
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
-        #("(Prote-)omics-toolkit", ["Fasta"])
+        #"(Prote-)omics-toolkit", ["Organization"])
         ]
 }
 
@@ -103,13 +103,57 @@ menuBarItems = [
         "funcKey": "filterFasta",
         "dataType": "Categories",
     },
+    {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"Fisher Enrichment Test",
+        "funcKey": "fisherCategoricalEnrichmentTest",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"Match mod. pept. sequence to sites",
+        "funcKey": "matchModPeptideSequenceToSites",
+        "dataType": "Categories",
+    },
     # {
-    #     "subM":"Multiple Groups",
-    #     "name":"2W-ANOVA",
-    #     "funcKey": "compareGroups",
-    #     "dataType": "Numeric Floats",
-    #     "fnKwargs":{"test":"2W-ANOVA"}
+    #     "subM":"(Prote-)omics-toolkit",
+    #     "name":"Protein-Peptide Profile View",
+    #     "funcKey": "openProteinPeptideView",
+    #     "dataType": "Categories",
     # },
+    {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"Intra Batch correction (lowess)",
+        "funcKey": "openBatchCorrectionDialog",
+        "dataType": "Numeric Floats",
+    },
+    # {
+    #     "subM":"Organization",
+    #     "name":"Create Sample List",
+    #     "funcKey": "createSampleList",
+    #     "dataType": "Categories",
+    # },
+    {
+        "subM":"Multiple Groups",
+        "name":"N-W-ANOVA",
+        "funcKey": "runNWayANOVA",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{}
+    },
+    {
+        "subM":"Multiple Groups",
+        "name":"Repeated Measures 1/2 W ANOVA",
+        "funcKey": "runRMOneTwoWayANOVA",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{}
+    },
+    {
+        "subM":"Multiple Groups",
+        "name":"Mixed Two-W-ANOVA",
+        "funcKey": "runMixedANOVA",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{}
+    },
     {
         "subM":"Pairwise Tests",
         "name":"Euclidean distance",
@@ -645,6 +689,18 @@ menuBarItems = [
     },
     {
         "subM":"Column operation ..",
+        "name":"Add index column",
+        "funcKey": "data::addIndexColumn",
+        "dataType": "All",
+    },
+    {
+        "subM":"Column operation ..",
+        "name":"Add group index column",
+        "funcKey": "data::addGroupIndexColumn",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"Column operation ..",
         "name":"Factorize column(s)",
         "funcKey": "data::factorizeColumns",
         "dataType": "Categories",
@@ -1169,6 +1225,8 @@ class DataTreeView(QWidget):
         funcProps = {"key":"data::sortColumns",
                     "kwargs":{"sortedColumnDict":columnDict,"dataID":self.mC.getDataID()}}
         self.mC.sendRequestToThread(funcProps)
+
+
 
     def customSortLabels(self):
         ""
@@ -2097,6 +2155,137 @@ class DataTreeViewTable(QTableView):
             else:
                 w = WarningMessage(infoText="No grouping founds. Please add a grouping first.")
                 w.exec_()
+    
+    def runNWayANOVA(self,**kwargs):
+        ""
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            #currentGrouping = self.mC.grouping.getCurrentGroupingName() 
+            N, ok = QInputDialog.getInt(self, 'N-Way Anova', 'Enter number of factors:')
+            if N > len(groupingNames):
+                self.mC.sendToWarningDialog(infoText = "Number of factors greater than annotated groupings. Please add some groupings (context menu - Group Comparison - Annotate Groups)")
+                return
+            if ok:
+                groupings = ["Grouping {}".format(n) for n in range(N)]
+                options = dict([(k,groupingNames) for k in groupings])
+                defaults = dict([(k,groupingNames[n]) for n,k in enumerate(groupings)])
+                selDiag = SelectionDialog(groupings,
+                                options,
+                                defaults,
+                                title="Select Grouping for N-Way ANOVA.")
+                if selDiag.exec_():
+                    fnKwargs = {}
+                    print(selDiag.savedSelection.values())
+                    fnKwargs["groupings"] = np.array([x for x in selDiag.savedSelection.values()])
+                    if "otherKwargs" in kwargs:
+                        fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                    funcProps = {"key":"stats::runNWayANOVA","kwargs":fnKwargs}
+                    funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                    print(fnKwargs)
+                    self.mC.sendRequest(funcProps)
+        else:
+            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+
+    def runRMOneTwoWayANOVA(self,**kwargs):
+
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            groupings = ["withinGrouping1","withinGrouping2","sibjectGrouping"]
+            options = dict([(k,["None"] + groupingNames) for k in groupings])
+            defaults = dict([(k,groupingNames[n]) for n,k in enumerate(groupings)])
+            selDiag = SelectionDialog(groupings,
+                            options,
+                            defaults,
+                            title="Select Grouping for Repeated measure one/two-way ANOVA.")
+                    
+            if selDiag.exec_():
+                fnKwargs = selDiag.savedSelection
+                if fnKwargs["withinGrouping1"] == fnKwargs["withinGrouping2"]:
+                    self.mC.sendToWarningDialog(infoText = "withinGroupings cannot be the same. Set withinGrouping2 to None to perform 1W ANOVA.")
+                    return
+                if fnKwargs["subjectGrouping"] == "None":
+                    self.mC.sendToWarningDialog(infoText = "subjectGroupings is required!")
+                    return
+
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                funcProps = {"key":"stats::runRMTwoWayANOVA","kwargs":fnKwargs}
+                funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                self.mC.sendRequest(funcProps)
+
+        else:
+            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+
+    def runMixedANOVA(self,**kwargs):
+        ""
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            currentGrouping = self.mC.grouping.getCurrentGroupingName() 
+            selDiag = SelectionDialog(["groupingWithin","groupingBetween","groupingSubject"],
+                            {"groupingWithin":groupingNames,"groupingBetween":groupingNames,"groupingSubject":groupingNames},
+                            {"groupingWithin":currentGrouping,"groupingBetween":currentGrouping,"groupingSubject":currentGrouping},
+                            title="Select Grouping for Mixed two-way ANOVA.")
+            if selDiag.exec_():
+                fnKwargs = selDiag.savedSelection
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                funcProps = {"key":"stats::runMixedTwoWayANOVA","kwargs":fnKwargs}
+                funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                self.mC.sendRequest(funcProps)
+        else:
+            self.mC.sendToWarningDialog(infoText = "No grouping found. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+
+
+    def fisherCategoricalEnrichmentTest(self,*args,**kwargs):
+        ""
+        categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
+        selectedColumn = self.getSelectedData()
+        selDiag = SelectionDialog(["categoricalColumn","alternative"],{"categoricalColumn":categoricalColumns,"alternative":["two-sided","greater","less"]},{"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided"},title="Fisher Exact Settings.")
+  
+        if selDiag.exec_():
+            categoricalColumn = selDiag.savedSelection["categoricalColumn"]
+      
+            dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
+            if dlg.exec_():
+                testColumns = dlg.getSelection()
+                fkey = "stats::runFisherEnrichment"
+                columnNames = [categoricalColumn] + testColumns.values.flatten().tolist() 
+                kwargs = {
+                            "categoricalColumn":categoricalColumn,
+                            "alternative":selDiag.savedSelection["alternative"],
+                            "testColumns":testColumns,
+                            "data" : self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"].copy()
+                        }
+                funcProps = {"key":fkey,"kwargs":kwargs}
+                self.mC.sendRequestToThread(funcProps)
+            
+
+    def openBatchCorrectionDialog(self):
+        ""
+
+
+    def matchModPeptideSequenceToSites(self,*args,**kwargs):
+        ""
+        dataID = self.mC.getDataID()
+        categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
+        selectedColumn = [colName for colName in self.getSelectedData() if colName in categoricalColumns]
+        #print(selectedColumn)
+        selDiag = SelectionDialog(
+                ["proteinGroupColumn","modifiedPeptideColumn"],
+                {"proteinGroupColumn":categoricalColumns,"modifiedPeptideColumn":categoricalColumns},
+                {"proteinGroupColumn":"","modifiedPeptideColumn":""},
+                title="Select the column that contains the modified sequence and protein group (for example uniprot)\nMust match the fasta reg ex (Settings).")
+        if selDiag.exec_():
+            fnKwargs = selDiag.savedSelection
+            dlg = AskForFile(placeHolderEdit="Select fasta file to match the modified sequences.")
+            if dlg.exec_():
+                fnKwargs["fastaFilePath"] = dlg.state 
+                fnKwargs["dataID"] = dataID
+                funcProps = {"key":"proteomics::matchModSequenceToSites","kwargs":fnKwargs}
+                self.mC.sendRequestToThread(funcProps)
+               # print(fnKwargs)
+
+
 
 
     def runCombat(self,**kwargs):

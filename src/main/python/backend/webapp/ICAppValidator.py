@@ -23,7 +23,7 @@ class ICAppValidator(object):
 
     def checkAppIDForCollision(self,b64EncAppID):
         "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided. The chances are however vereeery looow :) "
-        URL = "http://127.0.0.1:5000/api/v1/app/id/exists"
+        URL = "https://instantclue.de/api/v1/app/id/exists"
         try:
             r = requests.get(URL,params={"app-id":b64EncAppID})
             if r.status_code == 200:
@@ -55,20 +55,21 @@ class ICAppValidator(object):
     def validateApp(self):
         ""
         appIDPath, validPath = self.appIDFound()
-       
+        print(appIDPath)
         if not validPath:
             appIDValid = False
             while not appIDValid:
                 #create app ID
-                appID = getRandomString(20).encode("utf-8")
+                appID = getRandomString(30)
+                appIDValid = True
                 #encrypt appid for sending
-                b64EncAppID = self.encryptStringWithPublicKey(appID)
+                #b64EncAppID = self.encryptStringWithPublicKey(appID)
                 #check for collision
-                appIDValid, httpRequestFailed = self.checkAppIDForCollision(b64EncAppID)
-                if httpRequestFailed:
-                    self.mC.sendMessageRequest({"title":"Error..","message":"HTTP Request failed. App could not be validated."})
-                    return
-            self.saveAppID(appIDPath,b64EncAppID)
+                #appIDValid, httpRequestFailed = self.checkAppIDForCollision(b64EncAppID)
+                #if httpRequestFailed:
+                 #   self.mC.sendMessageRequest({"title":"Error..","message":"HTTP Request failed. App could not be validated."})
+                  #  return
+            self.saveAppID(appIDPath,appID)
 
     def appIDFound(self):
         ""
@@ -76,10 +77,11 @@ class ICAppValidator(object):
 
         return appIDPath, os.path.exists(appIDPath)
 
-    def saveAppID(self,appIDPath, b64EncStr):
+    def saveAppID(self,appIDPath, appID):
         ""
+        print(appIDPath)
         with open(appIDPath,"w") as f:
-            f.write(b64EncStr)
+            f.write(appID)
 
     def getAppIDPath(self):
         "Returnst the file path in which the app-id is stored."
@@ -91,12 +93,13 @@ class ICAppValidator(object):
         appIDPath,idFileFound = self.appIDFound()
         if idFileFound:
             with open(appIDPath,"r") as f:
-                b64EncStr = f.read()
-                return b64EncStr
+                appID = f.read()
+                return appID
         
     def getChartTitles(self):
         try:
             df = self.getChartsByAppID()
+            print(df)
             if not df.empty:
                 return df["title"].values.tolist()
             else:
@@ -109,7 +112,7 @@ class ICAppValidator(object):
         appID = self.getAppID()
         shortUrl = chartDetails.loc["short-url"] 
         if appID is not None:
-            URL = "http://127.0.0.1:5000/api/v1/graph/text"
+            URL = "https://instantclue.de/api/v1/graph/text"
             if isProtected:
                 encryptPwd = self.encryptStringWithPublicKey(password)
                 r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd})
@@ -128,7 +131,7 @@ class ICAppValidator(object):
 
     def isChartProtected(self,graphURL):
         ""
-        URL = "http://127.0.0.1:5000/api/v1/graph/protected"
+        URL = "https://instantclue.de/api/v1/graph/protected"
         r = requests.get(URL,params={"url":graphURL})
         if r.status_code == 200:
             graphIsProtected = not r.json()["protected"] == "false"
@@ -138,10 +141,18 @@ class ICAppValidator(object):
         "Returns the charts that were uplaoded and are associated to the app-id"
         appID = self.getAppID() 
         if appID is not None:
-            URL = "http://127.0.0.1:5000/api/v1/app/graphs"
-            r = requests.post(URL,json={"app-id":appID})
-            df = pd.read_json(r.json(),orient="records")
+            print(appID)
+            URL = "https://instantclue.de/api/v1/app/graphs"
+            r = requests.get(URL,params={"appID":appID})
+            print(r.status_code)
+            print(r.url)
+            print(r.content)
+            print(r.json())
             
+            try:
+                df = pd.read_json(r.json(),orient="records")
+            except:
+                df = pd.DataFrame()
             return df
         else:
             return  pd.DataFrame()
