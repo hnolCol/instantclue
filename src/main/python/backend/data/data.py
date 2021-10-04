@@ -67,6 +67,7 @@ from ..color.colorManager import ColorManager
 from ..statistics.statistics import StatisticCenter
 from ..normalization.normalizer import Normalizer
 from ..transformations.transformer import Transformer
+from ..proteomics.ICModifications import ICModPeptidePositionFinder
 from .ICExcelExport import ICHClustExporter
 from .ICSmartReplace import ICSmartReplace
 from collections import OrderedDict
@@ -533,8 +534,8 @@ class DataCollection(object):
 			dataToCopy.to_clipboard(excel=True)
 
 		elif dataID is not None and dataID in self.dfs:
-
-			self.dfs[dataID].to_clipboard(excel=True)
+			data = self.getDataByDataID(dataID)
+			data.to_clipboard(excel=True)
 
 		elif isinstance(data,pd.DataFrame):
 
@@ -1055,6 +1056,15 @@ class DataCollection(object):
 				return itertools.chain.from_iterable([str(v).split(splitString) for v in values])
 			else:
 				return values
+	
+	def _getCategoricalData(self,dataID,ignoreClipping=True):
+		""
+		if dataID in self.dfs:
+			categoricalColumns = self.getCategoricalColumns(dataID)
+			data = self.getDataByColumnNames(dataID,categoricalColumns,ignore_clipping=ignoreClipping)["fnKwargs"]["data"]
+			return data
+		else:
+			return errorMessage
 
 	# def getCategoricalColorMap(self, dataID, columnNames):
 	# 	""
@@ -2422,7 +2432,17 @@ class DataCollection(object):
 		else:
 			return otherDf
 		
+	def matchModSequenceToSites(self,dataID, proteinGroupColumn,modifiedPeptideColumn, fastaFilePath):
+		""
+		data = self.getDataByColumnNames(dataID=dataID,columnNames=[proteinGroupColumn,modifiedPeptideColumn])["fnKwargs"]["data"]
+		modPeptideSequence = data[modifiedPeptideColumn].values
+		proteinGroups = data[proteinGroupColumn].values
+		modFinder = ICModPeptidePositionFinder(None,None)
+		modFinder.loadFasta(fastaFilePath)
+		matchedSiteData = modFinder.matchModPeptides(proteinGroups,modPeptideSequence,data.index.values.tolist())
+		return self.joinDataFrame(dataID,matchedSiteData)
 		
+		#eturn getMessageProps("Done..","Modified peptides matched to sites.")
 		
 	def meltData(self,dataID,columnNames):
 		'''

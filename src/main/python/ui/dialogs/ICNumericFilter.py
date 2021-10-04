@@ -3,7 +3,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
 from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox
-from ..custom.buttonDesigns import AcceptButton, RefreshButton, ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
+from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
 
@@ -303,7 +303,7 @@ class NumericFilter(QDialog):
         elif self.CBFilterOptions["Subset Matches"].checkState():
             funcProps["kwargs"]["subsetData"] = True
             funcProps["key"] = "filter::subsetNumericFilter"
-        print(funcProps)
+       
         self.mC.sendRequestToThread(funcProps)
         self.close()
         

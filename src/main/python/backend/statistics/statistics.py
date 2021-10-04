@@ -1,13 +1,16 @@
+from pandas.core.reshape.melt import melt
+from scipy.sparse import data
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
 from ..utils.stringOperations import getMessageProps, getRandomString, mergeListToString
 from backend.utils.stringOperations import getNumberFromTimeString
 from backend.utils.misc import getKeyMatchInValuesFromDict
+from backend.filter.utils import buildRegex
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
 from scipy.optimize import curve_fit
-from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon
+from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact
 
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
@@ -19,7 +22,9 @@ from statsmodels.stats.multitest import multipletests
 #import pingouin as pg
 from pingouin import anova
 #from .anova.anova import Anova
+from pingouin import mixed_anova
 
+#mixed ANOVA import
 import hdbscan
 import umap
 import re
@@ -30,6 +35,8 @@ import fastcluster
 from collections import OrderedDict
 #pycombat import
 from combat.pycombat import pycombat
+from itertools import chain
+from skmisc.loess import loess
 
 clusteringMethodNames = OrderedDict([
                             ("kmeans",KMeans),
@@ -41,6 +48,28 @@ clusteringMethodNames = OrderedDict([
                             ])
 
 manifoldFnName = {"Isomap":"runIsomap","MDS":"runMDS","TSNE":"runTSNE","LLE":"runLLE","SpecEmb":"runSE"}
+
+
+
+def loess_fit(x, y, span=0.75):
+    """
+    loess fit and confidence intervals
+    """
+    # setup
+    lo = loess(x, y, span=span)
+    # fit
+    lo.fit()
+    # Predict
+    prediction = lo.predict(x, stderror=True)
+    # Compute confidence intervals
+    ci = prediction.confidence(0.05)
+    # Since we are wrapping the functionality in a function,
+    # we need to make new arrays that are not tied to the
+    # loess objects
+    yfit = np.array(prediction.values)
+    ymin = np.array(ci.lower)
+    ymax = np.array(ci.upper)
+    return yfit, ymin, ymax
 
 class StatisticCenter(object):
 
@@ -141,26 +170,32 @@ class StatisticCenter(object):
         config = self.sourceData.parent.config 
         grouping = self.sourceData.parent.grouping
         grouping.setCurrentGrouping(groupingName)
-        
+        groupingName = grouping.getCurrentGroupingName()
         columnNames = grouping.getColumnNames(groupingName)
         groupingAnnotation = grouping.getGroupNamesByColumnNames(columnNames)
-        print(groupingAnnotation)
+        #print(groupingAnnotation)
         if len(columnNames) > 0:
             X = self.getData(dataID,columnNames.values).dropna()
             Y = groupingAnnotation.values.flatten()
-            XT = X.values.T
-            XT = StandardScaler().fit_transform(XT)
-            print(XT,Y)
-            LDA = LinearDiscriminantAnalysis()
+            if config.getParam("lda.scale"):
+                XT = X.values.T
+                XT = StandardScaler().fit_transform(XT)
+            else:
+                XT = X.values.T
+
+            LDA = LinearDiscriminantAnalysis(n_components=config.getParam("LDA.n.components"))
             LDA.fit(XT,Y)
-            
             X_TRANFORMED = LDA.transform(XT)
-            print(X_TRANFORMED.shape)
-            XX = pd.DataFrame(X_TRANFORMED, columns = ["Comp{}".format(n) for n in range(2)])
-            XX["index"] = columnNames
-            print(LDA.coef_)
-            self.sourceData.addDataFrame(XX,fileName="LDA:({})".format(self.sourceData.getFileNameByID(dataID)))
-            return self.sourceData.addDataFrame(XX,fileName="LDA:({})".format(self.sourceData.getFileNameByID(dataID)))
+            
+            XX = pd.DataFrame(X_TRANFORMED, columns = ["Comp:{:02d}({:.2f}%)".format(n,perc*100) for n,perc in enumerate(LDA.explained_variance_ratio_.flatten())])
+            XX["ColumnNames"] = columnNames
+            XX[groupingName] = Y
+            weightVectors = pd.DataFrame(LDA.coef_.T, index=X.index,columns=groupingAnnotation.unique().tolist())
+            weightVectors = weightVectors.join(self.sourceData._getCategoricalData(dataID))
+            self.sourceData.addDataFrame(weightVectors, fileName="LDA:WeightVectors({})".format(self.sourceData.getFileNameByID(dataID)))
+            completedKwargs = self.sourceData.addDataFrame(XX,fileName="LDA:({})".format(self.sourceData.getFileNameByID(dataID)))
+            completedKwargs['messageProps'] = getMessageProps("Done..","LDA calulcated. Dataframes were added. Weight vector and transformed values.")
+            return completedKwargs
         else:
             return getMessageProps("Error..","No column names in grouping.")
     
@@ -188,6 +223,7 @@ class StatisticCenter(object):
         '''
         data = self.getData(dataID,columnNames)
         data.dropna(inplace=True)
+        data = data.sort_values(by = data.columns.values[0])
         x = data.iloc[:,0].values
         y = data.iloc[:,1].values
 
@@ -199,10 +235,14 @@ class StatisticCenter(object):
             else:
                 it = 1
                 frac = 0.3
-            
-        lowessLine = lowess(y,x, it=it, frac=frac,*args,**kwargs)
-
-        return lowessLine
+        yfit,ymin,ymax = loess_fit(x,y,span=frac)
+        #lowessLine = lowess(y,x, it=it, frac=frac,*args,**kwargs)
+        lowessLine = np.empty(shape=(x.size,4))
+        lowessLine[:,0] = x 
+        lowessLine[:,1] = yfit
+        lowessLine[:,2] = ymin
+        lowessLine[:,3] = ymax
+        return lowessLine 
 
     def runANOVA(self,dataID,betweenGroupings = [] ,withinGroupings = [], logPValues = True, subjectGrouping = []):
         ""
@@ -523,11 +563,14 @@ class StatisticCenter(object):
         "Fit Model to Data"
         
         def _calcLineRegress(row, xValues,addDataAUC, addFitAUC, addHalfLife = True):
-            
-            r = linregress(x = xValues, y=row)
+            Y = row.values
+            mask = np.isnan(Y)
+            Y = Y[~mask]
+            xValues = xValues[~mask]
+            r = linregress(x = xValues, y=Y)
             lRegress = r._asdict()
             if addDataAUC:
-                lRegress["dataAUC"] = np.trapz(row,xValues)
+                lRegress["dataAUC"] = np.trapz(Y,xValues)
             if addFitAUC:
                 x = np.linspace(np.nanmin(xValues), np.nanmax(xValues), num = 200)
                 y = x * r.slope + r.intercept
@@ -540,11 +583,11 @@ class StatisticCenter(object):
 
         def _calcIncrease(row,xValues, corrK):
             ""
-            def f(x,k):
-                return 1 - np.exp(-(k+corrK)*x)
+            def f(x,A,k):
+                return A*(1 - np.exp(-(k+corrK)*x))
             #print(corrK)
             popt, pcov = curve_fit(f,xValues,row)
-            r = {"k":popt[0]}
+            r = {"A":popt[0],"k":popt[0]}
             return pd.Series(r)
 
         try:
@@ -555,7 +598,6 @@ class StatisticCenter(object):
             xtime = OrderedDict(xtime)
             data = self.getData(dataID,np.unique(columnNames))
             #transform
-
             if replicateGrouping is None:
 
                 replicateGrouping = {"None":pd.Series(columnNames)}
@@ -593,12 +635,13 @@ class StatisticCenter(object):
                         dataSubset = dataSubset[list(timeValueColumns.keys())].divide(2 ** firstTimePointMedian, axis="rows")
 
                     #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
-                    dataSubset = dataSubset.dropna()
+                    dataSubset = dataSubset.dropna(thresh=3)
                     #corrK = 0.0303 if groupNameComp == "C" else 0
                     addt12 = model == "First Order Kinetic"
-                    xValues = list(timeValueColumns.values())
-                    X = dataSubset.apply(lambda row : _calcLineRegress(row,xValues,addDataAUC,addFitAUC,addHalfLife=addt12), axis=1)
-
+                    xValues = np.array(list(timeValueColumns.values()))
+                    X = dataSubset.apply(lambda row : _calcLineRegress(row,xValues,addDataAUC,addFitAUC,addHalfLife=True), axis=1)
+                    ####X = dataSubset.apply(lambda row : _calcIncrease(row,xValues,0), axis=1)
+                   
                     X.index = dataSubset.index
                     X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" and len(replicateGrouping) == 1 else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
                     
@@ -615,8 +658,66 @@ class StatisticCenter(object):
             print(e)
             return getMessageProps("Error..","Time group could not be interpreted.")
           
+    
+    def runCategoricalFisherEnrichment(self,data,categoricalColumn, testColumns, splitString = ";", alternative = "two-sided"):
+        ""
+        # import time
+        # print(dataID)
+        # print(testColumns)
+        # print(categoricalColumn)
+        # columnNames = [categoricalColumn] + testColumns.values.flatten().tolist() 
+        # print(columnNames)
+       # data = self.getData(dataID,columnNames).copy()
+        
+        groupedByData = data.groupby(by=categoricalColumn)
+        results = pd.DataFrame(columns=["p-value","oddsratio","testColumn","category","groupName"])
+        for testColumn in testColumns.values.flatten():
+            #print(testColumn)
+            splitData = data[testColumn].astype("str").str.split(splitString).values
+            uniqueCategories = list(set(chain.from_iterable(splitData)))
+            
+            #create data from unique categories.
+            #uniqueCategories = pd.DataFrame(flatSplitDataList,columns=columnName)
+            #print(uniqueCategories[0:12])
+            #uniqueCategories = self.sourceData.categoricalFilter.getUniqueCategories(dataID,testColumn,splitString).values.flatten()
+            #print(uniqueCategories)
+            
+            regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
+            
+            boolIdxByCategory = dict([(uniqueCategory,data[testColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
+            for groupName, groupData in groupedByData:
+                if groupName == self.sourceData.replaceObjectNan:
+                    continue
+                groupSize = groupData.index.size
+                overallDataSize = data.index.size
+                r = []
+                for category,boolIdx in boolIdxByCategory.items():
+                   # print(category,boolIdx)
+                   # print(groupData)
+                  
+                    
+                    categoryInGroup = np.sum(data[boolIdx.values].index.isin(groupData.index))
+                    if categoryInGroup < 5:
+                        continue
+                    categoryNotInGroup = groupSize-categoryInGroup
+
+                    categoryInCompleteData = np.sum(boolIdx)
+                    categoryNotInCompleteData = overallDataSize - categoryInCompleteData
+                    
+                    table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
+                    oddsratio,pvalue = fisher_exact(table,alternative=alternative)
+                    
+                    print(category)
+                    print(np.sum(boolIdx))
+
+                    print(table)
+                    r.append({"p-value":pvalue,"oddsratio":oddsratio,"testColumn":testColumn,"category":category,"groupName":groupName})
+                print(r)
+                results = results.append(r,ignore_index=True)
+
+        return self.sourceData.addDataFrame(results,fileName="FisherEnrichmentResults")
        
-    def runBatchCorrection(self,dataID, groupingName,grouping):
+    def runBatchCorrection(self,dataID, groupingName,*args,**kwargs):
         ""
         columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
         data = self.getData(dataID,columnNames).dropna() 
@@ -681,6 +782,90 @@ class StatisticCenter(object):
         return self.sourceData.joinDataFrame(dataID,results)
         #return getMessageProps("Done..","Multiple testing correction done.")
 
+    def runRMOneTwoWayANOVA(self,dataID,withinGroupin1, withinGroupin2, subjectGrouping,*args,**kwargs):
+        ""
+
+
+
+    def runNWayANOVA(self,dataID,groupings):
+        ""
+        grouping = self.sourceData.parent.grouping
+        columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings]
+        
+        if np.unique(groupings).size != groupings.size:
+            return getMessageProps("Error..","Groupings must be unique and no duplicates are allowed.")
+        if any(x.size != columnNamesForGroupings[0].size for x in columnNamesForGroupings):
+            return getMessageProps("Error..","Groups must be of same length.")
+        if groupings.size > 1:
+            if not all(np.all(np.isin(columnNamesForGroupings[0],columnNamesForGrouping)) for columnNamesForGrouping in columnNamesForGroupings):
+                return getMessageProps("Error..","All groupings must contain same column names..")
+
+        dataFrame = self.getData(dataID, columnNamesForGroupings[0]).dropna()
+
+        dataFrame["priorMeltIndex"] = dataFrame.index.values
+        meltedDataFrame = dataFrame.melt(value_vars = columnNamesForGroupings[0], id_vars = "priorMeltIndex")
+        groupedDF = meltedDataFrame.groupby("priorMeltIndex")
+        columnNameMatchesByGrouping = grouping.getGroupingsByColumnNames(columnNamesForGroupings[0])
+        r = None
+        for groupName in groupings:
+            #map groups to column names 
+            mapDict = dict([(k,v) for k,v in zip(columnNamesForGroupings[0],columnNameMatchesByGrouping[groupName].values)])
+            meltedDataFrame[groupName] = meltedDataFrame["variable"].map(mapDict)
+        for index, indexDF in groupedDF:
+            try:
+                aov = anova(dv="value", between=groupings.tolist(), data=indexDF)
+                columnNames = ["p-unc ({})".format(idx) for idx in aov["Source"].values]
+                if r is None:
+                    r = pd.DataFrame(index=dataFrame.index.values, columns = columnNames)
+                r.loc[index,columnNames] = aov["p-unc"].values.flatten()  
+            except Exception as e:
+                continue
+        if r is None:
+            return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")
+        r = r.astype(float)
+        return self.sourceData.joinDataFrame(dataID,r)
+
+    def runMixedTwoWayANOVA(self,dataID,groupingWithin,groupingBetween,groupingSubject):
+        ""
+        
+        
+        grouping = self.sourceData.parent.grouping
+        columnNamesWithin  = grouping.getColumnNames(groupingName = groupingWithin)
+        columnNamesBetween  = grouping.getColumnNames(groupingName = groupingBetween)
+        columnNamesSubject  = grouping.getColumnNames(groupingName = groupingSubject)
+
+        if columnNamesWithin.size != columnNamesBetween.size and columnNamesWithin.size != columnNamesSubject.size:
+            return getMessageProps("Error","Groupings must be of the same length and must contain same column names!")
+        if not all(np.all(np.isin(columnNamesWithin.values,columnNamesForGrouping)) for columnNamesForGrouping in [columnNamesBetween.values,columnNamesSubject.values]):
+            return getMessageProps("Error..","All groupings must contain the exact same column names..")
+
+        dataFrame = self.getData(dataID, columnNamesWithin).dropna()
+        dataFrame["priorMeltIndex"] = dataFrame.index.values
+        
+        meltedDataFrame = dataFrame.melt(value_vars = columnNamesWithin, id_vars = "priorMeltIndex")
+        groupedDF = meltedDataFrame.groupby("priorMeltIndex")
+
+        columnNameMatchesByGrouping = grouping.getGroupingsByColumnNames(columnNamesWithin)
+        r = None
+        for groupName in [groupingBetween,groupingWithin,groupingSubject]:
+            mapDict = dict([(k,v) for k,v in zip(columnNamesWithin,columnNameMatchesByGrouping[groupName].values)])
+            meltedDataFrame[groupName] = meltedDataFrame["variable"].map(mapDict)
+        for index, indexDF in groupedDF:
+            
+                try:
+                    aov = mixed_anova(dv="value", between=groupingBetween, within=groupingWithin, subject=groupingSubject, data=indexDF)
+                    columnNames = ["p-unc ({})".format(idx) for idx in aov["Source"].values]
+                    if r is None:
+                        r = pd.DataFrame(index=dataFrame.index.values, columns = columnNames)
+                    r.loc[index,columnNames] = aov["p-unc"].values.flatten()
+                    
+                except:
+                    continue
+        if r is None:
+            return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")
+        r = r.astype(float)
+        return self.sourceData.joinDataFrame(dataID,r)
+       # return getMessageProps("Done","Mixed two way anova performed.")
 
     def runComparison(self,dataID,grouping,test,referenceGroup=None, logPValues = True):
         """Compare groups."""

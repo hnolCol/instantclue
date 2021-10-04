@@ -49,9 +49,13 @@ class ICPlotter(object):
 
         if plotType in plotTypeGraph:
             self.graph = plotTypeGraph[plotType](self.mC,self,plotType)
+            return True
         elif plotType in additionToGraph and hasattr(self.graph,additionToGraph[plotType]):
             getattr(self.graph,additionToGraph[plotType])()
+            return True
 
+        return False
+        
     def clearFigure(self):
         ""
         if hasattr(self,"graph"):

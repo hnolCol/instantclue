@@ -10,7 +10,17 @@ class ICBoxplot(ICChart):
         super(ICBoxplot,self).__init__(*args,**kwargs)
 
         self.boxplotItems = dict() 
-        
+    
+    def addGraphSpecActions(self,menus):
+        ""
+        menus["main"].addAction("Show boxplot data", self.displayBoxplotData)
+
+    def displayBoxplotData(self,*args,**kwargs):
+        ""
+        self.mC.mainFrames["data"].openDataFrameinDialog(self.data["groupedPlotData"], 
+                                    ignoreChanges=True, 
+                                    headerLabel="Boxplot data.", 
+                                    tableKwargs={"forwardSelectionToGraph":False})
         
     def initBoxplots(self,onlyForID = None, targetAx = None):
         ""

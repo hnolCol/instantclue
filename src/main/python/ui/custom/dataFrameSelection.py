@@ -10,6 +10,9 @@ from ..dialogs.ICDFindReplace import FindReplaceDialog
 from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
 from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
 from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
+from ..dialogs.ICSampleList import ICSampleListCreater
+from ..dialogs.ICProteinPeptideView import ICProteinProteinView
+
 from ..custom.warnMessage import WarningMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
 
@@ -198,6 +201,10 @@ class CollapsableDataTreeView(QWidget):
 
             action = menu.addAction(actionName)
             action.triggered.connect(lambda _, txtFileFormat = fileFormat: self.mC.mainFrames["data"].exportData(txtFileFormat))
+        
+        action = menu.addAction("clipboard")
+        action.triggered.connect(self.mC.mainFrames["data"].copyDataFrameToClipboard)
+
         senderGeom = self.sender().geometry()
         topLeft = self.mapToGlobal(senderGeom.bottomLeft())
         menu.exec_(topLeft) 
@@ -254,41 +261,43 @@ class CollapsableDataTreeView(QWidget):
     def findAndReplace(self):
         ""
         try:
-            senderGeom = self.sender().geometry()
-            topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
-            frd = FindReplaceDialog(self.mC)
-            frd.setGeometry(topLeft.x(),topLeft.y(),200,150)
-            if frd.exec_():
-                funcKey = "data::replace"
-                fS = frd.findStrings 
-                rS = frd.replaceStrings
-                specificColumnSelected = frd.specificColumnSelected #bool
-                selectedIndex = frd.selectedColumnIndex
-                dataType = frd.selectedDataType # selected data type
-                mustMatchCompleteCell = frd.mustMatchCompleteCell 
-                if selectedIndex == 0: #this means complete selection, save if colum header is by change same in data
+            if self.mC.data.hasData():
+                senderGeom = self.sender().geometry()
+                topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
+                frd = FindReplaceDialog(self.mC)
+                frd.setGeometry(topLeft.x(),topLeft.y(),200,150)
+                if frd.exec_():
+                    funcKey = "data::replace"
+                    fS = frd.findStrings 
+                    rS = frd.replaceStrings
+                    specificColumnSelected = frd.specificColumnSelected #bool
+                    selectedIndex = frd.selectedColumnIndex
+                    dataType = frd.selectedDataType # selected data type
+                    mustMatchCompleteCell = frd.mustMatchCompleteCell 
+                    if selectedIndex == 0: #this means complete selection, save if colum header is by change same in data
 
-                    specificColumn = self.getSelectedColumns(dataType=dataType)
-                    if len(specificColumn) == 0:
-                        w = WarningMessage(iconDir = self.mC.mainPath, infoText = "No selected columns found in selected data type: {}".format(dataType))
-                        w.exec_()
-                        return
+                        specificColumn = self.getSelectedColumns(dataType=dataType)
+                        if len(specificColumn) == 0:
+                            self.mC.sendToWarningDialog(infoText = "No selected columns found in selected data type: {}".format(dataType))
+                            return
+                        
+                    #  specificColumn = frd.selectedColumn
+                    elif specificColumnSelected:
+                        specificColumn = [frd.selectedColumn]
+                    else:
+                        specificColumn = None
                     
-                  #  specificColumn = frd.selectedColumn
-                elif specificColumnSelected:
-                    specificColumn = [frd.selectedColumn]
-                else:
-                    specificColumn = None
-                
-                funcProps = {"key":funcKey,"kwargs":{
-                                    "findStrings":fS,
-                                    "replaceStrings":rS,
-                                    "specificColumns":specificColumn,
-                                    "dataID":self.mC.getDataID(),
-                                    "dataType":dataType,
-                                    "mustMatchCompleteCell":mustMatchCompleteCell}
-                            }
-                self.mC.sendRequestToThread(funcProps)
+                    funcProps = {"key":funcKey,"kwargs":{
+                                        "findStrings":fS,
+                                        "replaceStrings":rS,
+                                        "specificColumns":specificColumn,
+                                        "dataID":self.mC.getDataID(),
+                                        "dataType":dataType,
+                                        "mustMatchCompleteCell":mustMatchCompleteCell}
+                                }
+                    self.mC.sendRequestToThread(funcProps)
+            else:
+                self.mC.sendToInformationDialog(infoText="Please load data first.")
         except Exception as e:
             print(e)
 
@@ -313,7 +322,7 @@ class CollapsableDataTreeView(QWidget):
         for treeView in self.dataHeaders.values():
             treeView.setDataID(self.dataID)
 
-    def updateDfs(self, dfs = None, selectLastDf = True, remainLastSelection = False):
+    def updateDfs(self, dfs = None, selectLastDf = True, remainLastSelection = False, specificIndex = None):
         ""
         if dfs is not None:
             self.dfs = dfs
@@ -322,10 +331,16 @@ class CollapsableDataTreeView(QWidget):
             self.combo.clear() 
 
             self.combo.addItems(list(self.dfs.values()))
-            if remainLastSelection:
+            if specificIndex is not None and isinstance(specificIndex,int) and specificIndex < len(self.dfs):
+                self.combo.setCurrentIndex(specificIndex)
+            elif remainLastSelection:
                 self.combo.setCurrentIndex(lastIndex)
             elif selectLastDf:
                 self.combo.setCurrentIndex(len(dfs)-1)
+    
+    def getDfIndex(self):
+        
+        return self.combo.currentIndex()
 
     def updateColumnState(self,columnNames, newState = False):
         "The column state indicates if the column is used in the graph or not (bool)"
@@ -343,27 +358,33 @@ class CollapsableDataTreeView(QWidget):
                 self.sendToThreadFn(funcProps)
               
 
-    def openMergeDialog(self,event=None):
+    def openMergeDialog(self,e=None):
         ""
         dlg = ICDMergeDataFrames(mainController = self.mC)
         dlg.exec_()
 
-    def openCorrelateDialog(self,event=None):
+    def openCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateDataFrames(mainController=self.mC)
         dlg.exec_()
 
-    def openFeatureCorrelateDialog(self,event=None):
+    def openFeatureCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateFeatures(mainController=self.mC)
         dlg.exec_()
 
-    def openSGCCADialog(self,event=None):
+    def openSGCCADialog(self,e=None):
         ""
         # dlg = ICMultiBlockSGCCA(mainController = self.mC)
         # dlg.exec_()
 
-    def showMenu(self,event=None):
+    def openProteinPeptideView(self,e=None):
+        ""
+        dlg = ICProteinProteinView(mainController=self.mC)
+        dlg.exec_()
+
+
+    def showMenu(self,e=None):
         ""
         try:
             #remove focus on button
@@ -371,7 +392,7 @@ class CollapsableDataTreeView(QWidget):
             if hasattr(sender,"mouseLostFocus"):
                 sender.mouseLostFocus()
 
-            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. "])#,"Multi block analysis .."
+            menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. ","Proteomics Toolkit"])#,"Multi block analysis .."
             groupingNames = self.mC.grouping.getNames()
             groupSizes = self.mC.grouping.getSizes()
             if len(groupingNames) > 0:
@@ -394,6 +415,15 @@ class CollapsableDataTreeView(QWidget):
 
                 action = menus["Grouping .. "].addAction("Add Grouping")
                 action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
+            #
+
+            action = menus["Proteomics Toolkit"].addAction("Create Sample List")
+            action.triggered.connect(self.createSampleList)
+
+
+            action = menus["Proteomics Toolkit"].addAction("Protein/Peptide View")
+            action.triggered.connect(self.openProteinPeptideView)
+
 
             if False:#self.mC.data.hasTwoDataSets():
                 action = menus["Multi block analysis .."].addAction("SGGCA",self.openSGCCADialog)
@@ -406,6 +436,11 @@ class CollapsableDataTreeView(QWidget):
         except Exception as e:
             print(e)
     
+    def createSampleList(self,e=None):
+        ""
+        dlg = ICSampleListCreater(mainController=self.mC)
+        dlg.exec_()
+
     def updateGrouping(self, groupingName):
         ""
         self.mC.grouping.setCurrentGrouping(groupingName = groupingName)

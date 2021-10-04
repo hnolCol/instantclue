@@ -5,7 +5,7 @@ from PyQt5.QtCore import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from matplotlib.pyplot import figure
+from matplotlib.pyplot import figure, plot
 from collections import OrderedDict
 from ..custom.ICReceiverBox import ReceiverBox
 #from ..plotter.plotter import Plotter
@@ -29,6 +29,7 @@ class MatplotlibFigure(QWidget):
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
+        
 
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
@@ -52,6 +53,7 @@ class MatplotlibFigure(QWidget):
 
     def initiateChart(self, *args, **kwargs):
         ""
+       
         try:
             self.clearFigure(forceRedraw=False)
             plotType = self.mC.mainFrames["right"].getCurrentPlotType()
@@ -64,6 +66,7 @@ class MatplotlibFigure(QWidget):
             funcKey = kwargs["dataProps"]["funcProps"]
             funcKey["key"] = "plotter:getData"
             funcKey["kwargs"]["plotType"] = plotType
+            funcKey["kwargs"]["figureSize"] = self.mC.getFigureSize()
             
             
             self.mC.sendRequestToThread(funcKey)
@@ -71,6 +74,12 @@ class MatplotlibFigure(QWidget):
            # self.plotter.initiateChart(*args,**kwargs)#
         except Exception as e:
             print(e)
+
+    def restoreGraph(self,plotType,graphData):
+        ""
+        if self.setGraph(plotType):
+            self.setData(graphData)
+
 
     def getCanvas(self):
         ""
@@ -109,6 +118,12 @@ class MatplotlibFigure(QWidget):
         self.addReceiverBoxItems(items)
         return items
     
+    def updateReceiverBoxItemsSilently(self, receiverBoxItems):
+        ""
+        for receiverBoxName, receiverBox in self.receiverBoxes.items():
+            columnAlias = "numericColumns" if receiverBoxName == "Numeric Floats" else "categoricalColumns"
+            if columnAlias in receiverBoxItems:
+                receiverBox.addItems(receiverBoxItems[columnAlias])
 
     def getToolbarState(self):
         "Careful, works only if matplitlib > 3.3, otherwise active"
@@ -131,7 +146,9 @@ class MatplotlibFigure(QWidget):
         ""
         
         if hasattr(self,"ICPlotter"):
-            self.ICPlotter.setGraph(plotType)
+            return self.ICPlotter.setGraph(plotType)  
+        else:
+            return False
 
     def refreshQuickSelectSelection(self):
         ""
@@ -323,6 +340,12 @@ class MatplotlibFigure(QWidget):
         exists,graph = self.mC.getGraph()
         if exists and graph.hasScatters():
             graph.addLines(lineData)
+    
+    def addArea(self,areaData):
+        ""
+        exists,graph = self.mC.getGraph()
+        if exists and graph.hasScatters():
+            graph.addArea(areaData)
     
     def addLineCollections(self,lineCollections):
         ""

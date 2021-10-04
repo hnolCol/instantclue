@@ -340,6 +340,12 @@ class InstantClue(QMainWindow):
         "Error message if something went wrong in the calculation."
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
+    def getFigureSize(self):
+        ""
+        canvasSize = self.mainFrames["middle"].canvas.sizeHint()
+        print(canvasSize)
+        return canvasSize
+
     def _getObjFunc(self,fnProps):
         ""
         if fnProps["obj"] == "self":

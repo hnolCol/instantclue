@@ -4,6 +4,7 @@ from PyQt5.QtCore import *
 
 from ..utils import createTitleLabel,createLabel, createLineEdit
 from ..custom.warnMessage import WarningMessage
+from ..custom.buttonDesigns import ICStandardButton
 from collections import OrderedDict 
 import numpy as np 
 
@@ -32,11 +33,12 @@ class ICDataInput(QDialog):
         self.titleLabel = createTitleLabel(self.title,fontSize=15)
         self.valueGrid = self.addData()
 
-        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        self.okayButton = ICStandardButton(itemName="Okay")
+        self.cancelButton = ICStandardButton(itemName="Cancel")
+
+        self.okayButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
         
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
 
 
 
@@ -45,7 +47,11 @@ class ICDataInput(QDialog):
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.titleLabel)
         self.layout().addLayout(self.valueGrid)
-        self.layout().addWidget(self.buttonBox)
+        buttonBox = QHBoxLayout() 
+        buttonBox.addWidget(self.okayButton)
+        buttonBox.addWidget(self.cancelButton)
+
+        self.layout().addLayout(buttonBox)
 
     
     def addData(self):

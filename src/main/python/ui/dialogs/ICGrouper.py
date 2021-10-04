@@ -328,6 +328,12 @@ class ICGrouper(QDialog):
             w.exec_()
             return
         
+        elif  groupingName == "None":
+            w = WarningMessage(infoText = "None is not allowed as a group name.",iconDir = self.mC.mainPath)
+            w.exec_()
+            return
+
+
         elif self.mC.grouping.nameExists(groupingName):
             w = WarningMessage(infoText = "The name of grouping exists already.",iconDir = self.mC.mainPath)
             w.exec_()

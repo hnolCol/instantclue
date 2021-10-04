@@ -247,7 +247,7 @@ class PandaModel(QAbstractTableModel):
         ""
         self.df = df.copy()
         self.__df = df.copy() 
-        self.filters = pd.DataFrame(index=self.df.index)
+        self.filters = pd.DataFrame(index=df.index)
 
     def rowCount(self, parent=QModelIndex()):
         
@@ -472,8 +472,10 @@ class PandaModel(QAbstractTableModel):
     
     def updateDataFrame(self,df):
         ""
+        self.layoutAboutToBeChanged.emit()
         self.initData(df)
         self.completeDataChanged()
+        self.layoutChanged.emit()
 
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsEditable  | Qt.ItemIsSelectable
@@ -486,11 +488,19 @@ class SelectablePandaModel(PandaModel):
     def __init__(self, singleSelection = False, *args, **kwargs):
 
         super(SelectablePandaModel,self).__init__(*args, **kwargs)
+        
+        self.__df = self.df.copy()
         self.setCheckedSeries()
-        self._df = self.df.copy()
         self.lastClicked = None
         self.singleSelection = singleSelection
-        
+
+    def initData(self,df):
+        ""
+        self.__df = df.copy()
+        self.df = df.copy()
+        self.setCheckedSeries() 
+        self.lastClicked = None
+
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
@@ -545,7 +555,7 @@ class SelectablePandaModel(PandaModel):
     def getCheckedData(self):
         "Returns checked values"
         boolInd = self.checkedLabels == 1
-        return self.df.loc[boolInd,:]
+        return self.__df.loc[boolInd,:]
 
     def setCheckState(self,tableIndex):
         "Sets check state by table index."
@@ -588,13 +598,13 @@ class SelectablePandaModel(PandaModel):
         if self.rowCount() == 0:
             self.checkedLabels = pd.Series()
         else:
-            self.checkedLabels = pd.Series(np.zeros(shape=self.rowCount()), index=self.df.index)
+            self.checkedLabels = pd.Series(np.zeros(shape=self.__df.index.size), index=self.__df.index)
             self.checkedLabels = self.checkedLabels.astype(bool)
 
     def setAllCheckStates(self,newState):
         ""
         if newState:
-            self.checkedLabels = pd.Series(np.ones(shape=self.rowCount()), index=self.df.index)
+            self.checkedLabels = pd.Series(np.ones(shape=self.__df.index.size), index=self.__df.index)
             self.checkedLabels = self.checkedLabels.astype(bool)
         else:
             self.setCheckedSeries()
@@ -608,7 +618,7 @@ class SelectablePandaModel(PandaModel):
     def updateDataByBool(self, boolIndicator,resetData):
         ""
         if resetData:
-            self.df = self._df
+            self.df = self.__df.copy()
         if self.df.index.size == boolIndicator.size:
             self.df = self.df[boolIndicator]
             self.completeDataChanged()
@@ -625,7 +635,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
     
     def initData(self,df):
         self.df = df
-        self._df = self.df.copy()
+        self.__df = self.df.copy()
         self.setCheckedSeries()
 
     def data(self, index, role=Qt.DisplayRole): 
@@ -691,7 +701,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
         for columnName in self.df.columns:
             boolInd = self.checkedLabels[columnName] == 1
             if np.any(boolInd):
-                checkedValues[columnName] = self._df.loc[boolInd,columnName].values.flatten()
+                checkedValues[columnName] = self.__df.loc[boolInd,columnName].values.flatten()
         return checkedValues
 
     def setCheckState(self,tableIndex):
@@ -712,13 +722,13 @@ class MultiColumnSelectablePandaModel(PandaModel):
         if self.rowCount() == 0:
             self.checkedLabels = pd.DataFrame()
         else:
-            self.checkedLabels = pd.DataFrame(np.zeros(shape=(self.rowCount(),self.columnCount())), index=self._df.index, columns=self._df.columns)
+            self.checkedLabels = pd.DataFrame(np.zeros(shape=(self.rowCount(),self.columnCount())), index=self.__df.index, columns=self.__df.columns)
             self.checkedLabels = self.checkedLabels.astype(bool)
         
     def setAllCheckStates(self,newState):
         ""
         if newState:
-            self.checkedLabels = pd.DataFrame(np.ones(shape=(self.rowCount(),self.columnCount())), index=self._df.index, columns=self._df.columns)
+            self.checkedLabels = pd.DataFrame(np.ones(shape=(self.rowCount(),self.columnCount())), index=self.__df.index, columns=self.__df.columns)
             self.checkedLabels = self.checkedLabels.astype(bool)
         else:
             self.setCheckedSeries()
@@ -740,7 +750,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
     def updateDataByBool(self, boolIndicator,resetData):
         ""
         if resetData:
-            self.df = self._df
+            self.df = self.__df
         if self.df.index.size == boolIndicator.size:
             self.df = self.df[boolIndicator]
             self.completeDataChanged()

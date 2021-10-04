@@ -631,9 +631,34 @@ funcPropControl = {
             "completedRequest":
                     addDataAndRefresh        
         },
-    
+    "stats::runNWayANOVA": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runNWayANOVA","requiredKwargs":["dataID", "groupings"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },  
+    "stats::runRMTwoWayANOVA": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runRMOneTwoWayANOVA","requiredKwargs":["dataID", "withinGrouping1","withinGrouping2","subjectGrouping"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },    
 
-        
+       
+     "stats::runMixedTwoWayANOVA": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runMixedTwoWayANOVA","requiredKwargs":["dataID", "groupingWithin","groupingBetween","groupingSubject"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },   
+
+    "stats::runFisherEnrichment":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runCategoricalFisherEnrichment","requiredKwargs":["data", "categoricalColumn","testColumns"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },   
+          
 
     "stats::compareGroups": 
         {
@@ -641,6 +666,13 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView          
         },
+    "proteomics::matchModSequenceToSites": 
+        {
+            "threadRequest":{"obj":"data","fn":"matchModSequenceToSites","requiredKwargs":["dataID","fastaFilePath","proteinGroupColumn","modifiedPeptideColumn"]},
+            "completedRequest":
+                    refreshColumnView        
+        },
+    
     
     "transform::TSNE": 
         {
@@ -663,6 +695,7 @@ funcPropControl = {
             "threadRequest":{"obj":"plotterBrain","fn":"getLowessLine","requiredKwargs":["dataID","numericColumnPairs"]},
             "completedRequest":[
                 {"obj":"self","fn":"addLine","objKey":"middle","objName":"mainFrames","requiredKwargs":["lineData"]},
+                {"obj":"self","fn":"addArea","objKey":"middle","objName":"mainFrames","requiredKwargs":["areaData"]},
                 {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]},
                 sendMessageProps
             ]           
@@ -802,7 +835,11 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"sessionManager","fn":"openSession","requiredKwargs":["sessionPath"]},
             "completedRequest":
-                    addDataAndRefresh + [{"obj":"self","fn":"openMainFiguresForSession","objKey":"right","objName":"mainFrames","requiredKwargs":["mainFigures","mainFigureRegistry","mainFigureComboSettings"]}]
+                    #[{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"],"optionalKwargs":["dataComboboxIndex"]}] + \
+                    [{"obj":"self","fn":"updateReceiverBoxItemsSilently","objKey":"middle","objName":"mainFrames","requiredKwargs":["receiverBoxItems"]}] + \
+                    [updateTreeView] + \
+                    [{"obj":"self","fn":"openMainFiguresForSession","objKey":"right","objName":"mainFrames","requiredKwargs":["mainFigures","mainFigureRegistry","mainFigureComboSettings"]}] + \
+                    [{"obj":"self","fn":"restoreGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["graphData","plotType"]}]
         },
     
     }

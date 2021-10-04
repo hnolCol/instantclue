@@ -199,6 +199,11 @@ class DataHandleFrame(QFrame):
         funcProps = {"key":"data::copyDataFrameSelection","kwargs":{}}
         self.dataTreeView.sendToThread(funcProps,addSelectionOfAllDataTypes=True,addDataID=True)
 
+    def copyDataFrameToClipboard(self,e=None):
+        "Copy data frame to clipbaord. Active clipping will NOT be ignored."
+        funcProps = {"key":"data:copyDataToClipboard","kwargs":{"dataID":self.mC.getDataID()}} 
+        self.mC.sendRequestToThread(funcProps)
+
     def getSelectedColumns(self,dataType="all"):
         "Get Selected columns"
         return self.dataTreeView.getSelectedColumns(dataType)
@@ -353,10 +358,10 @@ class DataHandleFrame(QFrame):
         #update grouping
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 
-    def updateDataFrames(self,dfs,selectLastDf=True):
+    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None):
         ""
         if isinstance(dfs,dict):
-            self.dataTreeView.updateDfs(dfs,selectLastDf)
+            self.dataTreeView.updateDfs(dfs,selectLastDf,specificIndex=dataComboboxIndex)
 
     def updateDataInQuickSelect(self,data):
         ""
@@ -401,4 +406,4 @@ class DataHandleFrame(QFrame):
         fileName,_ = QFileDialog.getOpenFileName(self,"Load Instant Clue Session",workingDir,"Instant Clue File (*.ic)")
         if fileName is not None and fileName != "":
             self.mC.sendRequestToThread(funcProps = {"key":"session::load","kwargs":{"sessionPath":fileName}})
-            self.mC.sendMessageRequest({"title":"Saved ..","message":"Session loaded."})
+            

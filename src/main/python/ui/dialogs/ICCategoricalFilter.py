@@ -44,6 +44,7 @@ class FilterBase(QDialog):
 
     def updateModelDataByBool(self,boolIndicator, resetData=False):
         "Update model by bool series"
+        
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().updateDataByBool(boolIndicator,resetData)
         self.table.model().layoutChanged.emit() 
