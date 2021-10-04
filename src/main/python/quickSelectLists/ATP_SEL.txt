@@ -1,3 +1,0 @@
-checkedValues	checkedColors	userDefinedColors
-P06576	#3b9939	#3b9939
-Q9UII2	#9f9386	#9f9386
