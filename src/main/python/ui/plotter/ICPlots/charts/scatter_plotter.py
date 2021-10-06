@@ -361,8 +361,9 @@ class scatterPlot(object):
 			if self.toolTipsActive:
 				#reduce number of tooltips to 12
 				nAnnotColumns = len(self.annotationColumns)
+				maxAnnotationLength = self.parent.mC.config.getParam("annotate.max.length")
 				idxT = idx if idx.size * nAnnotColumns <= 14 else idx.values[:int(14/nAnnotColumns)]
-				self.updateTooltipPosition(event,"\n".join([str(x) if len(str(x)) < 20 else "{}..".format(str(x)[:20]) for x in self.data.loc[idxT,self.annotationColumns].values.flatten()]))
+				self.updateTooltipPosition(event,"\n".join([str(x) if len(str(x)) < maxAnnotationLength else "{}..".format(str(x)[:maxAnnotationLength]) for x in self.data.loc[idxT,self.annotationColumns].values.flatten()]))
 			return idx
 		
 	def setHoverObjectsInvisible(self,leftWidget=False, update=True):
@@ -783,7 +784,10 @@ class scatterPlot(object):
 		if len(columnsNotInData) != 0:
 			self.data = self.data.join(toolTipData[columnsNotInData])
 		
-		
+	def hasToolTip(self):
+		""
+		return self.toolTipsActive
+	
 	def buildTooltip(self):
 		'''
 		'''

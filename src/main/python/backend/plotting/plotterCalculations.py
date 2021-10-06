@@ -1539,8 +1539,8 @@ class PlotterBrain(object):
             height = y1-y0
         
         #multWidth = 0.4
-        pixelFigureWidth = figureSize.width()
-        pixelFigureHeight = figureSize.height()
+        pixelFigureWidth = figureSize["width"]
+        pixelFigureHeight = figureSize["height"]
         pixelPerColumn = self.sourceData.parent.config.getParam("pixel.width.per.column")
         maxPixelForHeatmap = (width - 0.1) * pixelFigureWidth #0.1 = min margin
         maxPixelHeightHeatmap = height * pixelFigureHeight
@@ -2353,7 +2353,7 @@ class PlotterBrain(object):
                 for j in np.arange(numberNearestNeighbors):
                     coordinates[i, j, :, 0] = np.array([X[i,:][0], X[neighbors[i, j], :][0]])
                     coordinates[i, j, :, 1] = np.array([X[i,:][1], X[neighbors[i, j], :][1]])
-            lineCollections[n] = LineCollection(coordinates.reshape((N*numberNearestNeighbors, 2, 2)), color='black', linewidth = 0.5,zorder=0)
+            lineCollections[n] = {"segments":coordinates.reshape((N*numberNearestNeighbors, 2, 2)), "color":'black', "linewidth" : 0.5,"zorder":0}
 
         returnKwargs = getMessageProps("Done..","Nearest neighbors calculated and added to graph.")
         returnKwargs["lineCollections"] = lineCollections

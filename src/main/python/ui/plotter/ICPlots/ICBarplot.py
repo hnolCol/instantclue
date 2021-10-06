@@ -12,6 +12,8 @@ class ICBarplot(ICChart):
         self.barplotItems = dict() 
 
     
+        
+    
     def initBarplots(self, onlyForID = None, targetAx = None):
         ""
         try:

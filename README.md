@@ -9,6 +9,10 @@
 Instant Clue is a Python (>3.7) based desktop application (GUI) using the PyQt5 library for data visualization and analysis.
 The tool was developed to equip everyone with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
+### Tutorials
+
+A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly.
+
 ### Status
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)

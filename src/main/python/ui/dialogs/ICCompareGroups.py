@@ -26,12 +26,12 @@ class ICCompareGroups(QDialog):
         self.groupCombo = createCombobox(self,self.mC.grouping.getGroupings())
         self.groupCombo.setCurrentText(self.mC.grouping.getCurrentGroupingName())
 
-        if self.test == "2W-ANOVA":
-            self.grouplabel2 = createLabel("2. Grouping:","Set grouping to compare. By default the currently selected grouping is shown.")
-            self.groupCombo2 = createCombobox(self,self.mC.grouping.getGroupings())
-            self.groupCombo2.setCurrentText("Select ..")
+        # if self.test == "2W-ANOVA":
+        #     self.grouplabel2 = createLabel("2. Grouping:","Set grouping to compare. By default the currently selected grouping is shown.")
+        #     self.groupCombo2 = createCombobox(self,self.mC.grouping.getGroupings())
+        #     self.groupCombo2.setCurrentText("Select ..")
 
-        if self.test not in ["2W-ANOVA"]:
+        if self.test not in ["1W-ANOVA"]:
             self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
             self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
@@ -76,8 +76,17 @@ class ICCompareGroups(QDialog):
        
     def __connectEvents(self):
         """Connect events to functions"""
+        self.groupCombo.currentIndexChanged.connect(self.groupingChanged)
         self.cancelButton.clicked.connect(self.close)
         self.okayButton.clicked.connect(self.startCalculations)
+        
+
+    def groupingChanged(self,newComboIndex):
+        ""
+        grouping = self.mC.grouping.getGroupings()[newComboIndex]
+        groupNames = self.mC.grouping.getGroupNames(grouping)
+        self.referenceGroupCombo.clear()
+        self.referenceGroupCombo.addItems(["None"] + groupNames)
         
 
     def startCalculations(self,event=None):

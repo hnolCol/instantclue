@@ -147,6 +147,7 @@ class AskStringMessage(MessageBase):
     def lineEditting(self, lineEditText):
         ""
         self.text = lineEditText
+        self.state = lineEditText
 
 class AskForFile(MessageBase):
     ""

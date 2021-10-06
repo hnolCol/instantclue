@@ -13,11 +13,12 @@ class ICBoxplot(ICChart):
     
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Show boxplot data", self.displayBoxplotData)
+        menus["main"].addAction("Show summary data", self.displaySummaryData)
 
-    def displayBoxplotData(self,*args,**kwargs):
+    def displaySummaryData(self,*args,**kwargs):
         ""
-        self.mC.mainFrames["data"].openDataFrameinDialog(self.data["groupedPlotData"], 
+        if "groupedPlotData" in self.data:
+            self.mC.mainFrames["data"].openDataFrameinDialog(self.data["groupedPlotData"], 
                                     ignoreChanges=True, 
                                     headerLabel="Boxplot data.", 
                                     tableKwargs={"forwardSelectionToGraph":False})

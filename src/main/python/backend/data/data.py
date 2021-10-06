@@ -2250,11 +2250,20 @@ class DataCollection(object):
 		Returns column names of current data
 		'''
 		return self.df_columns	
-	
+
+	def setFileNameByID(self,dataID,fileName):
+		""
+		if dataID in self.fileNameByID:
+			self.fileNameByID[dataID] = fileName
+			print(self.fileNameByID)	
+			completeKwargs = getMessageProps("Renamed.","Data frame renamed.")
+			completeKwargs["dfs"] = self.fileNameByID
+			return completeKwargs
 	
 	def getFileNameByID(self,dataID):
 		""
-		return self.fileNameByID[dataID]
+		if dataID in self.fileNameByID:
+			return self.fileNameByID[dataID]
 			
 	def get_groups_by_column_list(self,columnList, sort = False):
 		'''

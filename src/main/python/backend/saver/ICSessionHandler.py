@@ -35,13 +35,22 @@ class ICSessionHandler(object):
                 
                 plotType = graph.plotType
                 graphData = graph.data
+                if graph.hasTooltip():
+                    tooltipColumnNames = graph.getTooltipData()
+
+
+
         else:
             plotType = None
             graphData = {}
+            tooltipColumnNames = []
+
+        #get groupings
+        groupingState = self.mC.grouping.getAllGroupings()
 
         #get current dataset index
         comboboxIndex = self.mC.mainFrames["data"].dataTreeView.getDfIndex()
-        print(comboboxIndex)
+        
         #receiverBoxState 
         receiverBoxItems = self.mC.mainFrames["middle"].getReceiverBoxItems()
         
@@ -57,7 +66,9 @@ class ICSessionHandler(object):
                     "mainFigureRegistry":mainFigureRegistry,
                     "mainFigureComboSettings":comboSettings,
                     "dataComboboxIndex" : comboboxIndex,
-                    "receiverBoxItems":receiverBoxItems}
+                    "receiverBoxItems":receiverBoxItems,
+                    "groupingState": groupingState,
+                    "tooltipColumnNames":tooltipColumnNames}
        # print(combinedObj)
         with open(sessionPath,"wb") as icSession:
             pickle.dump(combinedObj,icSession)
@@ -89,5 +100,11 @@ class ICSessionHandler(object):
         if "receiverBoxItems" in combinedObj:
             response["receiverBoxItems"] = combinedObj["receiverBoxItems"]
             
+        if "groupingState" in combinedObj:
+            response["groupingState"] = combinedObj["groupingState"]
 
+        if "tooltipColumnNames" in combinedObj:
+            response["tooltipColumnNames"] = combinedObj["tooltipColumnNames"]
+        response["sessionIsBeeingLoaded"] = True
+        response["dataID"] = dataID
         return response

@@ -60,7 +60,8 @@ class ICClustermap(ICChart):
         self.tooltipActive = True
         self.updateBackgrounds()
 
-    
+    def hasTooltip(self):
+        return self.toolTipsActive
 
     def removeTooltip(self):
         ""

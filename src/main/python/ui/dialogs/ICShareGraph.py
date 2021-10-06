@@ -160,7 +160,10 @@ class ICShareGraph(QDialog):
                 graphProps = self.collectProjectInfoData()
                 data, columnNames, graphLimits,annotatedIdx,annotationProps = graph.getDataForWebApp()
                 
-                
+                if not hasattr(self,"selectedSearchableColumns"):
+                    self.mC.sendToInformationDialog(infoText="Please select at least one column that allows for searching.")
+                    return 
+
                 searchColumnName = self.selectedSearchableColumns[0]
 
                 graphProps["xLabel"] = columnNames[0]

@@ -210,6 +210,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, annotations will be made in all active scatter plots."
     },
     {
+    "name"          :   "annotate.max.length",
+    "value"         :   40,
+    "dtype"         :   int,
+    "range"         :   [3,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Annotation",
+    "description"   :   "Length of string for annotation. If the string is longer than the given value, '..' will be added to the string."
+    },
+    {
     "name"          :   "twoColorMap",
     "value"         :   "RdBu_r",
     "dtype"         :   str,

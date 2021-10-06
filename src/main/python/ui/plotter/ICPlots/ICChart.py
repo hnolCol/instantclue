@@ -4,7 +4,7 @@ from PyQt5.QtGui import QCursor
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Circle
-from matplotlib.collections import PathCollection
+from matplotlib.collections import LineCollection, PathCollection
 from matplotlib.pyplot import scatter
 from matplotlib.text import Text
 from matplotlib.offsetbox import AnchoredText
@@ -55,6 +55,7 @@ class ICChart(QObject):
 		self.statData = dict()
 		self.quickSelectScatterDataIdx = dict()
 		self.requiredKwargs = []
+		self.tooltipColumnNames = []
 		
 		self.saveStatTests = OrderedDict() 
 		self.preventQuickSelectCapture = False
@@ -142,13 +143,21 @@ class ICChart(QObject):
 				line = Line2D(**extraLines[n])
 				ax.add_line(line)
 	
-	def addLineCollections(self,lineCollections):
+	def addLineCollections(self,lineCollections,name=None):
 		""
-		for axisID,lineCollection in lineCollections.items():
+		for axisID,lineCollectionKwargs in lineCollections.items():
 			
 			if axisID in self.axisDict:
 				ax = self.axisDict[axisID]
+				lineCollection = LineCollection(**lineCollectionKwargs)
 				ax.add_artist(lineCollection)
+				lineCollectionID = getRandomString()
+				self.extraArtists[lineCollectionID] = {
+					"artist":lineCollection,
+					"color":"black",
+					"name":"LineColl({})".format(lineCollectionID) if name is None else name,
+					"ax":ax,
+					"lineCollectionKwargs":lineCollectionKwargs}
 
 
 	def addHoverBinding(self):
@@ -544,7 +553,7 @@ class ICChart(QObject):
 			menus["main"].addAction("Remove size legend", self.removeSizeLegend)
 		if hasattr(self,"markerLegend"):
 			menus["main"].addAction("Remove marker legend", self.removeMarkerLegend)
-		menus["main"].addAction("Share graph", self.shareGraph)
+		
 
 	def addQuickSelectHoverScatter(self):
 		""
@@ -632,7 +641,7 @@ class ICChart(QObject):
 	def addArea(self,areaData):
 		""
 		#
-		print(areaData)
+		#print(areaData)
 		for n,areaKwargs in areaData.items():
 			if n in self.axisDict:
 				ax = self.axisDict[n]
@@ -1127,7 +1136,17 @@ class ICChart(QObject):
 		'''
 		self.textProps = self.getStdTextProps()
 
-	
+	def hasTooltip(self):
+		""
+		if self.hasScatters():
+			return any(scatterPlot.hasToolTip() for scatterPlot in self.scatterPlots.values())
+		elif self.plotType == "hclust":
+			return self.hasTooltip()
+		return False
+
+	def getTooltipData(self):
+		""
+		return self.tooltipColumnNames
 
 	def extractAxisProps(self):
 		'''
@@ -1139,6 +1158,11 @@ class ICChart(QObject):
 		self.axProps['xDiff'] = self.axProps['xlim'][1] - self.axProps['xlim'][0]
 		self.axProps['yDiff'] = self.axProps['ylim'][1] - self.axProps['ylim'][0]
 				
+
+	def removeColumnNameFromTooltip(self,*args,**kwargs):
+		""
+		
+	
 	def updateTooltipPosition(self,event,text):
 		'''
 		'''
@@ -1275,7 +1299,7 @@ class ICChart(QObject):
 	def mirrorExtraLines(self,sourceAx,targetAx):
 		""
 		if len(self.extraArtists) > 0:
-			for aristID,artistKwargs in self.extraArtists.items():
+			for _,artistKwargs in self.extraArtists.items():
 				if artistKwargs["ax"] == sourceAx:
 					#XY = lineKwargs["artist"].get_xydata()
 					#print(XY)
@@ -1284,7 +1308,9 @@ class ICChart(QObject):
 						targetAx.add_artist(l)
 					elif "areaKwargs" in artistKwargs:
 						targetAx.fill_between(**artistKwargs["areaKwargs"])
-
+					elif "lineCollectionKwargs" in artistKwargs:
+						lc = LineCollection(**artistKwargs["lineCollectionKwargs"])
+						targetAx.add_artist(lc)
 
 
 	def mirrorStats(self,targetAx, onlyForID):

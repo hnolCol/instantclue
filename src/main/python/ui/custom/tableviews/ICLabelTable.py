@@ -45,8 +45,9 @@ class ICLabelTable(ICColorSizeTableBase):
     def hideLabel(self):
         ""
         exists, graph =  self.mC.getGraph()
-        if exists:
+        if exists and hasattr(graph,"removeColumnNameFromTooltip"):
             columnName = self.model.getCurrentGroup()
+            
             graph.removeColumnNameFromTooltip(columnName)
 
     def removeLabelsFromGraph(self):

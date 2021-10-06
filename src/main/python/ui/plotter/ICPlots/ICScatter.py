@@ -76,7 +76,7 @@ class ICScatterPlot(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        
+        menus["main"].addAction("Share graph", self.shareGraph)
         if self.preventQuickSelectCapture:
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:
@@ -84,9 +84,11 @@ class ICScatterPlot(ICChart):
         
         menus["main"].addAction("Connect nearest neighbors",self.getNearestNeighborLines)
 
+
     def addTooltip(self, tooltipColumnNames,dataID):
         ""
         try:
+            self.tooltipColumnNames = tooltipColumnNames
             data = self.mC.data.getDataByColumnNames(dataID,tooltipColumnNames)["fnKwargs"]["data"]
             for scatterPlot in self.scatterPlots.values():
                 scatterPlot.addTooltip(data )
@@ -95,7 +97,7 @@ class ICScatterPlot(ICChart):
             self.setDataInTooltipTable(labelData,title="Tooltip Labels")
         except Exception as e:
             print(e)
-
+    
     
         
     def initScatterPlots(self, onlyForID = None, targetAx = None, scaleFactor = None):
@@ -168,7 +170,6 @@ class ICScatterPlot(ICChart):
         else:
             self.updateFigure.emit()
 
-    
     def setHoverData(self,dataIndex, sender = None):
         "Sets hover data in scatter plots"
         for scatterPlot in self.scatterPlots.values():

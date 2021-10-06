@@ -353,6 +353,16 @@ class MatplotlibFigure(QWidget):
         if exists:
             graph.addLineCollections(lineCollections)
 
+    def addTooltip(self,tooltipColumnNames,dataID):
+        ""
+        print("BUM")
+        print(tooltipColumnNames)
+        if len(tooltipColumnNames) > 0:
+            exists,graph = self.mC.getGraph()
+            if exists:
+                print(tooltipColumnNames)
+                graph.addTooltip(tooltipColumnNames,dataID)
+
 
     def activateHoverInScatter(self):
         ""

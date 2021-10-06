@@ -72,7 +72,18 @@ class ICGrouping(object):
                 if groupingNameToDelete == self.currentGrouping:
                     self.currentGrouping = None
 
-            
+    def getAllGroupings(self):
+        ""
+        groupingKwargs = {"curentGrouping":self.currentGrouping, 
+                        "groups" : self.groups,
+                        "groupCmaps" : self.groupCmaps}
+
+        return groupingKwargs
+
+    def setGroupinsFromSavedSesssion(self,groupingState):
+        ""
+        for attrName, attrValue in groupingState.items():
+            setattr(self,attrName,attrValue)
 
     
     def setCurrentGrouping(self,groupingName):
@@ -136,8 +147,13 @@ class ICGrouping(object):
     
     def getCurrentGroupNames(self):
         ""
-        if self.currentGrouping in self.groups:
-            return list(self.groups[self.currentGrouping].keys())
+        return self.getGroupNames(self.currentGrouping)
+
+    def getGroupNames(self,grouping):
+        ""
+        if grouping in self.groups:
+            return list(self.groups[grouping].keys())
+
 
     def getGroupNameByColumn(self, groupingName):
         ""

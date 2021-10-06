@@ -136,7 +136,8 @@ class ICScatterAnnotations(object):
     def addAnnotations(self,idx):
         ""
 
-        selectedData = self.data.loc[idx,:]
+        selectedData = self.data.loc[idx,:] 
+        maxAnnotationLength = self.parent.getParam("annotate.max.length")
         #key = clickedData.name
         for key in selectedData.index:
             #annotations are saved by row idx
@@ -144,7 +145,7 @@ class ICScatterAnnotations(object):
             if selectedLabels is not None and key in selectedLabels: ## easy way to check if that row is already annotated
                 continue
             xyDataLabel = tuple(selectedData.loc[key,self.numericColumns].values)
-            textLabel = "\n".join([str(x) if len(str(x)) < 40 else "{}..".format(str(x)[:40]) for x in selectedData.loc[key,self.textAnnotationColumns].values.flatten()])
+            textLabel = "\n".join([str(x) if len(str(x)) <= maxAnnotationLength else "{}..".format(str(x)[:maxAnnotationLength]) for x in selectedData.loc[key,self.textAnnotationColumns].values.flatten()])
             
             ax = self.ax
             xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)

@@ -7,8 +7,33 @@
 }
 {
     "data::addDataFrameFromTxtFile": {
-        "pathToFile": "examples/Tutorial_Data_02.txt",
-        "fileName": "Tutorial_Data_02"
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 2"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
     }
 }
 {
@@ -18,40 +43,186 @@
 }
 {
     "data::getColumnNamesByDataID": {
-        "dataID": "t:Tutorial_Data_02"
+        "dataID": "DataFrame: 3"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 4"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 5"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 5"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 4"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 4"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 3"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 3"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 2"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 2"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 6"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 6"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "fileName": "Tutorial_Data_02",
+        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
+        "loadFileProps": null
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 7"
     }
 }
 {
     "plotter:getData": {
-        "dataID": "t:Tutorial_Data_02",
+        "dataID": "DataFrame: 7",
         "numericColumns": [
-            "NSRP1_0",
-            "CDK1_1",
-            "HDLBP_2",
-            "-_3",
-            "-_4",
-            "IGLC3;IGLC2;IGLC1;IGLC6_5",
-            "IGHG3_6",
-            "IGHM_7"
+            "CTRL_2"
         ],
         "categoricalColumns": [],
-        "plotType": "boxplot"
+        "plotType": "boxplot",
+        "figureSize": {
+            "width": 1013,
+            "height": 784
+        }
     }
 }
 {
     "plotter:getData": {
-        "dataID": "t:Tutorial_Data_02",
+        "dataID": "DataFrame: 7",
         "numericColumns": [
-            "NSRP1_0",
-            "CDK1_1",
-            "HDLBP_2",
-            "-_3",
-            "-_4",
-            "IGLC3;IGLC2;IGLC1;IGLC6_5",
-            "IGHG3_6",
-            "IGHM_7"
+            "CTRL_2"
         ],
         "categoricalColumns": [],
-        "plotType": "barplot"
+        "plotType": "swarmplot",
+        "figureSize": {
+            "width": 1013,
+            "height": 784
+        }
+    }
+}
+{
+    "plotter:getData": {
+        "dataID": "DataFrame: 7",
+        "numericColumns": [
+            "CTRL_2"
+        ],
+        "categoricalColumns": [],
+        "plotType": "scatter",
+        "figureSize": {
+            "width": 1013,
+            "height": 784
+        }
+    }
+}
+{
+    "plotter:getData": {
+        "dataID": "DataFrame: 7",
+        "numericColumns": [
+            "CTRL_2",
+            "S277A_1"
+        ],
+        "categoricalColumns": [],
+        "plotType": "scatter",
+        "figureSize": {
+            "width": 1013,
+            "height": 784
+        }
     }
 }

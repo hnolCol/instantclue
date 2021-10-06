@@ -31,6 +31,14 @@ funcPropControl = {
             "completedRequest": 
                             addDataAndRefresh
         },
+
+    "data::renameDataFrame":
+        {
+            "threadRequest":{"obj":"data","fn":"setFileNameByID","requiredKwargs":["dataID","fileName"]},
+            "completedRequest": 
+                            [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
+                            sendMessageProps]
+        }, 
     "data::addDataFrame":
         {
             "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
@@ -71,6 +79,13 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"getColumnNamesByDataID","requiredKwargs":["dataID"]},
             "completedRequest":[
                 {"obj":"self","fn":"resetReceiverBoxes","objKey":"middle","objName":"mainFrames","requiredKwargs":[]},
+                updateTreeView,
+                sendMessageProps]     
+        },
+    "data::getColumnNamesByDataIDSilently":
+        {
+            "threadRequest":{"obj":"data","fn":"getColumnNamesByDataID","requiredKwargs":["dataID"]},
+            "completedRequest":[
                 updateTreeView,
                 sendMessageProps]     
         },
@@ -835,11 +850,13 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"sessionManager","fn":"openSession","requiredKwargs":["sessionPath"]},
             "completedRequest":
-                    #[{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"],"optionalKwargs":["dataComboboxIndex"]}] + \
+                    [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs","sessionIsBeeingLoaded"],"optionalKwargs":["dataComboboxIndex"]}] + \
                     [{"obj":"self","fn":"updateReceiverBoxItemsSilently","objKey":"middle","objName":"mainFrames","requiredKwargs":["receiverBoxItems"]}] + \
+                    [{"obj":"grouping","fn":"setGroupinsFromSavedSesssion","requiredKwargs":["groupingState"]}]    + \
                     [updateTreeView] + \
                     [{"obj":"self","fn":"openMainFiguresForSession","objKey":"right","objName":"mainFrames","requiredKwargs":["mainFigures","mainFigureRegistry","mainFigureComboSettings"]}] + \
-                    [{"obj":"self","fn":"restoreGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["graphData","plotType"]}]
+                    [{"obj":"self","fn":"restoreGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["graphData","plotType"]}] + \
+                    [{"obj":"self","fn":"addTooltip","objKey":"middle","objName":"mainFrames","requiredKwargs":["tooltipColumnNames","dataID"]}]
         },
     
     }

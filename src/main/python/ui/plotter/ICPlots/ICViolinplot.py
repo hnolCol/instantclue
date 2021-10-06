@@ -10,8 +10,8 @@ class ICViolinplot(ICChart):
         super(ICViolinplot,self).__init__(*args,**kwargs)
 
         self.violinItems = dict() 
-
-
+        
+    
     def addMedianScatter(self, onlyForID = None, targetAx = None):
         ""
         scatKwargs = self.getScatterKwargs()

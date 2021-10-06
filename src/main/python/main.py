@@ -342,9 +342,11 @@ class InstantClue(QMainWindow):
 
     def getFigureSize(self):
         ""
+        canvasSizeDict = {}
         canvasSize = self.mainFrames["middle"].canvas.sizeHint()
-        print(canvasSize)
-        return canvasSize
+        canvasSizeDict["width"] = canvasSize.width()
+        canvasSizeDict["height"] = canvasSize.height()
+        return canvasSizeDict
 
     def _getObjFunc(self,fnProps):
         ""

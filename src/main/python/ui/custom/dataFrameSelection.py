@@ -13,7 +13,7 @@ from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFe
 from ..dialogs.ICSampleList import ICSampleListCreater
 from ..dialogs.ICProteinPeptideView import ICProteinProteinView
 
-from ..custom.warnMessage import WarningMessage
+from ..custom.warnMessage import WarningMessage, AskStringMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
 
 
@@ -47,6 +47,7 @@ class CollapsableDataTreeView(QWidget):
         self.mC = mainController
         self.dfs = dfs #OrderedDict keys: dataID, values: names
         self.preventReset = False
+        self.sessionIsBeeingLoaded = False
         self.__controls()
         self.__layout() 
         self.__connectEvents()
@@ -169,14 +170,15 @@ class CollapsableDataTreeView(QWidget):
             #send back to main
             
             funcProps = {
-                "key":"data::getColumnNamesByDataID",
+                "key":"data::getColumnNamesByDataID" if not self.sessionIsBeeingLoaded else "data::getColumnNamesByDataIDSilently",
                 "kwargs":{"dataID":dataID}}
-            
+            print(funcProps)
             self.dataID = dataID
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()
             self.updateDataIDInTreeViews()
             self.sendToThreadFn(funcProps)
+            self.sessionIsBeeingLoaded = False
            
 
     def deleteData(self,e=None):
@@ -322,15 +324,18 @@ class CollapsableDataTreeView(QWidget):
         for treeView in self.dataHeaders.values():
             treeView.setDataID(self.dataID)
 
-    def updateDfs(self, dfs = None, selectLastDf = True, remainLastSelection = False, specificIndex = None):
+    def updateDfs(self, dfs = None, selectLastDf = True, remainLastSelection = False, specificIndex = None, sessionIsBeeingLoaded = False):
         ""
         if dfs is not None:
             self.dfs = dfs
             if remainLastSelection:
                 lastIndex = self.combo.currentIndex() 
+            if sessionIsBeeingLoaded:
+                self.sessionIsBeeingLoaded = True
+            print(sessionIsBeeingLoaded)
             self.combo.clear() 
-
             self.combo.addItems(list(self.dfs.values()))
+            
             if specificIndex is not None and isinstance(specificIndex,int) and specificIndex < len(self.dfs):
                 self.combo.setCurrentIndex(specificIndex)
             elif remainLastSelection:
@@ -373,6 +378,15 @@ class CollapsableDataTreeView(QWidget):
         dlg = ICCorrelateFeatures(mainController=self.mC)
         dlg.exec_()
 
+    def openRenameDialog(self,e=None):
+        ""
+        dataID = self.mC.getDataID()
+        oldName = self.mC.data.getFileNameByID(dataID)
+        dlg = AskStringMessage(q="Provide new name for the data frame: {}".format(oldName))
+        if dlg.exec_():
+            funcProps = {"key": "data::renameDataFrame", "kwargs":{"dataID":dataID,"fileName":dlg.state}}
+            self.mC.sendRequestToThread(funcProps)
+
     def openSGCCADialog(self,e=None):
         ""
         # dlg = ICMultiBlockSGCCA(mainController = self.mC)
@@ -402,6 +416,8 @@ class CollapsableDataTreeView(QWidget):
                     action.triggered.connect(lambda _,groupingName = groupingName : self.updateGrouping(groupingName))
 
             if self.mC.data.hasData():
+                action = menus["Data frames .. "].addAction("Rename")
+                action.triggered.connect(self.openRenameDialog)
                 #add data frame menu
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)

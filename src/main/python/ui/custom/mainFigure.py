@@ -129,7 +129,10 @@ class MainFigureRegistry(object):
 
     def getMainFiguresByID(self):
         ""
-        return OrderedDict([(ID,fig["figure"]) for ID,fig in self.mainFigures.items()])
+        if hasattr(self, "mainFigures"):
+            return OrderedDict([(ID,fig["figure"]) for ID,fig in self.mainFigures.items()])
+        else:
+            return OrderedDict()
 
 
     def getMainFigureCurrentSettings(self):
@@ -223,8 +226,9 @@ class MainFigureRegistry(object):
 
     def removeLabels(self):
         ""
-        for figID in self.mainFigures.keys():
-            self.mainFigures[figID]['template'].removeAxisLabels()
+        if hasattr(self,"mainFigures"):
+            for figID in self.mainFigures.keys():
+                self.mainFigures[figID]['template'].removeAxisLabels()
 
     #def getMenu(self):
             
