@@ -6,11 +6,7 @@
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
-    }
+    "data::addDataFrameFromClipboard": {}
 }
 {
     "data::getColumnNamesByDataID": {
@@ -18,10 +14,93 @@
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
+    "filter::numericFilter": {
+        "dataID": "DataFrame: 1",
+        "filterProps": {
+            "fit:(T):rvalue_01": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_02": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_03": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_04": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_05": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_01": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_02": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_03": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_04": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_05": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            }
+        },
+        "setNonMatchNan": 1,
+        "selectedColumns": {
+            "fit:(T):rvalue_01": [
+                "fit:(T):slope_01"
+            ],
+            "fit:(T):rvalue_02": [
+                "fit:(T):slope_02"
+            ],
+            "fit:(T):rvalue_03": [
+                "fit:(T):slope_03"
+            ],
+            "fit:(T):rvalue_04": [
+                "fit:(T):slope_04"
+            ],
+            "fit:(T):rvalue_05": [
+                "fit:(T):slope_05"
+            ],
+            "fit:(C):rvalue_01": [
+                "fit:(C):slope_01"
+            ],
+            "fit:(C):rvalue_02": [
+                "fit:(C):slope_02"
+            ],
+            "fit:(C):rvalue_03": [
+                "fit:(C):slope_03"
+            ],
+            "fit:(C):rvalue_04": [
+                "fit:(C):slope_04"
+            ],
+            "fit:(C):rvalue_05": [
+                "fit:(C):slope_05"
+            ]
+        }
     }
 }
 {
@@ -30,11 +109,7 @@
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
-    }
+    "data::addDataFrameFromClipboard": {}
 }
 {
     "data::getColumnNamesByDataID": {
@@ -47,15 +122,80 @@
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
+    "plotter:getData": {
+        "dataID": "DataFrame: 3",
+        "numericColumns": [
+            "ln_WT_2_L",
+            "ln_WT_4_L",
+            "ln_WT_8_L",
+            "ln_WT_12_L",
+            "ln_WT_16_L",
+            "ln_WT_24_L",
+            "ln_WT_32_L",
+            "ln_KO_2_L",
+            "ln_KO_4_L",
+            "ln_KO_8_L",
+            "ln_KO_12_L",
+            "ln_KO_16_L",
+            "ln_KO_24_L",
+            "ln_KO_32_L",
+            "ln_WT_2_H",
+            "ln_WT_4_H",
+            "ln_WT_8_H",
+            "ln_WT_12_H",
+            "ln_WT_16_H",
+            "ln_WT_24_H",
+            "ln_WT_32_H",
+            "ln_KO_2_H",
+            "ln_KO_4_H",
+            "ln_KO_8_H",
+            "ln_KO_12_H",
+            "ln_KO_16_H",
+            "ln_KO_24_H",
+            "ln_KO_32_H"
+        ],
+        "categoricalColumns": [],
+        "plotType": "boxplot",
+        "figureSize": {
+            "width": 952,
+            "height": 824
+        }
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 3"
     }
 }
 {
     "data::getColumnNamesByDataID": {
         "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 2"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 2"
+    }
+}
+{
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::deleteData": {
+        "dataID": "DataFrame: 1"
+    }
+}
+{
+    "data::addDataFrameFromTxtFile": {
+        "pathToFile": "examples/Tutorial_Data_02.txt",
+        "fileName": "Tutorial_Data_02"
     }
 }
 {
@@ -64,16 +204,13 @@
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
-    }
+    "data::addDataFrameFromClipboard": {}
 }
 {
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 1"
-    }
+    "data::addDataFrameFromClipboard": {}
+}
+{
+    "data::addDataFrameFromClipboard": {}
 }
 {
     "data::getColumnNamesByDataID": {
@@ -81,70 +218,11 @@
     }
 }
 {
-    "data::deleteData": {
-        "dataID": "DataFrame: 5"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 1"
-    }
+    "data::addDataFrameFromClipboard": {}
 }
 {
     "data::getColumnNamesByDataID": {
         "dataID": "DataFrame: 4"
-    }
-}
-{
-    "data::deleteData": {
-        "dataID": "DataFrame: 4"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 1"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 3"
-    }
-}
-{
-    "data::deleteData": {
-        "dataID": "DataFrame: 3"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 1"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 2"
-    }
-}
-{
-    "data::deleteData": {
-        "dataID": "DataFrame: 2"
-    }
-}
-{
-    "data::getColumnNamesByDataID": {
-        "dataID": "DataFrame: 1"
-    }
-}
-{
-    "data::deleteData": {
-        "dataID": "DataFrame: 1"
-    }
-}
-{
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
     }
 }
 {
@@ -153,76 +231,102 @@
     }
 }
 {
-    "data::deleteData": {
-        "dataID": "DataFrame: 6"
+    "filter::numericFilter": {
+        "dataID": "DataFrame: 6",
+        "filterProps": {
+            "fit:(T):rvalue_01": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_02": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_03": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_04": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(T):rvalue_05": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_01": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_02": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_03": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_04": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            },
+            "fit:(C):rvalue_05": {
+                "min": -Infinity,
+                "max": -0.5,
+                "filterType": "Greater Equal than"
+            }
+        },
+        "setNonMatchNan": 1,
+        "selectedColumns": {
+            "fit:(T):rvalue_01": [
+                "fit:(T):slope_01"
+            ],
+            "fit:(T):rvalue_02": [
+                "fit:(T):slope_02"
+            ],
+            "fit:(T):rvalue_03": [
+                "fit:(T):slope_03"
+            ],
+            "fit:(T):rvalue_04": [
+                "fit:(T):slope_04"
+            ],
+            "fit:(T):rvalue_05": [
+                "fit:(T):slope_05"
+            ],
+            "fit:(C):rvalue_01": [
+                "fit:(C):slope_01"
+            ],
+            "fit:(C):rvalue_02": [
+                "fit:(C):slope_02"
+            ],
+            "fit:(C):rvalue_03": [
+                "fit:(C):slope_03"
+            ],
+            "fit:(C):rvalue_04": [
+                "fit:(C):slope_04"
+            ],
+            "fit:(C):rvalue_05": [
+                "fit:(C):slope_05"
+            ]
+        }
     }
 }
 {
-    "data::addDataFrameFromTxtFile": {
-        "fileName": "Tutorial_Data_02",
-        "pathToFile": "/Users/hnolte/Documents/GitHub/instantclue/src/main/python/examples/Tutorial_Data_02.txt",
-        "loadFileProps": null
+    "data::getColumnNamesByDataID": {
+        "dataID": "DataFrame: 4"
     }
 }
 {
     "data::getColumnNamesByDataID": {
         "dataID": "DataFrame: 7"
-    }
-}
-{
-    "plotter:getData": {
-        "dataID": "DataFrame: 7",
-        "numericColumns": [
-            "CTRL_2"
-        ],
-        "categoricalColumns": [],
-        "plotType": "boxplot",
-        "figureSize": {
-            "width": 1013,
-            "height": 784
-        }
-    }
-}
-{
-    "plotter:getData": {
-        "dataID": "DataFrame: 7",
-        "numericColumns": [
-            "CTRL_2"
-        ],
-        "categoricalColumns": [],
-        "plotType": "swarmplot",
-        "figureSize": {
-            "width": 1013,
-            "height": 784
-        }
-    }
-}
-{
-    "plotter:getData": {
-        "dataID": "DataFrame: 7",
-        "numericColumns": [
-            "CTRL_2"
-        ],
-        "categoricalColumns": [],
-        "plotType": "scatter",
-        "figureSize": {
-            "width": 1013,
-            "height": 784
-        }
-    }
-}
-{
-    "plotter:getData": {
-        "dataID": "DataFrame: 7",
-        "numericColumns": [
-            "CTRL_2",
-            "S277A_1"
-        ],
-        "categoricalColumns": [],
-        "plotType": "scatter",
-        "figureSize": {
-            "width": 1013,
-            "height": 784
-        }
     }
 }

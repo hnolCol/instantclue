@@ -11,7 +11,7 @@ The tool was developed to equip everyone with a tool that enables analysis and v
 
 ### Tutorials
 
-A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly.
+A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly. Please visit https://www.instantclue.uni-koeln.de for video tutorials.
 
 ### Status
 
@@ -67,38 +67,15 @@ The word cloud is generate based on the [wordcloud package](https://github.com/a
 
 <img src="/img/wordcloud.png" width="50%">
 
-#### Fosterplot 
-
-The foster plot (blobbogram) is a widely used plot type in metanalysis. The [wikipedia](https://en.wikipedia.org/wiki/Forest_plot)] website hosts useful information.
-
-
-#### Dimensional Reduction Plot
-
-Coming soon - under development.
-
-
-#### Cluster plot 
-
-Available but experimental. At the moment, only boxplots are used for visualization. Numerous cluster methods from scikit-learn library are available.
-
-
 ## Issues
 
-Please report Issues and Bugs using the GitHub issue functionality.
-
-[![GitHub issues](https://img.shields.io/github/issues-closed/Naereen/StrapDown.js.svg)](https://github.com/hnolCol/instantclue/issues)
-
-Issues that are currently taken care of:
-- []
-
-
-## Tutorials
-
-Please visit https://www.instantclue.uni-koeln.de for video tutorials. 
-
+Please report Issues and Bugs using the [GitHub issue](https://github.com/hnolCol/instantclue/issues) functionality.
+ 
 ## Get Started 
 
-Executable binary files are available at the [website](http://www.instantclue.uni-koeln.de) for Mac OS and Windows.
+### Executables
+
+Executable binary files are available at the [GitHub](https://github.com/hnolCol/instantclue/releases) for Mac OS and Windows.
 We recommend using the development snapshots as they are equipped with more features and recent bug reports, but may contain non-functional widgets or context menu functions.
 
 ### Source Code
@@ -121,10 +98,6 @@ pip install -r requirements.txt #install packages
 
 python3 main.py #starts InstantClue
 ```
-
-## Builds 
-
-From now on we are publishing development version builds to give faster acess to the users. Builds are available at [GitHub](https://github.com/hnolCol/instantclue/releases). The official website will only host the latest version. 
 
 ## Citation
 

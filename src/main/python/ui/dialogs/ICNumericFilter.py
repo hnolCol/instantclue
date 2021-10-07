@@ -255,7 +255,8 @@ class NumericFilter(QDialog):
         validator = QDoubleValidator()
         validator.setRange(minValue,maxValue,12)
         validator.setNotation(QDoubleValidator.StandardNotation)
-        
+        validator.setLocale(QLocale("en_US"))
+        validator.setDecimals(20)
         #self.alphaLineEdit.setValidator(validator)
         
         valueEdit = QLineEdit(placeholderText = placeholderText, toolTip = tooltipStr)
@@ -299,7 +300,7 @@ class NumericFilter(QDialog):
                 "filterProps":funcProps,
                 "setNonMatchNan":self.CBFilterOptions["Set NaN"].checkState() or self.CBFilterOptions["Set NaN in spec. columns"].checkState()}}
         if self.CBFilterOptions["Set NaN in spec. columns"].checkState():
-            funcProps["kwargs"]["selectedColumns"] = selectedColumns = OrderedDict([(k,v["specColumns"]) for k,v in self.filterProps.items()])
+            funcProps["kwargs"]["selectedColumns"] =  OrderedDict([(k,v["specColumns"]) for k,v in self.filterProps.items()])
         elif self.CBFilterOptions["Subset Matches"].checkState():
             funcProps["kwargs"]["subsetData"] = True
             funcProps["key"] = "filter::subsetNumericFilter"
@@ -347,7 +348,7 @@ class NumericFilter(QDialog):
             validator = self.filterProps[filterName][lineEdit].validator()
             if not topN:
                 validator.setRange(self.filterProps[filterName]["minValue"], self.filterProps[filterName]["maxValue"])
-                validator.setDecimals(2)
+                validator.setDecimals(20)
             else:
                 validator.setRange(1, self.filterProps[filterName]["N"])
                 validator.setDecimals(0)
