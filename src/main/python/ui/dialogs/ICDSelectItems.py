@@ -1,6 +1,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt5.QtWidgets import *
+from numpy.lib.arraysetops import isin 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit
 from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
@@ -8,13 +9,14 @@ from ..custom.buttonDesigns import ResetButton, AcceptButton, CheckButton
 import pandas as pd
 
 class ICDSelectItems(QDialog):
-    def __init__(self, data = pd.DataFrame(), stretch = True, selectAll = True, singleSelection = False, *args, **kwargs):
+    def __init__(self, data = pd.DataFrame(), title = None, stretch = True, selectAll = True, singleSelection = False, *args, **kwargs):
         super(ICDSelectItems, self).__init__(*args, **kwargs)
     
         self.data = data
         self.stretch = stretch
         self.selectAll = selectAll
         self.singleSelection = singleSelection
+        self.title = title
         self.__windowUpdate()
         self.__controls()
         self.__layout()
@@ -22,8 +24,9 @@ class ICDSelectItems(QDialog):
     
     def __controls(self):
         """Init widgets"""
-        
-        self.headerLabel = createTitleLabel("Compare groups using",fontSize=12)
+        if self.title is not None and isinstance(self.title,str):
+            self.headerLabel = createTitleLabel(self.title,fontSize=11)
+            
         self.table = PandaTable(parent=self)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
@@ -45,11 +48,14 @@ class ICDSelectItems(QDialog):
         """Put widgets in layout"""
         self.setLayout(QGridLayout())
         self.layout().setContentsMargins(3,3,3,3)
-        self.layout().addWidget(self.table,0,0,1,3)
+        if hasattr(self,"headerLabel"):
+            self.layout().addWidget(self.headerLabel,0,0,1,3)
+        
+        self.layout().addWidget(self.table,1,0,1,3)
         if self.selectAll:
-            self.layout().addWidget(self.selectCB,1,0)
-        self.layout().addWidget(self.okButton,1,1)
-        self.layout().addWidget(self.cancelButton,1,2)
+            self.layout().addWidget(self.selectCB,2,0)
+        self.layout().addWidget(self.okButton,2,1)
+        self.layout().addWidget(self.cancelButton,2,2)
         
 
        

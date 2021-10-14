@@ -45,7 +45,6 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Graphical User Interface",
     "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
     },
-
     {
     "name"          :   "load.file.encoding",
     "value"         :   "utf-8",
@@ -336,6 +335,24 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Filter",
     "description"   :   "Leading string for subsets created by numerical filtering.",
+    },
+    {
+    "name"          :   "consecutive.values.ignore.nan",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Filter",
+    "description"   :   "If True, nans will be removed row-wise before testing for consecutive increasing/decreasing values.",
+    },
+    {
+    "name"          :   "consecutive.values.min.non.nan",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Filter",
+    "description"   :   "Number of non-nan values required for consecutive value detection.",
     },
     {
     "name"          :   "axes.facecolor",
@@ -1183,7 +1200,25 @@ DEFAULT_PARAMETER = [
     "range"         :   [True,False],
     "parent"        :   "intern",
     "parentType"    :   "Cluster (HClust)",
-    "description"   :   "If enabked, upon zoom the x-axis will remain at fixed limits.",
+    "description"   :   "If enabled, upon zoom the x-axis will remain at fixed limits.",
+    },
+    {
+    "name"          :   "hclust.ask.for.groupings.to.display",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled you will be asked before plotting a hierarchical clustering which groups you would like to display.",
+    },
+    {
+    "name"          :   "hclust.display.grouping",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled the currently selected grouping will be displayed (if the grouping contains\ncolumns used for hierarchical clustering.\nMissing values will be display by the nanColor (see Color Settings).",
     },
     {
     "name"          :   "pixel.width.per.column",
@@ -2522,8 +2557,20 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Data View",
     "description"   :   "Spreadsheet like filtering in the source table. Use 'and' if each of the filter criteria match or 'or' if only one should match."
+    },
+    {
+    "name"          :   "fit.model.min.non.nan",
+    "value"         :   3,
+    "dtype"         :   int,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Model fitting",
+    "description"   :   "Minimum number of non-nan values for fitting a model (e.g. linear fit, first order kinetic). A minimum value of 2 is allowed but this will return always a r-value = 1 and is not informative."
     }
     ]
+    
+
+
     
 
 

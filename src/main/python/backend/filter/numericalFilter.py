@@ -1,10 +1,13 @@
 
 
-from backend.utils.stringOperations import mergeListToString
+from backend.utils.stringOperations import mergeListToString, getMessageProps
 
 
 import pandas as pd 
-import numpy as np  
+import numpy as np
+
+
+
 
 OPERATOR_OPTIONS = ["and","or"]
 
@@ -47,7 +50,6 @@ class NumericFilter(object):
 
     def applyFilter(self, dataID, filterProps, setNonMatchNan = False, subsetData = False, selectedColumns = None):
         ""
-        print(selectedColumns)
         if setNonMatchNan:
             filterIdx = dict()
         else:
@@ -93,6 +95,57 @@ class NumericFilter(object):
         else:
             annotationColumnName = "{}({})".format(self.sourceData.parent.config.getParam("leading.string.numeric.filter")," ".join(columnNameStr))
             return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
+
+    def findConsecutiveValues(self,dataID,columnNames,increasing=True,annotationString=None):
+        ""
+        
+        def diffWithNan(x,increasing,minValues):
+            a = x[~np.isnan(x)]
+            if a.size < minValues:
+                return False
+            else:
+                if increasing:
+                    return np.all(np.diff(a) > 0)
+                else:
+                    return np.all(np.diff(a) < 0)
+
+        if columnNames.values.size < 2:
+            return getMessageProps("Error..","Please select at least two numeric columns.")
+        #get data and config params
+        data = self.sourceData.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+        ignoreNaN = self.sourceData.parent.config.getParam("consecutive.values.ignore.nan")
+        minValues = self.sourceData.parent.config.getParam("consecutive.values.min.non.nan")
+        X = data.values
+      
+        if increasing:
+            if ignoreNaN:
+                filterIdx = np.apply_along_axis(diffWithNan,1,X,increasing,minValues)
+            else:
+                diff = np.diff(X,axis=1)
+                filterIdx = np.all(diff > 0,axis=1)
+            annotationColumnName = "consIncrease:({})".format(mergeListToString(columnNames.values) if annotationString is None else annotationString)
+            return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
+        else:
+            if ignoreNaN:
+                filterIdx = np.apply_along_axis(diffWithNan,1,X,increasing,minValues)
+            else:
+                diff = np.diff(X,axis=1)
+                filterIdx = np.all(diff < 0,axis=1)
+            annotationColumnName = "consDecrease:({})".format(mergeListToString(columnNames.values) if annotationString is None else annotationString)
+            return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
+
+    def findConsecutiveValuesInGrouping(self,dataID,groupingName,increasing=True):
+        ""
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        if grouping is not None:
+            for groupName, columnNames in grouping.items():
+                self.findConsecutiveValues(dataID,columnNames,increasing,annotationString=groupName)
+            funcProps = getMessageProps("Done..","Consecutive values in grouping {} annotated.".format(groupingName))
+            funcProps["columnNamesByType"] = self.sourceData.dfsDataTypesAndColumnNames[dataID]
+            funcProps["dataID"] = dataID 
+            return funcProps
+        else:
+            return getMessageProps("Error..","Grouping not found.")
 
     def findBetweenIndicies(self,data,props):
         ""

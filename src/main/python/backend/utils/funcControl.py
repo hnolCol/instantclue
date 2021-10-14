@@ -4,8 +4,8 @@
 
 updateTreeView = {"obj":"self","fn":"updateDataInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":["columnNamesByType"],"optionalKwargs":["dataID"]}
 sendMessageProps = {"obj":"self","fn":"sendMessageRequest","requiredKwargs":["messageProps"]}
-
-refreshColumnView  = [
+updateGrouping = {"obj":"self","fn":"updateGroupingInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":[]}
+refreshColumnView = [
                 updateTreeView,
                 sendMessageProps]   
 
@@ -463,8 +463,16 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"replaceInColumns","requiredKwargs":["dataID","findStrings","replaceStrings"]},
             "completedRequest":
+                [{"obj":"self","fn":"updateGroupingsByColumnNameMapper","objName":"grouping","requiredKwargs":["columnNameMapper"]}] + 
                 refreshColumnView
         },
+    "data::setNaNBasedOnCondition":
+        {
+            "threadRequest":{"obj":"data","fn":"setNaNBasedOnCondition","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                refreshColumnView
+        },        
+    
 
     "filter::subsetShortcut":
         {
@@ -548,6 +556,17 @@ funcPropControl = {
             "completedRequest": addDataAndRefresh
                     
         },
+    "filter::consecutiveValues":
+        {
+            "threadRequest":{"obj":"numericFilter","fn":"findConsecutiveValues","requiredKwargs":["dataID","columnNames","increasing"]},
+            "completedRequest":refreshColumnView               
+        },
+    "filter::consecutiveValuesInGrouping":
+        {
+            "threadRequest":{"obj":"numericFilter","fn":"findConsecutiveValuesInGrouping","requiredKwargs":["dataID","groupingName","increasing"]},
+            "completedRequest":refreshColumnView               
+        },
+        
 
     "data::removeDuplicates":
         {
@@ -845,6 +864,12 @@ funcPropControl = {
             "threadRequest":{"obj":"grouping","fn":"getNegativeExclusives","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":
                     refreshColumnView
+        },
+    "grouping::deleteGrouping":
+        {
+            "threadRequest":{"obj":"grouping","fn":"deleteGrouping","requiredKwargs":["groupingName"]},
+            "completedRequest":
+                    [updateGrouping,sendMessageProps]
         },
     "session::load":
         {

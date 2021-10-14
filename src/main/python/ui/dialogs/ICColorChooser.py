@@ -54,6 +54,11 @@ class ColorLabel(QWidget):
         self.mouseOver = False
         self.update()
 
+    def setBackgroundColor(self,color):
+        ""
+        self.backgroundColor = color
+        self.update()
+
 class ColorChooserDialog(QDialog):
     def __init__(self,mainController,*args, **kwargs):
         super(ColorChooserDialog,self).__init__(*args, **kwargs)

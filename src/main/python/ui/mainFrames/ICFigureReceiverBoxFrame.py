@@ -8,10 +8,11 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, plot
 from collections import OrderedDict
 from ..custom.ICReceiverBox import ReceiverBox
+from ..dialogs.ICDSelectItems import ICDSelectItems
 #from ..plotter.plotter import Plotter
 from ..plotter.plotManager import ICPlotter
 import numpy as np 
-
+import pandas as pd
 
 class MatplotlibFigure(QWidget):
     def __init__(self, parent=None, mainController=None):
@@ -67,8 +68,17 @@ class MatplotlibFigure(QWidget):
             funcKey["key"] = "plotter:getData"
             funcKey["kwargs"]["plotType"] = plotType
             funcKey["kwargs"]["figureSize"] = self.mC.getFigureSize()
-            
-            
+            funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName()
+
+            if plotType in ["hclust","corrmatrix"]  and self.mC.grouping.groupingExists() and self.mC.config.getParam("hclust.display.grouping") and self.mC.config.getParam("hclust.ask.for.groupings.to.display"):
+                groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
+                dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = "Groupings to display in h. clustering.")
+                if dlg.exec_():
+                    selectedGrupings = dlg.getSelection().values.flatten()
+                    funcKey["kwargs"]["groupingName"] = selectedGrupings
+            if "groupingName" not in funcKey["kwargs"]:
+                funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName() 
+                #print(groupings)
             self.mC.sendRequestToThread(funcKey)
             
            # self.plotter.initiateChart(*args,**kwargs)#
@@ -78,6 +88,7 @@ class MatplotlibFigure(QWidget):
     def restoreGraph(self,plotType,graphData):
         ""
         if self.setGraph(plotType):
+            self.mC.mainFrames["right"].setType(plotType,update=False)
             self.setData(graphData)
 
 
@@ -355,14 +366,13 @@ class MatplotlibFigure(QWidget):
 
     def addTooltip(self,tooltipColumnNames,dataID):
         ""
-        print("BUM")
-        print(tooltipColumnNames)
+        #print("BUM")
+        #print(tooltipColumnNames)
         if len(tooltipColumnNames) > 0:
             exists,graph = self.mC.getGraph()
             if exists:
-                print(tooltipColumnNames)
+                #print(tooltipColumnNames)
                 graph.addTooltip(tooltipColumnNames,dataID)
-
 
     def activateHoverInScatter(self):
         ""

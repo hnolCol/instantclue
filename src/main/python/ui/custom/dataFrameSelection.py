@@ -63,13 +63,14 @@ class CollapsableDataTreeView(QWidget):
         self.menuButton.setFixedSize(15,15)                     
         #find & replace button
         self.findReplaceButton = FindReplaceButton()
+        self.findReplaceButton.setToolTip("Find & replace in column headers as well as in the data frame.")
         #add function
         self.findReplaceButton.clicked.connect(self.findAndReplace)
         #set up hide shortcuts
         self.hideSC = ViewHideIcon(self)
         self.hideSC.clicked.connect(self.hideShortCuts)
         #export 
-        self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file. Right-click to see more options (Excel, Json, Markdown).", buttonSize=(15,15))
+        self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file. Right-click to see more options such Excel, Json, Markdown.", buttonSize=(15,15))
         self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
         self.exportButton.clicked.connect(self.exportData)
         self.exportButton.customContextMenuRequested.connect(self.exportMenu)
@@ -264,10 +265,12 @@ class CollapsableDataTreeView(QWidget):
         ""
         try:
             if self.mC.data.hasData():
-                senderGeom = self.sender().geometry()
-                topLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
+
+                senderGeom = self.findReplaceButton.geometry()
+                bottomLeft = self.parent().mapToGlobal(senderGeom.bottomLeft())
+
                 frd = FindReplaceDialog(self.mC)
-                frd.setGeometry(topLeft.x(),topLeft.y(),200,150)
+                frd.setGeometry(bottomLeft.x(),bottomLeft.y(),200,150)
                 if frd.exec_():
                     funcKey = "data::replace"
                     fS = frd.findStrings 
@@ -332,7 +335,7 @@ class CollapsableDataTreeView(QWidget):
                 lastIndex = self.combo.currentIndex() 
             if sessionIsBeeingLoaded:
                 self.sessionIsBeeingLoaded = True
-            print(sessionIsBeeingLoaded)
+            #print(sessionIsBeeingLoaded)
             self.combo.clear() 
             self.combo.addItems(list(self.dfs.values()))
             
@@ -409,11 +412,17 @@ class CollapsableDataTreeView(QWidget):
             menus = createSubMenu(subMenus=["Grouping .. ","Data frames .. ","Proteomics Toolkit"])#,"Multi block analysis .."
             groupingNames = self.mC.grouping.getNames()
             groupSizes = self.mC.grouping.getSizes()
+
             if len(groupingNames) > 0:
+                # add delete option
+                
+
                 for groupingName in groupingNames:
                     menuItemName = "{} ({})".format(groupingName,groupSizes[groupingName])
                     action = menus["Grouping .. "].addAction(menuItemName)#
                     action.triggered.connect(lambda _,groupingName = groupingName : self.updateGrouping(groupingName))
+                    
+
 
             if self.mC.data.hasData():
                 action = menus["Data frames .. "].addAction("Rename")
@@ -429,8 +438,16 @@ class CollapsableDataTreeView(QWidget):
                 action.triggered.connect(self.openFeatureCorrelateDialog)
                 
 
-                action = menus["Grouping .. "].addAction("Add Grouping")
+                menus["Grouping .. "].addSeparator()
+                action = menus["Grouping .. "].addAction("Add")
                 action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
+
+
+                deleteMenu = createMenu("Delete ..")
+                menus["Grouping .. "].addMenu(deleteMenu)
+                for groupingName in groupingNames:
+                    action = deleteMenu.addAction(groupingName)
+                    action.triggered.connect(lambda _, groupingName = groupingName : self.deleteGrouping(groupingName))
             #
 
             action = menus["Proteomics Toolkit"].addAction("Create Sample List")
@@ -452,6 +469,12 @@ class CollapsableDataTreeView(QWidget):
         except Exception as e:
             print(e)
     
+    def deleteGrouping(self,groupingName):
+        ""
+        key = "grouping::deleteGrouping"
+        kwargs = {"groupingName":groupingName}
+        self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})
+
     def createSampleList(self,e=None):
         ""
         dlg = ICSampleListCreater(mainController=self.mC)

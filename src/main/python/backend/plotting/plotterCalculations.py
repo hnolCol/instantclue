@@ -1348,9 +1348,9 @@ class PlotterBrain(object):
 
     def getCorrmatrixProps(self,dataID,numericColumns, categoricalColumns, figureSize = None, *args,**kwargs):
         ""
-        return self.getHeatmapProps(dataID,numericColumns,categoricalColumns, True, figureSize=figureSize)
+        return self.getHeatmapProps(dataID,numericColumns,categoricalColumns, True, figureSize=figureSize,*args,**kwargs)
 
-    def getHeatmapProps(self,dataID, numericColumns, categoricalColumns, corrMatrix = False, grouping = {},figureSize = None,*args,**kwargs):
+    def getHeatmapProps(self,dataID, numericColumns, categoricalColumns, corrMatrix = False, groupingName = None,figureSize = None,*args,**kwargs):
         ""
         rowMaxD = None
         colMaxD = None
@@ -1360,9 +1360,32 @@ class PlotterBrain(object):
         ytickPosition = []
         rowLineCollection = []
         colLineCollection = []
+        groupingRectangles = []
         rectangles = []
         clusterColorMap = {}
         
+        #display grouping setting
+        displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
+        
+        colorsByColumnNames = OrderedDict()
+        colorsByColumnNamesFiltered = OrderedDict()
+
+        if displayGrouping and groupingName is not None:
+            if isinstance(groupingName,str):
+                groupingName = [groupingName]
+            
+            for gN in groupingName:
+               
+                colorsByColumnNames[gN] = self.sourceData.parent.grouping.getColorsForGroupMembers(gN)
+
+                colorsByColumnNamesFiltered[gN] = dict([(k,v) for k,v in colorsByColumnNames[gN].items() if k in numericColumns])
+                if len(colorsByColumnNamesFiltered[gN]) == 0: #if no column in grouping - dont display grouping
+                   del colorsByColumnNamesFiltered[gN]
+               
+        else:
+          #  grouping = {}
+            displayGrouping = False
+
         #cluster rows 
         rowMetric = self.sourceData.statCenter.rowMetric
         rowMethod = self.sourceData.statCenter.rowMethod
@@ -1388,7 +1411,6 @@ class PlotterBrain(object):
             #remove no deviation data (Same value)
             data = data.loc[data.std(axis=1) != 0,:]
         
-
             #nRows, nCols = data.shape
             rawIndex = data.index
             rowXLimit, rowYLimit, rowLineCollection = None, None, None
@@ -1400,9 +1422,9 @@ class PlotterBrain(object):
                     corrMatrix=corrMatrix, 
                     rowOn = rowMetric != "None" and rowMethod != "None", 
                     columnOn =  columnMethod != "None" and columnMetric != "None",
-                    grouping = grouping,
+                    numberOfGroups=len(colorsByColumnNamesFiltered),
+                    displayGrouping = displayGrouping 
                     )
-           # print(axisDict)
             
 
             if data.shape[0] > 1 and rowMetric != "None" and rowMethod != "None":
@@ -1436,14 +1458,26 @@ class PlotterBrain(object):
 
             else:
                 del axisDict["axColumnDendro"]
-           
+        
+            groupingRectangles = []
+            if groupingName is not None and displayGrouping and len(colorsByColumnNamesFiltered) > 0:
+                for ii, (gN, colorsByColumnNamesForGn) in enumerate(colorsByColumnNamesFiltered.items()):
+                    groupingGNRectangles = [
+                        Rectangle(
+                            xy = (0+10*n,-0.5+ii),
+                            width = 10, 
+                            height = 1,
+                            faceColor =  colorsByColumnNamesForGn[columnName] if columnName in  colorsByColumnNamesForGn else self.sourceData.colorManager.nanColor,
+                            alpha = 0.75) for n,columnName in enumerate(data.columns.values)]
+                    groupingRectangles.extend(groupingGNRectangles)
         except Exception as e:
             print(e)
             return {}
        
      #   print(axisDict)
-       
-
+        
+        groupingAxLabels = {"tickLabels":groupingName,"tickPosition":np.arange(len(groupingName))} if groupingName is not None else {}
+        #print(groupingName)
         return {"newPlot":True,
             "data":{"plotData":data,
                 "rowMaxD" : rowMaxD,
@@ -1460,10 +1494,14 @@ class PlotterBrain(object):
                 "axisLimits":{
                     "rowDendrogram":{"x":rowXLimit,"y":rowYLimit},
                     "columnDendrogram":{"x":colXLimit,"y":colYLimit},
+                    "axColumnGrouping":{"x":[0,len(numericColumns)*10],"y":[-0.5,len(colorsByColumnNamesFiltered)-0.5]}
                     },
-                "tickLabels" : {"rowDendrogram":{"tickLabels": ytickLabels,"tickPosition": ytickPosition}},
+                "tickLabels" : {"rowDendrogram":{"tickLabels": ytickLabels,"tickPosition": ytickPosition},
+                                "axColumnGrouping":groupingAxLabels
+                                },
                 "absoluteAxisPositions" : axisDict,
                 "clusterRectangles": rectangles,
+                "groupingRectangles" : groupingRectangles,
                 "dataID":dataID,
                 "columnNames":numericColumns}
                 }
@@ -1527,7 +1565,7 @@ class PlotterBrain(object):
         '''
         return sch.fcluster(linkage,maxD,'distance')	
 
-    def getClusterAxes(self, numericColumns, figureSize, corrMatrix=False, rowOn = True,columnOn = True ,grouping = {}):
+    def getClusterAxes(self, numericColumns, figureSize, corrMatrix=False, rowOn = True,columnOn = True ,numberOfGroups = 0, displayGrouping = False):
         ""
         x0,y0 = 0.10,0.15
         x1,y1 = 0.95,0.95
@@ -1569,17 +1607,11 @@ class PlotterBrain(object):
                 clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
         
-                
-          
-            # pixelFigureHeight 
-            # ## to produce a corr matrix in the topleft corner of the graph
-            # heightMain = height * 0.5
+           
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
             
             y0 = 1 - heightMain - 0.22 #bit of margin
             
-            
-
         #widthPer pixelWidth / len(numericColumns)
         #correctHeight = 1
         # emperically determined to give almost equal width independent of number of columns 
@@ -1596,12 +1628,14 @@ class PlotterBrain(object):
         else: 
             columnDendroHeight = 0
        
-        if len(grouping) > 0:
-           numGroupings = len(grouping)
-           groupingAxHeight = width * 0.013 * numGroupings
+        if numberOfGroups > 0 and displayGrouping:
+           
+           groupingAxHeight = width * 0.013 * numberOfGroups
+           addSpacingForGroupAx = width * 0.013 * 0.75
            
         else:
             groupingAxHeight = 0
+            addSpacingForGroupAx = 0
 				
 
             
@@ -1613,14 +1647,14 @@ class PlotterBrain(object):
                                     heightMain]
                                     
         axisDict["axColumnDendro"] = [x0 + rowDendroWidth, 
-                                    y0+heightMain + groupingAxHeight,
+                                    y0+heightMain + groupingAxHeight + addSpacingForGroupAx,
                                     clusterMapWidth,
                                     columnDendroHeight ]
 
-        if groupingAxHeight > 0:
+        if groupingAxHeight > 0 and displayGrouping:
 
             axisDict["axColumnGrouping"] = [x0 + rowDendroWidth, 
-                                    y0+heightMain,
+                                    y0+heightMain + addSpacingForGroupAx,
                                     clusterMapWidth,
                                     groupingAxHeight]
 

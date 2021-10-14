@@ -4,7 +4,7 @@ import numpy as np
 from backend.color.data import colorParameterRange
 from matplotlib.pyplot import colorbar
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, to_hex
 import matplotlib.patches as patches
 import pandas as pd
 import seaborn as sns
@@ -48,7 +48,7 @@ class ICClustermap(ICChart):
         menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
         if self.plotType == "hclust":
             menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
-
+            menus["main"].addAction("Share graph", self.shareGraph)
             
     def addTooltip(self, tooltipColumnNames,dataID):
         ""
@@ -91,8 +91,6 @@ class ICClustermap(ICChart):
         if isinstance(annotationColumn,str):
             annotationColumn = pd.Series([annotationColumn])
         self.addAnnotations(annotationColumn, self.mC.getDataID())
-        
-
 
     def addColorMap(self,*args,**kwargs):
         ""
@@ -173,6 +171,23 @@ class ICClustermap(ICChart):
             self.addTicksToRowDendro()
             for rect in self.data["clusterRectangles"]:
                 self.axisDict["axRowDendro"].add_patch(rect)
+
+    def addTicksToGroupingAxis(self):
+        ""
+        if "axColumnGrouping" in self.data["tickLabels"] and "tickPosition" in self.data["tickLabels"]["axColumnGrouping"]:
+            if len(self.data["tickLabels"]["axColumnGrouping"]["tickPosition"]) > 0:
+                self.setYTicks(
+                    self.axisDict["axColumnGrouping"], 
+                    self.data["tickLabels"]["axColumnGrouping"]["tickPosition"],
+                    self.data["tickLabels"]["axColumnGrouping"]["tickLabels"]
+                    )
+                self.setXTicks(self.axisDict["axColumnGrouping"],[],[])
+                self.axisDict["axColumnGrouping"].tick_params(which='minor', length=0)
+
+    def addGroupingRectangles(self):
+        if "axColumnGrouping" in self.axisDict:
+            for rect in self.data["groupingRectangles"]:
+                self.axisDict["axColumnGrouping"].add_patch(rect)
 
     def addTicksToRowDendro(self):
         ""
@@ -306,6 +321,9 @@ class ICClustermap(ICChart):
             #set yaxis right
             self.setYTicksToRight(self.axisDict["axLabelColor"])
             self.setYTicksToRight(self.axisDict["axClusterMap"])
+            if "axColumnGrouping" in self.axisDict:
+                self.setYTicksToRight(self.axisDict["axColumnGrouping"])
+            self.setYTicksToRight(self.axisDict["axClusterMap"])
             #hide axis ticks
             if self.mC.getPlotType() == "corrmatrix" and "axRowDendro" in self.axisDict:
                 self.setTicksOff(self.axisDict["axRowDendro"])
@@ -320,7 +338,15 @@ class ICClustermap(ICChart):
             #set all ticks off
             if "axColumnDendro" in self.axisDict:
                 self.setTicksOff(self.axisDict["axColumnDendro"])
-            
+            #grouping 
+            if "axColumnGrouping" in self.axisDict and "axColumnGrouping" in self.data["tickLabels"] and "axColumnGrouping" in self.data["axisLimits"]:
+                
+                self.setAxisLimits(self.axisDict["axColumnGrouping"],
+                              data["axisLimits"]["axColumnGrouping"]["x"],
+                              data["axisLimits"]["axColumnGrouping"]["y"])
+                self.addTicksToGroupingAxis()
+                self.addGroupingRectangles()
+                self.axisDict["axColumnGrouping"].set_navigate(False)
             #set all ticks off
             if "axLabelColor" in self.axisDict:
                 self.axisDict["axLabelColor"].set_xlim((0,10))
@@ -335,7 +361,7 @@ class ICClustermap(ICChart):
             else:
                 self.setXTicks(self.axisDict["axClusterMap"], [], [])
             self.setYTicks(self.axisDict["axClusterMap"],[],[])
-
+            
             #add colorbar
             self.addColorMap(mappable=self.colorMesh,cax=self.axisDict["axColormap"], label="")
             #set title
@@ -366,13 +392,13 @@ class ICClustermap(ICChart):
                 self.addYLimChangeEvent(ax= self.axisDict["axClusterMap"],
                                         callbackFn = self.onClusterYLimChange)
 
-            if self.mC.groupingActive() and self.mC.getPlotType() == "corrmatrix":
-                colorData = self.mC.plotterBrain.getColorGroupingForCorrmatrix(
-                                self.data["plotData"].columns,
-                                self.mC.grouping.getCurrentGrouping(),
-                                self.mC.grouping.getCurrentGroupingName(),
-                                self.mC.grouping.getCurrentCmap())
-                self.updateHclustColor(colorMaPParamName= "colorMap", **colorData)
+            # if self.mC.groupingActive() and self.mC.getPlotType() == "corrmatrix":
+            #     colorData = self.mC.plotterBrain.getColorGroupingForCorrmatrix(
+            #                     self.data["plotData"].columns,
+            #                     self.mC.grouping.getCurrentGrouping(),
+            #                     self.mC.grouping.getCurrentGroupingName(),
+            #                     self.mC.grouping.getCurrentCmap())
+            #     self.updateHclustColor(colorMaPParamName= "colorMap", **colorData)
             qsData = self.getQuickSelectData()
             if qsData is not None:
 
@@ -417,6 +443,38 @@ class ICClustermap(ICChart):
             return df, self.data["clusterColorMap"]
         return None, None
 
+    def getDataForWebApp(self):
+        ""
+         
+        numberRows = self.data["plotData"].index.size
+        numberColumns = self.data["plotData"].columns.size
+        values = self.data["plotData"].values.tolist() 
+
+        self.meshGridKwargs["vmin"] 
+        self.meshGridKwargs["vmax"] 
+
+        colorValues = np.linspace(self.meshGridKwargs["vmin"],self.meshGridKwargs["vmax"],num=12)
+        colorValuesRGBA,  _ = self.mC.colorManager.matchColorsToValues(colorValues,self.mC.config.getParam("twoColorMap"),vmin=self.meshGridKwargs["vmin"], vmax = self.meshGridKwargs["vmax"])
+        colorPalette = [to_hex(c) for c in colorValuesRGBA ]
+
+        if hasattr(self, "labelData"):
+            
+            rowLabels = self.labelData.loc[self.data["plotData"].index].values.tolist()
+        else:
+            rowLabels = np.arange(numberRows).astype(str).tolist()
+        data = {
+            "nRows":numberRows,
+            "nCols":numberColumns,
+            "values":values,
+            "colorValues": colorValues.tolist(),
+            "rowLabels":rowLabels,
+            "colLabels":self.data["plotData"].columns.values.tolist(),
+            "extraValues" : [],
+            "extraColorValues" : None,
+            "colLabelColors" : {}
+            }
+        return data, colorPalette
+       
 
     def getGraphSpecMenus(self):
         ""
@@ -534,7 +592,7 @@ class ICClustermap(ICChart):
                 self.movingMaxDLine = True
 
 
-        #on hover qick select only works for hierarchical clustering
+        #on hover qick select/ Live graph only works for hierarchical clustering
         elif (self.isQuickSelectActive() or self.isLiveGraphActive() or self.tooltipActive) and self.mC.getPlotType() != "corrmatrix":
             idxData = None
             if event.inaxes == self.axisDict["axClusterMap"]:
@@ -563,6 +621,8 @@ class ICClustermap(ICChart):
             #send data to live graph
             if self.isLiveGraphActive():
                 self.sendIndexToLiveGraph(idxData)
+        elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
+            print("HERE")
 
     def updateColorMap(self):
         ""

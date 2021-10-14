@@ -43,7 +43,7 @@ dataTypeSubMenu = {
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
-        ("Filter",["NaN Filter (rows)","NaN Filter (columns)","Outlier"]),
+        ("Filter",["NaN Filter (rows)","NaN Filter (columns)","Outlier","Set NaN if..","Consecutive .."]),
         ("Clustering",["k-means"]),
         ("Smoothing",["Aggregate rows ..","Rolling window .."]),
         ("Density Estimation", ["Kernel Density"]),
@@ -731,6 +731,64 @@ menuBarItems = [
         "dataType": "Numeric Floats",
     },
     {
+        "subM":"Set NaN if..",
+        "name":"Value below X",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::setNaNBasedOnCondition", 
+                      "info":"Values below the given value will be set to NaN.\nA filtered set columns will be added.",
+                      "min": -np.inf,
+                      "max": np.inf,
+                      "default" : 1,
+                      "requiredFloat":"belowThreshold"}
+    },
+    {
+        "subM":"Set NaN if..",
+        "name":"Value above X",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::setNaNBasedOnCondition", 
+                      "info":"Values above the given value will be set to NaN.\nA filtered set columns will be added.",
+                      "min": -np.inf,
+                      "max": np.inf,
+                      "default" : 1,
+                      "requiredFloat":"aboveThreshold"}
+    },
+    {
+        "subM":"Consecutive ..",
+        "name":"Increasing (Selection)",
+        "funcKey": "filter::consecutiveValues",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"increasing":True}
+    },
+    {
+        "subM":"Consecutive ..",
+        "name":"Decreasing (Selection)",
+        "funcKey": "filter::consecutiveValues",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"increasing":False}
+    },
+    {
+        "subM":"Consecutive ..",
+        "name":"Increasing (Grouping)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"filter::consecutiveValuesInGrouping",
+                    "requiredGrouping": ["Grouping"],
+                    "otherKwargs": {"increasing":True}
+        }
+    },
+    {
+        "subM":"Consecutive ..",
+        "name":"Decreasing (Grouping)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"filter::consecutiveValuesInGrouping",
+                    "requiredGrouping": ["Grouping"],
+                    "otherKwargs": {"increasing":False}
+        }
+    },
+    {
         "subM":"Filter",
         "name":"Variance Filter (rows)",
         "funcKey": "getUserInput",
@@ -1275,13 +1333,16 @@ class DataTreeView(QWidget):
                 self.model.setGroupNameByDataIndex(modelDataIndex,groupName)
                 
             self.table.model().completeDataChanged()
-    
+
+        
+
     def setCurrentGrouping(self):
         ""
-        
         if self.mC.grouping.groupingExists():
             self.setGrouping(self.mC.grouping.getCurrentGrouping(), self.mC.grouping.getCurrentGroupingName())
-        
+        else:
+            self.model.resetGrouping()
+            self.table.model().completeDataChanged()
 
 class DataTreeModel(QAbstractTableModel):
     
@@ -2161,10 +2222,7 @@ class DataTreeViewTable(QTableView):
         if self.mC.grouping.groupingExists():
             groupingNames = self.mC.grouping.getNames()
             #currentGrouping = self.mC.grouping.getCurrentGroupingName() 
-            N, ok = QInputDialog.getInt(self, 'N-Way Anova', 'Enter number of factors:')
-            if N > len(groupingNames):
-                self.mC.sendToWarningDialog(infoText = "Number of factors greater than annotated groupings. Please add some groupings (context menu - Group Comparison - Annotate Groups)")
-                return
+            N, ok = QInputDialog.getInt(self, 'N-Way Anova', 'Enter number of factors:',min=1,max=self.mC.grouping.getNumberOfGroups())
             if ok:
                 groupings = ["Grouping {}".format(n) for n in range(N)]
                 options = dict([(k,groupingNames) for k in groupings])
@@ -2175,14 +2233,13 @@ class DataTreeViewTable(QTableView):
                                 title="Select Grouping for N-Way ANOVA.")
                 if selDiag.exec_():
                     fnKwargs = {}
-                    print(selDiag.savedSelection.values())
                     fnKwargs["groupings"] = np.array([x for x in selDiag.savedSelection.values()])
                     if "otherKwargs" in kwargs:
                         fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                     funcProps = {"key":"stats::runNWayANOVA","kwargs":fnKwargs}
                     funcProps["kwargs"]["dataID"] = self.mC.getDataID()
-                    print(fnKwargs)
-                    self.mC.sendRequest(funcProps)
+                    
+                    self.mC.sendRequestToThread(funcProps)
         else:
             self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
 

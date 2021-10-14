@@ -1201,6 +1201,7 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			if specificColumns is None: #replace in columnHeaders
 				newColumnNames  = None
+				savedColumns = self.dfs[dataID].columns.values.tolist() 
 				for n,fS in enumerate(findStrings):
 					rS = replaceStrings[n] if len(replaceStrings) > 1 else replaceStrings[0]
 					if newColumnNames is None:
@@ -1217,6 +1218,7 @@ class DataCollection(object):
 				funcProps = getMessageProps("Column names replaced.","Column evaluated and replaced.")
 				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 				funcProps["dataID"] = dataID
+				funcProps["columnNameMapper"] = dict([(oldColumnName,newColumnNames[n]) for n,oldColumnName in enumerate(savedColumns) if oldColumnName != newColumnNames[n]])
 				return funcProps
 
 			elif isinstance(specificColumns,list) and len(specificColumns) > 0 and all(x in self.getPlainColumnNames(dataID) for x in specificColumns):
@@ -2164,24 +2166,41 @@ class DataCollection(object):
 		return np.nan, np.nan
 
 
-	def setDataByIndexNaN(self,dataID,filterIdx,selectedColumns):
+	def setDataByIndexNaN(self,dataID,filterIdx,selectedColumns,baseString = "numFil:NaN"):
 		""
 		if dataID in self.dfs:
-			print(selectedColumns)
+			#print(selectedColumns)
 			if selectedColumns is None:
 				X = self.dfs[dataID][list(filterIdx.keys())]
 				for columnName, idx in filterIdx.items():
 					X.loc[idx,columnName] = np.nan
-				X.columns = ["numFil:NaN::{}".format(colName) for colName in X.columns]
+				X.columns = ["{}::{}".format(baseString,colName) for colName in X.columns]
 			elif isinstance(selectedColumns,dict):
 				totalColumns = np.unique(list(selectedColumns.values())).tolist()
-				print(totalColumns)
+				#print(totalColumns)
 				X = self.dfs[dataID][totalColumns]
 				for columnName, idx in filterIdx.items():
 					if columnName in selectedColumns:
 						X.loc[idx,selectedColumns[columnName]] = np.nan
-
+			else:
+				return errorMessage
 			return self.joinDataFrame(dataID,X)
+		else:
+			return errorMessage
+
+	def setNaNBasedOnCondition(self,dataID,columnNames, belowThreshold = None, aboveThreshold = None):
+		""
+		print(aboveThreshold,belowThreshold)
+		if dataID in self.dfs:
+			data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+			filterIdx = {} 
+			for columnName in columnNames.values:
+				if aboveThreshold is not None:
+					filterIdx[columnName] = data[columnName] > aboveThreshold
+				elif belowThreshold is not None:
+					filterIdx[columnName] = data[columnName] < belowThreshold
+			columnNameBaseString = "numFilt(>{}):NaN".format(aboveThreshold) if aboveThreshold is not None else "numFilt(<{}):NaN".format(belowThreshold)
+			return self.setDataByIndexNaN(dataID,filterIdx,None,baseString=columnNameBaseString )
 		else:
 			return errorMessage
 

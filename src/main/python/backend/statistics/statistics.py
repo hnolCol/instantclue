@@ -635,7 +635,8 @@ class StatisticCenter(object):
                         dataSubset = dataSubset[list(timeValueColumns.keys())].divide(2 ** firstTimePointMedian, axis="rows")
 
                     #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
-                    dataSubset = dataSubset.dropna(thresh=3)
+                    nNaNInFit = self.sourceData.parent.config.getParam("fit.model.min.non.nan")
+                    dataSubset = dataSubset.dropna(thresh=nNaNInFit)
                     #corrK = 0.0303 if groupNameComp == "C" else 0
                     addt12 = model == "First Order Kinetic"
                     xValues = np.array(list(timeValueColumns.values()))
@@ -819,6 +820,7 @@ class StatisticCenter(object):
                     r = pd.DataFrame(index=dataFrame.index.values, columns = columnNames)
                 r.loc[index,columnNames] = aov["p-unc"].values.flatten()  
             except Exception as e:
+                print(e)
                 continue
         if r is None:
             return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")

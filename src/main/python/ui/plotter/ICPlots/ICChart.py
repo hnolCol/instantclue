@@ -116,14 +116,21 @@ class ICChart(QObject):
 		lKwags = self.getBasicLineKwargs()
 		for n,ax in self.axisDict.items():
 			xLine = self.addVLine(ax,xCoord,**lKwags.copy())
-			self.saveLine(xLine,ax,lKwags.copy(),"VLine({}-{})".format(n,xCoord))
+			lKwargsToSave = lKwags.copy()
+			lKwargsToSave["xdata"] = xLine.get_xdata()
+			lKwargsToSave["ydata"] = np.array(ax.get_ylim())
+			
+			self.saveLine(xLine,ax,lKwargsToSave,"VLine({}-{})".format(n,xCoord))
 	
 	def addHorizontalLine(self,yCoord):
 		""
 		lKwags = self.getBasicLineKwargs()
 		for n,ax in self.axisDict.items():
 			xLine = self.addHLine(ax,yCoord,**lKwags.copy())
-			self.saveLine(xLine,ax,lKwags.copy(),"HLine({}-{})".format(n,yCoord))		
+			lKwargsToSave = lKwags.copy()
+			lKwargsToSave["xdata"] = np.array(ax.get_xlim())
+			lKwargsToSave["ydata"] = xLine.get_ydata()
+			self.saveLine(xLine,ax,lKwargsToSave,"HLine({}-{})".format(n,yCoord))		
 
 	def addVLine(self,ax,xCoord,*args,**kwargs):
 		""

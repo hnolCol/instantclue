@@ -8,7 +8,7 @@ class ICLogger(object):
         ""
         self.loggerPath = config.getParam("logger.path")
         self.version = version
-        self.createFile()
+        #self.createFile()
 
 
     def createFile(self):
@@ -21,7 +21,8 @@ class ICLogger(object):
 
 
     def add(self,fnKey,kwargs):
-        ""
+        "Not working yet"
+        return
         with open('my_log.txt', 'a') as f:
             
             f.write("\n"+json.dumps({fnKey:kwargs}, indent=4))

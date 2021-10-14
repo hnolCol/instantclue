@@ -153,28 +153,37 @@ class ICShareGraph(QDialog):
     def shareGraph(self):
         ""
         if self.requiredWidgetsFilled():
-            URL = "https://www.instantclue.de/api/v1/graph"
+            URL = "http://127.0.0.1:5000/api/v1/graph"#"https://www.instantclue.de/api/v1/graph"
             appID = self.mC.webAppComm.getAppID()
             exists, graph = self.mC.getGraph()
             if exists:
+                #graphProps = {}
                 graphProps = self.collectProjectInfoData()
-                data, columnNames, graphLimits,annotatedIdx,annotationProps = graph.getDataForWebApp()
+
                 
-                if not hasattr(self,"selectedSearchableColumns"):
-                    self.mC.sendToInformationDialog(infoText="Please select at least one column that allows for searching.")
-                    return 
+                # if not hasattr(self,"selectedSearchableColumns"):
+                #     self.mC.sendToInformationDialog(infoText="Please select at least one column that allows for searching through your data.")
+                #     return 
+                print(graph.plotType )
+                searchColumnName = "Gene names"
+                if graph.plotType == "hclust":
+                    graphProps["data"], graphProps["colorPalette"] = graph.getDataForWebApp()
+                    data = graph.getClusteredData()
+                    #searchColumnName = self.selectedSearchableColumns[0]
+                elif graph.plotType == "scatter":
+                    
+                    data, columnNames, graphLimits,annotatedIdx,annotationProps = graph.getDataForWebApp()
+                    searchColumnName = self.selectedSearchableColumns[0]
 
-                searchColumnName = self.selectedSearchableColumns[0]
-
-                graphProps["xLabel"] = columnNames[0]
-                graphProps["yLabel"] = columnNames[1]
-                graphProps["domains"] = graphLimits
-                graphProps["annotIdx"] = annotatedIdx
-                graphProps["annotProps"] = annotationProps
-                graphProps["searchColumnName"] = searchColumnName
-                graphProps["hoverColumnName"] = searchColumnName
-                graphProps["hoverColor"] = self.mC.config.getParam("scatter.hover.color")
-                graphProps["valid"] = self.validCombo.currentText()
+                    graphProps["xLabel"] = columnNames[0]
+                    graphProps["yLabel"] = columnNames[1]
+                    graphProps["domains"] = graphLimits
+                    graphProps["annotIdx"] = annotatedIdx
+                    graphProps["annotProps"] = annotationProps
+                    graphProps["searchColumnName"] = searchColumnName
+                    graphProps["hoverColumnName"] = searchColumnName
+                    graphProps["hoverColor"] = self.mC.config.getParam("scatter.hover.color")
+                    graphProps["valid"] = self.validCombo.currentText()
                 
                 searchData = self.mC.data.getDataByColumnNameForWebApp(self.mC.getDataID(),searchColumnName)
                 data = self.mC.data.joinColumnToData(data,self.mC.getDataID(),searchColumnName)

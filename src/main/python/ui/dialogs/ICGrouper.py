@@ -2,13 +2,15 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from ..custom.buttonDesigns import BigPlusButton, ResetButton, LabelLikeButton, ICStandardButton
+from .ICColorChooser import ColorLabel
+from ..custom.buttonDesigns import BigPlusButton, ResetButton, ICStandardButton
 from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps, createMenu
-from ..custom.utils import clearLayout, BuddyLabel
+from ..custom.utils import clearLayout, BuddyLabel, LabelLikeCombo
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 from ..custom.ICReceiverBox import ItemHolder, BoxItem
 from ..custom.warnMessage import WarningMessage
 from .selectionDialog import SelectionDialog
+from backend.color.data import colorParameterRange
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
@@ -67,6 +69,7 @@ class ICGrouper(QDialog):
         
         for n in range(initNGroups):
             self.addGroupArea(groupID = "Group {}".format(n))
+        self.updateColorButton()
 
     def __controls(self):
         ""
@@ -75,7 +78,17 @@ class ICGrouper(QDialog):
         self.scrollArea = QScrollArea(parent=self.rightFrame)
         
         self.scrollFrame = QFrame(parent=self.scrollArea) 
-       
+        self.cmapComboLabel = createLabel("Grouping Colormap:",
+                        "The color map that will be used to highlight the groups in data treeview and charts/graphs.",
+                        )
+
+        self.cmapCombo = LabelLikeCombo(
+                        text = self.mC.config.getParam("colorMap"),
+                        parent=self.rightFrame, 
+                        items=dict([(cmap,cmap) for cmap in colorParameterRange]))
+        
+        self.cmapCombo.setAutoDefault(False)
+
         self.scrollArea.setWidget(self.scrollFrame)
         self.scrollArea.setWidgetResizable(True)
 
@@ -102,7 +115,7 @@ class ICGrouper(QDialog):
         ""
         self.menu = createMenu(parent=self)
        # self.menu.addAction("Infer grouping",)
-        self.menu.addAction("Grouping by sample name", self.groupingBySampleName)
+        #self.menu.addAction("Grouping by sample name", self.groupingBySampleName)
         self.menu.addAction("Group by split string", self.groupBySplitString)
        
     def __layout(self):
@@ -118,8 +131,13 @@ class ICGrouper(QDialog):
         hbox.addWidget(self.groupingEdit)
         hbox.addWidget(self.addGroup)
 
+        cmapHbox = QHBoxLayout()
+        cmapHbox.addWidget(self.cmapComboLabel)
+        cmapHbox.addWidget(self.cmapCombo)
+
         self.rightFrame.setLayout(QVBoxLayout())
         self.rightFrame.layout().addLayout(hbox)
+        self.rightFrame.layout().addLayout(cmapHbox)
         self.rightFrame.layout().addWidget(self.scrollArea)
         self.scrollFrame.setLayout(QVBoxLayout())
         
@@ -141,8 +159,12 @@ class ICGrouper(QDialog):
         self.addGroup.clicked.connect(self.addNewGroup)
         self.okButton.clicked.connect(self.saveGrouping)
         self.cancelButton.clicked.connect(self.close)
-
+        self.cmapCombo.selectionChanged.connect(self.onCmapChange)
       #self.layout().addLayout(self.groupLayout)
+
+    def onCmapChange(self,cmapItem):
+        "campItem = tuple of ID/Name"
+        self.updateColorButton()
 
     def groupBySplitString(self,event=None):
         ""
@@ -229,8 +251,7 @@ class ICGrouper(QDialog):
         if warn:
             w = WarningMessage(infoText = "Some groups not created because only a single column was found.",iconDir = self.mC.mainPath)
             w.exec_()
-        
-
+    
     
     def addGroupArea(self,groupID = "2"):
         ""
@@ -251,6 +272,9 @@ class ICGrouper(QDialog):
             hLabelLayout.addWidget(groupLabel)
             hLabelLayout.addWidget(groupEdit)
             
+            colorButton = ColorLabel(parent=groupFrame)
+            colorButton.setFixedSize(QSize(16,16))
+
             deleteButton = ResetButton(parent=groupFrame)
             deleteButton.clicked.connect(lambda _,groupID = groupID:self.deleteGroup(groupID))
             deleteButton.setDefault(False)
@@ -259,6 +283,7 @@ class ICGrouper(QDialog):
             
             hbox = QHBoxLayout()
             hbox.addLayout(hLabelLayout)
+            hbox.addWidget(colorButton)
             hbox.addWidget(deleteButton)
             
             groupFrame.setLayout(QVBoxLayout())
@@ -275,6 +300,7 @@ class ICGrouper(QDialog):
             self.groupItems[groupID]["edit"] = groupEdit
             self.groupItems[groupID]["label"] = groupLabel
             self.groupItems[groupID]["name"] = groupID
+            self.groupItems[groupID]["colorButton"] = colorButton
         except Exception as e:
             print(e)
 
@@ -293,6 +319,7 @@ class ICGrouper(QDialog):
                 groupID = "Group {}".format(groupN)
         
         self.addGroupArea(groupID)
+        self.updateColorButton()
 
     def deleteGroup(self,groupID):
         "Delete Frame that Carries Group Frame"
@@ -305,6 +332,16 @@ class ICGrouper(QDialog):
                 self.model.layoutChanged.emit()
                 self.model.completeDataChanged()
             del self.groupItems[groupID]
+            self.updateColorButton()
+
+    
+    def updateColorButton(self):
+        ""
+        colorMapper = self.mC.grouping.getTheroeticalColorsForGroupedItems(self.groupItems,self.cmapCombo.getText())
+        for groupID,groupItems in self.groupItems.items():
+            if groupID in colorMapper:
+                groupItems["colorButton"].setBackgroundColor(colorMapper[groupID])
+
 
     def deleteBoxTimeFromGroup(self,event=None,groupID=None,itemName=None):
         ""
@@ -333,7 +370,6 @@ class ICGrouper(QDialog):
             w.exec_()
             return
 
-
         elif self.mC.grouping.nameExists(groupingName):
             w = WarningMessage(infoText = "The name of grouping exists already.",iconDir = self.mC.mainPath)
             w.exec_()
@@ -345,7 +381,7 @@ class ICGrouper(QDialog):
             return
         
         groupedItems = OrderedDict([(self.groupItems[groupID]["name"],self.groupItems[groupID]["items"]) for groupID in self.groupItems.keys()])
-        self.mC.grouping.addGrouping(groupingName,groupedItems)
+        self.mC.grouping.addGrouping(groupingName,groupedItems,colorMap=self.cmapCombo.getText())
         treeView = self.mC.getTreeView("Numeric Floats")
         treeView.setGrouping(groupedItems,groupingName)
         self.mC.sendMessageRequest(getMessageProps("Done ..","Grouping {} saved.".format(groupingName)))

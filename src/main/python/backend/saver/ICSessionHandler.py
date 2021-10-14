@@ -37,7 +37,8 @@ class ICSessionHandler(object):
                 graphData = graph.data
                 if graph.hasTooltip():
                     tooltipColumnNames = graph.getTooltipData()
-
+                else:
+                    tooltipColumnNames = []
 
 
         else:

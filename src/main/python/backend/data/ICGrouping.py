@@ -4,6 +4,8 @@ from matplotlib.colors import Normalize, to_hex
 from matplotlib import cm 
 from itertools import combinations
 
+
+
 from .ICExclusiveGroup import ICExlcusiveGroup
 from ..utils.stringOperations import getMessageProps
 
@@ -18,30 +20,39 @@ class ICGrouping(object):
         self.groupCmaps = OrderedDict()
         self.exclusiveGrouping = ICExlcusiveGroup(self,sourceData)
 
-    def addCmap(self, groupingName,groupedItems):
+    def addCmap(self, groupingName,groupedItems, colorMap = None):
         ""
-        
-        norm = Normalize(vmin=-0.5, vmax=len(groupedItems)+0.5)
-        twoColorMap = self.sourceData.colorManager.colorMap
-        cmap = self.sourceData.colorManager.get_max_colors_from_pallete(twoColorMap)
-        cmap.set_bad(self.sourceData.colorManager.nanColor)
-        m = cm.ScalarMappable(norm=norm, cmap=cmap)
+        m = self.getCmapMapper(groupedItems,colorMap)
         self.groupCmaps[groupingName] = m
         
+    def getCmapMapper(self,groupedItems, colorMap = None):
+        ""
+        norm = Normalize(vmin=-0.2, vmax=len(groupedItems)-0.8)
+        if colorMap is None:
+            colorMap = self.sourceData.colorManager.colorMap
+        cmap = self.sourceData.colorManager.get_max_colors_from_pallete(colorMap)
+        cmap.set_bad(self.sourceData.colorManager.nanColor)
+        return cm.ScalarMappable(norm=norm, cmap=cmap)
 
-    def addGrouping(self,groupingName,groupedItems, setToCurrent = True):
+    def getTheroeticalColorsForGroupedItems(self,groupedItems,colorMap=None):
+        ""
+        cmapMapper = self.getCmapMapper(groupedItems,colorMap)
+        colors = dict([(groupName,to_hex(cmapMapper.to_rgba(x))) for x,groupName in enumerate(groupedItems.keys())])
+        return colors
+
+    def addGrouping(self,groupingName,groupedItems, setToCurrent = True, colorMap = None):
         "Add grouping to collection"
         if groupingName in self.groups:
             del self.groups["groupingName"]
         
         self.groups[groupingName] = groupedItems
-        self.addCmap(groupingName,groupedItems)
+        self.addCmap(groupingName,groupedItems,colorMap)
 
         if setToCurrent:
             self.currentGrouping = groupingName
     
     def checkGroupsForExistingColumnNames(self,columnNames):
-        ""
+        "Removes groupings if columnNames are removed from the data"
         deletedColumnNames = columnNames
         deleteGroups = []
         alteredGroups = []
@@ -72,9 +83,25 @@ class ICGrouping(object):
                 if groupingNameToDelete == self.currentGrouping:
                     self.currentGrouping = None
 
+    def deleteGrouping(self,groupingName):
+        "Deletes a grouping"
+        if groupingName in self.groups:
+            del self.groups[groupingName]
+            del self.groupCmaps[groupingName]
+            if len(self.groups) == 0:
+                self.currentGrouping = None
+                funcProps = getMessageProps("Done..","Grouping {} deleted. No groupig found to set as current.".format(groupingName))
+            else:
+                newGrouping = list(self.groups.keys())[-1]
+                self.setCurrentGrouping(newGrouping)
+                funcProps = getMessageProps("Done..","Grouping {} deleted. New grouping defined: {}".format(groupingName,newGrouping))
+            return funcProps
+        else:
+            return getMessageProps("Error..","Grouping not found.")
+
     def getAllGroupings(self):
         ""
-        groupingKwargs = {"curentGrouping":self.currentGrouping, 
+        groupingKwargs = {"currentGrouping":self.currentGrouping, 
                         "groups" : self.groups,
                         "groupCmaps" : self.groupCmaps}
 
@@ -82,10 +109,18 @@ class ICGrouping(object):
 
     def setGroupinsFromSavedSesssion(self,groupingState):
         ""
+        
         for attrName, attrValue in groupingState.items():
+            
             setattr(self,attrName,attrValue)
+        
+        # #order of dict not given that current grouping is really set (if groups is defined afterwards)
+        # if "currentGrouping" in groupingState:
+        #     self.setCurrentGrouping(groupingState["currentGrouping"])
+        # print(self.currentGrouping)
+        # print(self.groups)
+        
 
-    
     def setCurrentGrouping(self,groupingName):
         ""
         if groupingName in self.groups:
@@ -105,15 +140,13 @@ class ICGrouping(object):
         ""
         if groupingName is None:
             groupingName = self.currentGrouping
-        cNames = pd.Series()
-        cNames = cNames.append(list(self.groups[groupingName].values()))
-        return cNames
+        return self.getColumnNamesFromGroup(groupingName)
     
-    def getColumnNamesFromGroup(self, groupName):
+    def getColumnNamesFromGroup(self, groupingName):
         ""
-        if groupName in self.groups:
+        if groupingName in self.groups:
             cNames = pd.Series()
-            cNames = cNames.append(list(self.groups[groupName].values()))
+            cNames = cNames.append(list(self.groups[groupingName].values()))
             return cNames
         return pd.Series()
 
@@ -124,7 +157,7 @@ class ICGrouping(object):
             return None
         if groupingName is None:
             groupingName = self.currentGrouping
-        groupColors = self.getGroupColors()
+        groupColors = self.getGroupColors(groupingName)
         colorMaps = []
         for groupName, columnNames in self.groups[groupingName].items():
             color = groupColors[groupName]
@@ -164,23 +197,29 @@ class ICGrouping(object):
         ""
         if not self.groupingExists():
             return OrderedDict()
+        if isinstance(columnNames,list):
+            columnNames = pd.Series(columnNames)
 
-        annotatedGroupins = OrderedDict() 
+        annotatedGroupings = OrderedDict() 
         if not currentGroupingOnly:
             for groupingName, groupedItems in self.groups.items():
 
                 groupingColumnNames = self.getColumnNamesFromGroup(groupingName)
                 if any(colName in groupingColumnNames.values for colName in columnNames.values):
                     columnNameGroupMatches = self.getGroupNameByColumn(groupingName)
-                    annotatedGroupins[groupingName] = columnNames.map(columnNameGroupMatches)
+                    annotatedGroupings[groupingName] = columnNames.map(columnNameGroupMatches)
         elif self.currentGrouping is not None:
             groupingColumnNames = self.getColumnNamesFromGroup(self.currentGrouping)
             if any(colName in groupingColumnNames.values for colName in columnNames.values):
                     columnNameGroupMatches = self.getGroupNameByColumn(self.currentGrouping)
-                    annotatedGroupins[self.currentGrouping] = columnNames.map(columnNameGroupMatches)
+                    annotatedGroupings[self.currentGrouping] = columnNames.map(columnNameGroupMatches)
 
-        return annotatedGroupins
+        return annotatedGroupings
 
+
+    def getNumberOfGroups(self):
+        ""
+        return len(self.groups)
 
     def getPositiveExclusives(self,dataID = None, columnNames = None):
         ""
@@ -225,12 +264,14 @@ class ICGrouping(object):
         if groupingName in self.groups:
             return self.groups[groupingName]
 
-    def getGroupColors(self):
+    def getGroupColors(self, groupingName = None):
         ""
-        if self.currentGrouping in self.groupCmaps:
+        if groupingName is None:
+            groupingName = self.currentGrouping
+        if groupingName in self.groupCmaps:
             
-            mapper = self.groupCmaps[self.currentGrouping]
-            colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[self.currentGrouping].keys())])
+            mapper = self.groupCmaps[groupingName]
+            colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[groupingName].keys())])
             return colors
 
     def getFactorizedColumns(self, groupingName = None):

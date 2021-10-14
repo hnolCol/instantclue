@@ -79,7 +79,7 @@ class ICAppValidator(object):
 
     def saveAppID(self,appIDPath, appID):
         ""
-        print(appIDPath)
+        #print(appIDPath)
         with open(appIDPath,"w") as f:
             f.write(appID)
 
@@ -112,27 +112,33 @@ class ICAppValidator(object):
         appID = self.getAppID()
         shortUrl = chartDetails.loc["short-url"] 
         if appID is not None:
-            URL = "https://instantclue.de/api/v1/graph/text"
-            if isProtected:
-                encryptPwd = self.encryptStringWithPublicKey(password)
-                r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd})
-            else:
-                r = requests.get(URL,params={"url":shortUrl})
-            rJson = r.json()
-            if "success" in rJson and rJson["success"]:
-                print(rJson["success"])
-                print(type(rJson["success"]))
-            elif "success" in rJson and not rJson["success"]:
-                self.mC.sendToWarningDialog(infoText="The password was not correct.")
-                
-            else:
+            try:
+                URL = "https://instantclue.de/api/v1/graph/text"
+                if isProtected:
+                    encryptPwd = self.encryptStringWithPublicKey(password)
+                    r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd})
+                else:
+                    r = requests.get(URL,params={"url":shortUrl})
+                rJson = r.json()
+                if "success" in rJson and rJson["success"]:
+                    print(rJson["success"])
+                    print(type(rJson["success"]))
+                elif "success" in rJson and not rJson["success"]:
+                    self.mC.sendToWarningDialog(infoText="The password was not correct.")
+                    
+                else:
+                    self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
+            except:
                 self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
 
 
     def isChartProtected(self,graphURL):
         ""
         URL = "https://instantclue.de/api/v1/graph/protected"
-        r = requests.get(URL,params={"url":graphURL})
+        try:
+            r = requests.get(URL,params={"url":graphURL})
+        except:
+            self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
         if r.status_code == 200:
             graphIsProtected = not r.json()["protected"] == "false"
             return graphIsProtected
@@ -143,11 +149,14 @@ class ICAppValidator(object):
         if appID is not None:
             print(appID)
             URL = "https://instantclue.de/api/v1/app/graphs"
-            r = requests.get(URL,params={"appID":appID})
-            print(r.status_code)
-            print(r.url)
-            print(r.content)
-            print(r.json())
+            try:
+                r = requests.get(URL,params={"appID":appID})
+            except:
+                self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
+            # print(r.status_code)
+            # print(r.url)
+            # print(r.content)
+            # print(r.json())
             
             try:
                 df = pd.read_json(r.json(),orient="records")

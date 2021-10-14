@@ -91,6 +91,7 @@ class FindReplaceDialog(QDialog):
 
     def accept(self,event = None):
         ""
+        
         if self.validateInput():
             if self.columnCombo.isEnabled():
                 self.specificColumnSelected = True
@@ -98,6 +99,7 @@ class FindReplaceDialog(QDialog):
                 self.selectedColumnIndex = self.columnCombo.currentIndex()
                 self.mustMatchCompleteCell = self.mustMatchCompleteCellButton.isChecked()
             else:
+                self.mustMatchCompleteCell = False
                 self.specificColumnSelected = False
             super().accept() 
 

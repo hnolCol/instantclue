@@ -185,6 +185,9 @@ class DataHandleFrame(QFrame):
         self.ctrlC = QShortcut(QKeySequence("Ctrl+c"), self)
         self.ctrlC.activated.connect(self.copyToClipboard)
 
+        self.ctrlH = QShortcut(QKeySequence("Ctrl+f"), self)
+        self.ctrlH.activated.connect(self.openFindReplaceDialog)
+
     def askForFile(self):
         "Get File Names"
         dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *tsv *xlsx);;Text files (*.txt *.csv *tsv);;Excel files (*.xlsx)")
@@ -252,6 +255,11 @@ class DataHandleFrame(QFrame):
                     self.addExcelFiles(xlsxFiles,d.getSettings())
         except Exception as e:
             print(e)
+
+    def openFindReplaceDialog(self,e=None):
+        ""
+        if self.mC.data.hasData():
+            self.dataTreeView.findAndReplace()
 
     def addExcelFiles(self,files, loadFileProps = None):
         ""
@@ -355,6 +363,9 @@ class DataHandleFrame(QFrame):
             if not self.dataTreeView.getDataID() == dataID:
                 return
         self.dataTreeView.updateDataInTreeView(columnNamesByType)
+        self.updateGroupingInTreeView()
+    
+    def updateGroupingInTreeView(self):
         #update grouping
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 

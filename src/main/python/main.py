@@ -74,7 +74,11 @@ menuBarItems = [
         "name":"Discussions (New Features)",
         "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/discussions/13")
     },
-    
+    {
+        "subM":"Help",
+        "name":"Tutorial/Wiki",
+        "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/wiki")
+    },
     {
         "subM":"Help",
         "name":"YouTube Videos",
@@ -231,6 +235,7 @@ class InstantClue(QMainWindow):
         self.config.updateAllParamsInParent()
         #self.webAppComm.getChartsByAppID()
         #self.validateApp()
+        print(self.config.getParentTypes())
 
     def _connectSignals(self):
         "Connects signals using the resetting of the tables defined in the sliceMarks frame."
