@@ -258,6 +258,7 @@ class ICChart(QObject):
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["positions"],event.xdata)
 					xdata = self.data["plotData"][axisID]["positions"][nearestIdx]
 					data = self.data["plotData"][axisID]["x"][nearestIdx]
+					
 				elif self.isBarplot():
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["x"],event.xdata)
 					xdata = self.data["plotData"][axisID]["x"][nearestIdx]

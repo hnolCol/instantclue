@@ -2566,7 +2566,35 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Model fitting",
     "description"   :   "Minimum number of non-nan values for fitting a model (e.g. linear fit, first order kinetic). A minimum value of 2 is allowed but this will return always a r-value = 1 and is not informative."
-    }
+    },
+    {
+    "name"          :   "fisher.exact.enrichment.min.group.size",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Minimum group size for an enrichment using the fisher exact test."
+    },
+    {
+    "name"          :   "1D.enrichment.alternative",
+    "value"         :   "two-sided",
+    "dtype"         :   str,
+    "range"         :   ["two-sided","less","greater"],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Hypothesis alternative for Whitney Mann U-test performed in 1D Enrichments."
+    },
+    {
+    "name"          :   "1D.enrichment.split.string",
+    "value"         :   ";",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Split string to separate categories."
+    },
+    
     ]
     
 

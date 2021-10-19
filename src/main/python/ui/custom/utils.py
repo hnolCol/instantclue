@@ -108,11 +108,12 @@ class QToggle(QPushButton):
 
 
 class PropertyChooser(QWidget):
-    def __init__(self,parent=None,*args,**kwargs):
+    def __init__(self,mainController, parent=None,*args,**kwargs):
         super(PropertyChooser,self).__init__(parent=parent,*args,**kwargs)
         self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
         self.setLayout(QGridLayout())
         self.layout().setContentsMargins(2,1,2,1)
+        self.mC = mainController
       
     def addItem(self,boxItem):
         ""
@@ -171,8 +172,14 @@ class PropertyChooser(QWidget):
                     elif isinstance(p.getAttr("range"),str):
                         newValue = vInput.text() 
                 else:
-                    newValue = np.int(np.float(vInput.text())) if p.getAttr("dtype") == int else np.float(vInput.text())
-                   
+                    try:
+                        newValue = np.int(np.float(vInput.text())) if p.getAttr("dtype") == int else np.float(vInput.text())
+                    except:
+
+                        
+                        self.mC.sendToWarningDialog(infoText="Could not convert input to float or integer. Paramater not updated")
+                        continue
+                            
                 p.setAttr("value",newValue)
                 p.updateAttrInParent()
 

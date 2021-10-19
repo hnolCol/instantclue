@@ -26,11 +26,11 @@ class ConfigDialog(QDialog):
     
     def __controls(self):
         """Init widgets"""
-        print(self.mC.config.getParentTypes())
+       
         propItems = sorted(self.mC.config.getParentTypes())
         self.titleLabel = createTitleLabel("Configurations")
         self.infoLabel = createLabel("Changed parameters are automatically saved.")
-        self.propHolder = PropertyChooser()
+        self.propHolder = PropertyChooser(mainController=self.mC,parent=self)
 
         self.saveButton = BigArrowButton(tooltipStr = "Save Setting Profile", buttonSize=(30,30))
         self.loadButton = BigArrowButton(direction="up", tooltipStr = "Load Setting Profile", buttonSize=(30,30))

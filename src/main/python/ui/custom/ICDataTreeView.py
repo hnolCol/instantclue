@@ -39,7 +39,8 @@ dataTypeSubMenu = {
                 "Filter",
                 "Clustering",
                 "Model Fitting",
-                "Group Comparison",
+                "Groupings",
+                "(Prote-)omics-toolkit"
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
@@ -52,7 +53,7 @@ dataTypeSubMenu = {
         ("Model Fitting",["Kinetic"]),
         ("Missing values (NaN)",["Replace NaN by .."]),
         ("Replace NaN by ..",["Iterative Imputer"]),
-        ("Group Comparison",["Pairwise Tests","Multiple Groups","Summarize Groups"])
+        ("Groupings",["Pairwise Tests","Multiple Groups","Summarize Groups"])
         ],
     "Integers" : [
         ("main",["Column operation ..","Sorting"]),
@@ -71,7 +72,7 @@ dataTypeSubMenu = {
 
 menuBarItems = [
     {
-        "subM":"Group Comparison",
+        "subM":"Groupings",
         "name":"Annotate Groups",
         "funcKey": "createGroups",
         "dataType": "Numeric Floats",
@@ -108,6 +109,12 @@ menuBarItems = [
         "name":"Fisher Enrichment Test",
         "funcKey": "fisherCategoricalEnrichmentTest",
         "dataType": "Categories",
+    },
+        {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"1D-Enrichment",
+        "funcKey": "run1DEnrichment",
+        "dataType": "Numeric Floats",
     },
     {
         "subM":"(Prote-)omics-toolkit",
@@ -2217,6 +2224,24 @@ class DataTreeViewTable(QTableView):
                 w = WarningMessage(infoText="No grouping founds. Please add a grouping first.")
                 w.exec_()
     
+
+    def run1DEnrichment(self,**kwargs):
+        "Run a 1D Enrichment "
+        
+        selectedColumns = self.getSelectedData()
+        categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
+        dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns), title = "Categorical Columns used in 1D Enrichment.")
+        if dlg.exec_():
+            selectedCategoricalColumns = dlg.getSelection().values.flatten()
+            funcProps = {"key":"stats::oneDEnrichment"}
+            funcKwargs = {"columnNames":selectedColumns,
+                      "alternative":self.mC.config.getParam("1D.enrichment.alternative"),
+                      "splitString":self.mC.config.getParam("1D.enrichment.split.string"),
+                      "categoricalColumns":selectedCategoricalColumns,
+                      "dataID":self.mC.getDataID()}
+            funcProps["kwargs"] = funcKwargs
+            self.mC.sendRequestToThread(funcProps)
+
     def runNWayANOVA(self,**kwargs):
         ""
         if self.mC.grouping.groupingExists():
@@ -2227,7 +2252,8 @@ class DataTreeViewTable(QTableView):
                 groupings = ["Grouping {}".format(n) for n in range(N)]
                 options = dict([(k,groupingNames) for k in groupings])
                 defaults = dict([(k,groupingNames[n]) for n,k in enumerate(groupings)])
-                selDiag = SelectionDialog(groupings,
+                selDiag = SelectionDialog(
+                                groupings,
                                 options,
                                 defaults,
                                 title="Select Grouping for N-Way ANOVA.")
@@ -2241,7 +2267,7 @@ class DataTreeViewTable(QTableView):
                     
                     self.mC.sendRequestToThread(funcProps)
         else:
-            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Groupings - Annotate Groups)")
 
     def runRMOneTwoWayANOVA(self,**kwargs):
 
@@ -2271,7 +2297,7 @@ class DataTreeViewTable(QTableView):
                 self.mC.sendRequest(funcProps)
 
         else:
-            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Groupings - Annotate Groups)")
 
     def runMixedANOVA(self,**kwargs):
         ""
@@ -2290,14 +2316,14 @@ class DataTreeViewTable(QTableView):
                 funcProps["kwargs"]["dataID"] = self.mC.getDataID()
                 self.mC.sendRequest(funcProps)
         else:
-            self.mC.sendToWarningDialog(infoText = "No grouping found. Please add a grouping first. (context menu - Group Comparison - Annotate Groups)")
+            self.mC.sendToWarningDialog(infoText = "No grouping found. Please add a grouping first. (context menu - Groupings - Annotate Groups)")
 
 
     def fisherCategoricalEnrichmentTest(self,*args,**kwargs):
         ""
         categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
         selectedColumn = self.getSelectedData()
-        selDiag = SelectionDialog(["categoricalColumn","alternative"],{"categoricalColumn":categoricalColumns,"alternative":["two-sided","greater","less"]},{"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided"},title="Fisher Exact Settings.")
+        selDiag = SelectionDialog(["categoricalColumn","alternative","splitString"],{"categoricalColumn":categoricalColumns,"alternative":["two-sided","greater","less"],"splitString":[";",">","<","_",",","."]},{"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided","splitString":";"},title="Fisher Exact Settings.")
   
         if selDiag.exec_():
             categoricalColumn = selDiag.savedSelection["categoricalColumn"]
@@ -2311,6 +2337,7 @@ class DataTreeViewTable(QTableView):
                             "categoricalColumn":categoricalColumn,
                             "alternative":selDiag.savedSelection["alternative"],
                             "testColumns":testColumns,
+                            "splitString":selDiag.savedSelection["splitString"],
                             "data" : self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"].copy()
                         }
                 funcProps = {"key":fkey,"kwargs":kwargs}

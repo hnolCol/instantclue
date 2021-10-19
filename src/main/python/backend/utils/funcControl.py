@@ -700,6 +700,14 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView          
         },
+
+    "stats::oneDEnrichment":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runOneDEnrichment","requiredKwargs":["dataID","columnNames","categoricalColumns","alternative"]},
+            "completedRequest":
+                    addDataAndRefresh        
+        },
+
     "proteomics::matchModSequenceToSites": 
         {
             "threadRequest":{"obj":"data","fn":"matchModSequenceToSites","requiredKwargs":["dataID","fastaFilePath","proteinGroupColumn","modifiedPeptideColumn"]},

@@ -671,6 +671,7 @@ class StatisticCenter(object):
        # data = self.getData(dataID,columnNames).copy()
         
         groupedByData = data.groupby(by=categoricalColumn)
+        minGroupSize = self.sourceData.parent.config.getParam("fisher.exact.enrichment.min.group.size")
         results = pd.DataFrame(columns=["p-value","oddsratio","testColumn","category","groupName"])
         for testColumn in testColumns.values.flatten():
             #print(testColumn)
@@ -698,7 +699,7 @@ class StatisticCenter(object):
                   
                     
                     categoryInGroup = np.sum(data[boolIdx.values].index.isin(groupData.index))
-                    if categoryInGroup < 5:
+                    if categoryInGroup <= minGroupSize:
                         continue
                     categoryNotInGroup = groupSize-categoryInGroup
 
@@ -708,10 +709,10 @@ class StatisticCenter(object):
                     table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
                     oddsratio,pvalue = fisher_exact(table,alternative=alternative)
                     
-                    print(category)
-                    print(np.sum(boolIdx))
+                    # print(category)
+                    # print(np.sum(boolIdx))
 
-                    print(table)
+                    # print(table)
                     r.append({"p-value":pvalue,"oddsratio":oddsratio,"testColumn":testColumn,"category":category,"groupName":groupName})
                 print(r)
                 results = results.append(r,ignore_index=True)
@@ -732,6 +733,48 @@ class StatisticCenter(object):
         fileName = self.sourceData.getFileNameByID(dataID)
         
         return self.sourceData.addDataFrame(XCorrected,fileName = "combat({})".format(fileName))
+
+    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, splitString = ";" , alternative="two-sided"):
+        ""
+        combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist()
+        data = self.getData(dataID,combinedColumnnames)
+        
+        for categoricalColumn in categoricalColumns:
+            splitData = data[categoricalColumn].astype("str").str.split(splitString).values
+            uniqueCategories = list(set(chain.from_iterable(splitData)))
+            regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
+            boolIdxByCategory = dict([(uniqueCategory,data[categoricalColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
+            
+        resultDF  = pd.DataFrame(columns=["numericColumn","Category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","-log10 p-value","adj. p-value"])
+        r = []
+        for numericColumn in columnNames.values:
+            
+            for uniqueCat, boolIdx in boolIdxByCategory.items():
+                N = np.sum(boolIdx)
+                if N >= 5:
+                        X = data.loc[boolIdx,numericColumn].dropna().values.flatten()
+                        Y = data.loc[~boolIdx,numericColumn].dropna().values.flatten()
+                        U, p = mannwhitneyu(
+                                    x = X,
+                                    y = Y,
+                                    alternative=alternative
+                                    )
+                        uniqueCatMean = np.mean(X)
+                        uniqueCatMedian = np.median(X)
+                        stdev = np.std(X)
+                        r.append({"numericColumn":numericColumn,"Category":uniqueCat,"p-value":p,"U-statistic":U,"n":N,"mean":uniqueCatMean,"categorySize(noNaN)":X.size,"median":uniqueCatMedian,"categorySize":N,"stdev":stdev})
+            
+        resultDF = resultDF.append(r,ignore_index=True)
+        pValues = resultDF["p-value"].values.flatten()
+        resultDF.loc[:,"-log10 p-value"] = (-1)*np.log10(pValues)
+        boolIdx, adjPValue, _, _  = multipletests(pValues,method="fdr_tsbh")
+        resultDF.loc[:,"adj. p-value"] = adjPValue
+
+        return self.sourceData.addDataFrame(
+                resultDF,
+                fileName="1DEnrichment:({})".format(self.sourceData.getFileNameByID(dataID))) 
+            
+
 
     
     def runKMeansElbowMethod(self,dataID,columnNames,kMax = 20):
@@ -936,6 +979,9 @@ class StatisticCenter(object):
         if kind in ["t-test","Welch-test"]:
             return ttest_ind(X.values,Y.values,nan_policy="omit", equal_var=False if kind == "Welch-test" else True)
         elif kind == "(Whitney-Mann) U-test":
+            print(X.values)
+            print(Y.values)
+            print(mannwhitneyu(X.values,Y.values))
             return mannwhitneyu(X.values,Y.values)
         elif kind == "Wilcoxon":
             if X.values.size != Y.values.size:
