@@ -1,4 +1,6 @@
 
+from multiprocessing import Pool
+from numba.np.ufunc import parallel
 import numpy as np
 from numpy.core import numeric
 from numpy.lib.histograms import histogram 
@@ -32,8 +34,48 @@ import scipy.stats as st
 from sklearn.neighbors import KernelDensity
 from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import GridSearchCV
-
+from numba import jit, njit, prange
 from wordcloud import WordCloud
+
+import time
+
+@njit(parallel=True)
+def spreadSwarm(kde):
+    ""
+    A = np.zeros(shape=(kde.size,1))
+    for i in prange(kde.size):
+        A[i,0] = np.random.uniform(-kde[i]*0.85,kde[i]*0.85) 
+    return A
+
+def kdeCalc(X, bw = None, kernel = "gaussian", widthBox=1, addToX=0, numColumn = "Col", defaultPos = 0):
+    xName = "x({})".format(numColumn)
+    if X.index.size > 2:
+        
+        if bw is None:
+            bw = X.index.size**(-1/(X.columns.size+4)) 
+        kde = KernelDensity(bandwidth=bw,
+            kernel=kernel, algorithm='ball_tree')
+        kde.fit(X.values) 
+        kdeData = np.exp(kde.score_samples(X.values))
+
+        allSame = np.all(kdeData == kdeData[0])
+        if allSame:
+            kdeData = np.zeros(shape=kdeData.size)
+        else:
+            kdeData = scaleBetween(kdeData,(0,widthBox/2))
+        #kdeData = spreadSwarm(kdeData.flatten())
+        kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+        #print(time.time()-t1,"numpy")
+        kdeData = kdeData + addToX
+        #save data
+        data = pd.DataFrame(kdeData, index = X.index, columns=[xName])
+    else:
+
+        
+        kdeData = np.array([0]) +  defaultPos
+        data = pd.DataFrame(kdeData ,index=X.index, columns = [xName])
+
+    return (X.index,data,(xName,numColumn))
 
 def CI(a, ci = 0.95):
     a = a[~np.isnan(a)]
@@ -99,6 +141,7 @@ class PlotterBrain(object):
         self.histogramLinewidth = 1
         self.histogramSortCategories = False
         self.countTransform = "none"
+        
 
     def findPositions(self,numericColumns,categoricalColumns, plotType):
         ""
@@ -736,11 +779,11 @@ class PlotterBrain(object):
             plotData["widths"] = xWidth
             plotData["dataset"] = [x.values for x in data]
             
-            plotData["showmedians"] = False
+            plotData["showmedians"] = self.sourceData.parent.config.getParam("violin.show.means")
             plotData["positions"] = violinPositions[n]
-            plotData["showextrema"] = False
-            plotData["points"] = 200 
-            
+            plotData["showextrema"] = self.sourceData.parent.config.getParam("violin.show.extrema")
+            plotData["points"] = self.sourceData.parent.config.getParam("violin.points")
+            #plotData["quantiles"] = [0,0.1,0.2,0.5,0.7,0.9]
             hoverData[n] = {"x" : data }
             del plotData["x"]
             filteredData[n] = plotData
@@ -1321,19 +1364,6 @@ class PlotterBrain(object):
 
 
 
-
-
-
-            # minValue, maxValue = boxplotData["limits"]
-            # IQR = boxplotData["IQR"]
-            # width = boxplotData["width"]
-            # median = boxplotData["median"]
-            # x0 = boxplotData["x0"]
-            # y0 = boxplotData["y0"]
-            # color = boxplotData["color"]
-            # xCenter = x0+width/2
-
-
         return {"newPlot":True,"data":{"plotData":boxplotProps,"outliers":outliers,"xAxisLabels":[xAxisLabels],"plotType":"boxplot"}}
 
 
@@ -1395,21 +1425,30 @@ class PlotterBrain(object):
 
         try:
             if corrMatrix:
+
                 data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].corr(method = self.corrMatrixMethod)
+                if data.dropna().empty:
+                    return getMessageProps("Error..","Correlation matrix calculations resulted in a complete NaN matrix.")
             else:
                 if rowMetric == "nanEuclidean":
                     nanThreshold = self.sourceData.parent.config.getParam("min.required.valid.values")
                     if nanThreshold > len(numericColumns):
                         nanThreshold = len(numericColumns)
                     data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna(thresh=nanThreshold)
+                    #remove no deviation data (Same value)
+                    data = data.loc[data.std(axis=1) != 0,:]
                     rowMetric = "nanEuclidean" 
                     if columnMetric != "None":
                         columnMetric = "nanEuclidean"
                 else:
-                    data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
-                
-            #remove no deviation data (Same value)
-            data = data.loc[data.std(axis=1) != 0,:]
+                    if (rowMetric != "None" and rowMethod != "None") or  (columnMetric != "None" and columnMethod != "None"):
+                        data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
+                        #remove no deviation data (Same value)
+                        data = data.loc[data.std(axis=1) != 0,:]
+                    else:
+                        data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
+                        #if no clustering applied, we can keep all values (e.g. just display)
+                        print("h?")
         
             #nRows, nCols = data.shape
             rawIndex = data.index
@@ -1445,7 +1484,6 @@ class PlotterBrain(object):
                 Z_row = None
 
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
-                
                 columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
 
                 Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
@@ -1567,7 +1605,7 @@ class PlotterBrain(object):
 
     def getClusterAxes(self, numericColumns, figureSize, corrMatrix=False, rowOn = True,columnOn = True ,numberOfGroups = 0, displayGrouping = False):
         ""
-        x0,y0 = 0.10,0.15
+        x0,y0 = 0.04,0.15
         x1,y1 = 0.95,0.95
         labelHeight = 0.15
         width = x1-x0
@@ -1663,7 +1701,7 @@ class PlotterBrain(object):
                                     clusterMapWidth,
                                     heightMain]
         
-        axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+width*0.02, #add margin
+        axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+clusterMapWidth/2/len(numericColumns), #add margin
                                     y0,
                                     width-clusterMapWidth-rowDendroWidth if clusterMapWidth < 0.75 else 0.1,
                                     heightMain]		
@@ -1895,7 +1933,7 @@ class PlotterBrain(object):
                     
                     
                     for numCols in numericColumnPairs:
-                        for groupName, groupData in data.groupby(categoricalColumns[0]):
+                        for nGroup , (groupName, groupData) in enumerate(data.groupby(categoricalColumns[0],sort=False)):
 
                             if axisID == numUniqueCat:
                                 firstAxisRow = False
@@ -1910,7 +1948,7 @@ class PlotterBrain(object):
                                 pair.append(columnKey)
                             plotNumericPairs.append(tuple(pair))
 
-                            axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
+                            axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}  
                             axisID += 1  
                     
                    # axisPositions = getAxisPosition(len(numericColumnPairs),nCols=numUniqueCat)
@@ -1943,7 +1981,7 @@ class PlotterBrain(object):
                     for numCols in numericColumnPairs:
                         for uniqueValueCat2, cat2data in data.groupby(categoricalColumns[1],sort=False):
                             
-                            for groupName, groupData in cat2data.groupby(categoricalColumns[0], sort=False):
+                            for nGroup,  (groupName, groupData) in enumerate(cat2data.groupby(categoricalColumns[0], sort=False)):
                                     if axisID == numUniqueCat:
                                         firstAxisRow = False
                                     elif firstAxisRow:
@@ -1970,7 +2008,7 @@ class PlotterBrain(object):
                                         pair.append(columnKey)
                                     plotNumericPairs.append(tuple(pair))
 
-                                    axisLabels[axisID] = {"x":numCols[0],"y":numCols[1]}  
+                                    axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}  
                                     axisID += 1  
                 else:
                     return getMessageProps("Error ..","For Scatter plots only two categorical columns are considered. You can use color, size and marker highlights.")
@@ -2638,6 +2676,8 @@ class PlotterBrain(object):
         axisLabels = {}
         tickLabels = {}
 
+        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+
         colorGroupsData = pd.DataFrame() 
         sizeGroupsData = pd.DataFrame()
         numCatColumns = len(categoricalColumns)
@@ -2662,37 +2702,57 @@ class PlotterBrain(object):
             sizeGroupsData["group"] = numericColumns
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
 
-            for n,numColumn in enumerate(numericColumns):
-                xName = "x({})".format(numColumn)
-                groupData = rawData[[numColumn]].dropna()
-                if groupData.index.size == 1:
-                    kdeData = np.array([0]) +  positions[n]
-                    data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
-                    kdeIndex = data.index
-                else:
-                    #get kernel data
-                    kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
-                    #get random x position around 0 to spread data
-                    allSame = np.all(kdeData == kdeData[0])
-                    if allSame:
-                        kdeData = np.zeros(shape=kdeData.size)
+            if rawData.size > 15000 and rawData.shape[1] > 4:
+                #if big data, use multiprocessing, otherwise not
+                with Pool(NProcesses) as p:
+                    r = p.starmap(kdeCalc,[(rawData[[numColumn]].dropna(),0.75,"gaussian",widthBox,tickPositions[0][n],numColumn,n)  for n,numColumn in enumerate(numericColumns)])
+                    kdeIndex, dataList, xNames = zip(*r)
+                # print(kdeIndex, dataList, xNames)
+                plotData = plotData.join(dataList)
+                for n,(xName,numColumn) in enumerate(xNames):
+                    columnNames.extend([xName,numColumn]) 
+                    multiScatterKwargs[0][(xName,numColumn)] = {"color": colorDict[numColumn]}
+                    internalID = colorGroupsData.loc[colorGroupsData["group"] == numColumn]["internalID"].values[0]
+                    colorCategoryIndexMatch[internalID] = kdeIndex[n]
+                    if internalID not in interalIDColumnPairs[0]:
+                        interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
                     else:
-                        kdeData = scaleBetween(kdeData,(0,widthBox/2))
-                    
-                    kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
-                    kdeData = kdeData + tickPositions[0][n]
-                    #save data
-                    data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
-                plotData = plotData.join(data)
-                columnNames.extend([xName,numColumn])
-                multiScatterKwargs[0][(xName,numColumn)] = {"color": colorDict[numColumn]}
-                internalID = colorGroupsData.loc[colorGroupsData["group"] == numColumn]["internalID"].values[0]
-                colorCategoryIndexMatch[internalID] = kdeIndex
-                if internalID not in interalIDColumnPairs[0]:
-                    interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
-                else:
-                    interalIDColumnPairs[0][internalID].append((xName,numColumn))
+                        interalIDColumnPairs[0][internalID].append((xName,numColumn))
+                
+            else:
 
+                for n,numColumn in enumerate(numericColumns):
+                    xName = "x({})".format(numColumn)
+                    groupData = rawData[[numColumn]].dropna()
+                    if groupData.index.size == 1:
+                        kdeData = np.array([0]) +  positions[n]
+                        data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
+                        kdeIndex = data.index
+                    else:
+                        #get kernel data
+                        kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
+                        #get random x position around 0 to spread data
+                        allSame = np.all(kdeData == kdeData[0])
+                        if allSame:
+                            kdeData = np.zeros(shape=kdeData.size)
+                        else:
+                            kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                        kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+                        #print(time.time()-t1,"numpy")
+                        kdeData = kdeData + tickPositions[0][n]
+                        #save data
+                        data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
+
+
+                    plotData = plotData.join(data)
+                    columnNames.extend([xName,numColumn])
+                    multiScatterKwargs[0][(xName,numColumn)] = {"color": colorDict[numColumn]}
+                    internalID = colorGroupsData.loc[colorGroupsData["group"] == numColumn]["internalID"].values[0]
+                    colorCategoryIndexMatch[internalID] = kdeIndex
+                    if internalID not in interalIDColumnPairs[0]:
+                        interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
+                    else:
+                        interalIDColumnPairs[0][internalID].append((xName,numColumn))
             
             numericColumnPairs = {0:tuple(columnNames)}
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
@@ -2746,15 +2806,14 @@ class PlotterBrain(object):
                     if groupData.index.size > 0:
                         xName = "x({}:{})".format(numColumn,colCat)
                         #get kernel data
-                        if groupData.index.size == 1:
-                            kdeData = np.array([0])+  positions[nColCat]
+                        if groupData.index.size < 5:
+                            kdeData = np.array([0]*groupData.index.size) +  positions[nColCat]
                             data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                             kdeIndex = data.index
                         else:
                             kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                             #get random x position around 0 to spread data between - and + kdeData
                             kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
-                            
                             kdeData = np.array([np.random.uniform(-x * 0.80 , x * 0.80) for x in kdeData])
                             kdeData = kdeData + positions[nColCat]
                             data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -3215,7 +3274,8 @@ class PlotterBrain(object):
             colorGroupsData["group"] = ["{}:{}".format(*columnPair) if "ICIndex" not in columnPair[0] else "{}".format(columnPair[1]) for columnPair in numericColumnPairs]
             colorCategories = ["None"]
         else:
-            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
+            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns)
+            print(colorCategories)
             numColorCategories = colorCategories.size
             colorGroupsData["group"] = colorCategories
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(numColorCategories)
@@ -3343,7 +3403,7 @@ class PlotterBrain(object):
                     "axisLabels" : axisLabels,
                     "axisPositions":axisPostions,
                     "dataColorGroups": colorGroupsData,
-                    "colorCategoricalColumn": "Lines",
+                    "colorCategoricalColumn": "Line Collection" if len(categoricalColumns) == 0 else categoricalColumns[0],
                     "axisLimits" : axisLimits,
                     "dataID" : dataID,
                     "linesByInternalID": linesByInternalID,

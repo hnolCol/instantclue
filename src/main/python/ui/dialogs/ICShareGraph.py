@@ -26,7 +26,7 @@ class ICShareGraph(QDialog):
         ""
         self.title = createTitleLabel(self.title)
 
-        self.updateGraph = createCombobox(self, items= ["New Entry"] + self.sharedCharts["title"].values.tolist())
+        self.updateGraph = createCombobox(self, items= ["New Entry"] + self.sharedCharts["title"].values.tolist() if "title" in self.sharedCharts.columns else ["Entry"])
 
         self.titleEdit = createLineEdit("Project/Graph Title","Title of the project.")
         self.subTitleEdit = createLineEdit("Project/Graph Subtitle","Subtitle of the project. Will be displayed below header.")
@@ -40,6 +40,7 @@ class ICShareGraph(QDialog):
         self.selectSearchableLabel = createLabel("Searchable columns:")
         self.searchableColumns = LabelLikeButton(parent = self, text = "Select column(s)", tooltipStr="Select columns that should be selectable in the web application for searching..", itemBorder=5)                     
 
+        self.emailEdit = createLineEdit("Email","Careful: Giving an email adress allows visitors of your graph website to send you emails. Leave blank if you dont want that. You validation email will not be used.")
         
         self.qsCheckbox = QCheckBox("Quick Select")
         self.dataDownloadCheckbox = QCheckBox("Data Download")
@@ -48,7 +49,7 @@ class ICShareGraph(QDialog):
         self.pwLineEdit = createLineEdit("Enter password","In you enter a password, users will be asked to enter a password before they can see the graph/chart.")
         self.pwLineEdit.setEchoMode(QLineEdit.Password)
 
-        self.validCombo = createCombobox(self,items=["90 days","30 days","ulimited (publication)"])
+        self.validCombo = createCombobox(self,items=["30 days","90 days","24h","unlimited (publication)"])
         
         self.applyButton = ICStandardButton("Share")
         self.closeButton = ICStandardButton("Close")
@@ -65,6 +66,7 @@ class ICShareGraph(QDialog):
         grid.addWidget(self.infoTextEdit)
         grid.addWidget(self.markDownCheckbox)
         grid.addWidget(self.doiEdit)
+        grid.addWidget(self.emailEdit)
         grid.addWidget(self.selectSearchableLabel)
         grid.addWidget(self.searchableColumns)
         grid.addWidget(self.enableLabel)
@@ -125,7 +127,9 @@ class ICShareGraph(QDialog):
                                     ("info",self.infoTextEdit),
                                     ("pwd",self.pwLineEdit),
                                     ("keywords",self.keywordsEdit),
-                                    ("valid",self.validCombo)]:
+                                    ("valid",self.validCombo),
+                                    ("DOI",self.doiEdit),
+                                    ("contact",self.emailEdit)]:
             if widgetName == "pwd":
                 if widget.text() != "":
                     graphProps[widgetName] = self.mC.webAppComm.encryptStringWithPublicKey(widget.text().encode("utf-8"))
@@ -147,13 +151,13 @@ class ICShareGraph(QDialog):
        
         graphProps["data-download"] = self.dataDownloadCheckbox.checkState()
         graphProps["info-is-markdown"] = self.markDownCheckbox.checkState()
-
+        
         return graphProps
 
     def shareGraph(self):
         ""
         if self.requiredWidgetsFilled():
-            URL = "http://127.0.0.1:5000/api/v1/graph"#"https://www.instantclue.de/api/v1/graph"
+            URL = "https://www.instantclue.de/api/v1/graph"
             appID = self.mC.webAppComm.getAppID()
             exists, graph = self.mC.getGraph()
             if exists:
@@ -164,16 +168,18 @@ class ICShareGraph(QDialog):
                 # if not hasattr(self,"selectedSearchableColumns"):
                 #     self.mC.sendToInformationDialog(infoText="Please select at least one column that allows for searching through your data.")
                 #     return 
-                print(graph.plotType )
-                searchColumnName = "Gene names"
+               # print(graph.plotType )
+                #searchColumnName = "Gene names"
                 if graph.plotType == "hclust":
                     graphProps["data"], graphProps["colorPalette"] = graph.getDataForWebApp()
                     data = graph.getClusteredData()
                     #searchColumnName = self.selectedSearchableColumns[0]
                 elif graph.plotType == "scatter":
-                    
+                    if not hasattr(self,"selectedSearchableColumns"):
+                        self.mC.sendToWarningDialog(infoText="Select columns that should be used for searching.",parent=self)
+                        return
                     data, columnNames, graphLimits,annotatedIdx,annotationProps = graph.getDataForWebApp()
-                    searchColumnName = self.selectedSearchableColumns[0]
+                    searchColumnName = self.selectedSearchableColumns
 
                     graphProps["xLabel"] = columnNames[0]
                     graphProps["yLabel"] = columnNames[1]
@@ -187,6 +193,7 @@ class ICShareGraph(QDialog):
                 
                 searchData = self.mC.data.getDataByColumnNameForWebApp(self.mC.getDataID(),searchColumnName)
                 data = self.mC.data.joinColumnToData(data,self.mC.getDataID(),searchColumnName)
+                #dprint(data)
                 if data is not None:
                     try:
                         r = requests.put(URL,json={
@@ -196,10 +203,10 @@ class ICShareGraph(QDialog):
                             "search-data":searchData}
                             )
                     except:
-                        self.mC.sendToInformationDialog(infoText="Error in http request. Server not reachable.")
+                        self.mC.sendToInformationDialog(infoText="Error in http request. Server not reachable.",parent=self)
                         return
                     if r.status_code == 200:
-                        self.mC.sendToInformationDialog("Graph shared succesfully. You can now access the graph using:\n\n https://www.instantclue.de/s/{}\n\nThe link is valid for the time duration of: {}".format(r.text.replace('"',""),self.validCombo.currentText()),textIsSelectable=True)
+                        self.mC.sendToInformationDialog("Graph shared succesfully. You can now access the graph using:\n\n https://www.instantclue.de/s/{}\n\nThe link is valid for the time duration of: {}".format(r.text.replace('"',""),self.validCombo.currentText()),textIsSelectable=True,parent=self)
                         
 
     def updateGraphSelectionChanged(self,currentIdx):
@@ -208,10 +215,10 @@ class ICShareGraph(QDialog):
         pwd = ""
         if currentIdx > 0:
             chartDetails = self.sharedCharts.iloc[currentIdx-1]
-            graphIsProtected = self.mC.webAppComm.isChartProtected(chartDetails["short-url"])
+            graphIsProtected = self.mC.webAppComm.isChartProtected(chartDetails["graphID"])
             if graphIsProtected is not None and isinstance(graphIsProtected,bool):
 
-                if self.mC.webAppComm.isChartProtected(chartDetails["short-url"]):
+                if self.mC.webAppComm.isChartProtected(chartDetails["graphID"]):
                    
                     qs = AskStringMessage(q="Please enter password.",passwordMode=True)
                     if qs.exec_():

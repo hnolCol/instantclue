@@ -107,7 +107,7 @@ class ItemHolder(QWidget):
 
 class ReceiverBox(QFrame):
     def __init__(self,parent=None,
-                title="Numeric Floats", 
+                title="Numeric", 
                 acceptedDragTypes = ["Numeric Floats", "Integers"], 
                 *args,**kwargs):
         

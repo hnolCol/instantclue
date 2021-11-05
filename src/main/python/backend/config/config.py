@@ -85,7 +85,9 @@ class Config(object):
         parentTypes = []
         for p in self.parameters.values():
             pType = p.getAttr("parentType")
-            if pType not in parentTypes:
+            if pType is None:
+                p.getAttr("name")
+            if pType not in parentTypes and pType is not None:
                 parentTypes.append(pType)
         return parentTypes
 

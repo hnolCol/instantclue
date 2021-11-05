@@ -170,7 +170,15 @@ class SliceMarksFrame(QWidget):
                                 acceptedDragTypes= ["Categories" , "Numeric Floats", "Integers"])
                                 
 
-        self.filterButton = FilterButton(self, callback=self.applyFilter, getDragType = self.getDragType ,acceptDrops=True ,tooltipStr=SLICE_MARKS_TOOLTIPSTR["filter"], acceptedDragTypes= ["Categories" , "Numeric Floats"])
+        self.filterButton = FilterButton(self, 
+                    callback=self.applyFilter, 
+                    getDragType = self.getDragType ,
+                    acceptDrops=True ,
+                    tooltipStr=SLICE_MARKS_TOOLTIPSTR["filter"], 
+                    acceptedDragTypes= ["Categories" , "Numeric Floats"],
+                    menuFn = self.showSettingMenu,
+                    menuKeyWord = "Filter")
+
         self.selectButton = SelectButton(self, tooltipStr=SLICE_MARKS_TOOLTIPSTR["select"])
         self.subsetDataButton = SubsetDataButton(#DropButton(parent=self,
             callback = self.subsetData,
@@ -272,13 +280,9 @@ class SliceMarksFrame(QWidget):
         menu["Point Selection"].addAction("Single")
         #menu["Point Selection"].addAction("Lasso")
         #find bottom left corner
-        senderGeom = self.sender().geometry()
-        topLeft = self.mapToGlobal(senderGeom.bottomLeft())
-        #set sender status 
-        if hasattr(self.sender(),"mouseOver"):
-            self.sender().mouseOver = False
+        bottomLeft = self.findSendersBottomLeft(self.sender())
         #cast menu
-        action = menu["main"].exec_(topLeft)
+        action = menu["main"].exec_(bottomLeft)
         if action:
             self.adjustSelectMode(mode = action.text())
 
@@ -289,19 +293,25 @@ class SliceMarksFrame(QWidget):
         funcProps = {"key":"filter::splitDataFrame","kwargs":{"dataID" : dataID,"columnNames":columnNames}}
         self.mC.sendRequestToThread(funcProps)
 
-    def findSendersBottomLeft(self):
+    def showSettingMenu(self,menuKeyWord,sender):
+        ""
+        bottomLeft = self.findSendersBottomLeft(sender)
+        menu = self.mC.createSettingMenu(menuKeyWord)
+        menu.exec_(bottomLeft)
+        
+    def findSendersBottomLeft(self,sender):
         ""
         #find bottom left corner
-        senderGeom = self.sender().geometry()
+        senderGeom = sender.geometry()
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
         #set sender status 
-        if hasattr(self.sender(),"mouseOver"):
-            self.sender().mouseOver = False
+        if hasattr(sender,"mouseOver"):
+            sender.mouseOver = False
         return bottomLeft
 
     def chooseColor(self,event=None):
         ""
-        bottomLeft = self.findSendersBottomLeft()
+        bottomLeft = self.findSendersBottomLeft(self.sender())
         #cast menu
         dlg = ColorChooserDialog(mainController = self.mC)
         dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),350,300)

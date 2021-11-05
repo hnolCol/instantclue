@@ -519,6 +519,8 @@ class ICScatterPlot(ICChart):
         if hasattr(self,"annotationProps"):
             if ax in self.annotationProps and keyClosest in self.annotationProps[ax]:
                 self.annotationProps[ax][keyClosest]['xytext'] = xyRectangle
+                #update bbox
+                self.annotationBbox[ax][keyClosest] = self.addedAnnotations[ax][keyClosest].get_window_extent().bounds
     
     def isAnnotationInAllPlotsEnabled(self):
         ""

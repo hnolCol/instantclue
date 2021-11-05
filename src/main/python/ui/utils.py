@@ -49,7 +49,7 @@ def areFilesSuitableToLoad(filePaths):
     checkedFiles = []
     for filePath in filePaths:
         if os.path.exists(filePath):
-            if any(str(filePath).endswith(endStr) for endStr in ["txt","csv","xlsx"]):
+            if any(str(filePath).endswith(endStr) for endStr in ["txt","csv","xlsx","tsv"]):
                 checkedFiles.append(filePath)
     return checkedFiles
 

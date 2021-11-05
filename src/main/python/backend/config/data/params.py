@@ -26,6 +26,17 @@ thoursandsString = ['None',',','.']
 MTMethods = ["bonferroni","sidak","holm-sidak","holm","simes-hochberg","hommel","fdr_bh","fdr_by","fdr_tsbh","fdr_tsbky"]
 FONT_FAMILIES = np.unique([f.name for f in matplotlib.font_manager.fontManager.afmlist]).tolist()
 
+
+WIKI_LINKGS = {
+    "Main Figure":"Main-Figure", #wiki extension
+    "Boxplot" : "Plot-Types#boxplot",
+    "Barplot" : "Plot-Types#barplot",
+    "Clusterplot":"Cluster-plot",
+    "Lineplot" : "Plot-Types#lineplot",
+    "Cluster (HClust)": "Heatmap---Hierarchical-Clustering",
+    "Matplotlib" : "Chart-Appearance-Settings-(Font-size,-ticks,-grids..)"
+}
+
 DEFAULT_PARAMETER = [
     {
     "name"          :   "label.font.size",
@@ -51,7 +62,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   encodingsCommonInPython,
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Encoding used to read files."
     },
     {
@@ -60,7 +71,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Number of rows to skip"
     }, 
     {
@@ -69,7 +80,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   commonSepartor,
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Separator to find columns in file."
     },
     {
@@ -78,7 +89,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   decimalForFloats,
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Decimal in numbers."
     },
     {
@@ -87,7 +98,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   thoursandsString,
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "None if no thousands separator is present."
     },
     {
@@ -96,7 +107,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Additional na values. If you want to provide multiple value separate them by a semicolon ';'."
     },
     {
@@ -105,7 +116,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   "any",
     "parent"        :   "intern",
-    "parentType"    :   "Load File",
+    "parentType"    :   "Load Data",
     "description"   :   "Missing categories will be replaced by this string."
     }, 
     {
@@ -161,7 +172,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Annotation",
     "description"   :   "Arrow color.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "arrowStyle",
@@ -270,7 +282,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "colorManager",
     "parentType"    :   "Color",
     "description"   :   "Color for nanValues, '-' or custom nanString in plots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "axis.title.box.background",
@@ -280,7 +293,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Color",
     "description"   :   "Background color for title boxes.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "replaceObjectNan",
@@ -362,7 +376,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Matplotlib",
     "description"   :   "Sets the background of plot axes.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "axes.grid",
@@ -617,7 +632,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Boxplot",
     "description"   :   "Edge marker color for outliers in boxplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     }, 
     {
     "name"          :   "boxplot.flierprops.markersize",
@@ -690,7 +706,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Boxplot",
     "description"   :   "Color for median line in boxplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     }, 
     {
     "name"          :   "boxplot.medianprops.linewidth",
@@ -727,7 +744,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Boxplot",
     "description"   :   "Marker facecolor for mean in boxplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },  
     {
     "name"          :   "boxplot.meanprops.markeredgecolor",
@@ -737,7 +755,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Boxplot",
     "description"   :   "Marker edgeecolor for mean in boxplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },  
     {
     "name"          :   "patch.edgecolor",
@@ -747,7 +766,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "matplotlib",
     "parentType"    :   "Patch",
     "description"   :   "Linewidth of patches",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "patch.linewidth",
@@ -829,7 +849,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Scatter",
     "description"   :   "Edgecolors of scatter points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "scatter.hover.color",
@@ -839,7 +860,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Scatter",
     "description"   :   "Marker facecolor for hover scatter points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "scatter.edgelinewidth",
@@ -1128,7 +1150,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Hover/Tooltip",
     "description"   :   "Facecolor of inactive (mouse not over) artists/items while hovering.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "absCorrCoeff",
@@ -1585,6 +1608,33 @@ DEFAULT_PARAMETER = [
     "description"   :   "Spacing between major elements measured by their width - e.g. 0.1 means that the border of a box is 0.1 its with. Bars separated by categorical column on x-axis consider the minor spacing."
     }, 
     {
+    "name"          :   "violin.points",
+    "value"         :   100,
+    "dtype"         :   int,
+    "range"         :   [3,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Defines the number of points to evaluate each of the gaussian kernel density estimations at."
+    }, 
+    {
+    "name"          :   "violin.show.means",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Enable/disable rendering of the mean."
+    }, 
+    {
+    "name"          :   "violin.show.extrema",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Enable/disable rendering of the extremas."
+    }, 
+    {
     "name"          :   "barplot.minor.spacing",
     "value"         :   0,
     "dtype"         :   float,
@@ -1855,7 +1905,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Countplot",
     "description"   :   "Marker symbol facecolor for countplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     }, 
     {
     "name"          :   "counts.markeredgecolor",
@@ -1865,7 +1916,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Countplot",
     "description"   :   "Marker symbol edgecolor for countplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     }, 
     {
     "name"          :   "counts.linestyle",
@@ -1893,7 +1945,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Countplot",
     "description"   :   "Linecolor for group indicator in countplots.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     }, 
     {
     "name"          :   "quantile.norm.scaling",
@@ -2092,7 +2145,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Add Swarm",
     "description"   :   "Facecolor of swarm scatter points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "swarm.alpha",
@@ -2294,7 +2348,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xy.plot.line.style",
-    "value"         :   "dashed",
+    "value"         :   "solid",
     "dtype"         :   str,
     "range"         :   ["solid","dashed","dotted","dashdot","dashed","densely dotted","dashdotdotted"],
     "parent"        :   "intern",
@@ -2354,7 +2408,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot marker points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "forest.plot.marker",
@@ -2373,7 +2428,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot marker points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "forest.plot.line.width",
@@ -2392,7 +2448,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot lower boundmarker points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "forest.plot.upper.bound.color",
@@ -2402,7 +2459,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Forestplot",
     "description"   :   "Facecolor of forestplot upper boundmarker points.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "forest.plot.bound.marker",
@@ -2484,7 +2542,8 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "WordCloud",
     "description"   :   "Background color of word cloud.",
-    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$"
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "word.cloud.normalize_plurals",
@@ -2577,6 +2636,24 @@ DEFAULT_PARAMETER = [
     "description"   :   "Minimum group size for an enrichment using the fisher exact test."
     },
     {
+    "name"          :   "1D.enrichment.min.category.group.size",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Minimal group size. If the groupsize (e.g. rows that contain the specific category such as a GO term) is below the value, no enrichment will be calculated."
+    },  
+    {
+    "name"          :   "1D.enrichment.min.abs.group.difference",
+    "value"         :   0,
+    "dtype"         :   float,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Minimal difference between groups. One group represents the subset of rows that contain the tested category and the other group are the rest of rows (features).\nPlease note that first the size of the group is checked and then the difference."
+    },  
+    {
     "name"          :   "1D.enrichment.alternative",
     "value"         :   "two-sided",
     "dtype"         :   str,
@@ -2594,8 +2671,24 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Enrichments (Omics Toolkit)",
     "description"   :   "Split string to separate categories."
     },
-    
-    ]
+    {
+    "name"          :   "1D.enrichment.adj.p.value.cutoff",
+    "value"         :   0.05,
+    "dtype"         :   float,
+    "range"         :   [0.0,1.0],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Cutoff used to filter results of a 1D Enrichment. If set to 1, no filtering will be performed and all categories will be reported."
+    },
+    {
+    "name"          :   "n.processes.multiprocessing",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Multiprocessing",
+    "description"   :   "Number of processes to be spawn when multiprocessing is utilized."
+    }]
     
 
 

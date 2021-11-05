@@ -7,6 +7,7 @@ from ..custom.warnMessage import WarningMessage
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
 import requests 
 import os 
+
 class ICValidateEmail(QDialog):
     ""
     def __init__(self, mainController, title = "Validate App by Email.", *args,**kwargs):
@@ -18,10 +19,11 @@ class ICValidateEmail(QDialog):
         self.__layout()
         self.__connectEvents()
 
-    def __controls(self):
+    def __controls(self) -> None:
         ""
         self.title = createTitleLabel(self.title)
-
+        
+        self.infoText = createLabel("Note: Your email will be saved decrypted on the server.\nA verification code will be send to the email.")
 
         self.emailEdit = createLineEdit("Verification Email","Provide a valid email adress. Your email adress will not be stored. All shared graphs will be stored under the generated application ID.")
         self.sendCodeButton = ICStandardButton(itemName="Send code")
@@ -47,7 +49,7 @@ class ICValidateEmail(QDialog):
         ""
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.title)
-
+        self.layout().addWidget(self.infoText)
         hboxLogoGrid = QHBoxLayout()
 
         grid = QGridLayout()
@@ -85,16 +87,17 @@ class ICValidateEmail(QDialog):
         currentText = self.emailEdit.text()
         if len(currentText) > 3 and "@" in currentText:
             URL = "http://127.0.0.1:5000/api/v1/app/validate"
-            email = self.mC.encryptStringWithPublicKey(currentText.encode('utf-8'))
-            appID = self.mC.getAppID()
+            email = self.mC.webAppComm.encryptStringWithPublicKey(currentText.encode('utf-8'))
+            appID = self.mC.webAppComm.getAppID()
             r = requests.put(URL,json={"app-id":appID,"email":email})
+            print(email,appID)
             self.statusLabel.setText("Request sent. Please check email.")
             if r.status_code == 200:
                 self.verificationCodeEdit.setEnabled(True)
             else:
                 self.statusLabel.setText("Error returned by webapp api. Internet?")
         else:
-            self.statusLabel.setText("Enter email (nchars > 3")
+            self.statusLabel.setText("Please enter valid email.")
 
     def onVerificationCodeTextChange(self,newText,*args,**kwargs):
         "Handles changes in the verification code line edit."

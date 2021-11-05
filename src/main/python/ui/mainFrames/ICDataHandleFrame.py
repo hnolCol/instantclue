@@ -127,7 +127,11 @@ class DataHandleFrame(QFrame):
         self.bigFrame.layout().addWidget(self.frames)
         
         vbox1 = QHBoxLayout()
-        loadDataButton = BigPlusButton(callback = self.addTxtFiles, tooltipStr ="Load Data from file.\nThis will reset the view.")
+        loadDataButton = BigPlusButton(
+                callback = self.addTxtFiles, 
+                tooltipStr ="Load Data from file.\nThis will reset the view.",
+                menuFn = self.showSettingMenu,
+                menuKeyWord = "Load Data")
         
         #addDataButton = BigPlusButton()
         #addDataButton.clicked.connect(self.loadSession)
@@ -138,7 +142,10 @@ class DataHandleFrame(QFrame):
         saveSessionButton = BigArrowButton(direction="down", tooltipStr="Saves session. Note: the current figure is not saved.")
         saveSessionButton.clicked.connect(self.saveSession)
 
-        viewDataButton = ViewDataButton(self, tooltipStr="View selected data.")
+        viewDataButton = ViewDataButton(self, 
+                    tooltipStr="View selected data.",
+                    menuFn = self.showSettingMenu,
+                    menuKeyWord = "Data View")
         viewDataButton.clicked.connect(self.showData)
 
 
@@ -182,6 +189,8 @@ class DataHandleFrame(QFrame):
         self.ctrlV = QShortcut(QKeySequence("Ctrl+v"), self)
         self.ctrlV.activated.connect(self.readClipboard)
 
+        
+    
         self.ctrlC = QShortcut(QKeySequence("Ctrl+c"), self)
         self.ctrlC.activated.connect(self.copyToClipboard)
 
@@ -199,6 +208,7 @@ class DataHandleFrame(QFrame):
 
     def copyToClipboard(self,event=None):
         "Send copy data request to thread"
+       
         funcProps = {"key":"data::copyDataFrameSelection","kwargs":{}}
         self.dataTreeView.sendToThread(funcProps,addSelectionOfAllDataTypes=True,addDataID=True)
 
@@ -344,8 +354,9 @@ class DataHandleFrame(QFrame):
         dataID = self.getDataID()
         columnNames = self.mC.data.getPlainColumnNames(dataID)
         useClipping = self.mC.config.getParam("data.view.use.clipping")
-        dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = useClipping)["fnKwargs"]["data"]
-        self.openDataFrameinDialog(dataFrame)
+        clippingActive = self.mC.data.hasClipping(dataID)
+        dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
+        self.openDataFrameinDialog(dataFrame,clippingActive = clippingActive)
 
     def openDataFrameinDialog(self,dataFrame,*args,**kwargs):
         ""
@@ -418,3 +429,18 @@ class DataHandleFrame(QFrame):
         if fileName is not None and fileName != "":
             self.mC.sendRequestToThread(funcProps = {"key":"session::load","kwargs":{"sessionPath":fileName}})
             
+    def showSettingMenu(self,menuKeyWord,sender):
+        ""
+        bottomLeft = self.findSendersBottomLeft(sender)
+        menu = self.mC.createSettingMenu(menuKeyWord)
+        menu.exec_(bottomLeft)
+        
+    def findSendersBottomLeft(self,sender):
+        ""
+        #find bottom left corner
+        senderGeom = sender.geometry()
+        bottomLeft = sender.parent().mapToGlobal(senderGeom.bottomLeft())
+        #set sender status 
+        if hasattr(sender,"mouseOver"):
+            sender.mouseOver = False
+        return bottomLeft

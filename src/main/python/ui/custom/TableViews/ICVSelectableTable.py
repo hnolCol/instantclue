@@ -18,7 +18,7 @@ contextMenuData = OrderedDict([
             ("deleteRows",{"label":"Delete Row(s)","fn":"deleteRows"}),
             ("copyRows",{"label":"Copy Row(s)","fn":"copyRows"}),
             ("copyData",{"label":"To Clipboard","fn":"copyDf"}),
-            ("addDataFrame",{"label":"Add data","fn":"addDf"})
+            ("addDataFrame",{"label":"Add as new data frame","fn":"addDf"})
 
         ])
 
@@ -46,7 +46,6 @@ class PandaTable(QTableView):
             self.setContextMenuPolicy(Qt.CustomContextMenu)
             self.customContextMenuRequested.connect( self.showHeaderMenu )
         self.setItemDelegate(EditorDelegate(self))
-        
         self.setCornerButtonEnabled(cornerButton)
         
         self.setStyleSheet("""
@@ -63,39 +62,19 @@ class PandaTable(QTableView):
     def showHeaderMenu( self, point ):
         """ """  
         menu = createMenu(parent=self)     
-        menus = createSubMenu(menu,subMenus=["Export.."])
+
         for k, v in contextMenuData.items():
-            action = menus["main"].addAction(v["label"])
+            action = menu.addAction(v["label"])
             fn = getattr(self,v["fn"])
             action.triggered.connect(fn)
 
-        menus["main"].exec_(QCursor.pos()+QPoint(3,3))
+        menu.exec_(QCursor.pos()+QPoint(3,3))
 
     def handleHeaderRightClick(self, point):
         ""
         if self.rightClickOnHeaderCallBack is not None:
             idxClicked = self.horizontalHeader().logicalIndexAt(point)
             self.rightClickOnHeaderCallBack(idxClicked)
-       # print(self.mapToGlobal(self.horizontalHeader().sectionPosition(idxClicked)))
-        # self.horizontalHeader().setStyleSheet( "QVerticalHeaderView { margin-bottom: 25px}" )
-        # self.horizontalHeader().setFixedHeight(50)
-        # width = self.horizontalHeader().sectionSize(idxClicked)
-        # headerPos = self.mapToGlobal(self.horizontalHeader().pos())        
-        # posY = headerPos.y() + self.horizontalHeader().height()
-        # posX = headerPos.x() + self.horizontalHeader().sectionViewportPosition(idxClicked)       
-        # #menu.exec_(QPoint(posX, posY))
-        # #self.setStyleSheet("QTableView {margin-top: 25px}")
-        # menu = createMenu(parent=self)
-        # ql = createLineEdit("Search..")
-        # ql.setMinimumWidth(width)
-        # ql.setMaximumWidth(width)
-        # wAction = QWidgetAction(self)
-        # wAction.setDefaultWidget(ql)
-        # menu.addAction(wAction)
-        # menu.exec_(QPoint(posX,posY-25))
-        # self.horizontalHeader().setStyleSheet( "QVerticalHeaderView { margin-bottom: 0px}" )
-        # #self.setStyleSheet("QTableView {margin-top: 0px}")
-        # self.horizontalHeader().setFixedHeight(20)
 
     def headerClicked(self,columnIndex):
         ""
@@ -115,7 +94,10 @@ class PandaTable(QTableView):
                 selectedRows = self.getSelectedRows()
                 indexes = [idx.row() for idx in selectedRows if idx.isValid()]
                 data = self.model().getSelectedRows(indexes)
-                
+            
+            elif isinstance(selectedRows,list):
+                indexes = [idx.row() for idx in selectedRows if idx.isValid()]
+                data = self.model().getSelectedRows(indexes)
             else:
                 if isinstance(selectedRows,str):
                     if selectedRows == "all":
@@ -126,13 +108,22 @@ class PandaTable(QTableView):
                 funcProp = {"key":"copyDataFrameToClipboard",
                             "kwargs":{"data":data}}
         
-                self.parent().sendToThread(funcProp)
+                self.mC.sendRequestToThread(funcProp)
                         
             else:
                 self.parent().sendMessage(getMessageProps("Error","No selected rows.."))
         except Exception as e:
             print(e)
 
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        "Overwrite key press event to copy rows by defualt not the actual value"
+        if e.matches(QKeySequence.Copy):
+            selectedRows = self.getSelectedRows()
+            if len(selectedRows) >0:
+                self.copyRows(selectedRows=selectedRows)
+        else:
+            super().keyPressEvent(e)
 
     def addDf(self,e=None):
         ""
@@ -358,7 +349,6 @@ class PandaModel(QAbstractTableModel):
         if self.filters.columns.size == 0:
             self.df = self.__df
         else:
-            print(self.parent().mC.config.getParam("source.data.filter.logical.op"))
             if self.parent().mC.config.getParam("source.data.filter.logical.op") == "and":
                 boolIdx = self.filters.index[self.filters.sum(axis=1).values == self.filters.columns.size]
             else:

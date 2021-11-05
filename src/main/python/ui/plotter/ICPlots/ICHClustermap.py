@@ -5,6 +5,7 @@ from backend.color.data import colorParameterRange
 from matplotlib.pyplot import colorbar
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, to_hex
+from matplotlib.backends.backend_pdf import FigureCanvasPdf
 import matplotlib.patches as patches
 import pandas as pd
 import seaborn as sns
@@ -528,7 +529,7 @@ class ICClustermap(ICChart):
                 tickLabels = [";".join(x) for x in self.labelData.loc[idxData].astype(str).values]
                 
                 inv = self.axisDict["axLabelColor"].transLimits.inverted()
-                xOffset,_= inv.transform((0.03, 0.25))
+                xOffset,_= inv.transform((0.012, 0.25))
                 coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
                 for n,(x,y) in enumerate(coords):
                     labelStr = tickLabels[n]
@@ -732,7 +733,7 @@ class ICClustermap(ICChart):
         if addRectangleAndLabels:
             # get 0.5% offset
             self.rectangleAndLabels = []
-            yOffset = self.axisDict["axLabelColor"].get_ylim()[1] * 0.005
+            yOffset = self.axisDict["axLabelColor"].get_ylim()[1] * 0.0075
             
             for n, labelColumnName in enumerate(labelColumnNames):
                 t = self.axisDict["axLabelColor"].text(
@@ -752,6 +753,8 @@ class ICClustermap(ICChart):
         
     def updateBackgrounds(self):
         "Update Background for blitting"
+        if isinstance(self.p.f.canvas,FigureCanvasPdf):
+            return 
         if "axLabelColor" in self.axisDict:
             self.colorLabelBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axLabelColor"].bbox)	
         if "axRowDendro" in self.axisDict:

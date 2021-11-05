@@ -427,9 +427,10 @@ class PlotOptionFrame(QWidget):
         self.sender().setText("{} annotations in all subplots".format("Disable" if self.mC.config.getParam("annotate.in.all.plots") else "Enable")) 
 
 
-    def openConfig(self,event=None):
+    def openConfig(self,event=None,specificSettingsTab = None):
         ""
-        cdl = ConfigDialog(self.mC)
+        print(specificSettingsTab)
+        cdl = ConfigDialog(self.mC,specificSettingsTab = specificSettingsTab)
         cdl.exec_()
 
     def getFileSaveFileName(self):

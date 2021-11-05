@@ -71,9 +71,7 @@ class CollapsableDataTreeView(QWidget):
         self.hideSC.clicked.connect(self.hideShortCuts)
         #export 
         self.exportButton = BigArrowButton(self,tooltipStr="Export selected data to txt file. Right-click to see more options such Excel, Json, Markdown.", buttonSize=(15,15))
-        self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.exportButton.clicked.connect(self.exportData)
-        self.exportButton.customContextMenuRequested.connect(self.exportMenu)
+        
         #set up delete button
         self.deleteButton = ResetButton(tooltipStr="Delete selected data.")
         self.deleteButton.clicked.connect(self.deleteData)
@@ -127,6 +125,9 @@ class CollapsableDataTreeView(QWidget):
         ""
         self.combo.currentIndexChanged.connect(self.dfSelectionChanged)
         self.menuButton.clicked.connect(self.showMenu)
+        self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.exportButton.clicked.connect(self.exportData)
+        self.exportButton.customContextMenuRequested.connect(self.exportMenu)
 
     def addDataFrame(self, dataID, dataFrameName):
         "Add a new data frame to the combobox"
@@ -173,11 +174,11 @@ class CollapsableDataTreeView(QWidget):
             funcProps = {
                 "key":"data::getColumnNamesByDataID" if not self.sessionIsBeeingLoaded else "data::getColumnNamesByDataIDSilently",
                 "kwargs":{"dataID":dataID}}
-            print(funcProps)
+            #print(funcProps)
             self.dataID = dataID
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()
-            self.updateDataIDInTreeViews()
+            #self.updateDataIDInTreeViews()
             self.sendToThreadFn(funcProps)
             self.sessionIsBeeingLoaded = False
            
@@ -209,8 +210,8 @@ class CollapsableDataTreeView(QWidget):
         action.triggered.connect(self.mC.mainFrames["data"].copyDataFrameToClipboard)
 
         senderGeom = self.sender().geometry()
-        topLeft = self.mapToGlobal(senderGeom.bottomLeft())
-        menu.exec_(topLeft) 
+        bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        menu.exec_(bottomLeft) 
 
     def getDfId(self,comboIndex):
         "Return DataID from index selection"
@@ -318,7 +319,10 @@ class CollapsableDataTreeView(QWidget):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
-                        self.dataHeaders[headerName].addData(values)    
+                        self.dataHeaders[headerName].addData(values) 
+                        self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
+                        if values.size == 0:
+                            self.frames.setInactiveByTitle(headerName)
                     else:
                         raise ValueError("Provided Data are not a pandas Series!") 
     
@@ -441,14 +445,18 @@ class CollapsableDataTreeView(QWidget):
                 menus["Grouping .. "].addSeparator()
                 action = menus["Grouping .. "].addAction("Add")
                 action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
+                
 
-
-                deleteMenu = createMenu("Delete ..")
-                menus["Grouping .. "].addMenu(deleteMenu)
-                for groupingName in groupingNames:
-                    action = deleteMenu.addAction(groupingName)
-                    action.triggered.connect(lambda _, groupingName = groupingName : self.deleteGrouping(groupingName))
-            #
+                if self.mC.grouping.groupingExists():
+                    groupingMenus = {}
+                    fnMapper = {"Delete ..":self.deleteGrouping,"Rename ..":self.renameGrouping,"Edit ..":self.editGrouping}
+                    for menuName in ["Delete ..","Rename ..","Edit .."]:
+                        groupingMenus[menuName] = createMenu(menuName)
+                        menus["Grouping .. "].addMenu(groupingMenus[menuName])
+                        for groupingName in groupingNames:
+                            action = groupingMenus[menuName].addAction(groupingName)
+                            action.triggered.connect(lambda _, groupingName = groupingName, menuName = menuName : fnMapper[menuName](groupingName))
+                
 
             action = menus["Proteomics Toolkit"].addAction("Create Sample List")
             action.triggered.connect(self.createSampleList)
@@ -474,6 +482,20 @@ class CollapsableDataTreeView(QWidget):
         key = "grouping::deleteGrouping"
         kwargs = {"groupingName":groupingName}
         self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})
+
+    def editGrouping(self,groupingName):
+        ""
+        self.dataHeaders["Numeric Floats"].table.createGroups(loadGrouping = True, groupingName = groupingName)
+
+    def renameGrouping(self,groupingName):
+        ""
+        dlg = AskStringMessage(q="Provide new name for the grouping: {}".format(groupingName))
+        if dlg.exec_():
+
+            key = "grouping::renameGrouping"
+            kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
+            self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})      
+    
 
     def createSampleList(self,e=None):
         ""

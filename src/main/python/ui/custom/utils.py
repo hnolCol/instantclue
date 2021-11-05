@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit
 from .buttonDesigns import LabelLikeButton
+from ..dialogs.ICColorChooser import ColorLabel
 import numpy as np
 
 INSTANT_CLUE_ANAYLSIS = [
@@ -119,9 +120,22 @@ class PropertyChooser(QWidget):
         ""
         self.layout().addWidget(boxItem)
 
+    def chooseColor(self,event ,parentLineEdit ,initialColor,sender,*args,**kwargs):
+        ""
+        
+        updatadColor = QColorDialog(parent=self).getColor(QColor(initialColor))
+        if updatadColor.isValid():
+            updatedHexColor = updatadColor.name()
+            if updatedHexColor != initialColor:
+                if hasattr(parentLineEdit,"setText") and isinstance(updatedHexColor,str):
+                    parentLineEdit.setText(updatedHexColor)
+                if hasattr(sender,"setBackgroundColor"):
+                    sender.setBackgroundColor(updatedHexColor)
+        
+
     def addProperties(self, parameters, clearLayoutBefore = True, updateParamsBefore = True):
         ""
-
+        
         if updateParamsBefore:
             self.updateParams()
 
@@ -130,6 +144,7 @@ class PropertyChooser(QWidget):
             self.inputValues = []
 
         for n, p in  enumerate(parameters):
+            colorButton = None
             propLabel = createLabel("{}:".format(p.getAttr("name")))
             if p.getAttr("dtype") == str:
                 if isinstance(p.getAttr("range"),list):
@@ -138,7 +153,12 @@ class PropertyChooser(QWidget):
                 elif isinstance(p.getAttr("range"),str):
                     vInput = createLineEdit(p.getAttr("name"),"")
                     vInput.setText(p.getAttr("value"))
-
+                    if p.getAttr("isColor"):
+                        hexColor = p.getAttr("value")
+                        colorButton = ColorLabel(backgroundColor=hexColor)
+                        colorButton.setFixedSize(QSize(20,20))
+                        colorButton.mousePressEvent = lambda event,parentLineEdit = vInput, hexColor = hexColor, sender = colorButton: self.chooseColor(event, parentLineEdit,hexColor,sender)
+                       
             elif p.getAttr("dtype") == bool:
 
                 vInput = QToggle()
@@ -147,11 +167,15 @@ class PropertyChooser(QWidget):
             else:
                 vInput = createLineEdit(p.getAttr("name"),"")
                 vInput.setText(str(p.getAttr("value")))
-                
-                
             propLabel.setToolTip(p.getAttr("description"))
-            self.layout().addWidget(vInput,n,1,1,1)
+
+            if colorButton is not None:
+                self.layout().addWidget(colorButton,n,2,1,1)
+                self.layout().addWidget(vInput,n,1,1,1)
+            else:
+                self.layout().addWidget(vInput,n,1,1,2)
             self.layout().addWidget(propLabel,n,0,1,1,Qt.AlignRight)
+            
             #save input label
             self.inputValues.append(vInput)
         self.parameters = parameters

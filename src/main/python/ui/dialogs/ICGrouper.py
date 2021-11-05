@@ -54,22 +54,30 @@ class ICGroupFrame(QFrame):
 
 class ICGrouper(QDialog):
 
-    def __init__(self, mainController, initNGroups = 2, *args,**kwargs):
+    def __init__(self, mainController, initNGroups = 2, loadGrouping = False, groupingName = None, *args,**kwargs):
         ""
         super(ICGrouper,self).__init__(*args,**kwargs)
 
         self.mC = mainController
         self.groupItems = OrderedDict()
         self.initNGroups = initNGroups
-        
+        self.editGrouping = loadGrouping
+       
         self.__createMenu()
         self.__controls()
         self.__layout()
         self.__connectEvents()
+        if not loadGrouping:
+            for n in range(initNGroups):
+                self.addGroupArea(groupID = "Group {}".format(n))
+            self.updateColorButton()
+        elif groupingName is not None and isinstance(groupingName,str):
+            print(self.mC.grouping.getColorMap(groupingName))
+            self.cmapCombo.setText(self.mC.grouping.getColorMap(groupingName))
+            self.loadGrouping(groupingName)
+            
+            
         
-        for n in range(initNGroups):
-            self.addGroupArea(groupID = "Group {}".format(n))
-        self.updateColorButton()
 
     def __controls(self):
         ""
@@ -174,9 +182,13 @@ class ICGrouper(QDialog):
             return
         selDialog = SelectionDialog(
             title="Select split string extraction props.",
-            selectionNames = ["splitString","index"],
-            selectionOptions={"splitString":["_","__","-","//",";","space"],"index":[str(x) for x in range(30)]},
-            selectionDefaultIndex={"splitString":"_","index":"0"}
+            selectionNames = ["splitString","index","maxSplit","remove N from right"],
+            selectionOptions={
+                "splitString":["_","__","-","//",";","space"],
+                "index":[str(x) for x in range(30)],
+                "maxSplit":["inf"] + [str(x+1) for x in range(29)],
+                "remove N from right":[str(x) for x in range(30)]},
+            selectionDefaultIndex={"splitString":"_","index":"0","maxSplit":"inf","remove N from right":"0"}
             )
         if selDialog.exec_():
             selectedItems = selDialog.savedSelection
@@ -188,18 +200,31 @@ class ICGrouper(QDialog):
                 return 
             if selectedItems["splitString"] == "space":
                 selectedItems["splitString"] = " "
-            groupNames = self.extractGroupsByColumnNames(selectedColumnNames,selectedItems["splitString"],index=splitIndex)
+            if selectedItems["maxSplit"] == "inf":
+                selectedItems["maxSplit"] = -1
+            groupNames = self.extractGroupsByColumnNames(selectedColumnNames,selectedItems["splitString"],
+                                                        index=splitIndex, 
+                                                        maxsplit=selectedItems["maxSplit"],
+                                                        removeNFromRight = selectedItems["remove N from right"])
             if groupNames is not None:
                 self.addGroupsByDataFrame(groupNames)
 
-    def extractGroupsByColumnNames(self,selectedColumnNames,splitString = "_",index = 0,rsplit = False,maxsplit=-1):
+    def extractGroupsByColumnNames(self,selectedColumnNames,splitString = "_",index = 0,rsplit = False,maxsplit=-1,removeNFromRight = "0"):
         ""
         try:
+            if isinstance(maxsplit,str):
+                maxsplit = int(float(maxsplit))
+            
+            if isinstance(removeNFromRight,str):
+                ""
+                removeN = int(float(removeNFromRight))
+                
+
             if rsplit:
-                groupNames = pd.DataFrame([colName.rsplit(splitString,maxsplit=maxsplit)[index] for colName in selectedColumnNames.values],
+                groupNames = pd.DataFrame([colName.rsplit(splitString,maxsplit=maxsplit)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
             else:
-                groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit)[index] for colName in selectedColumnNames.values],
+                groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit,)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
         except:
             w = WarningMessage(infoText = "Splitting resulted in an error. Index out of range? Indexing starts with 0.",iconDir = self.mC.mainPath)
@@ -334,6 +359,16 @@ class ICGrouper(QDialog):
             del self.groupItems[groupID]
             self.updateColorButton()
 
+    def loadGrouping(self, groupingName):
+        ""
+        if self.mC.grouping.nameExists(groupingName):
+
+            self.groupingEdit.setText(groupingName)
+            for groupName, groupItems in self.mC.grouping.getGroupItems(groupingName).items():
+                self.addGroupArea(groupName)
+                self.updateItems(groupID = groupName, labels=groupItems)
+            self.updateColorButton()
+
     
     def updateColorButton(self):
         ""
@@ -370,7 +405,7 @@ class ICGrouper(QDialog):
             w.exec_()
             return
 
-        elif self.mC.grouping.nameExists(groupingName):
+        elif self.mC.grouping.nameExists(groupingName) and not self.editGrouping:
             w = WarningMessage(infoText = "The name of grouping exists already.",iconDir = self.mC.mainPath)
             w.exec_()
             return

@@ -295,6 +295,7 @@ class ICChart(QObject):
 		self.addAppActions(menus)
 		self.addMenuActions(menus)
 		self.addGraphSpecActions(menus)
+		menus["main"].addAction("Copy figure to clipboard",self.mC.mainFrames["middle"].copyFigureToClipboard)
 		pos = QCursor.pos()
 		pos += QPoint(3,3)
 		menus["main"].exec_(pos)

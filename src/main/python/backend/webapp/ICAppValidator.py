@@ -1,5 +1,5 @@
 
-from ..utils.stringOperations import getRandomString
+from ..utils.stringOperations import getMessageProps, getRandomString
 import pandas as pd
 import os  
 import requests 
@@ -12,6 +12,7 @@ from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 
 
+BASE_URL = "https://instantclue.de/api/v1/"#"#"http://127.0.0.1:5000/api/v1/"#"
 class ICAppValidator(object):
     ""
     def __init__(self, mainController):
@@ -71,6 +72,27 @@ class ICAppValidator(object):
                   #  return
             self.saveAppID(appIDPath,appID)
 
+    def isAppIDValidated(self):
+        "Cheks if app id is already validated."
+        appIDPath, validPath = self.appIDFound()
+        
+        if validPath:
+            appID = self.getAppID()
+            URL = BASE_URL+"app/validate"
+            try:
+                r = requests.get(URL,params={"appID":appID})
+            except:
+                print("Connection error")
+                return
+            if r.status_code == 200:
+                print("server reached. ")
+                if isinstance(r.json(),bool) and r.json():
+                    print("appvalid")
+                else:
+                    print("app not vlaid")
+            else:
+                print("error")
+
     def appIDFound(self):
         ""
         appIDPath = self.getAppIDPath()
@@ -99,7 +121,6 @@ class ICAppValidator(object):
     def getChartTitles(self):
         try:
             df = self.getChartsByAppID()
-            print(df)
             if not df.empty:
                 return df["title"].values.tolist()
             else:
@@ -147,29 +168,42 @@ class ICAppValidator(object):
         "Returns the charts that were uplaoded and are associated to the app-id"
         appID = self.getAppID() 
         if appID is not None:
-            print(appID)
             URL = "https://instantclue.de/api/v1/app/graphs"
             try:
                 r = requests.get(URL,params={"appID":appID})
             except:
                 self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
-            # print(r.status_code)
-            # print(r.url)
-            # print(r.content)
-            # print(r.json())
-            
             try:
                 df = pd.read_json(r.json(),orient="records")
+
             except:
                 df = pd.DataFrame()
             return df
         else:
             return  pd.DataFrame()
 
+    def getChartData(self,graphID):
+        ""
+        URL = BASE_URL + "/graph"
+
+        r = requests.get(URL,params={"url":graphID})
+        if r.status_code == 200:
+            jsonData = r.json() 
+            if isinstance(jsonData,dict) and "plotData" in jsonData:
+                df = pd.read_json(jsonData["plotData"])
+                return self.mC.data.addDataFrame(df,fileName="GraphData({})".format(graphID))
+            else:
+                return getMessageProps("Error..","Server response did not contain required data.")
+            
+        else:
+            return getMessageProps("Error..","Request error. Internet conection?.")
+
     def displaySharedCharts(self):
         ""
         df = self.getChartsByAppID()
         if not df.empty:
             self.mC.mainFrames["data"].openDataFrameinDialog(df,ignoreChanges=True, 
-                                                            headerLabel="Count plot data.", 
+                                                            headerLabel="Shared Graphs using the current AppID.", 
                                                             tableKwargs={"forwardSelectionToGraph":False})
+        else:
+            self.mC.sendToWarningDialog(infoText="No Graphs found for the AppID. If you have recently dinstalled Instant Clue you can add your AppID using the menu function.")

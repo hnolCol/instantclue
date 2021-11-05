@@ -28,7 +28,7 @@ headercolors = sns.color_palette("Paired",8,desat=0.75).as_hex()
 
 class PandaTableDialog(QDialog):
 
-    def __init__(self, mainController, df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, filterActive = True, multiSelection = False, modelKwargs = {}, tableKwargs = {}, *args, **kwargs):
+    def __init__(self, mainController, df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, filterActive = True, multiSelection = False, modelKwargs = {}, tableKwargs = {}, clippingActive = False, *args, **kwargs):
         super(PandaTableDialog,self).__init__(*args, **kwargs)
         
         self.header = headerLabel
@@ -38,6 +38,7 @@ class PandaTableDialog(QDialog):
         self.multiSelection = multiSelection
         self.df = df
         self.mC = mainController
+        self.clippingActive = clippingActive
         self.tagIDColumnIndexMapper = dict()
 
         self.setHeaderText()
@@ -63,17 +64,26 @@ class PandaTableDialog(QDialog):
         self.table.setModel(self.model)
 
         if self.filterActive:
-            self.searchWithTags = ICSearchWithTags(onTextChanged = self.handleTextChange,onEnterEvent=self.handleEnterEvent,parent=self,onTagDelete=self.handleTagDelete)
+            self.filterInfoLabel = createTitleLabel(
+                            "Left-click on column header to sort. Right-click on column header to activate search/filter.\nCmd/Ctrl-c allows copying of selected rows to clipboard.", 
+                            fontSize=12,
+                            colorString="black")
+            self.searchWithTags = ICSearchWithTags(onTextChanged = self.handleTextChange,
+                                                onEnterEvent=self.handleEnterEvent,
+                                                parent=self,
+                                                onTagDelete=self.handleTagDelete)
             self.searchWithTags.hideLineEdit()
             self.searchWithTags.hideNumericFilter()
            
 
-        if self.addToMainDataOption:
+        if self.clippingActive:
 
-            self.addDataToMain = ICStandardButton(itemName="Save")
-            self.closeButton = ResetButton(buttonSize=(20,20))
-            self.closeButton.setDefault(False)
-            self.closeButton.setAutoDefault(False)
+            self.clippActiveLabel = createTitleLabel("Clipping active!",fontSize=12,colorString=WIDGET_HOVER_COLOR)
+
+           # self.addDataToMain = ICStandardButton(itemName="Save")
+        self.closeButton = ResetButton(buttonSize=(20,20))
+        self.closeButton.setDefault(False)
+        self.closeButton.setAutoDefault(False)
 
     def __layout(self):
         ""
@@ -81,14 +91,16 @@ class PandaTableDialog(QDialog):
         hbox = QHBoxLayout()
         hbox.addWidget(self.headerLabel)
         hbox.addStretch(1)
+        if hasattr(self,"clippActiveLabel"):
+            hbox.addWidget(self.clippActiveLabel)
         hbox.addWidget(self.selectionLabel)
         
-        if self.addToMainDataOption:
-            
-            hbox.addWidget(self.closeButton)
+       
+        hbox.addWidget(self.closeButton)
             
         self.layout().addLayout(hbox)
         if self.filterActive:
+            self.layout().addWidget(self.filterInfoLabel)
             self.layout().addWidget(self.searchWithTags)
         self.layout().addWidget(self.table)
 
@@ -224,7 +236,8 @@ class PandaTableDialog(QDialog):
             quest = AskQuestionMessage(title = "Question", infoText = "Data have changed. Update data?")
             quest.exec_()
             if quest.state:
-                questForCopy = AskQuestionMessage(title = "Question", infoText = "Would you like to update the current data in place?\n\n(no - creates a new data frame with the made changes (sorting and filtering included))?")
+                questForCopy = AskQuestionMessage(title = "Question", 
+                        infoText = "Would you like to update the current data in place?\n\n(no - creates a new data frame with the changes made (sorting and filtering included))?")
                 questForCopy.exec_()
                 if questForCopy.state:
                     funcProps = dict() 

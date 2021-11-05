@@ -62,6 +62,7 @@ dataTypeSubMenu = {
     "Categories" : [
         ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]), #
         ("Column operation ..", ["Change data type to ..","String operation"]),
+        ("Data Format Transformation",["Group by and Aggregate .."]),
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
@@ -433,6 +434,36 @@ menuBarItems = [
                     "requiredColumns": ["groupbyColumn"],
                     "addColumns" : True,
                     "otherKwargs": {"metric":"max"}}
+    },
+    {
+        "subM":"Group by and Aggregate ..",
+        "name":"count valid values",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"count"}}
+    },
+    {
+        "subM":"Group by and Aggregate ..",
+        "name":"count values (+total size)",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":["count" ,"size"]}}
+    },
+    {
+        "subM":"Group by and Aggregate ..",
+        "name":"count unique values",
+        "dataType": "Categories",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"nunique"}}
     },
     {
         "subM":"Value Transformation",
@@ -1316,6 +1347,8 @@ class DataTreeView(QWidget):
         self.table.model().setNewData(X)
         self.table.selectionModel().clear()
         self.table.model().layoutChanged.emit()
+
+      
         
         if dataID is not None:
             self.setDataID(dataID)
@@ -1990,7 +2023,7 @@ class DataTreeViewTable(QTableView):
         ""
 
         if self.mC.data.hasData():
-            groupDialog = ICGrouper(self.mC,parent=self)
+            groupDialog = ICGrouper(self.mC,parent=self,**kwargs)
             groupDialog.exec()
         
 

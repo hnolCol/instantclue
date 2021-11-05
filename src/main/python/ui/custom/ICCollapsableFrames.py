@@ -59,7 +59,7 @@ class CollapsableFrames(QWidget):
         ""
         if isinstance(stackFrameTop,bool) and not stackFrameTop:
             self.layout().addStretch(1)
-        self.colors = ["#E8E8E8","#a6cee3","#A0D4CB","#2776BC"]#sns.color_palette("Paired",len(frameProps)).as_hex()
+        #self.colors = ["#E8E8E8","#a6cee3","#A0D4CB","#2776BC"]#sns.color_palette("Paired",len(frameProps)).as_hex()
         self.frameInitHeight = self.calculateFrameHeight(frameProps)
         for frameID, frameInfo in enumerate(frameProps):
             if isinstance(stackFrameTop,str) and frameID == int(stackFrameTop):
@@ -68,6 +68,8 @@ class CollapsableFrames(QWidget):
             self.frameProps[frameID]["open"] = frameInfo["open"]
             self.frameProps[frameID]["fixedHeight"] = frameInfo["fixedHeight"]
             self.frameProps[frameID]["height"] = frameInfo["height"]
+            self.frameProps[frameID]["title"] = frameInfo["title"]
+            self.frameProps[frameID]["active"] = True
             self.addHeaderFrame(frameID)
             self.addContentArea(frameID,frameInfo["layout"] ,frameInfo["open"])
             self.addToggleButton(frameID,frameInfo["title"],  *args, **kwargs)
@@ -119,11 +121,38 @@ class CollapsableFrames(QWidget):
         vbox.addWidget(toolButton)
         self.buttonHeight = toolButton.getWidgetHeight()
         
+
+    def getFrameIDByTitle(self,frameTitle):
+        ""
+        for frameID, frameInfo in self.frameProps.items():
+            
+            if frameTitle == frameInfo["title"]:
+
+                return frameID
+
+    def setHeaderNameByFrameID(self,frameTitle,headerName):
+        "Danger- only possible if title unique"
+        frameID = self.getFrameIDByTitle(frameTitle)
+        if frameID is not None:
+            self.frameProps[frameID]["button"].setText(headerName)
+            self.frameProps[frameID]["button"].active = True
+            self.frameProps[frameID]["active"] = True
+       
+    def setInactiveByTitle(self,frameTitle):
+        ""
+        frameID = self.getFrameIDByTitle(frameTitle)
+        if frameID is not None:
+            self.frameProps[frameID]["button"].active = False
+            self.frameProps[frameID]["active"] = False
+            self.frameProps[frameID]["open"] = False
         
     
     def startAnimation(self, event = None, frameID = None):
         ""
         if frameID is not None:
+            if not self.frameProps[frameID]["active"]:
+                self.frameProps[frameID]["open"] = False
+                return
             self.frameProps[frameID]["open"] = not self.frameProps[frameID]["open"]
             self.frameProps[frameID]["button"].setMouseEntered(False)
             

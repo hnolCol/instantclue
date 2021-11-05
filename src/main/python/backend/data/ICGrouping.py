@@ -18,32 +18,41 @@ class ICGrouping(object):
         self.currentGrouping = None
         self.groups = OrderedDict()
         self.groupCmaps = OrderedDict()
+        self.groupColorMap = OrderedDict()
         self.exclusiveGrouping = ICExlcusiveGroup(self,sourceData)
 
     def addCmap(self, groupingName,groupedItems, colorMap = None):
         ""
         m = self.getCmapMapper(groupedItems,colorMap)
-        self.groupCmaps[groupingName] = m
-        
+        colorMapper, colorMap = m
+  
+        self.groupCmaps[groupingName] = colorMapper
+        self.groupColorMap[groupingName] = colorMap
     def getCmapMapper(self,groupedItems, colorMap = None):
         ""
         norm = Normalize(vmin=-0.2, vmax=len(groupedItems)-0.8)
         if colorMap is None:
             colorMap = self.sourceData.colorManager.colorMap
+        
         cmap = self.sourceData.colorManager.get_max_colors_from_pallete(colorMap)
         cmap.set_bad(self.sourceData.colorManager.nanColor)
-        return cm.ScalarMappable(norm=norm, cmap=cmap)
+        return cm.ScalarMappable(norm=norm, cmap=cmap), colorMap
+
+    def getColorMap(self,groupingName):
+        ""
+        if groupingName in self.groupColorMap:
+            return self.groupColorMap[groupingName]
 
     def getTheroeticalColorsForGroupedItems(self,groupedItems,colorMap=None):
         ""
-        cmapMapper = self.getCmapMapper(groupedItems,colorMap)
+        cmapMapper,_ = self.getCmapMapper(groupedItems,colorMap)
         colors = dict([(groupName,to_hex(cmapMapper.to_rgba(x))) for x,groupName in enumerate(groupedItems.keys())])
         return colors
 
     def addGrouping(self,groupingName,groupedItems, setToCurrent = True, colorMap = None):
         "Add grouping to collection"
         if groupingName in self.groups:
-            del self.groups["groupingName"]
+            self.deleteGrouping(groupingName)
         
         self.groups[groupingName] = groupedItems
         self.addCmap(groupingName,groupedItems,colorMap)
@@ -88,14 +97,34 @@ class ICGrouping(object):
         if groupingName in self.groups:
             del self.groups[groupingName]
             del self.groupCmaps[groupingName]
+            del self.groupColorMap[groupingName]
             if len(self.groups) == 0:
                 self.currentGrouping = None
                 funcProps = getMessageProps("Done..","Grouping {} deleted. No groupig found to set as current.".format(groupingName))
-            else:
+            elif self.currentGrouping == groupingName:
                 newGrouping = list(self.groups.keys())[-1]
                 self.setCurrentGrouping(newGrouping)
                 funcProps = getMessageProps("Done..","Grouping {} deleted. New grouping defined: {}".format(groupingName,newGrouping))
+            else:
+                funcProps = getMessageProps("Done..","Grouping {} deleted.".format(groupingName))
             return funcProps
+        else:
+            return getMessageProps("Error..","Grouping not found.")
+
+    def renameGrouping(self,groupingName, newGroupingName):
+        "Renames a grouping"
+        if groupingName in self.groups:
+            if newGroupingName is self.groups:
+                return getMessageProps("Error..","Grouping name already exists.")
+            self.groups[newGroupingName] = self.groups[groupingName].copy()
+            self.addCmap(newGroupingName,self.groups[groupingName],colorMap=self.groupColorMap[groupingName])
+
+            if self.currentGrouping == groupingName:
+                self.setCurrentGrouping(newGroupingName)
+            
+            self.deleteGrouping(groupingName)
+
+            return getMessageProps("Done..","Grouping renamed.")
         else:
             return getMessageProps("Error..","Grouping not found.")
 
@@ -103,6 +132,7 @@ class ICGrouping(object):
         ""
         groupingKwargs = {"currentGrouping":self.currentGrouping, 
                         "groups" : self.groups,
+                        "groupColorMap" : self.groupColorMap,
                         "groupCmaps" : self.groupCmaps}
 
         return groupingKwargs

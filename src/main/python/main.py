@@ -5,10 +5,13 @@ from PyQt5.QtCore import *
 from matplotlib.pyplot import get, text
 
 
+
+
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
+from ui.custom.warnMessage import AskStringMessage
 
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
@@ -25,7 +28,7 @@ from backend.webapp.ICAppValidator import ICAppValidator
 from backend.plotting.plotterCalculations import PlotterBrain
 
     
-from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl
+from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl, createMenu
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
 from ui.custom.ICWelcomeScreen import ICWelcomeScreen
 from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
@@ -39,7 +42,8 @@ from datetime import datetime
 import webbrowser
 import requests
 import warnings
-from multiprocessing import freeze_support
+import multiprocessing
+
 
 
 #ignore some warnings
@@ -137,7 +141,7 @@ menuBarItems = [
     {
         "subM":"Share",
         "name":"Validate App",
-        "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
+        "fn": {"obj":"self","fn":"openAppValidationDialog"}
     },
     {
         "subM":"Share",
@@ -157,7 +161,7 @@ menuBarItems = [
     {
         "subM":"Share",
         "name":"Retrieve Data",
-        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+        "fn": {"obj":"self","fn":"getChartData"}
     },
     {
         "subM":"Share",
@@ -233,6 +237,9 @@ class InstantClue(QMainWindow):
         self.acceptDrop = False
         #update parameters saved in parents (e.g data, plotter etc)
         self.config.updateAllParamsInParent()
+        ##### 
+        self.webAppComm.isAppIDValidated()
+        #self.webAppComm.getChartData()
         #self.webAppComm.getChartsByAppID()
         #self.validateApp()
         #print(self.config.getParentTypes())
@@ -345,6 +352,16 @@ class InstantClue(QMainWindow):
         "Error message if something went wrong in the calculation."
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
+
+    def getChartData(self,*args,**kwargs):
+        ""
+
+        dlg = AskStringMessage(q="Please provide graphID from which you would like to retrieve the data.")
+        if dlg.exec_():
+            fkey = "webApp::getChartData"
+            kwargs = {"graphID":dlg.state}
+            self.sendRequestToThread({"key":fkey,"kwargs":kwargs})
+
     def getFigureSize(self):
         ""
         canvasSizeDict = {}
@@ -352,6 +369,8 @@ class InstantClue(QMainWindow):
         canvasSizeDict["width"] = canvasSize.width()
         canvasSizeDict["height"] = canvasSize.height()
         return canvasSizeDict
+
+
 
     def _getObjFunc(self,fnProps):
         ""
@@ -415,6 +434,15 @@ class InstantClue(QMainWindow):
         ""
         if hasattr(self.mainFrames["sliceMarks"],tableName):
             return getattr(self.mainFrames["sliceMarks"],tableName)
+
+
+    def openAppValidationDialog(self,*args,**kwargs):
+        ""
+        if self.webAppComm.isAppIDValidated():
+            dlg = ICValidateEmail(self)
+            dlg.exec_()
+        else:
+            self.sendToWarningDialog(infoText="Web AppID is already validated.")
 
     def sendRequest(self,funcProps):
         ""
@@ -505,6 +533,13 @@ class InstantClue(QMainWindow):
         except Exception as e:
             print(e)
 
+    def createSettingMenu(self,settingKeyWord,menu=None):
+        ""
+        if menu is None:
+            menu = createMenu()
+        action = menu.addAction("Settings")
+        action.triggered.connect(lambda _,keyWord = settingKeyWord:self.mainFrames["right"].openConfig(specificSettingsTab=keyWord))
+        return menu 
 
     def closeEvent(self, event = None, *args, **kwargs):
         """Overwrite close event"""
@@ -596,9 +631,9 @@ class InstantClue(QMainWindow):
         w = WarningMessage(title="Warning", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable, *args,**kwargs)
         w.exec_()
 
-    def sendToInformationDialog(self,infoText="",textIsSelectable=False):
+    def sendToInformationDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
         ""
-        w = WarningMessage(title="Information", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable)
+        w = WarningMessage(title="Information", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable,*args,**kwargs)
         w.exec_()
 
     def _setupStyle(self):
@@ -789,5 +824,6 @@ def main():
     app.exec_()
 
 if __name__ == '__main__':
-    freeze_support()
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method('spawn')
     sys.exit(main())

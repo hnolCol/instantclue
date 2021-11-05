@@ -38,6 +38,8 @@ activity is performed like:
 """
 
 from math import isnan
+from multiprocessing import Pool
+from numba.core.decorators import njit
 from numba.np.ufunc import parallel
 import numpy as np
 from pandas.core.algorithms import isin
@@ -112,39 +114,75 @@ def z_score(x):
 	return vector
 
 
-
-def pearsonByRowsTwoArray(X,Y):
-	idx = 0
+def rowByRow(X,Y,chunkIdx = None):
+	""
 	nRows = X.shape[0] * Y.shape[0]
+	idx = 0
 	A = np.empty(shape=(nRows,2), dtype=np.float64)
 	for n in range(X.shape[0]):
 		for m in range(Y.shape[0]):
-			y = Y[m,:]
-			nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
-			x = X[n,nonNaNIdx]
-			y = Y[m,nonNaNIdx]
-			if x.size > 2 and y.size > 2:
-				r,p = pearsonr(x,y)
+			A[idx] =  pearsonWithNaNCheck(X[n],Y[m])
+			idx += 1
+	return (chunkIdx,A)
+
+
+def pearsonWithNaNCheck(x,y):
+	"Checks nan in both arrays."
+	nonNaNIdx = [idx for idx in range(y.size) if not np.isnan(x[idx]) and not np.isnan(y[idx])]
+	if len(nonNaNIdx) > 2:
+		return pearsonr(x[nonNaNIdx],y[nonNaNIdx])
+	return [np.nan,np.nan]
+
+def pearsonByRowsTwoArray(X,Y,NProcesses = 8):
+	"Correlate rows of two arrays using multiprocessing. The bigger array will be split into chunks."
+	#chunk bigger array 
+	if X.shape[0] > Y.shape[0]:
+		chunks = np.array_split(X,NProcesses,axis=0)
+	else:
+		chunks = np.array_split(Y,NProcesses,axis=0)
+	
+	with Pool(NProcesses) as p:
+		rs = p.starmap(rowByRow,[(chunk,Y,chunkIdx) for chunkIdx, chunk in enumerate(chunks)])
+		rs.sort(key=lambda x: x[0]) 
+		A = np.concatenate([r[1] for r in rs],axis=0)
+	return A
+	
+	
+	# print(time.time()-t1,"multi")
+
+	# t1 = time.time()
+	# idx = 0
+	# nRows = X.shape[0] * Y.shape[0]
+	# A = np.empty(shape=(nRows,2), dtype=np.float64)
+	# for n in range(X.shape[0]):
+	# 	for m in range(Y.shape[0]):
+	# 		y = Y[m,:]
+	# 		nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
+	# 		x = X[n,nonNaNIdx]
+	# 		y = Y[m,nonNaNIdx]
+	# 		if x.size > 2 and y.size > 2:
+	# 			r,p = pearsonr(x,y)
 			
-				A[idx,:] = [r,p]
+	# 			A[idx,:] = [r,p]
 				
-			else:
-				A[idx,:] = [np.nan,np.nan]
-			idx+=1
-	return A 
+	# 		else:
+	# 			A[idx,:] = [np.nan,np.nan]
+	# 		idx+=1
+	# print(time.time()-t1,"no - multi")
+	# return A 
 
-def pearsonByRowsTwoArrayN(X,Y):
-	r = 0
-	nRows = X.shape[0] * Y.shape[0]
-	A = np.zeros(shape=(nRows,1))
-	for n in range(X.shape[0]):
-		x = X[n,:].flatten()
-		for m in range(Y.shape[0]):
-			y = Y[m,:].flatten()
+# def pearsonByRowsTwoArrayN(X,Y):
+# 	r = 0
+# 	nRows = X.shape[0] * Y.shape[0]
+# 	A = np.zeros(shape=(nRows,1))
+# 	for n in range(X.shape[0]):
+# 		x = X[n,:].flatten()
+# 		for m in range(Y.shape[0]):
+# 			y = Y[m,:].flatten()
 
-			A[r] = _pearson(x,y)
-			r+=1
-	return A 
+# 			A[r] = _pearson(x,y)
+# 			r+=1
+# 	return A 
 
 
 def corr2_coeff(A, B):
@@ -870,11 +908,13 @@ class DataCollection(object):
 		else:
 			return self.dfs[dataID].loc[rowIdx,:]
 
-	def getDataByColumnNameForWebApp(self,dataID,columnName):
+	def getDataByColumnNameForWebApp(self,dataID,columnNames):
 		""
+		if isinstance(columnNames,str):
+			columnNames = [columnNames]
 
-		data = self.getDataByColumnNames(dataID,[columnName])["fnKwargs"]["data"]
-		data = data.rename(columns={columnName:"text"})
+		data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
+		#data = data.rename(columns={columnName:"text"})
 		data["idx"] = data.index
 		return data.to_json(orient="records")
 
@@ -893,7 +933,7 @@ class DataCollection(object):
 		
 		return resultDict
 
-	def getUniqueValues(self, dataID, categoricalColumn, forceListOutput = False):
+	def getUniqueValues(self, dataID, categoricalColumn, forceListOutput = False,*args,**kwargs):
 		'''
 		Return unique values of a categorical column. If multiple columns are
 		provided in form of a list. It returns a list of pandas series having all
@@ -902,19 +942,24 @@ class DataCollection(object):
 		if isinstance(categoricalColumn,list):
 			if len(categoricalColumn) == 1:
 				categoricalColumn = categoricalColumn[0]
-				uniqueCategories = self.dfs[dataID][categoricalColumn].unique()
+				uniqueCategories = self.getDataByDataID(dataID,*args,**kwargs)[categoricalColumn].unique()
 			else:
 				collectUniqueSeries = []
+				X = self.getDataByDataID(dataID,*args,**kwargs)
 				for category in categoricalColumn:
-					collectUniqueSeries.append(self.dfs[dataID][category].unique())
+					collectUniqueSeries.append(X[category].unique())
 				return collectUniqueSeries
 		else:
-			uniqueCategories = self.dfs[dataID][categoricalColumn].unique()
+			uniqueCategories = self.getDataByDataID(dataID,*args,**kwargs)[categoricalColumn].unique()
 
 		if forceListOutput:
 			return [uniqueCategories]
 		else:
 			return uniqueCategories
+
+	def hasClipping(self,dataID):
+		""
+		return dataID in self.clippings
 
 	def hasData(self):
 		""
@@ -1087,11 +1132,14 @@ class DataCollection(object):
 			funcProps["dataID"] = dataID
 			return funcProps
 	
-	def joinColumnToData(self,dataFrame,dataID,columnName):
+	def joinColumnToData(self,dataFrame,dataID,columnNames):
 		"Plain return"
-		print(dataFrame,dataID,columnName)
-		if dataID in self.dfs and columnName not in dataFrame.columns and columnName in self.dfs[dataID].columns:
-			columnData = self.dfs[dataID][columnName]
+		if isinstance(columnNames,str):
+			columnNames = [columnNames]
+		#print(dataFrame,dataID,columnName)
+		if dataID in self.dfs:
+			columnsToJoin = [colName for colName in columnNames if colName not in dataFrame and colName in self.dfs[dataID].columns]
+			columnData = self.dfs[dataID][columnsToJoin]
 			return dataFrame.join(columnData)
 
 
@@ -1832,7 +1880,7 @@ class DataCollection(object):
 			elif fileFormat == "md":
 				self.dfs[dataID].to_markdown(path, tablefmt="grid")
 			else:
-				return getMessageProps("Error ..", "The used fileFormat unknown.")
+				return getMessageProps("Error ..", "The used fileFormat is unknown.")
 			return getMessageProps("Exported.","Data exported to path:\n{}".format(path))
 		else:
 			return errorMessage
@@ -2047,7 +2095,7 @@ class DataCollection(object):
 				imputedData = IterativeImputer(estimator=imputeEstimator).fit_transform(X.values)
 				df = pd.DataFrame(imputedData,index=X.index,columns = ["Imp({}):{}".format(estimator,colName) for colName in columnNames.values])
 				return self.joinDataFrame(dataID,df)
-			return errorMessage
+		return errorMessage
 	
 	def fill_na_in_columnList(self,columnLabelList,id = None, naFill = None):
 		'''
@@ -2525,6 +2573,7 @@ class DataCollection(object):
 	
 	def correlateEachFeatureOfTwoDfs(self,corrParams):
 		""
+		
 		dataID1,dataID2,columnNames1,columnNames2 = self._getCorrParamFromDict(corrParams)
 		if any(x.size < 3 for x in [columnNames2,columnNames1]):
 			return getMessageProps("Error..","Each data frame must have more than three columns.")

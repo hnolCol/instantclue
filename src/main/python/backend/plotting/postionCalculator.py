@@ -179,7 +179,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         plotData =   {0:{
                         "x":filteredData,
                         }}
-        axisLabels = {0:{"x":"","y":"value"}}
+        axisLabels = {0:{"x":"","y":"value" if len(numericColumns) > 1 else numericColumns[0]}}
         colorCategoricalColumn = "Numeric Columns"
         axisLimits[0] = {"xLimit" :  (tickValues[0]- widthBox,tickValues[-1] + widthBox), "yLimit" : None} 
         
@@ -236,7 +236,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         "x":filteredData,
                     }}
                        # "capprops":{"linewidth":self.boxplotCapsLineWidth}}}
-        axisLabels = {0:{"x":categoricalColumns[0],"y":"value"}}
+        axisLabels = {0:{"x":categoricalColumns[0],"y":"value" if len(numericColumns) > 1 else numericColumns[0]}}
         colorCategoricalColumn = categoricalColumns[0]
         
     

@@ -13,6 +13,7 @@ from ..dialogs.ICDSelectItems import ICDSelectItems
 from ..plotter.plotManager import ICPlotter
 import numpy as np 
 import pandas as pd
+import io
 
 class MatplotlibFigure(QWidget):
     def __init__(self, parent=None, mainController=None):
@@ -26,18 +27,15 @@ class MatplotlibFigure(QWidget):
         self.startActionOnThread = mainController.sendRequestToThread
         # a figure instance to plot on
         self.figure = figure()
-
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
-        
-
         # this is the Navigation widget
         # it takes the Canvas widget and a parent
         self.toolbar = NavigationToolbar(self.canvas, self)
         #self.plotter = Plotter(self,sourceData ,self.figure)
         self.ICPlotter = ICPlotter(self.mC,self.figure)
-        #self.ICPlotter.graph.setData()
+        
 
         self.receiverBoxes = OrderedDict() 
         self.receiverBoxes["Numeric Floats"] = ReceiverBox(parent=self)
@@ -51,6 +49,15 @@ class MatplotlibFigure(QWidget):
         self.setLayout(layout)
         self.layout().setContentsMargins(0,0,0,0)
 
+   
+
+    def copyFigureToClipboard(self,*args,**kwargs):
+        ""
+        print("copied")
+        buf = io.BytesIO()
+        self.figure.savefig(buf,format="png")
+        QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
+        buf.close()
 
     def initiateChart(self, *args, **kwargs):
         ""

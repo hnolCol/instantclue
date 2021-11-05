@@ -580,7 +580,7 @@ class ColorTable(QTableView):
                     else:
                         self.model().setColor(dataIndex,nanColor)
                 else:
-                    color = QColorDialog.getColor()
+                    color = QColorDialog(parent=self.parent()).getColor()
                     if color.isValid():
                         self.model().setColor(dataIndex,color.name())
                     else:

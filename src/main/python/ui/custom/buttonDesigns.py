@@ -1,6 +1,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from scipy.spatial.distance import braycurtis
 
 from ..utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
 import numpy as np
@@ -45,6 +46,7 @@ class CollapsButton(QPushButton):
         self.strokeWidth = strokeWidth
         self.setMouseTracking(mouseTracking)
         self.mouseEntered = False
+        self.active = True
         self.QFont = getStandardFont()#QFont("verdana",fontSize, weight=QFont.Light) if font is None else font
         self.QFont.setLetterSpacing(QFont.PercentageSpacing,105)
         self.QFont.setWordSpacing(3)
@@ -57,12 +59,14 @@ class CollapsButton(QPushButton):
 
     def enterEvent(self,event):
         ""
-        self.mouseEntered = True
-        self.update()
+        if self.active:
+            self.mouseEntered = True
+            self.update()
 
     def leaveEvent(self,event):
-        self.mouseEntered = False
-        self.update()
+        if self.active:
+            self.mouseEntered = False
+            self.update()
 
     def setMouseEntered(self,mouseEntered):
         ""
@@ -113,13 +117,14 @@ class CollapsButton(QPushButton):
         painter.setPen(pen)
         painter.setFont(self.QFont)
 
-        if self.mouseEntered and self.hoverColor is not None:
+        if self.active and self.mouseEntered and self.hoverColor is not None:
             brushColor = self.hoverColor 
-        else:
+        elif self.active:
             if self.openColor is not None:
                 brushColor = self.openColor if self.openFrame else self.closeColor
             else:
                 brushColor = self.closeColor
+        
         brush = QBrush(QColor(brushColor))
         painter.setBrush(brush)
         brush.setColor(QColor(self.hoverDotColor if self.mouseEntered else self.dotColor))
@@ -131,6 +136,10 @@ class CollapsButton(QPushButton):
     def getText(self):
         ""
         return self.text
+
+    def setText(self,text):
+        self.text = text 
+        self.update() 
 
     def getWidgetHeight(self):
         ""
@@ -189,8 +198,10 @@ class DataHeaderButton(CollapsButton):
         brush = QBrush(QColor(brushColor))
         painter.setBrush(brush)
         
-
-        pen = QPen(QColor("black"))
+        if self.active:
+            pen = QPen(QColor("black"))
+        else: 
+            pen = QPen(QColor("grey"))
         pen.setWidthF(0.1)
         painter.setPen(pen)
         painter.drawRect(rect)
@@ -200,10 +211,17 @@ class DataHeaderButton(CollapsButton):
                             Qt.AlignVCenter | Qt.AlignLeft, 
                             self.text)
 
+
+
+        ### drawing icon 
+
         yCenter = centerPoint.y() 
         xArrow = 8 
         h = rect.height()/2
-        pen = QPen(QColor(self.dotColor if not self.mouseEntered else self.hoverDotColor))
+        if self.active:
+            pen = QPen(QColor(self.dotColor if not self.mouseEntered else self.hoverDotColor))
+        else:
+            pen = QPen(QColor("grey"))
         pen.setWidthF(2)
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
@@ -232,7 +250,10 @@ class PushHoverButton(QPushButton):
                       callback = None, 
                       txtColor = "black",
                       drawFrame = True,
-                      tooltipStr = None,*args,**kwargs):
+                      tooltipStr = None,
+                      menuKeyWord = "General",
+                      menuFn = None,
+                      *args,**kwargs):
         super(PushHoverButton,self).__init__(parent,*args,**kwargs)
 
         self.mouseOver = False
@@ -245,9 +266,14 @@ class PushHoverButton(QPushButton):
         self.acceptedDragTypes = acceptedDragTypes
         self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self.text = text
+        self.menuFn = menuFn 
+        self.menuKeyWord = menuKeyWord
         if tooltipStr is not None and isinstance(tooltipStr,str):
             self.setToolTip(tooltipStr)
-
+        if self.menuFn is not None:
+            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.customContextMenuRequested.connect(lambda _, menuKw = menuKeyWord: self.menuFn(menuKw,self))
+            
     def paintEvent(self,event):
         
         painter = QPainter(self)
@@ -481,6 +507,45 @@ class ICStandardButton(PushHoverButton):
                          Qt.AlignCenter | Qt.AlignTop, 
                          self.itemName)
 
+
+class HelpButton(PushHoverButton):
+    
+    def __init__(self,parent=None, buttonSize = None, **kwargs):
+        super(HelpButton,self).__init__(parent, acceptDrops=False, **kwargs)
+        self.buttonSize = buttonSize
+        self.colors = flatui + ["black"]
+        self.selectColor()
+        
+        
+    def sizeHint(self):
+        ""
+        if self.buttonSize is not None:
+            w, h  = self.buttonSize
+            return QSize(w,h)
+        else:
+            return QSize(35,35)
+            
+    def paintEvent(self,event):
+        
+        #calculate rectangle props
+        rect, h, w, x0, y0 = self.getRectProps(event)
+
+        #create common background/reacts to hover
+        super().paintEvent(event)
+        #create button specific content
+        painter = QPainter(self)
+        pen = QPen(QColor(self.color))
+        pen.setWidthF(1)
+        painter.setPen(pen)
+        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.drawText(rect,Qt.AlignCenter,"?")
+       
+
+    def selectColor(self, updateButton=False):
+        idx = np.random.randint(low=0,high=len(self.colors)-1,size=1)
+        self.color = self.colors[int(idx)]
+        if updateButton:
+            self.update()
 
 class BigArrowButton(PushHoverButton):
     """

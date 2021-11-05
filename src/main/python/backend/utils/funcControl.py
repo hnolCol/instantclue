@@ -879,6 +879,18 @@ funcPropControl = {
             "completedRequest":
                     [updateGrouping,sendMessageProps]
         },
+    "grouping::renameGrouping":
+        {
+            "threadRequest":{"obj":"grouping","fn":"renameGrouping","requiredKwargs":["groupingName"]},
+            "completedRequest":
+                    [updateGrouping,sendMessageProps]
+        },
+    "webApp::getChartData":
+        {
+            "threadRequest":{"obj":"webAppComm","fn":"getChartData","requiredKwargs":["graphID"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },
     "session::load":
         {
             "threadRequest":{"obj":"sessionManager","fn":"openSession","requiredKwargs":["sessionPath"]},

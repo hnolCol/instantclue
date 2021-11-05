@@ -2,7 +2,7 @@ import numpy as np
 import re
 import matplotlib 
 
-REQUIRED_ATTR_NAMES = ["id","name","value","dtype","range","parent","parentType","description"]
+REQUIRED_ATTR_NAMES = ["id","name","value","dtype","range","parent","parentType","description","isColor"]
 OPTIONAL_ATTR_NAMES = ["regEx"]
 
 ATTR_NAMES = REQUIRED_ATTR_NAMES + OPTIONAL_ATTR_NAMES
@@ -17,9 +17,10 @@ class Parameter(object):
 
         """
         self.params = {
-            "id"    :   paramID,
-            "dtype" :   dtype,
-            "value" :   value
+            "id"       :   paramID,
+            "dtype"    :   dtype,
+            "value"    :   value,
+            "isColor"  :   False
         }
 
         self.updateParamInParent = updateParamInParent
