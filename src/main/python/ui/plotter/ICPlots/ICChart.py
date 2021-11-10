@@ -554,8 +554,10 @@ class ICChart(QObject):
 		if "Axis limits .." in menus:
 			#axis limit menus
 			menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
-			menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
-			menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
+			menus["Axis limits .."].addAction("Center x-axis limit to 0", self.centerXToZero)
+			menus["Axis limits .."].addAction("Set equal y-axis limits in subplots", self.alignYLimitsOfAllAxes)
+			menus["Axis limits .."].addAction("Set equal x-axis limits in subplots", self.alignXLimitsOfAllAxes)
+			menus["Axis limits .."].addAction("Set equal x- and y-axis limits in subplots", self.alignLimitsOfAllAxes)
 			menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
 		
 		if hasattr(self,"colorLegend"):
@@ -1076,6 +1078,32 @@ class ICChart(QObject):
 		
 		for ax in axes:
 			self.setAxisLimits(ax, xLimit=(xMin,xMax), yLimit=(yMin,yMax))
+		if updateFigure:
+			self.updateFigure.emit() 
+
+	def alignXLimitsOfAllAxes(self,updateFigure=True):
+		""
+		"Set y-limits"
+		axes, xLims, _ = self.getAxesWithLimits()
+		
+		xMin, xMax = np.min(xLims[:,0]), np.max(xLims[:,1])
+		#yMin, yMax = np.min(yLims[:,0]), np.max(yLims[:,1])
+		
+		for ax in axes:
+			self.setAxisLimits(ax, xLimit=(xMin,xMax), yLimit=None)
+		if updateFigure:
+			self.updateFigure.emit() 
+
+
+	def alignYLimitsOfAllAxes(self,updateFigure = True):
+		"Set y-limits"
+		axes, _, yLims = self.getAxesWithLimits()
+		
+		#xMin, xMax = np.min(xLims[:,0]), np.max(xLims[:,1])
+		yMin, yMax = np.min(yLims[:,0]), np.max(yLims[:,1])
+		
+		for ax in axes:
+			self.setAxisLimits(ax, xLimit=None, yLimit=(yMin,yMax))
 		if updateFigure:
 			self.updateFigure.emit() 
 
