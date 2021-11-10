@@ -639,6 +639,13 @@ menuBarItems = [
     },
     {
         "subM":"Change data type to ..",
+        "name":"Numeric Floats (flex - copy)",
+        "funcKey": "data::changeDataType",
+        "fnKwargs": {"newDataType":"float64","flex":True},
+        "dataType": ["Integers","Categories"]
+    },
+    {
+        "subM":"Change data type to ..",
         "name":"Integers",
         "funcKey": "data::changeDataType",
         "fnKwargs": {"newDataType":"int64"},

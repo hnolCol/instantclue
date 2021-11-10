@@ -1377,21 +1377,42 @@ class DataCollection(object):
 		return newColumnName		 
 		
 	
-	def changeDataType(self, dataID, columnNames, newDataType):
+	def changeDataType(self, dataID, columnNames, newDataType,flex=False):
 		'''
 		Changes the DataType of a List of column Names
 		'''
+		def checkForFloat(row):
+			"Try/except to conver entry to float."
+			r = np.empty(shape = row.size)
+			for n,x in enumerate(row.values):
+				try: 
+					r[n] = float(x)
+				except:
+					r[n] = np.nan 
+			return r 
+			
+
 		if dataID in self.dfs:
 			if isinstance(columnNames,pd.Series):
 				columnNames = columnNames.values
 
 			try:
-				self.dfs[dataID][columnNames] = self.dfs[dataID][columnNames].astype(newDataType)
+				if newDataType == "float64":
+					self.dfs[dataID][columnNames] = self.dfs[dataID][columnNames].replace(self.replaceObjectNan,np.nan, regex=False)
+				if flex:
+					X = self.dfs[dataID][columnNames].apply(checkForFloat,result_type="expand")
+					newColumnNames = ["f:{}".format(colName) for colName in columnNames]
+					self.joinDataFrame(dataID,pd.DataFrame(X,index=self.dfs[dataID].index, columns=newColumnNames))
+				else:
+					self.dfs[dataID][columnNames] = self.dfs[dataID][columnNames].astype(newDataType)
 			except:
 				return getMessageProps("Error..","Changing data type failed.")
 			
 			if newDataType in ['object','str']:
-				self.dfs[dataID][columnNames].fillna(self.replaceObjectNan,inplace=True)
+				self.dfs[dataID][columnNames] = self.dfs[dataID][columnNames].replace("nan",self.replaceObjectNan, regex=False)
+				self.dfs[dataID][columnNames].fillna(self.replaceObjectNan,)
+				
+				#pd.DataFrame().replace()
 			#update columns
 			self.extractDataTypeOfColumns(dataID)
 			funcProps = getMessageProps("Data Type changed.","Columns evaluated and data type changed.")

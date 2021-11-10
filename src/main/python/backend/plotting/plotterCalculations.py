@@ -3653,7 +3653,7 @@ class PlotterBrain(object):
                     "hoverData" : rawData
                     }}
         
-    def _getXYLimits(self,X,Y,marginFrac = 0.02):
+    def _getXYLimits(self,X,Y,marginFrac = 0.1):
         ""
         minX, maxX = np.nanquantile(X,q = [0,1])
         marginX = np.sqrt(maxX**2 + minX**2)

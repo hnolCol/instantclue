@@ -26,7 +26,6 @@ thoursandsString = ['None',',','.']
 MTMethods = ["bonferroni","sidak","holm-sidak","holm","simes-hochberg","hommel","fdr_bh","fdr_by","fdr_tsbh","fdr_tsbky"]
 FONT_FAMILIES = np.unique([f.name for f in matplotlib.font_manager.fontManager.afmlist]).tolist()
 
-
 WIKI_LINKGS = {
     "Main Figure":"Main-Figure", #wiki extension
     "Boxplot" : "Plot-Types#boxplot",
@@ -34,7 +33,8 @@ WIKI_LINKGS = {
     "Clusterplot":"Cluster-plot",
     "Lineplot" : "Plot-Types#lineplot",
     "Cluster (HClust)": "Heatmap---Hierarchical-Clustering",
-    "Matplotlib" : "Chart-Appearance-Settings-(Font-size,-ticks,-grids..)"
+    "Matplotlib" : "Chart-Appearance-Settings-(Font-size,-ticks,-grids..)",
+    "Load Data" : "Load-files"
 }
 
 DEFAULT_PARAMETER = [

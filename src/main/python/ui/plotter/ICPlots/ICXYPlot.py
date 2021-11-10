@@ -122,28 +122,37 @@ class ICXYPlot(ICChart):
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         "changed category is encoded in a internalID"
-        if "linesByInternalID" in self.data and changedCategory in self.data["linesByInternalID"]:
-            l = self.data["linesByInternalID"][changedCategory]
-            
-            changedColor = colorGroup.loc[colorGroup["internalID"] == changedCategory]["color"].values[0]
-            if hasattr(l,"set_color"):
-                l.set_color(changedColor)
-            if isinstance(l,list):
-                for line in l:
-                    if hasattr(line,"set_markerfacecolor"):
-                        line.set_markerfacecolor(changedColor)
-                    line.set_color(changedColor)
-            #change color in props for export
-            for lineKwargs in self.data["lineKwargs"].values():
-                for kwg in lineKwargs:
-                    if kwg["ID"] == changedCategory:
-                        kwg["props"]["color"] = changedColor
-            
-            for markerKwargs in self.data["markerKwargs"].values():
-                for kwg in markerKwargs:
-                    if kwg["ID"] == changedCategory:
-                        kwg["props"]["markerfacecolor"] = changedColor
-            
+       
+        if changedCategory is not None:
+            changedCategories = [changedCategory]
+        elif "internalID" in colorGroup.columns:
+            changedCategories = colorGroup["internalID"].values.tolist() 
+        else:
+            return 
+
+
+        if "linesByInternalID" in self.data:
+            for changedCategory in changedCategories:
+                l = self.data["linesByInternalID"][changedCategory]
+                changedColor = colorGroup.loc[colorGroup["internalID"] == changedCategory]["color"].values[0]
+                if hasattr(l,"set_color"):
+                    l.set_color(changedColor)
+                if isinstance(l,list):
+                    for line in l:
+                        if hasattr(line,"set_markerfacecolor"):
+                            line.set_markerfacecolor(changedColor)
+                        line.set_color(changedColor)
+                #change color in props for export
+                for lineKwargs in self.data["lineKwargs"].values():
+                    for kwg in lineKwargs:
+                        if kwg["ID"] == changedCategory:
+                            kwg["props"]["color"] = changedColor
+                
+                for markerKwargs in self.data["markerKwargs"].values():
+                    for kwg in markerKwargs:
+                        if kwg["ID"] == changedCategory:
+                            kwg["props"]["markerfacecolor"] = changedColor
+                
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
         self.updateFigure.emit()
