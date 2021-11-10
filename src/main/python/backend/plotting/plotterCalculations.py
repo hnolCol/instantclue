@@ -9,6 +9,8 @@ import pandas as pd
 from matplotlib.colors import to_hex
 #backend imports
 from backend.utils.stringOperations import getReadableNumber
+from backend.statistics.statistics import loess_fit
+
 from ..utils.stringOperations import getMessageProps, getReadableNumber, getRandomString, mergeListToString
 from ..utils.misc import scaleBetween, replaceKeyInDict
 from .postionCalculator import calculatePositions, getAxisPosition
@@ -22,7 +24,7 @@ from matplotlib.patches import Rectangle, Polygon
 from matplotlib.lines import Line2D
 from matplotlib.colors import Normalize, ListedColormap
 from matplotlib.colors import to_hex
-from matplotlib.pyplot import hist
+from matplotlib.pyplot import get, hist, sca
 import matplotlib.cm as cm
 from matplotlib import rcParams
 
@@ -36,8 +38,10 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.model_selection import GridSearchCV
 from numba import jit, njit, prange
 from wordcloud import WordCloud
-
+import io
 import time
+import pickle
+from scipy.stats import linregress
 
 @njit(parallel=True)
 def spreadSwarm(kde):
@@ -46,6 +50,213 @@ def spreadSwarm(kde):
     for i in prange(kde.size):
         A[i,0] = np.random.uniform(-kde[i]*0.85,kde[i]*0.85) 
     return A
+
+def buildScatterPairs(axisInts,columnPairs,scatterColumnPairs):
+    ""
+    for nA in axisInts.flatten():
+        scatterColumnPairs[nA] = columnPairs[nA]
+    return scatterColumnPairs
+
+def lowessFit(X,it=None,frac=None,*args,**kwargs):
+        '''
+        Calculates lowess line from dataFrame input
+        '''
+        X.dropna(inplace=True)
+        data = X.sort_values(by = X.columns.values[0])
+        x = data.iloc[:,0].values
+        y = data.iloc[:,1].values
+
+        if it is None and frac is None:
+            lenX = x.size
+            if lenX > 1000:
+                it = 3
+                frac = 0.65
+            else:
+                it = 1
+                frac = 0.3
+        yfit,ymin,ymax = loess_fit(x,y,span=frac)
+        #lowessLine = lowess(y,x, it=it, frac=frac,*args,**kwargs)
+        lowessLine = np.empty(shape=(x.size,4))
+        lowessLine[:,0] = x 
+        lowessLine[:,1] = yfit
+        lowessLine[:,2] = ymin
+        lowessLine[:,3] = ymax
+        return lowessLine 
+
+def buildLabelData(axisInts, numericColumns, groupColorDict, labelData):
+    ""
+    for numericColumn, nAx in zip(numericColumns,axisInts):
+        
+        tKwargs = {
+            "color" : groupColorDict[numericColumn] if numericColumn in groupColorDict else "black",
+            "s" : numericColumn,
+            "horizontalalignment" : 'center',
+            "verticalalignment" : 'center',
+            "x" : 0.5,
+            "y" : 0.5
+            }
+        
+        labelData[nAx] = tKwargs
+        
+    
+    return labelData
+
+def build2DHistogramData(axisInts, columnPairs, data, histogramData):
+        #get pcolormesh for column pairs
+        ""
+        for nA in axisInts.flatten():
+            numericPairs = list(columnPairs[nA])
+            
+            XY  = data[numericPairs].dropna().values
+            
+            H, xedges, yedges = np.histogram2d(XY[:,0], XY[:,1], bins=(25, 25))
+            meshX, meshY = np.meshgrid(xedges, yedges)
+            histogramData[nA] = {
+                        "H":H,
+                        "xedges":xedges,
+                        "yedges":yedges,
+                        "meshX":meshX,
+                        "meshY":meshY
+                        }
+        return histogramData
+
+
+def buildCorrelationLabelData(axisInts, columnPairs, labelData, corrMatrix  = None, spearmanCorrMatrix=None):
+    ""
+    if corrMatrix is None and spearmanCorrMatrix is None:
+        return labelData
+
+    for nA in axisInts.flatten():
+        colA, colB = columnPairs[nA]
+        pearCorr = "" if corrMatrix is None else "r = {}\n".format(round(corrMatrix.loc[colA, colB],2))
+        spearCorr = "" if spearmanCorrMatrix is None else "rho = {}".format(round(spearmanCorrMatrix.loc[colA, colB],2))
+
+        tKwargs = {
+            "color" : "black",
+            "s" : pearCorr+spearCorr,
+            "horizontalalignment" : 'left',
+            "verticalalignment" : 'top',
+            "x" : 0.02,
+            "y" : 0.95
+            }
+        labelData[nA] = tKwargs
+
+    return labelData
+
+def buildScatterMatrix(data,
+                    numericColumns,
+                    plotType,
+                    axisInts,
+                    backgroundColorHex,
+                    scatterColumnPairs,
+                    colorBackground,
+                    addLinReg,
+                    addLowess,
+                    columnPairs,
+                    kdeKwargs,
+                    groupColorDict,
+                    addToPlotType,
+                    addPearson,
+                    addSpearman,
+                    corrmatrix,
+                    spearmanCorrMatrix,
+                    lowessKwargs):
+    ""
+    backgroundColors = {} 
+    histogramData = {}
+    linregressFit = {}
+    lowessData = {}
+    labelData = {}
+    kdeData = {}
+    if plotType == "scatter":
+        scatterColumnPairs = buildScatterPairs(axisInts,columnPairs,scatterColumnPairs)
+        if colorBackground and backgroundColorHex is not None:
+            for nA, columnPair in scatterColumnPairs.items():
+                colA, colB = columnPair
+
+                backgroundColors[nA] = backgroundColorHex.loc[colA,colB]
+        if addLinReg or addLowess:
+            for nA in axisInts.flatten():
+                numericPairs = list(columnPairs[nA])
+                if numericPairs[0] !=  numericPairs[1]:
+                    if addLinReg:
+                        linregressFit[nA] = linRegress(data[numericPairs])
+                    if addLowess:
+                        lowessData[nA] = lowessFit(data[numericPairs],**lowessKwargs)
+    elif plotType == "2D-Histogram":
+        histogramData =  build2DHistogramData(axisInts,columnPairs,data,histogramData)
+    elif plotType == "kde" or plotType == "label-kde":
+       kdeData = buildKdeData(axisInts,data,numericColumns,kdeData,**kdeKwargs)
+
+    if "label" in plotType:
+        labelData = buildLabelData(axisInts,numericColumns,groupColorDict,labelData)
+
+    if (addPearson or addSpearman) and (addToPlotType == "all types" or addToPlotType == plotType) and plotType not in ["label-kde","label","kde"]:            
+                
+            labelData = buildCorrelationLabelData(axisInts,
+                            columnPairs,
+                            labelData,
+                            corrMatrix = None if not addPearson else corrmatrix,
+                            spearmanCorrMatrix = spearmanCorrMatrix)
+
+    return (scatterColumnPairs,backgroundColors,linregressFit,histogramData,kdeData,labelData,lowessData)
+
+
+def _findBwByGridSearch(x,minBW,maxBW,numCrossValidations=5,kernel="gaussian"):
+    ""
+    grid = GridSearchCV(KernelDensity(kernel=kernel,algorithm='ball_tree'),
+                {'bandwidth': np.linspace(minBW, maxBW, 30)},
+                cv=numCrossValidations) # 5-fold cross-validation
+    grid.fit(x)
+    
+    return grid.best_params_["bandwidth"]
+
+def buildKdeData(axisInts,data,numericColumns,kdeData,bw,kernel,bwGridSearch,logDensity,gridMin,gridMax,numCVs):
+    ""
+
+    minMaxValues = np.nanquantile(data[numericColumns].values, q = [0.0,1.0],axis=0)
+    
+    for n,nAx in enumerate(axisInts):
+        x = data[numericColumns[n]].dropna().values.reshape(-1,1)
+    
+        #find x limits
+        minValue,maxValue = minMaxValues[:,n]
+        offSet = (maxValue - minValue) * 0.1
+        minValue -= offSet
+        maxValue += offSet
+
+        #caluclate kde and get y values
+        xx = np.linspace(minValue,maxValue,num=500).reshape(-1,1)
+        if bwGridSearch:
+            
+            bw = _findBwByGridSearch(x,gridMin,gridMax,numCVs)
+        
+        
+        kde = KernelDensity(bandwidth=bw, kernel=kernel, algorithm='ball_tree').fit(x)
+        y = kde.score_samples(xx)
+        if not logDensity:
+            y = np.exp(y)
+        
+        #find y limits
+        yMax = np.max(y)
+        yMin = np.min(y)
+        yMax += 0.15*np.sqrt((yMax-yMin)**2)
+        #add kdea data - key is axis int
+        kdeData[nAx] = {"xx" : xx, "x" : x, "yKde" : y ,"xLimit":(minValue,maxValue),"yLimit":(yMin,yMax)}
+
+    return kdeData
+
+def linRegress(X):
+    X = X.dropna()
+    
+    x = X.iloc[:,0].values
+    y = X.iloc[:,1].values
+
+    slope, intercept, r_value, p_value, std_err = linregress(x,y)
+    x1, x2 = x.min(), x.max()
+    y1, y2 = slope*x1+intercept, slope*x2+intercept
+
+    return [x1,x2],[y1,y2],slope, intercept, r_value, p_value, std_err
 
 def kdeCalc(X, bw = None, kernel = "gaussian", widthBox=1, addToX=0, numColumn = "Col", defaultPos = 0):
     xName = "x({})".format(numColumn)
@@ -106,7 +317,7 @@ plotFnDict = {
     "proteinpeptideplot" : "getProteinPeptideProps"
 }
 
-line_kwargs = dict(linewidths=.45, colors='k')
+line_kwargs = dict(linewidths=.2, colors='k')
 
 transformDict = {"log2" : np.log2, "log10" : np.log10, "ln" : np.log}
 
@@ -142,6 +353,23 @@ class PlotterBrain(object):
         self.histogramSortCategories = False
         self.countTransform = "none"
         
+
+    def figToClipboard(self,figure):
+        ""
+       # print(figure)
+        buf = io.BytesIO()
+        #pickle.dump(figure,buf)
+        dpi = self.sourceData.parent.config.getParam("copy.to.clipboard.dpi")
+        transparent = self.sourceData.parent.config.getParam("copy.to.clipboard.background.transparent")
+        figure.savefig(buf,format="png",dpi=dpi,transparent=transparent)
+        funcProps = getMessageProps("Done..","Figure saved to clipboard.")
+        funcProps["buf"] = buf
+        return funcProps
+        #QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
+        #self.figure.savefig(buf,format="png")
+        
+        # buf.close()
+
 
     def findPositions(self,numericColumns,categoricalColumns, plotType):
         ""
@@ -840,7 +1068,7 @@ class PlotterBrain(object):
             plotData["widths"] = xWidth
             plotData["patch_artist"] = True
             plotData["positions"] = boxPositions[n] 
-            plotData["capprops"] = {"linewidth":self.boxplotCapsLineWidth}
+            plotData["capprops"] = {"linewidth":rcParams["boxplot.whiskerprops.linewidth"]} 
             filteredData[n] = plotData
 
         
@@ -1448,7 +1676,7 @@ class PlotterBrain(object):
                     else:
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
                         #if no clustering applied, we can keep all values (e.g. just display)
-                        print("h?")
+                        
         
             #nRows, nCols = data.shape
             rawIndex = data.index
@@ -1548,6 +1776,7 @@ class PlotterBrain(object):
         '''
         Idea is from the seaborn package.
         '''
+        line_kwargs = dict(linewidths=.4, colors='k')
         dependent_coord = dendrogram['dcoord']
         independent_coord = dendrogram['icoord']
         max_dependent_coord = max(map(max, dependent_coord))
@@ -2163,16 +2392,10 @@ class PlotterBrain(object):
             if not logDensity:
                 y = np.exp(y)
            
-
-
-
             #find y limits
             yMax = np.max(y)
             yMin = np.min(y)
             yMax += 0.15*np.sqrt((yMax-yMin)**2)
-
-            
-
             #add kdea data - key is axis int
             kdeData[nAx] = {"xx" : xx, "x" : x, "yKde" : y ,"xLimit":(minValue,maxValue),"yLimit":(yMin,yMax)}
 
@@ -2233,7 +2456,7 @@ class PlotterBrain(object):
         labelData = dict()
         lowessFit,linregressFit = dict(), dict()
         backgroundColors = dict()
-
+        backgroundColorHex = None
         categoryIndexMatch = None
 
         config = self.sourceData.parent.config
@@ -2282,8 +2505,17 @@ class PlotterBrain(object):
                 columnsFoundInGrouping = [colName for colName in columnNames if colName in numericColumns]
                 numericColumns = columnsFoundInGrouping + [colName for colName in numericColumns if colName not in columnsFoundInGrouping]
                 groupColorDict = self.sourceData.parent.grouping.getColorsForGroupMembers(groupingName)
-        
-        
+            if columnSorting == "Hierarch. Clustering":
+                columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data[numericColumns].dropna(axis=0).values))
+                if columnLinkage is None:
+                    return getMessageProps("Error..","There was an error in clustering columns.")
+                Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
+                                    leaf_rotation=90, ax = None, no_plot=True)
+                
+                data = data.iloc[:,Z_col['leaves']]
+                numericColumns = [numericColumns[idx] for idx in Z_col['leaves']]
+                
+
         nAxis = int(nNumCols ** 2)
         axisPositions = getAxisPosition(nAxis, maxCol=nNumCols)
         subplotBorders = dict(wspace=0.1, hspace = 0.1, bottom=0.15,right=0.95,top=0.95)
@@ -2329,40 +2561,48 @@ class PlotterBrain(object):
         axisIntsBottom = axisIntsBottom[axisIntsBottom > 0]
 
         axisIntsDiagonal = np.diag(axisInts)
-        
-        #get data for above diagonal 
-        for plotType, axisInts in zip([topPlotType,bottomPlotType,diagPlotType],[axisIntsTop,axisIntsBottom,axisIntsDiagonal]):
-            if plotType == "scatter":
-                scatterColumnPairs = self._buildScatterPairs(axisInts,columnPairs,scatterColumnPairs)
-                if colorBackground:
-                    for nA, columnPair in scatterColumnPairs.items():
-                        colA, colB = columnPair
-        
-                        backgroundColors[nA] = backgroundColorHex.loc[colA,colB]
-                if addLinReg or addLowess:
-                    for nA in axisInts.flatten():
-                        numericPairs = list(columnPairs[nA])
-                        if numericPairs[0] !=  numericPairs[1]:
-                            if addLinReg:
-                                linregressFit[nA] = self.sourceData.statCenter.runLinearRegression(dataID,numericPairs)
-                            if addLowess:
-                                lowessFit[nA] = self.sourceData.statCenter.runLowess(dataID,numericPairs,frac=lowessFrac , it = lowessIt, delta = lowessDelta)
-                
-            elif plotType == "2D-Histogram":
-                histogramData =  self._build2DHistogramData(axisInts,columnPairs,data,histogramData)
-            elif plotType == "kde" or plotType == "label-kde":
-                kdeData = self._buildKdeData(axisInts,data,numericColumns,kdeData)
-            if "label" in plotType:
-                labelData = self._buildLabelData(axisInts,numericColumns,groupColorDict,labelData)
 
-            if (addPearson or addSpearman) and (addToPlotType == "all types" or addToPlotType == plotType) and plotType not in ["label-kde","label","kde"]:            
-                
-                labelData = self._buildCorrelationLabelData(axisInts,
+
+        kdeKwargs = {"bw" :  self.sourceData.parent.config.getParam("multi.scatter.kde.bandwidth"),
+                    "kernel" :  self.sourceData.parent.config.getParam("multi.scatter.kde.kernel"),
+                    "bwGridSearch" :  self.sourceData.parent.config.getParam("multi.scatter.kde.grid.search"),
+                    "logDensity" :  self.sourceData.parent.config.getParam("multi.scatter.kde.log.density"),
+                    "gridMin" :  self.sourceData.parent.config.getParam("multi.scatter.kde.grid.search.min"),
+                    "gridMax" :  self.sourceData.parent.config.getParam("multi.scatter.kde.grid.search.max"),
+                    "numCVs" : self.sourceData.parent.config.getParam("multi.scatter.kde.grid.n.cross.val")}
+        lowessKwargs = {"frac":lowessFrac , "it" : lowessIt, "delta" : lowessDelta}
+                            # if addLowess:
+                            #     lowessFit[nA] = self.sourceData.statCenter.runLowess(dataID,numericPairs,frac=lowessFrac , it = lowessIt, delta = lowessDelta)
+        #multi processing to calculate the axisInts (topRight,bottomleft,and diagonal simult.)        
+        with Pool(3) as p:
+            rPool = p.starmap(buildScatterMatrix,[(data,
+                                            numericColumns,
+                                            plotType, 
+                                            axisInts,
+                                            backgroundColorHex,
+                                            scatterColumnPairs,
+                                            colorBackground,
+                                            addLinReg,
+                                            addLowess,
                                             columnPairs,
-                                            labelData,
-                                            corrMatrix = None if not addPearson else corrmatrix,
-                                            spearmanCorrMatrix = spearmanCorrMatrix)
-
+                                            kdeKwargs,
+                                            groupColorDict,
+                                            addToPlotType,
+                                            addPearson,
+                                            addSpearman,
+                                            corrmatrix,
+                                            spearmanCorrMatrix,
+                                            lowessKwargs) for plotType, axisInts in zip([topPlotType,bottomPlotType,diagPlotType],
+                                                                                                    [axisIntsTop,axisIntsBottom,axisIntsDiagonal])])
+           # print(rPool) #output of pool - merged:(scatterColumnPairs,backgroundColors,linregressFit,histogramData,kdeData,labelData,lowessData)
+            scatterColumnPairs = {k: v for d in rPool for k, v in d[0].items()}
+            backgroundColors = {k: v for d in rPool for k, v in d[1].items()}
+            linregressFit = {k: v for d in rPool for k, v in d[2].items()}
+            histogramData = {k: v for d in rPool for k, v in d[3].items()}
+            kdeData = {k: v for d in rPool for k, v in d[4].items()}
+            labelData = {k: v for d in rPool for k, v in d[5].items()}
+            lowessFit = {k: v for d in rPool for k, v in d[6].items()}
+           
                 
 
         #compile size groups

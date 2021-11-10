@@ -51,10 +51,11 @@ class Transformer(object):
 
     def transformData(self, dataID, transformKey, columnNames, **kwargs):
         ""
+  
         if dataID in self.sourceData.dfs:
             if transformKey in funcKeys:
                 return getattr(self,funcKeys[transformKey])(dataID,columnNames, **kwargs)
-
+        return getMessageProps("Error..","No matching data ID?")
     def absoluteTransformation(self,dataID,columnNames):
         ""
         transformedColumnNames = ['abs:{}'.format(columnName) for columnName in columnNames.values] 

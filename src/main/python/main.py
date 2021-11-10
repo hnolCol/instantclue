@@ -49,7 +49,7 @@ import multiprocessing
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
-__VERSION__ = "0.10.10.20210316"
+__VERSION__ = "0.10.10.20211105"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -167,6 +167,11 @@ menuBarItems = [
         "subM":"Share",
         "name":"Display shared charts",
         "fn": {"obj":"webAppComm","fn":"displaySharedCharts"}
+    },
+    {
+        "subM":"Windows",
+        "name":"Main Window",
+        "fn": {"obj":"self","fn":"showWindow"}
     }
     
 ] + exampleFuncs 
@@ -305,7 +310,7 @@ class InstantClue(QMainWindow):
     def _addMenu(self):
         "Main window menu."
         self.subMenus = {}
-        subMenus = ["File","Log","Share","Help","About"]
+        subMenus = ["File","Settings","Log","Share","Help","About","Windows"]
         for subM in subMenus:
             self.subMenus[subM] = QMenu(subM,self)
             self.menuBar().addMenu(self.subMenus[subM])
@@ -330,6 +335,12 @@ class InstantClue(QMainWindow):
                     else:
                         action.triggered.connect(menuProps["fn"])
         
+        #add Setting Headers
+        subMenu = self.subMenus["Settings"]
+        propItems = sorted(self.config.getParentTypes())
+        for propItemName in propItems:
+            action = subMenu.addAction(propItemName)
+            action.triggered.connect(lambda _,propItem = propItemName:self.mainFrames["right"].openConfig(specificSettingsTab = propItem))
 
     def _createSubMenu(self,subMenuName,parentMenu):
         "Add a sub menu to a parent menu."
@@ -618,6 +629,11 @@ class InstantClue(QMainWindow):
         "Checks if there is any data loaded."
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
 
+    def setBufToClipboardImage(self,buf):
+        ""
+        QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
+        buf.close()
+
     def sendMessageRequest(self,messageProps = dict()):
         "Display message on user screen in the top right corner"
         # check if all keys present
@@ -635,6 +651,16 @@ class InstantClue(QMainWindow):
         ""
         w = WarningMessage(title="Information", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable,*args,**kwargs)
         w.exec_()
+
+    def addWindowMenu(self,actionName,actionFn,fnKwargs):
+        ""
+        action = self.subMenus["Windows"].addAction(actionName)
+        action.triggered.connect(lambda _,kwargs= fnKwargs: actionFn(**kwargs))
+        
+    def showWindow(self,*args,**kwargs):
+        ""
+        if hasattr(self,"raise_"):
+            self.raise_()
 
     def _setupStyle(self):
         "Style setup of the graphical user interface."

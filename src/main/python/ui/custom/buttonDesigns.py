@@ -1893,6 +1893,7 @@ def generateRandomCorrelationData(x0,x1,y0,y1,n):
             [stds[0]*stds[1]*corr,           stds[1]**2]]
 
     m = np.random.multivariate_normal(means, covs, n)
+    m[:,1] = m[::-1, 1]
     return m
 
 class PlotTypeButton(PushHoverButton):
@@ -1920,7 +1921,7 @@ class PlotTypeButton(PushHoverButton):
                             "wordcloud"     :   self.drawWordcloud}
 
     def paintEvent(self,event, noAxis = False):
-        "NoAxis - no effect. remove"
+        ""
         #create common background/reacts to hover
         super().paintEvent(event)
         painter = QPainter(self)
@@ -2251,12 +2252,13 @@ class PlotTypeButton(PushHoverButton):
             qp.drawEllipse(xy,3,3)
 
 
-    def drawScatterPoints(self,qp, height, width, rectX, rectY):
+    def drawScatterPoints(self,qp, height, width, rectX, rectY,r=3):
         b = QBrush(QColor("lightgrey"))
         qp.setBrush(b)
+        
         for x,y in generateRandomCorrelationData(0,width,0,height,n=20):
-            xy = QPointF(x + 10, height - y + 10)
-            qp.drawEllipse( xy,3,3)
+            xy = QPointF((rectX+width)-x, (rectY+height)-y)
+            qp.drawEllipse( xy,r,r)
 
     def drawBars(self,qp, height, width, rectX, rectY, nBars=4):
         ""
@@ -2382,6 +2384,42 @@ class PlotTypeButton(PushHoverButton):
     def sizeHint(self):
         ""
         return QSize(50,50)
+
+
+
+class MultiScatterButton(PlotTypeButton):
+    
+    def __init__(self,parent=None,*args,**kwargs):
+
+        super(MultiScatterButton,self).__init__(parent=None,*args,**kwargs)
+
+    def paintEvent(self,event):
+        ""
+       
+        super().paintEvent(event,noAxis = True)
+        painter = QPainter(self)
+        pen = QPen(QColor("black"))
+        pen.setWidthF(0.5)
+        painter.setPen(pen)
+        painter.setRenderHint(QPainter.Antialiasing,True)
+        #get rect
+        rect, h, w, x0, y0 = self.getRectProps(event)
+        m = w/8
+        w2 = w/2
+        qs = [QRectF(x0 - w2, y0 - w2, w2,h/2),
+            QRectF(x0, y0 - w2, w2,h/2),
+            QRectF(x0 - w2, y0, w2,h/2),
+            QRectF(x0, y0, w2,h/2)]
+        
+        for q in qs:
+            #set small width of pen line
+            pen.setWidthF(0.2)#
+            painter.setPen(pen)
+            rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter, q , False, 5) #jsut add axis no drawing
+            fKey = "scatter"
+            self.funcKeyDict[fKey](painter,rectHeight,rectWidth, rectX, rectY,r=1)
+            painter.setBrush(Qt.NoBrush)
+
 
 
 class MainFigureButton(PlotTypeButton):

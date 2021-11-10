@@ -29,6 +29,8 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     axisTitles = {}
     verticalLines = {}
     data = sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
+    data = data.dropna(subset=numericColumns,how="all")
+   
     if nCatCols == 0:
         
         groupedPlotData = data.describe()

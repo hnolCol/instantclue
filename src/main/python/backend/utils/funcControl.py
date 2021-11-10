@@ -721,6 +721,15 @@ funcPropControl = {
             "threadRequest":{"obj":"statCenter","fn":"runTSNE","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":[]           
         },
+    "plotter:figToClipboard": 
+        {
+            "threadRequest":{"obj":"plotterBrain","fn":"figToClipboard","requiredKwargs":["figure"]},
+            "completedRequest":[
+                {"obj":"self","fn":"setBufToClipboardImage","requiredKwargs":["buf"]},
+                sendMessageProps
+            ]           
+        },  
+        
     "plotter:addLinearFit": 
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getLinearRegression","requiredKwargs":["dataID","numericColumnPairs"]},

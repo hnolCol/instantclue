@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from ..plotter.plotTypeManager import PlotTypeManager, plotTypeTooltips, gridPosition 
-from ..custom.buttonDesigns import PlotTypeButton, MainFigureButton, SettingsButton
+from ..custom.buttonDesigns import PlotTypeButton, MainFigureButton, SettingsButton, MultiScatterButton
 from ..custom.mainFigure import MainFigure, MainFigureRegistry
 from ..custom.warnMessage import WarningMessage
 from ..custom.tableviews.ICDataTable import PandaTableDialog
@@ -44,7 +44,11 @@ class PlotOptionFrame(QWidget):
         ""
         self.buttons = []
         for plotType in self.typeManager.getAvailableTypes():
-            button = PlotTypeButton(parent=self,plotType=plotType,tooltipStr = plotTypeTooltips[plotType] if plotType in plotTypeTooltips else "")
+        
+            if plotType == "mulitscatter":
+                button = MultiScatterButton(parent=self,plotType=plotType,tooltipStr = plotTypeTooltips[plotType] if plotType in plotTypeTooltips else "")
+            else:
+                button = PlotTypeButton(parent=self,plotType=plotType,tooltipStr = plotTypeTooltips[plotType] if plotType in plotTypeTooltips else "")
             button.setContextMenuPolicy(Qt.CustomContextMenu)
             self.buttons.append(button)
                 
@@ -355,6 +359,7 @@ class PlotOptionFrame(QWidget):
        
         mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure, figureID = figureID)
         mainFigure.show()
+        self.mC.addWindowMenu("F{}".format(mainFigure.figureID),self.showMainFigureByID,fnKwargs={"mainFID" : mainFigure.figureID})
         self.mainFigureDialogs[mainFigure.figureID] = mainFigure
         return mainFigure
 
@@ -429,7 +434,7 @@ class PlotOptionFrame(QWidget):
 
     def openConfig(self,event=None,specificSettingsTab = None):
         ""
-        print(specificSettingsTab)
+        
         cdl = ConfigDialog(self.mC,specificSettingsTab = specificSettingsTab)
         cdl.exec_()
 

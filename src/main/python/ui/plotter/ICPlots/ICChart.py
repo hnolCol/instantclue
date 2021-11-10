@@ -78,7 +78,7 @@ class ICChart(QObject):
 						title = "Axis title", 
 						axisSize = 0.20, 
 						axisPadding=0, 
-						textSize = 9,  
+						textSize = 8,  
 						caBackground = None,
 						textRotation = 90):
 		"""
@@ -515,9 +515,10 @@ class ICChart(QObject):
 	
 	def getSubMenus(self):
 		""
-
-		return ["To main figure","Axis limits .."]
-
+		if self.plotType not in ["corrmatrix","hclust"]:
+			return ["To main figure","Axis limits .."]
+		else:
+			return []
 	def addMainFigActions(self,menu):
 		""
 		try:
@@ -550,11 +551,12 @@ class ICChart(QObject):
 
 	def addMenuActions(self, menus):
 		""
-		#axis limit menus
-		menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
-		menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
-		menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
-		menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
+		if "Axis limits .." in menus:
+			#axis limit menus
+			menus["Axis limits .."].addAction("Raw limits", self.rawAxesLimits)
+			menus["Axis limits .."].addAction("Center x to 0", self.centerXToZero)
+			menus["Axis limits .."].addAction("Set equal axes limits", self.alignLimitsOfAllAxes)
+			menus["Axis limits .."].addAction("Set x- and y-axis limits equal", self.alignLimitsOfXY)
 		
 		if hasattr(self,"colorLegend"):
 			menus["main"].addAction("Remove color legend", self.removeColorLegend)
@@ -1252,15 +1254,14 @@ class ICChart(QObject):
 
 	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
-		print("MIRROR")
+		
 		try:
 			markerLegend, sizeLegend, colorLegend, quickSelectLegend = None, None, None, None
 			if sourceAx is None and hasattr(self,"menuClickedInAxis"):
 
 				sourceAx = self.menuClickedInAxis
-			print("aa")
+			
 			axisID = self.getAxisID(sourceAx)
-			print(axisID)
 			targetAx.clear() 
 			
 			if self.mC.config.getParam("main.figure.size.scaling"):
@@ -1549,9 +1550,9 @@ class ICChart(QObject):
 		""
 		ax.axis(True)
 
-	def setAxisTitle(self,ax,title):
+	def setAxisTitle(self,ax,title,*args,**kwargs):
 		""
-		ax.set_title(title)		
+		ax.set_title(title,*args,**kwargs)		
 
 	def setData(self,data={}):
 		""

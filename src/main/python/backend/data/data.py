@@ -1221,6 +1221,7 @@ class DataCollection(object):
 		
 	def replaceColumns(self,dataID,columnNames,data):
 		""
+		
 		if dataID in self.dfs:
 			# if replacedColumnNames is not None and columnNames.size != replacedColumnNames.size:
 			# 	return getMessageProps("Erorr..","There was an error in replacing data in place (incorrect column name number)")

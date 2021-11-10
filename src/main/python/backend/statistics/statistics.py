@@ -922,7 +922,7 @@ class StatisticCenter(object):
         with Pool(NProcesses) as p:
             rPool = p.starmap(p_anova,[(indexDf,"value",groupings.tolist(),idx) for idx,indexDf in groupedDF])
            # print(rPool)
-            idx, data = zip(*[r[0] for r in rPool if r[0] is not None])
+            idx, data = zip(*[r[0] for r in rPool if r is not None and r[0] is not None])
             sourceName = rPool[0][1]
             columnNames = ["p-unc ({})".format(idx) for idx in sourceName.values]
             #print(rPool)

@@ -147,6 +147,8 @@ class CollapsableDataTreeView(QWidget):
 
             for menuItem in menuFuncs:
                 action = menus[menuItem["subM"]].addAction(menuItem["name"])
+                if dataType not in self.dataHeaders:
+                    dataType = dataType[:-5]
                 action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
 
             menus["main"].exec_(menuPosition)
@@ -178,7 +180,7 @@ class CollapsableDataTreeView(QWidget):
             self.dataID = dataID
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()
-            #self.updateDataIDInTreeViews()
+            self.updateDataIDInTreeViews()
             self.sendToThreadFn(funcProps)
             self.sessionIsBeeingLoaded = False
            

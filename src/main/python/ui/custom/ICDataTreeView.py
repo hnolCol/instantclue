@@ -93,13 +93,6 @@ menuBarItems = [
         "fnKwargs":{"test":"welch-test"}
     },
     {
-        "subM":"Multiple Groups",
-        "name":"1W-ANOVA",
-        "funcKey": "compareGroups",
-        "dataType": "Numeric Floats",
-        "fnKwargs":{"test":"1W-ANOVA"}
-    },
-    {
         "subM":"(Prote-)omics-toolkit",
         "name":"Filter fasta by ids",
         "funcKey": "filterFasta",

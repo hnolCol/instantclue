@@ -319,7 +319,7 @@ class SliceMarksFrame(QWidget):
     
     def chooseSize(self,event=None):
         ""
-        bottomLeft = self.findSendersBottomLeft()
+        bottomLeft = self.findSendersBottomLeft(self.sender())
         dlg = ICSizeDialog(mainController=self.mC)
         dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),250,200)
         dlg.exec_() 

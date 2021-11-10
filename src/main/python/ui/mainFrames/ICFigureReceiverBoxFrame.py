@@ -14,6 +14,9 @@ from ..plotter.plotManager import ICPlotter
 import numpy as np 
 import pandas as pd
 import io
+from multiprocessing import Process
+
+
 
 class MatplotlibFigure(QWidget):
     def __init__(self, parent=None, mainController=None):
@@ -26,7 +29,8 @@ class MatplotlibFigure(QWidget):
         
         self.startActionOnThread = mainController.sendRequestToThread
         # a figure instance to plot on
-        self.figure = figure()
+        self.figure = figure(dpi=100)
+        
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
@@ -53,11 +57,24 @@ class MatplotlibFigure(QWidget):
 
     def copyFigureToClipboard(self,*args,**kwargs):
         ""
-        print("copied")
-        buf = io.BytesIO()
-        self.figure.savefig(buf,format="png")
-        QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
-        buf.close()
+
+
+#         def f(name):
+#     print('hello', name)
+
+# if __name__ == '__main__':
+  #  p = Process(target=f, args=('bob',))
+        
+        fkey = "plotter:figToClipboard"
+        kwargs = {"figure":self.figure}
+        self.mC.sendRequestToThread({"key":fkey,"kwargs":kwargs})
+        # buf = io.BytesIO()
+        # fig.savefig(buf,format="png")
+    
+        
+        # #self.figure.savefig(buf,format="png")
+        
+       # buf.close()
 
     def initiateChart(self, *args, **kwargs):
         ""
