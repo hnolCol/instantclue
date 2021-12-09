@@ -3,7 +3,11 @@ import pandas as pd
 from matplotlib.colors import Normalize, to_hex
 from matplotlib import cm 
 from itertools import combinations
+import json
+from datetime import datetime
+import socket
 
+#from main.python.ui.custom.ICQuickSelect import FavoriteSelectionCollection
 
 
 from .ICExclusiveGroup import ICExlcusiveGroup
@@ -217,7 +221,6 @@ class ICGrouping(object):
         if grouping in self.groups:
             return list(self.groups[grouping].keys())
 
-
     def getGroupNameByColumn(self, groupingName):
         ""
         if groupingName in self.groups:
@@ -348,4 +351,38 @@ class ICGrouping(object):
             for groupName, items in groups.items():
                 items.replace(to_replace = prevColumnNames,value = newColumnNames,inplace=True)
 
-    
+    def exportGroupingToJson(self,groupingNames, filePath):
+        ""
+        computerName = socket.gethostname()
+        jsonOut = OrderedDict()
+        jsonOut["Creation Date"] = datetime.now().strftime("%Y%m%d %H:%M:%S")
+        jsonOut["Software"] = "Instant Clue"
+        jsonOut["Version"] = self.sourceData.parent.version
+        jsonOut["Computer"] = computerName
+        jsonOut["grouping"] = OrderedDict()
+        jsonOut["groupingCmap"] = dict()
+        for groupingName in groupingNames:
+            if groupingName in self.groups:
+                jsonOut["grouping"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])
+                jsonOut["groupingCmap"][groupingName] = self.getColorMap(groupingName)
+        with open(filePath, 'w', encoding='utf-8') as f:
+            json.dump(jsonOut, f, ensure_ascii=False, indent=4)
+
+        return getMessageProps("Done","Grouping saved to json file. You can upload groupings from this file into Instant Clue.")
+        
+
+    def loadGroupingFromJson(self,filePath):
+        ""
+        try:
+            with open(filePath, 'r', encoding='utf-8') as f:
+                jsonLoaded = json.load(f)
+                for groupingName, groups in jsonLoaded["grouping"].items():
+                    groupedItems = dict([(k,pd.Series(v)) for k,v in groups.items()])
+                    if groupingName in jsonLoaded["groupingCmap"]:
+                        cmapName = jsonLoaded["groupingCmap"][groupingName]
+                    else:
+                        cmapName = None
+                    self.addGrouping(groupingName, groupedItems,colorMap=cmapName)
+        except:
+            return getMessageProps("Error ..","There was an error reading the selected json file.")
+        return getMessageProps("Done..","Grouping loaded.")

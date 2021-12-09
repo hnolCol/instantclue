@@ -12,7 +12,7 @@ from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
 from ui.custom.warnMessage import AskStringMessage
-
+from ui.dialogs.ICDSelectItems import ICDSelectItems
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
 from backend.data.ICGrouping import ICGrouping
@@ -455,6 +455,21 @@ class InstantClue(QMainWindow):
         else:
             self.sendToWarningDialog(infoText="Web AppID is already validated.")
 
+
+    def askForGroupingSelection(self, funcKey, numericColumnsInKwargs = True, title = "Groupings to display in h. clustering.", kwargName = "groupingName", **kwargs):
+        ""
+        if numericColumnsInKwargs:
+            groupings = self.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
+        else:
+            groupings = self.grouping.groups.copy()
+        if len(groupings) > 0:
+            dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = title, **kwargs)
+            if dlg.exec_():
+                selectedGrupings = dlg.getSelection().values.flatten()
+                if selectedGrupings.size > 0: #check
+                    funcKey["kwargs"][kwargName] = selectedGrupings
+        return funcKey
+
     def sendRequest(self,funcProps):
         ""
         try:
@@ -656,6 +671,11 @@ class InstantClue(QMainWindow):
         ""
         action = self.subMenus["Windows"].addAction(actionName)
         action.triggered.connect(lambda _,kwargs= fnKwargs: actionFn(**kwargs))
+        return action 
+
+    def deleteWindowAction(self,action):
+        "Delete an aciton"
+        self.subMenus["Windows"].removeAction(action)
         
     def showWindow(self,*args,**kwargs):
         ""

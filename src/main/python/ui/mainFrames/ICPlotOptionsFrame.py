@@ -30,9 +30,10 @@ class PlotOptionFrame(QWidget):
 
         self.mC = mainController
         self.typeManager = PlotTypeManager()
-        self.mainFigureRegistry = MainFigureRegistry()
+        self.mainFigureRegistry = MainFigureRegistry(parent=self)
         self.currentPlotType = self.getDefaultPlotType()
         self.mainFigureDialogs = dict()
+        self.mainFigureWindowActions = dict()
         self._controls()
         self._layout()
         self._connectEvents()
@@ -215,6 +216,11 @@ class PlotOptionFrame(QWidget):
         self.mC.config.toggleParam("boxplot.split.data.on.category")
 
 
+    def removeMainFigureWindowLink(self,figureID):
+        ""
+        action = self.mainFigureWindowActions[figureID]
+        self.mC.deleteWindowAction(action)
+
     def castMainFigureMenu(self,event=None):
         ""
         mainFiguresIDs = self.mainFigureRegistry.getMainFigureIDs()
@@ -356,11 +362,11 @@ class PlotOptionFrame(QWidget):
 
     def openMainFigure(self,event=None,mainFigure=None, figureID = None):
         ""
-       
         mainFigure = MainFigure(parent=self, mainController = self.mC, mainFigureRegistry = self.mainFigureRegistry, mainFigure = mainFigure, figureID = figureID)
         mainFigure.show()
-        self.mC.addWindowMenu("F{}".format(mainFigure.figureID),self.showMainFigureByID,fnKwargs={"mainFID" : mainFigure.figureID})
+        action = self.mC.addWindowMenu("F{}".format(mainFigure.figureID),self.showMainFigureByID,fnKwargs={"mainFID" : mainFigure.figureID})
         self.mainFigureDialogs[mainFigure.figureID] = mainFigure
+        self.mainFigureWindowActions[mainFigure.figureID] = action
         return mainFigure
 
     def updateColorScaleInClustermap(self, scaleString = "Raw data"):
@@ -376,7 +382,7 @@ class PlotOptionFrame(QWidget):
                     self.mC.config.setParam("colorMapLimits.min",minValue)
                     self.mC.config.setParam("colorMapLimits.max",maxValue)
                     exists,graph = self.mC.getGraph()
-                    if exists:
+                    if exists and hasattr(graph,"updateClim"):
                         graph.updateClim()
             except Exception as e:
                 print(e)

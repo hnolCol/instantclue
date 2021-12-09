@@ -12,7 +12,7 @@ from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 
 
-BASE_URL = "https://instantclue.de/api/v1/"#"#"http://127.0.0.1:5000/api/v1/"#"
+BASE_URL = "https://app.instantclue.de/api/v1/"#"#"http://127.0.0.1:5000/api/v1/"#"
 class ICAppValidator(object):
     ""
     def __init__(self, mainController):
@@ -24,7 +24,7 @@ class ICAppValidator(object):
 
     def checkAppIDForCollision(self,b64EncAppID):
         "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided. The chances are however vereeery looow :) "
-        URL = "https://instantclue.de/api/v1/app/id/exists"
+        URL = "https://app.instantclue.de/api/v1/app/id/exists"
         try:
             r = requests.get(URL,params={"app-id":b64EncAppID})
             if r.status_code == 200:
@@ -80,7 +80,7 @@ class ICAppValidator(object):
             appID = self.getAppID()
             URL = BASE_URL+"app/validate"
             try:
-                r = requests.get(URL,params={"appID":appID})
+                r = requests.get(URL,params={"appID":appID}, timeout=2)
             except:
                 print("Connection error")
                 return
@@ -134,7 +134,7 @@ class ICAppValidator(object):
         shortUrl = chartDetails.loc["short-url"] 
         if appID is not None:
             try:
-                URL = "https://instantclue.de/api/v1/graph/text"
+                URL = "https://app.instantclue.de/api/v1/graph/text"
                 if isProtected:
                     encryptPwd = self.encryptStringWithPublicKey(password)
                     r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd})
@@ -155,7 +155,7 @@ class ICAppValidator(object):
 
     def isChartProtected(self,graphURL):
         ""
-        URL = "https://instantclue.de/api/v1/graph/protected"
+        URL = "https://app.instantclue.de/api/v1/graph/protected"
         try:
             r = requests.get(URL,params={"url":graphURL})
         except:
@@ -168,7 +168,7 @@ class ICAppValidator(object):
         "Returns the charts that were uplaoded and are associated to the app-id"
         appID = self.getAppID() 
         if appID is not None:
-            URL = "https://instantclue.de/api/v1/app/graphs"
+            URL = "https://app.instantclue.de/api/v1/app/graphs"
             try:
                 r = requests.get(URL,params={"appID":appID})
             except:
@@ -186,9 +186,10 @@ class ICAppValidator(object):
         ""
         URL = BASE_URL + "/graph"
 
-        r = requests.get(URL,params={"url":graphID})
+        r = requests.get(URL,params={"graphID":graphID})
         if r.status_code == 200:
             jsonData = r.json() 
+            print(jsonData)
             if isinstance(jsonData,dict) and "plotData" in jsonData:
                 df = pd.read_json(jsonData["plotData"])
                 return self.mC.data.addDataFrame(df,fileName="GraphData({})".format(graphID))

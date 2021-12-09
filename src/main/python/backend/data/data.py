@@ -2260,7 +2260,7 @@ class DataCollection(object):
 
 	def setNaNBasedOnCondition(self,dataID,columnNames, belowThreshold = None, aboveThreshold = None):
 		""
-		print(aboveThreshold,belowThreshold)
+		#print(aboveThreshold,belowThreshold)
 		if dataID in self.dfs:
 			data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
 			filterIdx = {} 
@@ -2365,7 +2365,6 @@ class DataCollection(object):
 			return groupByObject
 		else:
 			return
-		
 	
 	def get_next_available_id(self):
 		'''
@@ -2555,6 +2554,15 @@ class DataCollection(object):
 			meltedDataFrame = pd.melt(self.dfs[dataID], id_vars = idVars, value_vars = columnNames,
 									var_name = variableName,
 									value_name = valueName)
+			#add groupings
+			if self.parent.grouping.groupingExists():
+				groupingNames = self.parent.grouping.getGroupings()
+				for groupingName in groupingNames:
+					mapper = self.parent.grouping.getGroupNameByColumn(groupingName)
+					meltedDataFrame.loc[:,groupingName] = meltedDataFrame[variableName].map(mapper)
+
+				
+
 			## determine file name
 			baseFile = self.getFileNameByID(dataID)
 			numMeltedfiles = len([fileName for fileName in self.fileNameByID.values() if 'Melted_' in fileName])			

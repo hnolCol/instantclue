@@ -53,7 +53,8 @@ dataTypeSubMenu = {
         ("Model Fitting",["Kinetic"]),
         ("Missing values (NaN)",["Replace NaN by .."]),
         ("Replace NaN by ..",["Iterative Imputer"]),
-        ("Groupings",["Pairwise Tests","Multiple Groups","Summarize Groups"])
+        ("Groupings",["Pairwise Tests","Multiple Groups","Summarize Groups"]),
+        ("(Prote-)omics-toolkit", ["pulse-SILAC"])
         ],
     "Integers" : [
         ("main",["Column operation ..","Sorting"]),
@@ -66,7 +67,7 @@ dataTypeSubMenu = {
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
-        #"(Prote-)omics-toolkit", ["Organization"])
+        ("(Prote-)omics-toolkit", ["Annotations"]),
         ]
 }
 
@@ -104,7 +105,31 @@ menuBarItems = [
         "funcKey": "fisherCategoricalEnrichmentTest",
         "dataType": "Categories",
     },
-        {
+    {
+        "subM":"Annotations",
+        "name":"MitoCarta 3.0 (member)",
+        "funcKey": "annotate::",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"Annotations",
+        "name":"MitoCarta 3.0 (full)",
+        "funcKey": "annotate::",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"Annotations",
+        "name":"Human MitoCoP (member)",
+        "funcKey": "annotate::",
+        "dataType": "Categories",
+    },
+    {
+        "subM":"Annotations",
+        "name":"Human MitoCoP (full)",
+        "funcKey": "annotate::",
+        "dataType": "Categories",
+    },
+    {
         "subM":"(Prote-)omics-toolkit",
         "name":"1D-Enrichment",
         "funcKey": "run1DEnrichment",
@@ -128,6 +153,21 @@ menuBarItems = [
         "funcKey": "openBatchCorrectionDialog",
         "dataType": "Numeric Floats",
     },
+    {
+        "subM":"pulse-SILAC",
+        "name":"A * exp(-k*t) + b (Exp. Degradation)",
+        "funcKey": "runExponentialFit",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"fitType":"decrease"}
+    },
+    {
+        "subM":"pulse-SILAC",
+        "name":" 1- (A * exp(-k*t) + b) (Exp. Synthesis)",
+        "funcKey": "runExponentialFit",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"fitType":"increase"}
+    },
+    
     # {
     #     "subM":"Organization",
     #     "name":"Create Sample List",
@@ -390,6 +430,16 @@ menuBarItems = [
     },
     {
         "subM":"Group by and Aggregate ..",
+        "name":"mean & stdev",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requiredColumns": ["groupbyColumn"],
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":["mean",np.std]}}
+    },
+    {
+        "subM":"Group by and Aggregate ..",
         "name":"sum",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -440,13 +490,20 @@ menuBarItems = [
     },
     {
         "subM":"Group by and Aggregate ..",
-        "name":"count values (+total size)",
+        "name":"count valid values (+total size)",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
                     "requiredColumns": ["groupbyColumn"],
                     "addColumns" : True,
                     "otherKwargs": {"metric":["count" ,"size"]}}
+    },
+    {
+        "subM":"Group by and Aggregate ..",
+        "name":"custom combination",
+        "dataType": "Numeric Floats",
+        "funcKey": "getCustomGroupByInput",
+        "fnKwargs": {}
     },
     {
         "subM":"Group by and Aggregate ..",
@@ -595,6 +652,13 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "loessRowNorm"}
     },
+    # {
+    #     "subM":"Normalization (row)",
+    #     "name":"Relative within Group",
+    #     "funcKey": "normalizer::relativeWithinGroup",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs": {"normKey": "loessRowNorm"}
+    # },
     {
         "subM":"Normalization (column)",
         "name":"Standardize (Z-Score)",
@@ -622,6 +686,16 @@ menuBarItems = [
         "funcKey": "normalizer::normalizeData",
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "globalMedian"}
+    },
+    {
+        "subM":"Normalization (column)",
+        "name":"Adjust Median By Subset",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"normalizer::adjustMedianBySubset",
+                    "requiredColumns": ["subsetColumn"],
+                    "addColumns" : True
+                    }
     },
     {
         "subM":"Normalization (column)",
@@ -791,6 +865,23 @@ menuBarItems = [
                       "max": np.inf,
                       "default" : 1,
                       "requiredFloat":"aboveThreshold"}
+    },
+    # {
+    #     "subM":"Set NaN if..",
+    #     "name":"Not decreasing (Group)",
+    #     "funcKey": ",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs": {"increasing":True}
+    # },
+    {
+        "subM":"Set NaN if..",
+        "name":"Not decreasing (Group)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"filter::NaNconsecutiveDecreasing",
+                    "requiredGrouping": ["Grouping"],
+                    "otherKwargs": {"increasing":False}
+        }
     },
     {
         "subM":"Consecutive ..",
@@ -2023,7 +2114,7 @@ class DataTreeViewTable(QTableView):
         ""
 
         if self.mC.data.hasData():
-            groupDialog = ICGrouper(self.mC,parent=self,**kwargs)
+            groupDialog = ICGrouper(self.mC,parent=self)
             groupDialog.exec()
         
 
@@ -2258,6 +2349,33 @@ class DataTreeViewTable(QTableView):
                 w.exec_()
     
 
+    def runExponentialFit(self,fitType,*args,**kwargs):
+        ""
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            if len(groupingNames) < 3:
+                groupingNames = groupingNames + ["None"] * (3-len(groupingNames))
+            groupings = ["timeGrouping","replicateGrouping","comparisonGrouping"]
+            options = dict([(k,["None"] + groupingNames) for k in groupings])
+            defaults = dict([(k,groupingNames[n] if len(groupingNames) > n+1 else groupingNames[0]) for n,k in enumerate(groupings)])
+            selDiag = SelectionDialog(groupings,
+                                options,
+                                defaults,
+                                title="Select Grouping for Exponential Fit.")
+                        
+            if selDiag.exec_():
+
+                fnKwargs = selDiag.savedSelection
+                fnKwargs["dataID"] = self.mC.getDataID()
+                fnKwargs["fitType"] = fitType
+                funcProps = {
+                    "key" : "stats::fitExponentialCurve",
+                    "kwargs" : fnKwargs
+                    }
+                self.mC.sendRequestToThread(funcProps)
+        else:
+            self.mC.sendToWarningDialog(infoText = "No grouping founds. Please add a grouping first. (context menu - Groupings - Annotate Groups)")
+
     def run1DEnrichment(self,**kwargs):
         "Run a 1D Enrichment "
         
@@ -2306,7 +2424,7 @@ class DataTreeViewTable(QTableView):
 
         if self.mC.grouping.groupingExists():
             groupingNames = self.mC.grouping.getNames()
-            groupings = ["withinGrouping1","withinGrouping2","sibjectGrouping"]
+            groupings = ["withinGrouping1","withinGrouping2","subjectGrouping"]
             options = dict([(k,["None"] + groupingNames) for k in groupings])
             defaults = dict([(k,groupingNames[n]) for n,k in enumerate(groupings)])
             selDiag = SelectionDialog(groupings,
@@ -2376,6 +2494,10 @@ class DataTreeViewTable(QTableView):
                 funcProps = {"key":fkey,"kwargs":kwargs}
                 self.mC.sendRequestToThread(funcProps)
             
+
+    def getCustomGroupByInput(self,*args,**kwargs):
+        ""
+
 
     def openBatchCorrectionDialog(self):
         ""

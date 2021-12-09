@@ -566,7 +566,16 @@ funcPropControl = {
             "threadRequest":{"obj":"numericFilter","fn":"findConsecutiveValuesInGrouping","requiredKwargs":["dataID","groupingName","increasing"]},
             "completedRequest":refreshColumnView               
         },
-        
+    "filter::NaNconsecutiveDecreasing":
+        {
+            "threadRequest":{"obj":"numericFilter","fn":"filterConsecutiveValuesInGrouping","requiredKwargs":["dataID","groupingName","increasing"]},
+            "completedRequest":refreshColumnView               
+        },
+    # "filter::longestConsecutiveDecreasingStretch":
+    #     {
+    #         "threadRequest":{"obj":"numericFilter","fn":"findConsecutiveValuesInGrouping","requiredKwargs":["dataID","groupingName","increasing"]},
+    #         "completedRequest":refreshColumnView               
+    #     },     
 
     "data::removeDuplicates":
         {
@@ -582,6 +591,17 @@ funcPropControl = {
                 sendMessageProps]
                     
         },
+    
+    "normalizer::adjustMedianBySubset":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeMedianBySubset","requiredKwargs":["dataID","columnNames","subsetColumn"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
+
+        
     "normalizer::normalizeData":
         {
             "threadRequest":{"obj":"normalizer","fn":"normalizeData","requiredKwargs":["dataID","columnNames","normKey"]},
@@ -870,6 +890,13 @@ funcPropControl = {
             "completedRequest":
                     addDataAndRefresh
         },
+    "stats::fitExponentialCurve":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runExponentialFit","requiredKwargs":["dataID","fitType","timeGrouping","replicateGrouping","comparisonGrouping"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },
+    
     "grouping::exclusivePositives":
         {
             "threadRequest":{"obj":"grouping","fn":"getPositiveExclusives","requiredKwargs":["dataID","columnNames"]},
@@ -894,6 +921,19 @@ funcPropControl = {
             "completedRequest":
                     [updateGrouping,sendMessageProps]
         },
+    "groupings:exportGroupingToJson":
+        {
+            "threadRequest":{"obj":"grouping","fn":"exportGroupingToJson","requiredKwargs":["groupingNames","filePath"]},
+            "completedRequest":
+                    [sendMessageProps]
+        },
+    "groupings:loadGroupingFromJson":
+        {
+            "threadRequest":{"obj":"grouping","fn":"loadGroupingFromJson","requiredKwargs":["filePath"]},
+            "completedRequest":
+                    [updateGrouping,sendMessageProps]
+        },
+        
     "webApp::getChartData":
         {
             "threadRequest":{"obj":"webAppComm","fn":"getChartData","requiredKwargs":["graphID"]},

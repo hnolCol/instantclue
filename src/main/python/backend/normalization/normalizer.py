@@ -17,7 +17,8 @@ funcKeys = {
         "Quantile (25 - 75)" : "calculateQuantiles", 
         "loessRowNorm" : "fitCorrectLoess",
         "loesColNorm" : "globalLoessCorrection",
-        "globalMedian" : "globalMedian"
+        "globalMedian" : "globalMedian",
+        "normalizeMedianBySubset" : "normalizeMedianBySubset"
          }
 
 
@@ -95,6 +96,27 @@ class Normalizer(object):
             transformedValues[normColumnNames] = X[groupColumns].subtract(distToGroupMedian, axis="columns")
 
         return self.sourceData.joinDataFrame(dataID,transformedValues)
+
+    def normalizeMedianBySubset(self,dataID,columnNames,subsetColumn):
+        "Normalize data on a specific subset."
+        if isinstance(subsetColumn,list):
+            subsetColumn = subsetColumn[0]
+
+        data = self.sourceData.dfs[dataID][columnNames.values.tolist() + [subsetColumn]]
+        #uniqueValues = self.sourceData.getUniqueValues(dataID, subsetColumn)
+        groupedDf = data.groupby(by=subsetColumn)
+        r = []
+        for groupName, groupData in groupedDf:
+            medians = groupData[columnNames].median(axis=0)
+            globalMedian = np.nanmedian(medians)
+            diff = medians - globalMedian
+            normData = data[columnNames].sub(diff,axis="columns")
+            normData.columns = ["{}:{}".format(groupName,colName) for colName in columnNames.values]
+            r.append(normData)
+        transformedValues = pd.concat(r,axis=1)
+
+        return self.sourceData.joinDataFrame(dataID, transformedValues)
+
 
     def fitLowess(self,y,x,**kwargs):
         "Should not be here - move function"

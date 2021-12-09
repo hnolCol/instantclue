@@ -1439,7 +1439,7 @@ class PlotterBrain(object):
                     else:
                         tickPos = np.arange(tickCats.size)
                         
-                    tickPositions[n] = tickPos
+                    tickPositions[nAxis] = tickPos
                     minX, maxX = np.min(tickPos), np.max(tickPos)
                     distance = np.sqrt(minX**2 + maxX**2) * 0.05
                     hoverData[nAxis] = axisCatData
@@ -1469,7 +1469,7 @@ class PlotterBrain(object):
                             error2D = {}
 
                             line2D["marker"] = "o"
-                            line2D["color"] = "black"
+                            line2D["color"] =  colors[colorCategory] if faceAndLineColorSame else "black"
                             line2D["linestyle"] = "-"
                             line2D["linewidth"] = lineWidth
                             line2D["markerfacecolor"] = colors[colorCategory]
@@ -2788,7 +2788,7 @@ class PlotterBrain(object):
         funcProps["areaData"] = areaData
         return funcProps
 
-    def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None):
+    def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None, userMinMax = None):
         ""
      
             
@@ -2865,35 +2865,35 @@ class PlotterBrain(object):
             nanIndex = rawData.index[np.isnan(rawData.values).flatten()]
             
             minV, q25, median, q75, maxV = np.nanquantile(rawData.values,q = [0,0.25,0.5,0.75,1])
-            scaledColorValues = (rawData.values.flatten() - minV) / (maxV - minV)
+            if userMinMax is not None:
+                minV, maxV = userMinMax
+                median = (maxV+minV) / 2 
+                q25 = median - (median-minV)/2
+                q75 = median + (maxV-median)/2
+
             
-            cmap = self.sourceData.colorManager.get_max_colors_from_pallete(colorMap = twoColorMap)
-            
-            colorData =  pd.DataFrame([to_hex(c) for c in cmap(scaledColorValues)],
+            colorValues, colorsInMapper = self.sourceData.colorManager.matchColorsToValues(arr = rawData.values.flatten(), colorMapName = twoColorMap, vmin = minV, vmax = maxV, asHex=True)
+            colorData =  pd.DataFrame(colorValues,
                                     columns=["color"],
                                     index=rawData.index)
             colorData.loc[nanIndex,"color"] = self.sourceData.colorManager.nanColor
             
             #save colors for legend
-            scaledColorVs = [to_hex(cmap( (x - minV) / (maxV - minV))) for x in [maxV,q75,median,q25,minV]]
+            #scaledColorVs = [to_hex(cmap( (x - minV) / (maxV - minV))) for x in [maxV,q75,median,q25,minV]]
+            legendColors, _ = self.sourceData.colorManager.matchColorsToValues(arr = [maxV,q75,median,q25,minV], colorMapName = twoColorMap, vmin = minV, vmax = maxV, asHex=True)
+            colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
             
-            colorLimitValues = scaledColorVs + [self.sourceData.colorManager.nanColor]
-
-            if colorGroupData is None:
-                colorGroupData = pd.DataFrame(columns=["color","group"])
-
-                groupNames = ["Max ({})".format(getReadableNumber(maxV)),
-                            "75% Quantile ({})".format(getReadableNumber(q75)),
-                            "Median ({})".format(getReadableNumber(median)),
-                            "25% Quantile ({})".format(getReadableNumber(q25)),
-                            "Min ({})".format(getReadableNumber(minV)),
-                            "NaN"]
-                colorGroupData["color"] = colorLimitValues
-                colorGroupData["group"] = groupNames
-            else:
-                colorGroupData["color"] = colorLimitValues
+            colorGroupData = pd.DataFrame(columns=["color","group"])
+            groupNames = ["Max ({})".format(getReadableNumber(maxV)),
+                        "75% Quantile ({})".format(getReadableNumber(q75)),
+                        "Median ({})".format(getReadableNumber(median)),
+                        "25% Quantile ({})".format(getReadableNumber(q25)),
+                        "Min ({})".format(getReadableNumber(minV)),
+                        "NaN"]
+            colorGroupData["color"] = colorLimitValues
+            colorGroupData["group"] = groupNames
         
-        tableTitle = mergeListToString(colorColumn.values,"\n") 
+        tableTitle = mergeListToString(colorColumn.values,"\n") if userMinMax is None else "Custom Scale\n" + mergeListToString(colorColumn.values,"\n")
         #save data to enable fast update 
         self.colorColumn = colorColumn
         self.colorColumnType = colorColumnType
@@ -3340,7 +3340,7 @@ class PlotterBrain(object):
                             pd.Series(np.concatenate(uniqueValuesList)) , ignore_index=True).unique()
         
         factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
-        
+       # print(factorMapper)
         #ensure -1 is first in color chooser
        # factorMapper = OrderedDict(sorted(factorMapper.items(), key=lambda x:x[1]))
         
@@ -3348,18 +3348,18 @@ class PlotterBrain(object):
         colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
 
         for columnName in colorColumn.values:
-            colorData.loc[rawData.index,columnName] = rawData[columnName].map(factorMapper)
+            colorData.loc[rawData.index,columnName] = rawData.loc[rawData.index,columnName].map(factorMapper)
 
 
         colorValues = sns.color_palette("Paired",len(factorMapper)).as_hex()
         colorValues[0] = self.sourceData.colorManager.nanColor
+       
         cmap = ListedColormap(colorValues)
+      
         colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
         colorGroupData["color"] = colorValues
         colorGroupData["group"] = list(factorMapper.keys())
         colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
-
-	
 
         return {"colorData":colorData,"colorGroupData":colorGroupData,"cmap":cmap,"title":mergeListToString(colorColumnNames,"\n"),"isEditable":False}
         

@@ -157,7 +157,7 @@ class ICShareGraph(QDialog):
     def shareGraph(self):
         ""
         if self.requiredWidgetsFilled():
-            URL = "https://www.instantclue.de/api/v1/graph"
+            URL = "https://app.instantclue.de/api/v1/graph"
             appID = self.mC.webAppComm.getAppID()
             exists, graph = self.mC.getGraph()
             if exists:
@@ -193,6 +193,8 @@ class ICShareGraph(QDialog):
                 
                 searchData = self.mC.data.getDataByColumnNameForWebApp(self.mC.getDataID(),searchColumnName)
                 data = self.mC.data.joinColumnToData(data,self.mC.getDataID(),searchColumnName)
+                columnsSorted = searchColumnName + [colName for colName in data.columns if colName not in searchColumnName]
+                data = data[columnsSorted]
                 #dprint(data)
                 if data is not None:
                     try:

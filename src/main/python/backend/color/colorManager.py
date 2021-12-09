@@ -4,7 +4,7 @@ import seaborn as sns
 from collections import OrderedDict
 from .colorHelper import ColorHelper
 from ..utils.misc import replaceKeyInDict
-from matplotlib.colors import ListedColormap, Normalize
+from matplotlib.colors import ListedColormap, Normalize, to_hex
 import matplotlib.cm as cm
 import numpy as np
 import pandas as pd
@@ -251,7 +251,7 @@ class ColorManager(object):
         ""
         return self.colorMap
 
-    def matchColorsToValues(self,arr = None, colorMapName = None, vmin = None, vmax = None):
+    def matchColorsToValues(self,arr = None, colorMapName = None, vmin = None, vmax = None, asHex = False):
         ""
         cmap, colors = self.get_max_colors_from_pallete(colorMapName,returnColors=True)
         if vmin is None or vmax is None:
@@ -260,6 +260,8 @@ class ColorManager(object):
         norm = Normalize(vmin=vmin, vmax=vmax, clip=True)
         mapper = cm.ScalarMappable(norm=norm, cmap=cmap)
         colorMap = mapper.to_rgba(arr)
+        if asHex:
+            colorMap = np.array([to_hex(c) for c in colorMap])
         
         return colorMap, colors 
         

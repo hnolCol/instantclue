@@ -8,7 +8,7 @@ from ..custom.buttonDesigns import ICStandardButton
 from collections import OrderedDict 
 
 class SelectionDialog(QDialog):
-    def __init__(self,selectionNames, selectionOptions, selectionDefaultIndex, title ="Selection", *args, **kwargs):
+    def __init__(self,selectionNames, selectionOptions, selectionDefaultIndex, title ="Selection", selectionEditable = [], *args, **kwargs):
         super(SelectionDialog,self).__init__(*args, **kwargs)
         self.title = title
         self.savedSelection = OrderedDict()
@@ -17,6 +17,8 @@ class SelectionDialog(QDialog):
         self.selectionNames = selectionNames
         self.selectionOptions = selectionOptions
         self.selectionDefaultIndex = selectionDefaultIndex
+
+        self.selectionEditable = selectionEditable
 
         self.__controls()
         self.__layout()
@@ -41,7 +43,9 @@ class SelectionDialog(QDialog):
             if selectionName in self.selectionDefaultIndex:
                 
                 cb.setCurrentText(self.selectionDefaultIndex[selectionName])
-               
+            if selectionName in self.selectionEditable:
+                cb.setEditable(True)
+                
             self.selectionCombos[selectionName]["label"] = label
             self.selectionCombos[selectionName]["cb"] = cb
 

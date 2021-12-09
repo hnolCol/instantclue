@@ -22,6 +22,7 @@ a = Analysis(['main.py'],
              noarchive=False)
 
 a.datas += Tree('./examples', prefix='examples')
+a.datas += Tree('./annotations', prefix='annotations')
 a.datas += Tree('./conf', prefix='conf')
 a.datas += Tree('./icons', prefix='icons')
 a.datas += Tree('./quickSelectLists', prefix='quickSelectLists')

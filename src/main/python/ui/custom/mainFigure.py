@@ -33,9 +33,9 @@ ALPHABETIC_LABEL  = list(string.ascii_lowercase)+list(string.ascii_uppercase)
 
 class MainFigureRegistry(object):
 
-    def __init__(self):
+    def __init__(self,parent):
         self.mainFigureId = 0
-
+        self.parent = parent
         self.mainFigureTemplates = OrderedDict()
         self.mainFigures = {}
         self.exportDetails = {}
@@ -203,6 +203,7 @@ class MainFigureRegistry(object):
         ""
         if figID in self.mainFigureTemplates:
             del self.mainFigureTemplates[figID]
+            self.parent.removeMainFigureWindowLink(figID)
 
     def getMenu(self, mainMenu,actionFn):
         menus = createSubMenu(mainMenu, ["F{}".format(x) for x in self.mainFigureTemplates.keys()])

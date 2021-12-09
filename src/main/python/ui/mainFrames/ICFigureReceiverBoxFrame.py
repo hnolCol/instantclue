@@ -95,11 +95,15 @@ class MatplotlibFigure(QWidget):
             funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName()
 
             if plotType in ["hclust","corrmatrix"]  and self.mC.grouping.groupingExists() and self.mC.config.getParam("hclust.display.grouping") and self.mC.config.getParam("hclust.ask.for.groupings.to.display"):
-                groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
-                dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = "Groupings to display in h. clustering.")
-                if dlg.exec_():
-                    selectedGrupings = dlg.getSelection().values.flatten()
-                    funcKey["kwargs"]["groupingName"] = selectedGrupings
+                funcKey = self.mC.askForGroupingSelection(funcKey)
+
+                # groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
+                # if len(groupings) > 0:
+                #     dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = "Groupings to display in h. clustering.")
+                #     if dlg.exec_():
+                #         selectedGrupings = dlg.getSelection().values.flatten()
+                #         if selectedGrupings.size > 0: #check
+                #             funcKey["kwargs"]["groupingName"] = selectedGrupings
             if "groupingName" not in funcKey["kwargs"]:
                 funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName() 
                 #print(groupings)

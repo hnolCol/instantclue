@@ -1,3 +1,4 @@
+from re import split
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -182,13 +183,15 @@ class ICGrouper(QDialog):
             return
         selDialog = SelectionDialog(
             title="Select split string extraction props.",
-            selectionNames = ["splitString","index","maxSplit","remove N from right"],
+            selectionNames = ["splitString","splitFrom","index","maxSplit","remove N from right"],
             selectionOptions={
                 "splitString":["_","__","-","//",";","space"],
+                "splitFrom" : ["left","right"],
                 "index":[str(x) for x in range(30)],
                 "maxSplit":["inf"] + [str(x+1) for x in range(29)],
                 "remove N from right":[str(x) for x in range(30)]},
-            selectionDefaultIndex={"splitString":"_","index":"0","maxSplit":"inf","remove N from right":"0"}
+            selectionDefaultIndex={"splitString":"_","splitFrom":"left","index":"0","maxSplit":"inf","remove N from right":"0"},
+            selectionEditable=["splitString"]
             )
         if selDialog.exec_():
             selectedItems = selDialog.savedSelection
@@ -204,6 +207,7 @@ class ICGrouper(QDialog):
                 selectedItems["maxSplit"] = -1
             groupNames = self.extractGroupsByColumnNames(selectedColumnNames,selectedItems["splitString"],
                                                         index=splitIndex, 
+                                                        rsplit=selectedItems["splitFrom"] == "right",
                                                         maxsplit=selectedItems["maxSplit"],
                                                         removeNFromRight = selectedItems["remove N from right"])
             if groupNames is not None:
@@ -216,15 +220,13 @@ class ICGrouper(QDialog):
                 maxsplit = int(float(maxsplit))
             
             if isinstance(removeNFromRight,str):
-                ""
                 removeN = int(float(removeNFromRight))
-                
-
             if rsplit:
+                
                 groupNames = pd.DataFrame([colName.rsplit(splitString,maxsplit=maxsplit)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
             else:
-                groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit,)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
+                groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
         except:
             w = WarningMessage(infoText = "Splitting resulted in an error. Index out of range? Indexing starts with 0.",iconDir = self.mC.mainPath)
@@ -244,7 +246,7 @@ class ICGrouper(QDialog):
         ""
         selIdx = self.table.getSelectedRows()
         if len(selIdx) < 2:
-            w = WarningMessage(infoText = "Please select at least two columns.",iconDir = self.mC.mainPath)
+            w = WarningMessage(infoText = "Please select at least two columns.", iconDir = self.mC.mainPath)
             w.exec_()
             return
 
@@ -286,7 +288,7 @@ class ICGrouper(QDialog):
         try:
             groupEdit = createLineEdit("Enter group name ..","Define name of group. This name will be used to indicate comparisions.",parent=groupFrame)
             groupEdit.hide() # Hide line edit
-            groupEdit.returnPressed.connect(lambda:print("return"))
+            groupEdit.returnPressed.connect(lambda:print(""))
             groupEdit.editingFinished.connect(lambda groupID = groupID : self.textEdited(groupID=groupID))
             groupLabel = BuddyLabel(groupEdit,parent=groupFrame) # Create our custom label, and assign myEdit as its buddy
             groupLabel.setText(groupID)

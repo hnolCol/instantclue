@@ -41,7 +41,7 @@ from skmisc.loess import loess
 from joblib import Parallel, delayed, dump, load
 import time
 from multiprocessing import Pool
-
+from scipy.optimize import curve_fit
 import warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
@@ -60,7 +60,50 @@ clusteringMethodNames = OrderedDict([
 
 manifoldFnName = {"Isomap":"runIsomap","MDS":"runMDS","TSNE":"runTSNE","LLE":"runLLE","SpecEmb":"runSE"}
 
+def expIncrease(x,A,k,b):
+    ""
+    return 1 - (A * np.exp(-x*k) + b)
+
+def expDecrease(x,A,k,b):
+    ""
+    return A * np.exp(-x*k) + b 
     
+
+def fitExponentialToChunk(fitType,xdata,Y,chunkIdx):
+    
+    """
+    To Do:
+    get is nan for complete Y and index by row.
+    """
+    fits = []
+    if fitType == "decrease":
+        for ydata in Y:
+            try:
+                fitResult = curve_fit(expDecrease,xdata[~np.isnan(ydata)],ydata[~np.isnan(ydata)], bounds=(0, [1., 1., 0.01])) 
+            except:
+                fitResult = (np.array([np.nan,np.nan,np.nan]), None)
+            fits.append(fitResult)
+        
+        #fits =  [curve_fit(expDecrease,xdata[~np.isnan(ydata)],ydata[~np.isnan(ydata)]) for ydata in Y]
+        residuals = [ydata[~np.isnan(ydata)] - expDecrease(xdata[~np.isnan(ydata)], *ff[0]) if ff[1] is not None else None for ydata,ff in zip(Y,fits)]
+        
+    else:
+        for ydata in Y:
+            try:
+                fitResult = curve_fit(expIncrease,xdata[~np.isnan(ydata)],ydata[~np.isnan(ydata)], bounds=(0, [1., 1., 0.01]))
+            except:
+                fitResult = (None,None)
+            fits.append(fitResult)
+        
+        residuals = [ydata[~np.isnan(ydata)] - expIncrease(xdata[~np.isnan(ydata)], *ff[0]) if ff[1] is not None else None for ydata,ff in zip(Y,fits)]
+
+    ss_res = [np.sum(res**2) if res is not None else None for res in residuals]
+    ss_tot = [np.nansum((ydata[~np.isnan(ydata)]-np.nanmean(ydata[~np.isnan(ydata)]))**2) for ydata in Y]
+    r_squared = [1 - (ss_r / ss_t) if ss_r is not None else np.nan for ss_r, ss_t in zip(ss_res,ss_tot)]
+    output = pd.DataFrame([np.append(ff[0],r_squared[n]) for n,ff in enumerate(fits)])
+    return (chunkIdx,output)
+
+
 def p_anova(data,dv,grouping,idx):
     try:
         aov = anova(data=data,dv=dv,between=grouping)
@@ -905,7 +948,7 @@ class StatisticCenter(object):
             if not all(np.all(np.isin(columnNamesForGroupings[0],columnNamesForGrouping)) for columnNamesForGrouping in columnNamesForGroupings):
                 return getMessageProps("Error..","All groupings must contain same column names..")
 
-        dataFrame = self.getData(dataID, columnNamesForGroupings[0]).dropna()
+        dataFrame = self.getData(dataID, columnNamesForGroupings[0]).dropna(thresh=3)
 
         dataFrame["priorMeltIndex"] = dataFrame.index.values
         meltedDataFrame = dataFrame.melt(value_vars = columnNamesForGroupings[0], id_vars = "priorMeltIndex")
@@ -1044,9 +1087,7 @@ class StatisticCenter(object):
         if kind in ["t-test","Welch-test"]:
             return ttest_ind(X.values,Y.values,nan_policy="omit", equal_var=False if kind == "Welch-test" else True)
         elif kind == "(Whitney-Mann) U-test":
-            print(X.values)
-            print(Y.values)
-            print(mannwhitneyu(X.values,Y.values))
+            
             return mannwhitneyu(X.values,Y.values)
         elif kind == "Wilcoxon":
             if X.values.size != Y.values.size:
@@ -1145,6 +1186,58 @@ class StatisticCenter(object):
     def _nanEuclidianDistance(self,u,v):
 
         return np.sqrt(np.nansum((u - v) ** 2, axis=0))
+
+    def runExponentialFit(self,dataID,fitType,timeGrouping,replicateGrouping = None,comparisonGrouping = None):
+        ""
+        groupings = [timeGrouping,replicateGrouping,comparisonGrouping]
+        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        grouping = self.sourceData.parent.grouping
+        timeGroupsByColumns = grouping.getGrouping(timeGrouping)
+        columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings if groupingName is not None and groupingName != "None"]
+        combinedGroupingColumns = pd.concat(columnNamesForGroupings)
+        print(combinedGroupingColumns)
+
+        #unique column names in groups
+        columnNames = combinedGroupingColumns.unique().tolist()
+        
+        data = self.getData(dataID,columnNames)
+        
+        xtime = [(getNumberFromTimeString(groupName),groupColumns.values) for groupName,groupColumns in timeGroupsByColumns.items()]
+        times = dict([(colName,t) for t, colNames in xtime for colName in colNames])
+        
+
+        #transform
+        if replicateGrouping is None or replicateGrouping == "None":
+
+            replicateGrouping = {"None":pd.Series(columnNames)}
+            #normalize
+        else:
+            replicateGrouping = grouping.getGrouping(replicateGrouping)
+
+        if comparisonGrouping == "None" or comparisonGrouping is None:
+
+            comparisonGrouping = {"raw":pd.Series(columnNames)} 
+        else:
+            comparisonGrouping = grouping.getGrouping(comparisonGrouping)
+        output = []
+        for groupNameComp, groupColumnsComp in comparisonGrouping.items():
+            for repID, replicateColumns in replicateGrouping.items():
+                groupColumnsCompPerReplicate = pd.Series([colName for colName in groupColumnsComp.values if colName in replicateColumns.values and colName in times])
+                dataCompRep = data[groupColumnsCompPerReplicate.values].dropna(thresh=3)# self.getData(dataID,groupColumnsCompPerReplicate).dropna(thresh=3)
+                Ys = np.array_split(dataCompRep.values,NProcesses,axis=0)
+                xdata = groupColumnsCompPerReplicate.map(times).values
+                with Pool(NProcesses) as p:
+                    
+                    rs = p.starmap(fitExponentialToChunk,[(fitType,xdata,Y,n) for n,Y in enumerate(Ys)])
+                    rs.sort(key=lambda x: x[0])  #sort by chunkIdx
+                    
+                    fitData = pd.concat([r[1] for r in rs])
+                    fitData.index  = dataCompRep.index
+                    fitData.columns = ["{}:_{}_{}".format(groupNameComp,colName,repID) for colName in ["A","k","b","r2"]]
+                    output.append(fitData)
+                    print(data)
+		    #A = np.concatenate([r[1] for r in rs],axis=0)
+        return self.sourceData.joinDataFrame(dataID,pd.concat(output,axis=1))
 
     def clusterData(self, data, metric = "euclidean", method = "complete"):
         '''

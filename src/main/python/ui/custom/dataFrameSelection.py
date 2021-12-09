@@ -13,14 +13,14 @@ from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFe
 from ..dialogs.ICSampleList import ICSampleListCreater
 from ..dialogs.ICProteinPeptideView import ICProteinProteinView
 
-from ..custom.warnMessage import WarningMessage, AskStringMessage
+from ..custom.warnMessage import AskForFile, WarningMessage, AskStringMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
 
 
 #external imports
 import pandas as pd
 from collections import OrderedDict
-
+import os 
 
 dataTypeMenu = ["Sort columns .."]
 
@@ -148,8 +148,9 @@ class CollapsableDataTreeView(QWidget):
             for menuItem in menuFuncs:
                 action = menus[menuItem["subM"]].addAction(menuItem["name"])
                 if dataType not in self.dataHeaders:
-                    dataType = dataType[:-5]
-                action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
+                    dataType = dataType[:-5].strip()
+                if dataType in self.dataHeaders:
+                    action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
 
             menus["main"].exec_(menuPosition)
 
@@ -448,9 +449,9 @@ class CollapsableDataTreeView(QWidget):
                 action = menus["Grouping .. "].addAction("Add")
                 action.triggered.connect(self.dataHeaders["Numeric Floats"].table.createGroups)
                 
-
+                groupingMenus = {}
                 if self.mC.grouping.groupingExists():
-                    groupingMenus = {}
+                    
                     fnMapper = {"Delete ..":self.deleteGrouping,"Rename ..":self.renameGrouping,"Edit ..":self.editGrouping}
                     for menuName in ["Delete ..","Rename ..","Edit .."]:
                         groupingMenus[menuName] = createMenu(menuName)
@@ -458,7 +459,15 @@ class CollapsableDataTreeView(QWidget):
                         for groupingName in groupingNames:
                             action = groupingMenus[menuName].addAction(groupingName)
                             action.triggered.connect(lambda _, groupingName = groupingName, menuName = menuName : fnMapper[menuName](groupingName))
-                
+                    groupingMenus["Export .."] = createMenu("Export ..")
+
+                    groupingMenus["Export .."].addAction("to json", self.exportGrouping) 
+                    groupingMenus["Export .."].addAction("to json (MitoCube)")
+                    menus["Grouping .. "].addMenu(groupingMenus["Export .."])
+
+                groupingMenus["Load .."] = createMenu("Load ..")
+                menus["Grouping .. "].addMenu(groupingMenus["Load .."])
+                groupingMenus["Load .."].addAction("from json", self.importGrouping) 
 
             action = menus["Proteomics Toolkit"].addAction("Create Sample List")
             action.triggered.connect(self.createSampleList)
@@ -479,17 +488,39 @@ class CollapsableDataTreeView(QWidget):
         except Exception as e:
             print(e)
     
-    def deleteGrouping(self,groupingName):
+    def exportGrouping(self,*args,**kwargs):
+        ""
+        funcKey = {"kwargs":{"groupingNames":[]},"key":"groupings:exportGroupingToJson"}
+        funcKey = self.mC.askForGroupingSelection(funcKey,numericColumnsInKwargs=False,title="Choose groupings for export.",kwargName="groupingNames")
+        
+        if len(funcKey["kwargs"]["groupingNames"]) > 0:
+            baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),"ICGroupings")
+            fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,"Json files (*.json)")
+            if fname:
+                funcKey["kwargs"]["filePath"] = fname
+                self.mC.sendRequestToThread(funcKey)
+            #self.exportGroupingToJson()
+
+    def importGrouping(self,*args,**kwargs):
+        ""
+
+        funcKey = {"key":"groupings:loadGroupingFromJson","kwargs":{}}
+        fname,_ = QFileDialog.getOpenFileName(self,'Load json grouping',self.mC.config.getParam("WorkingDirectory"),"Json files (*.json)")   #getSaveFileName(self, 'Save file', baseFilePath,)
+        if fname:
+            funcKey["kwargs"]["filePath"] = fname
+            self.mC.sendRequestToThread(funcKey)
+    
+    def deleteGrouping(self,groupingName,*args,**kwargs):
         ""
         key = "grouping::deleteGrouping"
         kwargs = {"groupingName":groupingName}
         self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})
 
-    def editGrouping(self,groupingName):
+    def editGrouping(self,groupingName,*args,**kwargs):
         ""
         self.dataHeaders["Numeric Floats"].table.createGroups(loadGrouping = True, groupingName = groupingName)
 
-    def renameGrouping(self,groupingName):
+    def renameGrouping(self,groupingName,*args,**kwargs):
         ""
         dlg = AskStringMessage(q="Provide new name for the grouping: {}".format(groupingName))
         if dlg.exec_():

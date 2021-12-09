@@ -5,7 +5,25 @@ from backend.utils.stringOperations import mergeListToString, getMessageProps
 
 import pandas as pd 
 import numpy as np
+from numba import jit,prange
 
+@jit(parallel=True)
+def replaceNotDecreasingValueWithNaN(X,allowDiff = 0):
+    Y = np.empty(shape=X.shape)
+    for n in prange(X.shape[0]):
+        lastNonNaN = 0
+        x = X[n,:]
+        for xi in prange(x.size):
+            if xi == 0:
+                Y[n,xi] = True
+            elif np.isnan(X[n,xi]):
+                Y[n,xi] = False
+            elif X[n,lastNonNaN] - X[n,xi] > -allowDiff:
+                Y[n,xi] = True
+                lastNonNaN = int(xi)
+            else:
+                Y[n,xi] = False
+    return Y
 
 
 
@@ -133,6 +151,24 @@ class NumericFilter(object):
                 filterIdx = np.all(diff < 0,axis=1)
             annotationColumnName = "consDecrease:({})".format(mergeListToString(columnNames.values) if annotationString is None else annotationString)
             return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
+
+    def filterConsecutiveValuesInGrouping(self,dataID,groupingName,increasing=True):
+        ""
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        if grouping is not None:
+            r = []
+            cs = []
+            for groupName, columnNames in grouping.items():
+                #get data and config params
+                data = self.sourceData.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+                X = data.values
+                Y = replaceNotDecreasingValueWithNaN(X).astype(bool)
+                X[~Y] = np.nan
+                r.append(X)
+                cs.extend(columnNames.values.tolist())
+
+            rs = pd.DataFrame(np.concatenate(r,axis=1),columns=["conDecreaseFilter({}):{}".format(groupName,c) for c in cs],index=data.index)
+            return self.sourceData.joinDataFrame(dataID,rs)
 
     def findConsecutiveValuesInGrouping(self,dataID,groupingName,increasing=True):
         ""

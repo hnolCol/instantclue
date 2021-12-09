@@ -6,7 +6,7 @@ from ..utils import clearLayout, getStandardFont, BuddyLabel
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit
 
 from ...delegates.quickSelectDelegates import DelegateColor#, ItemDelegate #borrow delegate
-
+from ...dialogs.ICDataInputDialog import ICDataInput
 import pandas as pd
 import numpy as np
 import os
@@ -63,6 +63,7 @@ class ICColorSizeTableBase(QWidget):
         "" 
         if isinstance(data,pd.DataFrame):
             self.setTitle(title)
+            
             self.table.model().layoutAboutToBeChanged.emit()
             self.table.model().isEditable = isEditable
             self.table.createMenu()
@@ -103,6 +104,8 @@ class ICColorSizeTableBase(QWidget):
         if hasattr(self,"table"):
             self.table.mouseOverItem = None
 
+
+
     def saveModelDataToExcel(self):
         "Allows export to excel file."
         baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),"ICExport")
@@ -121,7 +124,7 @@ class ICColorTable(ICColorSizeTableBase):
     def __init__(self, *args,**kwargs):
 
         super(ICColorTable,self).__init__(*args,**kwargs)
-        
+        self.colorValueLimit = None
         self.selectionChanged.connect(self.updateColorInGraph)
         self.clorMapChanged.connect(self.updateColorsByColorMap)
         self.__controls()
@@ -178,14 +181,16 @@ class ICColorTable(ICColorSizeTableBase):
     @pyqtSlot()
     def updateColorsByColorMap(self):
         ""
-        
         if self.model.rowCount() > 0:
             self.table.createMenu()
             if self.mC.getPlotType() == "scatter":
-                funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
-                    "colorColumn":None,
-                    "colorColumnType":None,
-                    "colorGroupData":self.model._labels}}
+                funcProps = {"key":"plotter:getScatterColorGroups",
+                            "kwargs":{"dataID":self.mC.getDataID(),
+                                    "colorColumn":None,
+                                    "colorColumnType":None,
+                                    "colorGroupData":self.model._labels,
+                                    "userMinMax":self.colorValueLimit}
+                                    }
             
                 self.mC.sendRequestToThread(funcProps)
             else:
@@ -213,6 +218,23 @@ class ICColorTable(ICColorSizeTableBase):
                             title = self.title, 
                             legendKwargs = legendKwargs)
             self.model.completeDataChanged()
+    
+    def setMinMaxByUser(self,*args,**kwargs):
+        ""
+        askLimits = ICDataInput(mainController=self.mC, title = "Color map limits for scatter.",valueNames = ["min","max"], valueTypes = {"min":float,"max":float})
+        if askLimits.exec_():
+            minValue, maxValue = askLimits.providedValues["min"], askLimits.providedValues["max"]
+            if minValue > maxValue:
+                setattr(self,"colorValueLimit",(maxValue,minValue))
+            else:
+                setattr(self,"colorValueLimit",(minValue,maxValue))
+        self.clorMapChanged.emit()
+
+    def setMinMaxByDefault(self,*args,**kwargs):
+        ""
+        if self.colorValueLimit is not None:
+            setattr(self,"colorValueLimit",None)
+            self.clorMapChanged.emit()
 
     def removeFromGraph(self):
         ""
@@ -517,13 +539,16 @@ class ColorTable(QTableView):
                 pq.end()
                 action.setIcon(i)
         else:
-            menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) .."])
+            menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) ..","Color Range (min/max)"])
+            menu["Color Range (min/max)"].addAction("user defined", self.parent().setMinMaxByUser)
+            menu["Color Range (min/max)"].addAction("raw data", self.parent().setMinMaxByDefault)
 
         for legendLoc in legendLocations:
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
             menu["Add Legend at (-NaN Color) .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(ignoreNaN = True,legendKwargs = {"loc":lloc}))
         
         menu["main"].addAction("Hide/Show in Legend", self.model().toggleInLegend)
+        
         menu["main"].addAction("Remove", self.parent().removeFromGraph)
         menu["main"].addAction("Copy to clipboard",self.parent().copyToClipboard)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)

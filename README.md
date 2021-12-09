@@ -8,17 +8,25 @@
 
 Instant Clue is a Python (>3.7) based desktop application (GUI) using the PyQt5 library for data visualization and analysis. The software was developed to equip everyone with a tool that enables analysis and visualization of high dimensional data sets in an easy and playful way.
 
+### Download (Executables) 
+
+Please find the executables for Windows and Mac in the [Releases](https://github.com/hnolCol/instantclue/releases).
+
 ### Tutorials
 
 A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly. We are working on video tutorials which will be available here https://www.instantclue.uni-koeln.de.
+
+### Share Web Application 
+
+We are establishing a web application to share app graphs with collaborators. The website is available at [https://app.instantclue.de](https://app.instantclue.de)
 
 ### Status
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 
-### Download (Executables) 
+The master branch is the developing branch. For each release (not dev. builds) a new branch with the version number is created. 
+Please put pull requests to the master branch.
 
-Please find the executables for Windows and Mac in the [Releases](https://github.com/hnolCol/instantclue/releases).
 
 ### Issues / Bugs
 

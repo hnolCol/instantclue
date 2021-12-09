@@ -709,7 +709,8 @@ class ICClustermap(ICChart):
                         colorData,
                         cmap= cmap,
                         paramName=colorMaPParamName,
-                        clearAxis = False
+                        clearAxis = False,
+                        colorMeshLimits = (0,np.nanmax(colorData))
                         )
         self.numOfColorColumns = colorData.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)

@@ -15,7 +15,14 @@ from datetime import datetime
 
 
 class ICSampleListCreator(object):
-    def __init__(self,numberRows = 8, numberColumns = 12, samplesInRows = True, sampleStartPositionIndex = 0, scramble = True, addDate = True, *args,**kwargs):
+    def __init__(self,
+                    numberRows = 8, 
+                    numberColumns = 12, 
+                    samplesInRows = True, 
+                    sampleStartPositionIndex = 0, 
+                    scramble = True, 
+                    addDate = True,
+                    multiInject = 1, *args,**kwargs):
         ""
         self.samplesInRows = samplesInRows
         self.numberRows = numberRows
@@ -23,6 +30,7 @@ class ICSampleListCreator(object):
         self.startIndex = sampleStartPositionIndex
         self.scramble = scramble
         self.addDate = addDate
+        self.multiInject = int(multiInject)
         self.constants = OrderedDict()
         self.updateIndexedPositions()
         
@@ -42,6 +50,9 @@ class ICSampleListCreator(object):
             constantValues = [x.split(",") for x in constants]
        
             self.constants = OrderedDict([(constName,constValue) for constName, constValue in constantValues])
+    def setMultiInject(self,multiInject):
+        ""
+        self.multiInject = int(float(multiInject))
 
     def setRowNumber(self,n):
         ""
@@ -84,7 +95,7 @@ class ICSampleListCreator(object):
         ""
          
         constantColumnNames = list(self.constants.keys())
-        sampleNames = self.createSampleNames(numberSamples,baseSampleName)
+        sampleNames, numberSamples = self.createSampleNames(numberSamples,baseSampleName)
         if sampleNames is None:
             return getMessageProps("Error..","Number of samples exceeds plate positions.")
         self.updateIndexedPositions(numberSamples)
@@ -101,8 +112,19 @@ class ICSampleListCreator(object):
                 n += 1
             plateIdx.append("P"+str(n))
         df["Plate"] = plateIdx
-     
+
+        if self.multiInject > 1:
+            rSplitSamples = [sampleName.rsplit("_",maxsplit=1) for sampleName in df["Sample Name"].values]
+            updatedSampleNames = []
+            for n in range(self.multiInject):
+                updatedSampleNames.extend(["{}_i{:02d}_{}".format(s1,n+1,s2) for s1,s2 in rSplitSamples])
+            
+            df = pd.concat([df]*self.multiInject, ignore_index=True) 
+            df["Sample Name"] = updatedSampleNames
+            df = df.sort_values(by=["Plate","Position"])
+    
         if self.scramble: 
+            #scramble within plate
             df = df.groupby("Plate").sample(frac=1)
         
         return df
@@ -121,7 +143,7 @@ class ICSampleListCreator(object):
             sampleNames = ["{}_{:02d}".format(baseString,n+1)  for n in range(numberSamples)]
 
         self.sampleNames = sampleNames 
-        return sampleNames 
+        return sampleNames , numberSamples
         
     def getColumnNames(self):
         ""

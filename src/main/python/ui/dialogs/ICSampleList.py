@@ -24,6 +24,7 @@ class ICSampleListCreater(QDialog):
         self.currentNumRow = 7
         self.currentNumColumns = 12
         self.defaultStartIndex = 0
+        self.multiInject = 1 
         self.scrambleDefault = False
         self.sampleInRowsDefault = True
         self.addDateDefault = True
@@ -33,6 +34,7 @@ class ICSampleListCreater(QDialog):
         fnKwargs = {
             "scramble" : self.scrambleDefault ,
             "numberRows" : self.currentNumRow+1,
+            "multiInject" : self.multiInject,
             "numberColumns" : self.currentNumColumns,
             "samplesInRows" : self.sampleInRowsDefault,
             "addDate" : self.addDateDefault
@@ -76,6 +78,11 @@ class ICSampleListCreater(QDialog):
         self.scrambleLabel = createTitleLabel("Scramble sample list:",12)
         self.scrambleSwitch = QToggle()
         self.scrambleSwitch.setChecked(self.scrambleDefault )
+
+        self.multipleInjectionLabel = createLabel("Set number of injections per sample")
+        self.multipleInjectionEdit = createLineEdit("Enter number of samples..")
+        self.multipleInjectionEdit.setText("1")
+        self.multipleInjectionEdit.setValidator(QIntValidator())
 
         self.samplesInRowsLabel = createTitleLabel("Samples in rows:",12)
         self.samplesInRowsSwitch = QToggle()
@@ -121,6 +128,9 @@ class ICSampleListCreater(QDialog):
         self.layout().addWidget(self.startIndexLabel)
         self.layout().addWidget(self.startIndexEdit)
 
+        self.layout().addWidget(self.multipleInjectionLabel)
+        self.layout().addWidget(self.multipleInjectionEdit)
+
         hboxScramble = QHBoxLayout()
         hboxScramble.addWidget(self.scrambleLabel)
         hboxScramble.addWidget(self.scrambleSwitch)
@@ -162,6 +172,7 @@ class ICSampleListCreater(QDialog):
         self.baseStringEdit.textChanged.connect(self.displaySampleFileName)
         self.sampleNumberEdit.textChanged.connect(self.setSampleNumber)
         self.startIndexEdit.textChanged.connect(self.validatePosition)
+        self.multipleInjectionEdit.textChanged.connect(self.setMultiInject)
         self.addDateSwitch.clicked.connect(self.addDateChanged)
         self.scrambleSwitch.clicked.connect(self.scrambleChanged)
         self.samplesInRowsSwitch.clicked.connect(self.samplesInRowsChanged)
@@ -234,6 +245,11 @@ class ICSampleListCreater(QDialog):
         else:
             self.numSamples = int(float(numSamples))
     
+    def setMultiInject(self,multiInject):
+        ""
+        self.multiInject = int(float(multiInject))
+        self.sampleListCreator.setMultiInject(multiInject)
+
     def validatePosition(self,newPosition):
         ""
         if newPosition in self.sampleListCreator.positionsOnPlate:

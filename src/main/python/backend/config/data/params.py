@@ -615,24 +615,6 @@ DEFAULT_PARAMETER = [
     },   
     {
     "name"          :   "legend.fontsize",
-    "value"         :   5,
-    "dtype"         :   float,
-    "range"         :   [2,np.inf],
-    "parent"        :   "intern",
-    "parentType"    :   "Legend",
-    "description"   :   "Legend font size for legends.",
-    },
-    {
-    "name"          :   "legend.mainfigure.fontsize",
-    "value"         :   4,
-    "dtype"         :   float,
-    "range"         :   [2,np.inf],
-    "parent"        :   "intern",
-    "parentType"    :   "Legend",
-    "description"   :   "Legend font size for main figure exports.",
-    },
-    {
-    "name"          :   "legend.title.fontsize",
     "value"         :   7,
     "dtype"         :   float,
     "range"         :   [2,np.inf],
@@ -641,8 +623,26 @@ DEFAULT_PARAMETER = [
     "description"   :   "Legend font size for legends.",
     },
     {
+    "name"          :   "legend.mainfigure.fontsize",
+    "value"         :   7,
+    "dtype"         :   float,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Legend",
+    "description"   :   "Legend font size for main figure exports.",
+    },
+    {
+    "name"          :   "legend.title.fontsize",
+    "value"         :   8,
+    "dtype"         :   float,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Legend",
+    "description"   :   "Legend font size for legends.",
+    },
+    {
     "name"          :   "legend.title.mainfigure.fontsize",
-    "value"         :   5,
+    "value"         :   7,
     "dtype"         :   float,
     "range"         :   [2,np.inf],
     "parent"        :   "intern",
@@ -651,7 +651,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "legend.label.spacing",
-    "value"         :   0.75,
+    "value"         :   0.85,
     "dtype"         :   float,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
@@ -2769,7 +2769,62 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Multiprocessing",
     "description"   :   "Number of processes to be spawn when multiprocessing is utilized."
-    }]
+    },
+    {
+    "name"          :   "favorite.1.splitString",
+    "value"         :   "_",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    },
+    {
+    "name"          :   "favorite.2.splitString",
+    "value"         :   "_",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    },
+    {
+    "name"          :   "favorite.2.splitString",
+    "value"         :   ".",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    },
+    {
+    "name"          :   "favorite.1.index",
+    "value"         :   0,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    },
+    {
+    "name"          :   "favorite.2.index",
+    "value"         :   1,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    },
+    {
+    "name"          :   "favorite.2.index",
+    "value"         :   0,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Groupings",
+    "description"   :   "."
+    }
+    ]
     
 
 
