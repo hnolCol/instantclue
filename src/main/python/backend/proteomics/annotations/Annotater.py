@@ -5,14 +5,13 @@ from numba import jit, prange, types
 import pandas as pd 
 import numba as nb
 
-#@jit()
+
 def findFirstIdxMatch(s,Y):
     for i in prange(Y.size):
         if s == Y[i]:
             return i
     return -1
 
-#@jit()
 def findAllMatches(ss,Y):
     ms = np.ones(shape=len(ss)) * (-1)
     for i in np.arange(Y.size):
@@ -22,7 +21,6 @@ def findAllMatches(ss,Y):
     return ms 
 
 
-#@jit(, nopython=True, cache=True) 
 def idxMatch(X,Y,splitString = ";", chunkId = None):
     ""
     A = np.ones(shape=X.size) * (-1)
