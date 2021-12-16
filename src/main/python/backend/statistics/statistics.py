@@ -37,7 +37,12 @@ from collections import OrderedDict
 #pycombat import
 from combat.pycombat import pycombat
 from itertools import chain
-from skmisc.loess import loess
+try:
+    from skmisc.loess import loess
+    useStatmodelLoess = False
+except ImportError:
+    useStatmodelLoess = True
+    from statsmodels.nonparametric.smoothers_lowess import lowess as loess
 from joblib import Parallel, delayed, dump, load
 import time
 from multiprocessing import Pool
@@ -116,20 +121,25 @@ def loess_fit(x, y, span=0.75):
     """
     loess fit and confidence intervals
     """
-    # setup
-    lo = loess(x, y, span=span)
-    # fit
-    lo.fit()
-    # Predict
-    prediction = lo.predict(x, stderror=True)
-    # Compute confidence intervals
-    ci = prediction.confidence(0.05)
-    # Since we are wrapping the functionality in a function,
-    # we need to make new arrays that are not tied to the
-    # loess objects
-    yfit = np.array(prediction.values)
-    ymin = np.array(ci.lower)
-    ymax = np.array(ci.upper)
+    if not useStatmodelLoess:
+        # setup
+        lo = loess(x, y, span=span)
+        # fit
+        lo.fit()
+        # Predict
+        prediction = lo.predict(x, stderror=True)
+        # Compute confidence intervals
+        ci = prediction.confidence(0.05)
+        # Since we are wrapping the functionality in a function,
+        # we need to make new arrays that are not tied to the
+        # loess objects
+        yfit = np.array(prediction.values)
+        ymin = np.array(ci.lower)
+        ymax = np.array(ci.upper)
+    else:
+        yfit = loess(y,x,frac=span)
+        ymin = np.nan
+        ymax = np.nan
     return yfit, ymin, ymax
 
 class StatisticCenter(object):
