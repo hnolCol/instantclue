@@ -1769,7 +1769,15 @@ class PlotterBrain(object):
                 "clusterRectangles": rectangles,
                 "groupingRectangles" : groupingRectangles,
                 "dataID":dataID,
-                "columnNames":numericColumns}
+                "columnNames":numericColumns,
+                "params" : [
+                    ("Type","Hclust" if not corrMatrix else "Corrmarix"),
+                    ("rowMetric",rowMetric),
+                    ("rowMethod",rowMethod),
+                    ("columnMetric",columnMetric),
+                    ("columnMethod",columnMethod),
+                    ("nanFilter","all NaNs filtered" if rowMetric != "nanEuclidean" else "minValidValues = {}".format(nanThreshold))]
+                    }
                 }
     
     def addDendrogram(self,dendrogram,rotate,*args,**kwargs):
@@ -3515,7 +3523,7 @@ class PlotterBrain(object):
             colorCategories = ["None"]
         else:
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns)
-            print(colorCategories)
+            #print(colorCategories)
             numColorCategories = colorCategories.size
             colorGroupsData["group"] = colorCategories
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(numColorCategories)

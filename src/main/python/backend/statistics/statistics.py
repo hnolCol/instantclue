@@ -11,7 +11,7 @@ import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
 from scipy.optimize import curve_fit
-from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact
+from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact, chi2_contingency
 
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
@@ -47,7 +47,9 @@ warnings.filterwarnings("ignore", 'This pattern has match groups')
 
 def _matchRegExToPandasSeries(data,regEx,uniqueCategory):
     return (uniqueCategory, data.str.contains(regEx, case = True))
-
+def _matchMultipleRegExToPandasSeries(data,regExs,uniqueCategories):
+    ""
+    return [(uniqueCategory, data.str.contains(regEx, case = True)) for regEx, uniqueCategory in zip(regExs,uniqueCategories)]
 
 clusteringMethodNames = OrderedDict([
                             ("kmeans",KMeans),
@@ -734,24 +736,44 @@ class StatisticCenter(object):
         
         #freeze_support()
         groupedByData = data.groupby(by=categoricalColumn)
-        minGroupSize = self.sourceData.parent.config.getParam("fisher.exact.enrichment.min.group.size")
+        minGroupSize = self.sourceData.parent.config.getParam("categorical.enrichment.min.group.size")
+        adjPvalueCutoff = self.sourceData.parent.config.getParam("categorical.enrichment.adj.pvalue.cutoff")
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
-        results = pd.DataFrame(columns=["p-value","oddsratio","testColumn","category","groupName"])
+        adjPvalueMethod = self.sourceData.parent.config.getParam("categorical.enrichment.multipletest.method")
+        
+        results = pd.DataFrame(columns=["p-value(Fisher)",
+                                        "p-value(Chi2)",
+                                        "{} p-value(Fisher)".format(adjPvalueMethod),
+                                        "{} p-value(Chi2)".format(adjPvalueMethod),
+                                        "oddsratio",
+                                        "testColumn",
+                                        "category",
+                                        "groupName",
+                                        "n_positive(group)",
+                                        "n_positive(total)",
+                                        "n_negative(group)",
+                                        "n_negative(total)",
+                                        "groupSize",
+                                        "totalSize"])
 
         for testColumn in testColumns.values.flatten():
             #print(testColumn)
-            splitData = data[testColumn].astype("str").str.split(splitString).values
+            #get unique categories for non nan groups (e.g. by default -)
+            splitData = data.loc[data[testColumn] != self.sourceData.replaceObjectNan,testColumn].astype("str").str.split(splitString).values
             uniqueCategories = list(set(chain.from_iterable(splitData)))
             
 
             regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
             #most beneift from using Parallel for this job. Others were not faster (fisher test etc, using "normal" protomics data (e.g. 4-10K rows))
-            #freeze_support()
-            t1 = time.time()
             X = data[testColumn]
-            
+
+            A = np.array(list(regExByCategory.items()))
+            As = np.array_split(A,NProcesses,axis=0)
+
             with Pool(NProcesses) as p:
-                poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
+                r = p.starmap(_matchMultipleRegExToPandasSeries,[(X, A[:,1], A[:,0]) for A in As])
+                poolResult =list(chain.from_iterable(r))
+               
             boolIdxByCategory = dict(poolResult)
       
             #t1 = time.time()
@@ -778,18 +800,43 @@ class StatisticCenter(object):
                     categoryInCompleteData = np.sum(boolIdx)
                     categoryNotInCompleteData = overallDataSize - categoryInCompleteData
                     
-                    table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
-                    oddsratio,pvalue = fisher_exact(table,alternative=alternative)
-                    
+                    #table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
+                    table = np.array([[categoryInGroup,categoryInCompleteData],[groupSize , overallDataSize]])
+                    oddsratio, pvalue = fisher_exact(table,alternative=alternative)
+                    chi2,chiPValue,_,_ = chi2_contingency(table)
                     # print(category)
                     # print(np.sum(boolIdx))
 
                     # print(table)
-                    r.append({"p-value":pvalue,"oddsratio":oddsratio,"testColumn":testColumn,"category":category,"groupName":groupName})
+                    r.append({"p-value(Fisher)":pvalue,
+                                "p-value(Chi2)":chiPValue,
+                                "oddsratio":oddsratio,
+                                "testColumn":testColumn,
+                                "category":category,
+                                "groupName":groupName,
+                                "n_positive(group)":categoryInGroup,
+                                "n_positive(total)":categoryInCompleteData,
+                                "n_negative(group)":categoryNotInGroup,
+                                "n_negative(total)":categoryNotInCompleteData,
+                                "groupSize":groupSize,
+                                "totalSize":overallDataSize})
                 
-                results = results.append(r,ignore_index=True)
-
-        return self.sourceData.addDataFrame(results,fileName="FisherEnrichmentResults")
+                if len(r) > 0:
+                    r = pd.DataFrame(r)
+                    
+                    boolIdxFisher, adjFisherPValue, _, _  = multipletests(r["p-value(Fisher)"].values,method=adjPvalueMethod)
+                    boolIdxChi, adjChi2PValue, _, _  = multipletests(r["p-value(Chi2)"].values,method=adjPvalueMethod)
+                   
+                    r["{} p-value(Fisher)".format(adjPvalueMethod)] = adjFisherPValue.astype(float)
+                    r["{} p-value(Chi2)".format(adjPvalueMethod)] = adjChi2PValue.astype(float)
+                    
+                    boolIdxAdjPvalue = boolIdxFisher | boolIdxChi
+                    r = r.loc[boolIdxAdjPvalue,:]
+                    if r.index.size > 0:
+                        results = results.append(r,ignore_index=True)
+        if results.index.size == 0:
+            return getMessageProps("Error","No significant hits found.")
+        return self.sourceData.addDataFrame(results,fileName="FisherEnrichmentResults({})".format(categoricalColumn))
        
     def runBatchCorrection(self,dataID, groupingName,*args,**kwargs):
         ""
@@ -810,18 +857,22 @@ class StatisticCenter(object):
         ""
         combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist()
         data = self.getData(dataID,combinedColumnnames)
+        data = data.dropna(subset=columnNames,how="all")
         minGroupSize = self.sourceData.parent.config.getParam("1D.enrichment.min.category.group.size")
         minGroupDifference = self.sourceData.parent.config.getParam("1D.enrichment.min.abs.group.difference")
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         for categoricalColumn in categoricalColumns:
+            
             splitData = data[categoricalColumn].astype("str").str.split(splitString).values
             uniqueCategories = list(set(chain.from_iterable(splitData)))
             regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
             #boolIdxByCategory = dict([(uniqueCategory,data[categoricalColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
             X = data[categoricalColumn]
+            t1=time.time()
             with Pool(NProcesses) as p:
                 poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
             boolIdxByCategory = dict(poolResult)
+            
             
         resultDF  = pd.DataFrame(columns=["numericColumn","Category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value"])
         r = []
@@ -1251,10 +1302,14 @@ class StatisticCenter(object):
                 else:
                     return None, None
             
-            if  metric ==  'euclidean':   
+            if  metric in  ['euclidean','correlation','ward','cosine']:   
                 linkage = fastcluster.linkage(data, method = method, metric = metric)   
             
             elif metric == "nanEuclidean":
+                i = data
+                j = np.nansum((i - i[:, None]) ** 2, axis=2) ** .5
+                linkage = fastcluster.linkage(j,method = method)
+            elif metric == "nanCorrelation":
                 i = data
                 j = np.nansum((i - i[:, None]) ** 2, axis=2) ** .5
                 linkage = fastcluster.linkage(j,method = method)

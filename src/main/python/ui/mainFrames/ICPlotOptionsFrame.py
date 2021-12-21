@@ -19,7 +19,9 @@ from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import createSubMenu
 from backend.statistics.statistics import clusteringMethodNames
 import numpy as np
+import socket
 import os
+from datetime import datetime
 
 
 
@@ -463,11 +465,18 @@ class PlotOptionFrame(QWidget):
                 colorArray = graph.getColorArray()
                 clusteredData = graph.getClusteredData()
                 quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
-                
+                hclustParams = [
+					("Software","Instant Clue"),
+					("Version",self.mC.version),
+                    ("Computer Name",socket.gethostname()),
+                    ("Date",datetime.now().strftime("%Y%m%d %H:%M:%S"))
+					] + graph.data["params"]
+
                 clusterLabels, clusterColors = graph.getClusterLabelsAndColor()
                 #print(clusterLabels, clusterColors)
                 dataID = self.mC.getDataID()
-
+                groupings = self.mC.grouping.getGroupings()
+                
                 fkey = "data::exportHClustToExcel"
                 kwargs = dict(dataID = dataID,
                                         pathToExcel = fileName,
@@ -476,7 +485,9 @@ class PlotOptionFrame(QWidget):
                                         totalRows = clusteredData.index.size,
                                         clusterLabels = clusterLabels,
                                         clusterColors = clusterColors,
-                                        quickSelectData = quickSelectData
+                                        quickSelectData = quickSelectData,
+                                        hclustParams = hclustParams,
+                                        groupings = groupings
                                         )
                 funcProps = {"key":fkey,"kwargs":kwargs}
                 #send to thread

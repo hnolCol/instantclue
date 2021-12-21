@@ -1256,10 +1256,10 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","nanCorrelation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster (HClust)",
-    "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
+    "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean and nanCorrelation can handle nans and is significantly slower.",
     },
     {
     "name"          :   "columnMetric",
@@ -1283,7 +1283,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMethod",
     "value"         :   "complete",
     "dtype"         :   str,
-    "range"         :   ["complete","average"],
+    "range"         :   ["complete","average","median","ward","weighted"],
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define method used for row dendrogram. If None, no dendrogra will be shown.",
@@ -1292,7 +1292,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "columnMethod",
     "value"         :   "complete",
     "dtype"         :   str,
-    "range"         :   ["complete","average"],
+    "range"         :   ["complete","average","median","ward","weighted"],
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
@@ -2708,13 +2708,31 @@ DEFAULT_PARAMETER = [
     "description"   :   "Minimum number of non-nan values for fitting a model (e.g. linear fit, first order kinetic). A minimum value of 2 is allowed but this will return always a r-value = 1 and is not informative."
     },
     {
-    "name"          :   "fisher.exact.enrichment.min.group.size",
+    "name"          :   "categorical.enrichment.min.group.size",
     "value"         :   5,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
     "parentType"    :   "Enrichments (Omics Toolkit)",
     "description"   :   "Minimum group size for an enrichment using the fisher exact test."
+    },
+    {
+    "name"          :   "categorical.enrichment.adj.pvalue.cutoff",
+    "value"         :   0.02,
+    "dtype"         :   float,
+    "range"         :   [0,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Adjusted p-value cutoff. Results will be filtered using this cutoff."
+    },
+    {
+    "name"          :   "categorical.enrichment.multipletest.method",
+    "value"         :   "fdr_tsbh",
+    "dtype"         :   str,
+    "range"         :   MTMethods,
+    "parent"        :   "intern",
+    "parentType"    :   "Enrichments (Omics Toolkit)",
+    "description"   :   "Method to correct for multiple testing of the p value from fisher test and chi2 test"
     },
     {
     "name"          :   "1D.enrichment.min.category.group.size",

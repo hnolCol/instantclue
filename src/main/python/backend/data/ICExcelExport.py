@@ -1,3 +1,4 @@
+
 import xlsxwriter
 import numpy as np 
 import pandas as pd
@@ -10,7 +11,7 @@ baseNumFormat =   {'align': 'center',
 
 class ICHClustExporter(object):
     ""
-    def __init__(self,pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors):
+    def __init__(self,pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors,hclustParams = [], groupings=None):
         ""
         self.pathToExcel = pathToExcel
         self.clusteredData = clusteredData
@@ -20,6 +21,8 @@ class ICHClustExporter(object):
         self.extraData = extraData
         self.clusterLabels = clusterLabels
         self.clusterColors = clusterColors
+        self.groupings = groupings
+        self.hclustParams = hclustParams
         
 
     def export(self):
@@ -35,47 +38,83 @@ class ICHClustExporter(object):
             self.colorArray = self.colorArray.reshape(self.clusteredData.index.size,-1,4)
            
             workbook = xlsxwriter.Workbook(self.pathToExcel, {'constant_memory': True, "nan_inf_to_errors":True} )
-            worksheet = workbook.add_worksheet()
+            worksheet = workbook.add_worksheet(name="data")
+            paramWorksheet = workbook.add_worksheet(name="params")
+
+            #add groupings
+            if self.groupings is not None and isinstance(self.groupings,dict) and len(self.groupings) > 0 and "groupings" in self.groupings:
+                if "groupings" in self.groupings:
+                    columnOffset = 1 
+                    rowOffset = len(self.groupings["groupings"])
+
+                    for n, (groupingName, grouping) in enumerate(self.groupings["groupings"].items()):
+                        worksheet.write_string(n,0,groupingName)
+                        for groupName, groupItems in grouping.items():
+                            for groupItem in groupItems:
+                                if groupItem in self.columnHeaders:
+                                    columnIndex = self.columnHeaders.index(groupItem) + columnOffset
+                                    group_format = workbook.add_format({"bg_color":"#efefef"})
+                                    if "colors" in self.groupings and groupingName in self.groupings["colors"] and groupName in self.groupings["colors"][groupingName]:
+                                        group_format.set_bg_color(self.groupings["colors"][groupingName][groupName])
+
+                                    worksheet.write_string(n,columnIndex,groupName,group_format)
+
+            else:
+                columnOffset = 0
+                rowOffset = 0 
+
+
             #start with headers
-            writeRow = 0
+            writeRow = 0  + rowOffset
+            header_format = workbook.add_format({"bg_color":"#efefef","text_wrap":True,"valign":"vcenter"})
             for n,columnHeader in enumerate(self.columnHeaders):
-                worksheet.write_string(writeRow,n,columnHeader)
-            
+                worksheet.write_string(writeRow,n+columnOffset,columnHeader,header_format)
+            worksheet.freeze_panes(writeRow+1,0)
+
+
             for nRow in range(self.totalRows):
                 for nCol in range(len(self.columnHeaders)):
-                    
+                    nWRow = writeRow + nRow + 1
                     if self.columnHeaders[nCol] == "Cluster ID" and self.clusterLabels is not None:
                         #find cluster ID format
                         clustID = self.clusterLabels.iloc[nRow].values[0]
                         formatDict = baseNumFormat.copy()
                         formatDict["bg_color"] = self.clusterColors[clustID] 
                         cell_format = workbook.add_format(formatDict)
-                        worksheet.write_string(nRow+1,nCol,clustID,cell_format)
+                        worksheet.write_string(nWRow,nCol+columnOffset,clustID,cell_format)
 
                     elif nCol < self.clusteredData.columns.size + 1:#indlucate all columns (first one is alsoway "Cluster ID") 
                         c = self.colorArray[self.totalRows-nRow-1,nCol - 1].tolist()
                         formatDict = baseNumFormat.copy()
                         formatDict["bg_color"] = to_hex(c)
                         cell_format = workbook.add_format(formatDict)
-                        worksheet.write_number(nRow + 1 ,nCol,self.clusteredData.iloc[nRow,nCol - 1], cell_format) #-1 to account for first Cluster ID column
+                        worksheet.write_number(nWRow ,nCol+columnOffset,self.clusteredData.iloc[nRow,nCol - 1], cell_format) #-1 to account for first Cluster ID column
                     elif self.columnHeaders[nCol] == "IC Data Index":
-                        worksheet.write_number(nRow+1,nCol, self.clusteredData.index.values[nRow])
+                        worksheet.write_number(nWRow,nCol+columnOffset, self.clusteredData.index.values[nRow])
                     elif self.columnHeaders[nCol] == "IC Cluster Index":
-                        worksheet.write_number(nRow+1,nCol,nRow)
+                        worksheet.write_number(nWRow,nCol+columnOffset,nRow)
                     elif self.columnHeaders[nCol] == "QuickSelect":
                         colorValue = self.extraData[self.columnHeaders[nCol]].iloc[nRow]
                         
                         if colorValue != "":
-                            worksheet.write_string(nRow+1,nCol,"+",workbook.add_format({"bg_color":colorValue}))
+                            worksheet.write_string(nWRow,nCol+columnOffset,"+",workbook.add_format({"bg_color":colorValue}))
 
                     else:
                         dtype = self.extraData[self.columnHeaders[nCol]].dtype
                         if dtype == np.float64 or dtype == np.int64:
-                            worksheet.write_number(nRow+1,nCol,self.extraData[self.columnHeaders[nCol]].iloc[nRow])
+                            worksheet.write_number(nWRow,nCol+columnOffset,self.extraData[self.columnHeaders[nCol]].iloc[nRow])
                         else:
-                            worksheet.write_string(nRow+1,nCol,str(self.extraData[self.columnHeaders[nCol]].iloc[nRow]))
+                            worksheet.write_string(nWRow,nCol+columnOffset,str(self.extraData[self.columnHeaders[nCol]].iloc[nRow]))
 
             
+            ## add params
+            paramWorksheet.write_string(0,0,"Parameters",header_format)
+            
+            for n, (paramName,value) in enumerate(self.hclustParams):
+                paramWorksheet.write_string(n+1,0,paramName)
+                paramWorksheet.write_string(n+1,1,value)
+
+
             workbook.close()
         except Exception as e:
             print(e)
