@@ -297,6 +297,19 @@ class ICGrouping(object):
         if groupingName in self.groups:
             return self.groups[groupingName]
 
+    def getGroupingsByList(self,groupinNames=[]):
+        ""
+        if isinstance(groupinNames,list):
+            return OrderedDict([(groupingName,self.groups[groupingName]) for groupingName in groupinNames if groupingName in self.groups])
+        else:
+            return {}
+
+    def getGroupColorsByGroupingList(self,groupingNames):
+        ""
+        if isinstance(groupingNames,list):
+            return dict([(groupingName,self.getGroupColors(groupingName)) for groupingName in groupingNames if groupingName in self.groups])
+        else:
+            return {}
     def getGroupColors(self, groupingName = None):
         ""
         if groupingName is None:

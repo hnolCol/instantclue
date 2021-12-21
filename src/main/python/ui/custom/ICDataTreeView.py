@@ -101,7 +101,7 @@ menuBarItems = [
     },
     {
         "subM":"(Prote-)omics-toolkit",
-        "name":"Fisher Enrichment Test",
+        "name":"Categorical Enrichment Test",
         "funcKey": "fisherCategoricalEnrichmentTest",
         "dataType": "Categories",
     },

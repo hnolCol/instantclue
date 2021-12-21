@@ -759,21 +759,26 @@ class DataCollection(object):
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
 	
-	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors,quickSelectData):
+	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors,quickSelectData,hclustParams,groupings=None):
 		""
 
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
 		clusterColumns = clusteredData.columns.values.tolist() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]
 		columnHeaders = ["Cluster ID"] + clusterColumns + extraDataColumns
-		
+		groupingDetails = dict()
 		rowIdx = clusteredData.index
 		extraData = self.getDataByColumnNames(dataID,extraDataColumns,rowIdx=rowIdx)["fnKwargs"]["data"]
 		if quickSelectData is not None:
 			extraData["QuickSelect"] = np.full(extraData.index.size,"")
 			extraData.loc[quickSelectData[0]["dataIndexInClust"],"QuickSelect"] = [to_hex(c) for c in quickSelectData[1]]
 			columnHeaders.append("QuickSelect")
-		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors)
+		if groupings is not None and isinstance(groupings,list) and len(groupings) > 0:
+			
+			groupingDetails["groupings"] = self.parent.grouping.getGroupingsByList(groupings)
+			groupingDetails["colors"] = self.parent.grouping.getGroupColorsByGroupingList(groupings)
+	
+		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors,hclustParams,groupingDetails)
 		exporter.export()
 		
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))
