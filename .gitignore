@@ -18,4 +18,6 @@ src/main/python/dist/
 src/main/python/build/
 src/main/python/env
 src/main/python/conf/key/app_id
+src/main/python/conf/current.ic
 src/main/python/my_log.txt
+
