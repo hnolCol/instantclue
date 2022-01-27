@@ -358,6 +358,23 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView
         },
+        
+    "data::countValidValues":
+        {
+            "threadRequest":{"obj":"data","fn":"countValidValues","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                    refreshColumnView
+        },
+    "data::countValidValuesInSubset":
+        {
+            "threadRequest":{"obj":"data","fn":"countValidValuesInSubset","requiredKwargs":["dataID","columnNames","categoricalColumns"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },
+
+        
+
+        
      "data::correlateDataFrames":
         {
             "threadRequest":{"obj":"data","fn":"correlateDfs","requiredKwargs":[]},
@@ -415,6 +432,12 @@ funcPropControl = {
     "data::exportHClustToExcel":
         {
             "threadRequest":{"obj":"data","fn":"exportHClustToExcel","requiredKwargs":["dataID","pathToExcel","clusteredData","colorArray","totalRows","quickSelectData"]},
+            "completedRequest":
+                [sendMessageProps]
+        },
+    "data::exportDataToExcel":
+        {
+            "threadRequest":{"obj":"data","fn":"exportDataToExcel","requiredKwargs":["pathToExcel","fileNames","dataFrames","softwareParams"]},
             "completedRequest":
                 [sendMessageProps]
         },
@@ -932,6 +955,12 @@ funcPropControl = {
             "threadRequest":{"obj":"grouping","fn":"loadGroupingFromJson","requiredKwargs":["filePath"]},
             "completedRequest":
                     [updateGrouping,sendMessageProps]
+        },
+    "groupings:runGroupCorrelation":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runGroupCorrelations","requiredKwargs":["dataID","groupingNames"]},
+            "completedRequest":
+                    addDataAndRefresh
         },
         
     "webApp::getChartData":

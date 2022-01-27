@@ -400,13 +400,7 @@ class ICClustermap(ICChart):
             #                     self.mC.grouping.getCurrentGroupingName(),
             #                     self.mC.grouping.getCurrentCmap())
             #     self.updateHclustColor(colorMaPParamName= "colorMap", **colorData)
-            qsData = self.getQuickSelectData()
-            if qsData is not None:
-
-                self.mC.quickSelectTrigger.emit()
-
-            else:
-                self.updateFigure.emit()
+                self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
             print(e)
         

@@ -126,6 +126,7 @@ class ICSampleListCreator(object):
         if self.scramble: 
             #scramble within plate
             df = df.groupby("Plate").sample(frac=1)
+            df = df.reset_index()
         
         return df
 

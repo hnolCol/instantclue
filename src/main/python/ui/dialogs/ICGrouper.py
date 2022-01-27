@@ -50,9 +50,6 @@ class ICGroupFrame(QFrame):
     
 
 
-
-
-
 class ICGrouper(QDialog):
 
     def __init__(self, mainController, initNGroups = 2, loadGrouping = False, groupingName = None, *args,**kwargs):
@@ -63,7 +60,9 @@ class ICGrouper(QDialog):
         self.groupItems = OrderedDict()
         self.initNGroups = initNGroups
         self.editGrouping = loadGrouping
-       
+
+        
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__createMenu()
         self.__controls()
         self.__layout()
@@ -73,7 +72,6 @@ class ICGrouper(QDialog):
                 self.addGroupArea(groupID = "Group {}".format(n))
             self.updateColorButton()
         elif groupingName is not None and isinstance(groupingName,str):
-            print(self.mC.grouping.getColorMap(groupingName))
             self.cmapCombo.setText(self.mC.grouping.getColorMap(groupingName))
             self.loadGrouping(groupingName)
             
@@ -126,6 +124,10 @@ class ICGrouper(QDialog):
        # self.menu.addAction("Infer grouping",)
         #self.menu.addAction("Grouping by sample name", self.groupingBySampleName)
         self.menu.addAction("Group by split string", self.groupBySplitString)
+        self.menu.addAction("Group detection by Favorite 1", self.groupBySplitByFavorite)
+        self.menu.addAction("Group detection by Favorite 2", self.groupBySplitByFavorite)
+        self.menu.addAction("Group detection by Favorite 3", self.groupBySplitByFavorite)
+        self.menu.addAction("Define Favorite Patterns", lambda : self.mC.mainFrames["right"].openConfig("Groupings"))
        
     def __layout(self):
         ""
@@ -179,8 +181,8 @@ class ICGrouper(QDialog):
         ""
         self.deleteEmptyGroups()
         selectedColumnNames = self.findSelectedColumns()
-        if selectedColumnNames is None:
-            return
+        if selectedColumnNames is None: return
+
         selDialog = SelectionDialog(
             title="Select split string extraction props.",
             selectionNames = ["splitString","splitFrom","index","maxSplit","remove N from right"],
@@ -210,8 +212,26 @@ class ICGrouper(QDialog):
                                                         rsplit=selectedItems["splitFrom"] == "right",
                                                         maxsplit=selectedItems["maxSplit"],
                                                         removeNFromRight = selectedItems["remove N from right"])
+            
             if groupNames is not None:
                 self.addGroupsByDataFrame(groupNames)
+
+
+    def groupBySplitByFavorite(self,*args,**kwargs):
+        ""
+        self.deleteEmptyGroups()
+        selectedColumnNames = self.findSelectedColumns()
+        if selectedColumnNames is None: return
+
+        favoriteID = self.sender().text()[-1]
+        idx = self.mC.config.getParam("favorite.{}.index".format(favoriteID))
+        splitString = self.mC.config.getParam("favorite.{}.splitString".format(favoriteID))
+
+        groupNames = self.extractGroupsByColumnNames(selectedColumnNames,index=idx,splitString=splitString)
+        
+        if groupNames is not None:
+                self.addGroupsByDataFrame(groupNames)
+
 
     def extractGroupsByColumnNames(self,selectedColumnNames,splitString = "_",index = 0,rsplit = False,maxsplit=-1,removeNFromRight = "0"):
         ""
@@ -229,10 +249,14 @@ class ICGrouper(QDialog):
                 groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
         except:
-            w = WarningMessage(infoText = "Splitting resulted in an error. Index out of range? Indexing starts with 0.",iconDir = self.mC.mainPath)
-            w.exec_()
+            self.mC.sendToWarningDialog(infoText = "Splitting resulted in an error. Index out of range? Indexing starts with 0.",parent=self)
             return
         groupNames["ColumnNames"] = selectedColumnNames.values
+
+        if groupNames["GroupName"].unique().size == groupNames.index.size:
+            self.mC.sendToWarningDialog(infoText="Group detection by columnnames using split string yield only groups with single columns. Please revisit the split settings and make sure the split string is in the column names.",parent=self)
+            return 
+
         return groupNames
 
     def deleteEmptyGroups(self):
@@ -391,6 +415,7 @@ class ICGrouper(QDialog):
                 self.model.completeDataChanged()
             self.groupItems[groupID]["itemHolder"].deleteItem(self.sender())
             self.groupItems[groupID]["items"] = self.groupItems[groupID]["items"].loc[~boolIdx]
+            if self.groupItems[groupID]["items"].size == 0: self.groupItems[groupID]["itemHolder"].setDragLabelVisibility(True)
             
 
     def saveGrouping(self,event=None):
@@ -446,11 +471,13 @@ class ICGrouper(QDialog):
             newLabels = labels.loc[idxToAdd]
             
             for l in newLabels.values:
-                bItem = BoxItem(itemName=l,tooltipStr="Right-click to remove item from list.")
+                bItem = BoxItem(itemName=l,tooltipStr="Right-click to remove this item from the receiver box.")
                 bItem.setContextMenuPolicy(Qt.CustomContextMenu)
                 bItem.customContextMenuRequested.connect(lambda _,groupID = groupID, itemName = l: self.deleteBoxTimeFromGroup(groupID=groupID,itemName=itemName))
 
                 self.groupItems[groupID]["itemHolder"].addItem(bItem)
+
+        if self.groupItems[groupID]["items"].size > 0: self.groupItems[groupID]["itemHolder"].setDragLabelVisibility(False)
 
             
     def textEdited(self, event = None, groupID = None):

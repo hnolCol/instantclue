@@ -248,14 +248,14 @@ class MainFigureRegistry(object):
 
     def __getstate__(self):
         '''
-        We need to reove certain params before pickle
+        We need to remove certain params before pickle
         '''
         for figureId, axisDict in self.mainFigureTemplates.items():
             for axisID, params in axisDict.items():
                 if 'ax' in params: # if user saves session twice this will be gone already
                     del params['ax']
         state = self.__dict__.copy()
-        for attr in ['mainFigures']:
+        for attr in ['mainFigures',"parent"]:
             if attr in state:
                 del state[attr]
         return state

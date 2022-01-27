@@ -38,9 +38,9 @@ class Transformer(object):
         self.config = self.sourceData.parent.config
         self.inplace = True
 
-    def _addToSourceData(self,dataID,columnNames,transformedData):
+    def _addToSourceData(self,dataID,columnNames,transformedData,allowInPlace=True):
         ""
-        if self._transformInPlace():
+        if self._transformInPlace() and allowInPlace:
             return self.sourceData.replaceColumns(dataID,columnNames,transformedData.values)
         else:
             return self.sourceData.joinDataFrame(dataID,transformedData)
@@ -80,8 +80,10 @@ class Transformer(object):
                             columns = transformedColumnNames
                             )
             transformedData[~np.isfinite(transformedData)] = np.nan
-        return self._addToSourceData(dataID,columnNames,transformedData)
-
+            return self._addToSourceData(dataID,columnNames,transformedData)
+        else:
+            return getMessageProps("Error..","Unknown metric.")
+            
     def rollingWindowTransformation(self,dataID,columnNames,windowSize,metric):
         ""
 
@@ -116,7 +118,7 @@ class Transformer(object):
                             columns = transformedColumnNames
                             )
 
-            return self._addToSourceData(dataID,columnNames,transformedData)
+            return self._addToSourceData(dataID,columnNames,transformedData,allowInPlace=False)
         else:
             return getMessageProps("Error..","Unknown metric.")
 	# def calculate_rolling_metric(self,numericColumns,windowSize,metric,quantile = 0.5):

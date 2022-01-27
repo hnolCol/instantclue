@@ -68,6 +68,7 @@ class ICDSelectItems(QDialog):
     def __windowUpdate(self):
         ""
         self.setWindowFlags( Qt.WindowStaysOnTopHint)# Qt.FramelessWindowHint |
+        
        # self.setWindowOpacity(0.95)
 
 

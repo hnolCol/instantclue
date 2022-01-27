@@ -55,6 +55,7 @@ class ICModPeptidePositionFinder(object):
                 idxStart, idxEnd = self.findPeptidePostionByID(proteinID,strippedSequence)
                 inProteinStart = str(idxStart)
                 inProteinEnd = str(idxEnd)
+                print(idxStart,idxEnd)
                 if idxStart is not None and idxEnd is not None:
                     if modString in modPeptideSequence:
                         modPositions = [(m.start(), m.end()) for m in re.finditer(modString, modPeptideSequence)]
@@ -66,7 +67,10 @@ class ICModPeptidePositionFinder(object):
                         aaModProt = self._joinStrings(aaPositionInProtein)
                         aaModPept = self._joinStrings(aaPositionInPeptide)
                         return pd.Series([aasMod,aaModPept,aaModProt], index=outputIndex, name=idx)
-                        
+        print("R?")
+        print(hasattr(self,"sequenceByID"))
+        print(proteinID in self.sequenceByID)
+        print("==")
         return pd.Series([""]*len(outputIndex), index=outputIndex, name = idx)
 
     

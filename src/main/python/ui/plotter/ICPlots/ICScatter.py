@@ -164,11 +164,7 @@ class ICScatterPlot(ICChart):
                                     title="Scatter Points")
 
         #annotate data that are selected by user in QuickSelect widget
-        qsData = self.getQuickSelectData()
-        if qsData is not None:
-            self.mC.quickSelectTrigger.emit()
-        else:
-            self.updateFigure.emit()
+        self.checkForQuickSelectDataAndUpdateFigure()
 
     def setHoverData(self,dataIndex, sender = None):
         "Sets hover data in scatter plots"

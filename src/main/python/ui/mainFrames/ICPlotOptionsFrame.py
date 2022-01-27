@@ -355,6 +355,7 @@ class PlotOptionFrame(QWidget):
     def openMainFiguresForSession(self,mainFigures,mainFigureRegistry, mainFigureComboSettings):
         ""
         self.mainFigureRegistry = mainFigureRegistry
+        self.mainFigureRegistry.parent = self
         for ID,fig in mainFigures.items():
             
             mainFigure = self.openMainFigure(mainFigure=fig, figureID = ID)
@@ -462,6 +463,8 @@ class PlotOptionFrame(QWidget):
         if fileName != "":
             exists,graph = self.mC.getGraph()
             if exists:
+                dataID = self.mC.getDataID()
+
                 colorArray = graph.getColorArray()
                 clusteredData = graph.getClusteredData()
                 quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
@@ -470,11 +473,12 @@ class PlotOptionFrame(QWidget):
 					("Version",self.mC.version),
                     ("Computer Name",socket.gethostname()),
                     ("Date",datetime.now().strftime("%Y%m%d %H:%M:%S"))
+                    ("File Name",self.mC.data.getFileNameByID(dataID))
 					] + graph.data["params"]
 
                 clusterLabels, clusterColors = graph.getClusterLabelsAndColor()
                 #print(clusterLabels, clusterColors)
-                dataID = self.mC.getDataID()
+                
                 groupings = self.mC.grouping.getGroupings()
                 
                 fkey = "data::exportHClustToExcel"

@@ -522,7 +522,8 @@ class ICChart(QObject):
 	def addMainFigActions(self,menu):
 		""
 		try:
-			mainFigMenus = self.mC.mainFrames["right"].mainFigureRegistry.getMenu(menu["To main figure"],self.mirrorAxis)
+			if "To main figure" in menu:
+				mainFigMenus = self.mC.mainFrames["right"].mainFigureRegistry.getMenu(menu["To main figure"],self.mirrorAxis)
 		except Exception as e:
 			print(e)
 
@@ -1624,9 +1625,9 @@ class ICChart(QObject):
 		if hasattr(sizeTable,"model") and sizeTable.model._labels.index.size > 0:
 			return sizeTable.model._labels
 
-	def setDataInColorTable(self,data = pd.DataFrame(), title = "Colors"):
+	def setDataInColorTable(self,data = pd.DataFrame(), title = "Colors",isEditable=True):
 		""
-		self.mC.mainFrames["sliceMarks"].colorTable.setData(data, title)
+		self.mC.mainFrames["sliceMarks"].colorTable.setData(data, title, isEditable)
 
 	def setDataInSizeTable(self,data = pd.DataFrame(), title = "Sizes"):
 		""

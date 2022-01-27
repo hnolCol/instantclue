@@ -61,12 +61,7 @@ class ICHistogram(ICChart):
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax)
                     
-            qsData = self.getQuickSelectData()
-            if qsData is not None:
-                self.mC.quickSelectTrigger.emit()
-                return
-
-            self.updateFigure.emit()
+            self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
             print(e)
     
@@ -79,7 +74,6 @@ class ICHistogram(ICChart):
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         ""
-        
         for color, group, internalID in colorGroup.values:
             if internalID in self.histogramPatches:
                 patches = self.histogramPatches[internalID]

@@ -1,4 +1,5 @@
 
+from asyncore import write
 import xlsxwriter
 import numpy as np 
 import pandas as pd
@@ -8,6 +9,97 @@ from matplotlib.colors import to_hex
 baseNumFormat =   {'align': 'center',
                     'valign': 'vcenter',
                     'border':1}
+
+
+class ICDataExcelExporter(object):
+    ""
+    def __init__(self,pathToExcel,data, sheetNames, softwareParams, groupings=None):
+        """
+        pathToExcel : 
+        data : 
+        """
+        self.pathToExcel = pathToExcel
+        self.groupings = groupings
+        self.data = data
+        self.softwareParams = softwareParams
+        self.sheetNames = sheetNames 
+        self.worksheets = dict() 
+       
+
+    def export(self):
+
+        workbook = xlsxwriter.Workbook(self.pathToExcel, {'constant_memory': True, "nan_inf_to_errors":True} )
+        self.headerFormat = workbook.add_format({"bg_color":"#efefef","text_wrap":True,"valign":"vcenter"})
+        for sheetName in self.sheetNames:
+            self.worksheets[sheetName] = workbook.add_worksheet(name=sheetName)
+        self.paramWorksheet = workbook.add_worksheet(name="Software Info")
+        self.addDataToWorksheet(workbook)
+        self.addParams()
+        workbook.close()
+        
+
+    def addHeader(self, workbook, worksheet, columnHeaders, writeRow, columnOffset):
+        header_format = workbook.add_format({"bg_color":"#efefef","text_wrap":True,"valign":"vcenter"})
+        for n,columnHeader in enumerate(columnHeaders):
+            worksheet.write_string(writeRow,n+columnOffset,columnHeader,header_format)
+            worksheet.freeze_panes(writeRow+1,0)
+
+    def addDataToWorksheet(self, workbook):
+        ""
+        if len(self.data) == len(self.sheetNames):
+            
+            for n, data in enumerate(self.data):
+                sheetName = self.sheetNames[n]
+                writeRow, rowOffset, columnOffset = self.addGroupingToWorkSheets(self.worksheets[sheetName],workbook,data.columns.values.tolist())
+                self.addHeader(workbook,self.worksheets[sheetName],data.columns.values,writeRow,columnOffset)
+                self.addDataValues(data.columns.values, self.worksheets[sheetName],data,writeRow,columnOffset)
+    
+    def addDataValues(self, columnHeaders, worksheet, data, writeRow, columnOffset):
+        ""
+        for nRow in range(data.index.size):
+            for nCol in range(data.columns.size):
+                nWRow = writeRow + nRow + 1 #row to write now, +1 because of the header
+                dtype = data[columnHeaders[nCol]].dtype
+                if dtype == np.float64 or dtype == np.int64:
+                    worksheet.write_number(nWRow,nCol+columnOffset,data[columnHeaders[nCol]].iloc[nRow])
+                else:
+                    worksheet.write_string(nWRow,nCol+columnOffset,str(data[columnHeaders[nCol]].iloc[nRow]))
+        
+        self.addFilter(worksheet,writeRow,columnOffset,nWRow,columnHeaders.size-1)
+    
+    def addFilter(self,worksheet,rowOffset,columnOffset,lastRow,lastColumn):
+        ""
+        worksheet.autofilter(rowOffset, columnOffset, lastRow, lastColumn)
+
+    def addGroupingToWorkSheets(self,worksheet,workbook,columnHeaders):
+        ""
+        writeRow, rowOffset, columnOffset = 0, 0, 0
+        if self.groupings is not None and isinstance(self.groupings,dict) and len(self.groupings) > 0:
+            columnOffset = 1 
+            rowOffset = len(self.groupings["groupings"])
+
+            for n, (groupingName, grouping) in enumerate(self.groupings["groupings"].items()):
+                worksheet.write_string(n,0,groupingName)
+                for groupName, groupItems in grouping.items():
+                    for groupItem in groupItems:
+                        if groupItem in columnHeaders:
+                            columnIndex = columnHeaders.index(groupItem) + columnOffset
+                            group_format = workbook.add_format({"bg_color":"#efefef"})
+                            if "colors" in self.groupings and groupingName in self.groupings["colors"] and groupName in self.groupings["colors"][groupingName]:
+                                group_format.set_bg_color(self.groupings["colors"][groupingName][groupName])
+
+                            worksheet.write_string(n,columnIndex,groupName,group_format)
+                writeRow += 1
+        return writeRow, rowOffset, columnOffset
+
+    def addParams(self):
+        ## add params
+        self.paramWorksheet.write_string(0,0,"Parameters",self.headerFormat)
+        
+        for n, (paramName,value) in enumerate(self.softwareParams):
+            self.paramWorksheet.write_string(n+1,0,paramName)
+            self.paramWorksheet.write_string(n+1,1,value)
+
 
 class ICHClustExporter(object):
     ""

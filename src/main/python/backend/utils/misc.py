@@ -20,7 +20,7 @@ def getKeyMatchInValuesFromDict(value,inputDict):
 def replaceKeyInDict(toReplaced, inputDict, replaceValue):
     ""
     if toReplaced in inputDict:
-	    inputDict.update({toReplaced: replaceValue})
+        inputDict.update({toReplaced: replaceValue})
 
     return inputDict
 
