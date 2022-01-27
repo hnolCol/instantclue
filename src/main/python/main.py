@@ -131,11 +131,11 @@ menuBarItems = [
         "name":"Load Examples",
         "fn": {"obj":"self","fn":"_createSubMenu"}
     },
-    {
-        "subM":"Log",
-        "name":"Save log",
-        "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
-    },
+    #{
+    #    "subM":"Log",
+    #    "name":"Save log",
+    #    "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
+    #},
     # {
     #     "subM":"Share",
     #     "name":"Validate App",
@@ -313,7 +313,7 @@ class InstantClue(QMainWindow):
     def _addMenu(self):
         "Main window menu."
         self.subMenus = {}
-        subMenus = ["File","Settings","Log","Help","About","Windows"] #"Workflow","Share"
+        subMenus = ["File","Settings","Help","About","Windows"] #"Workflow","Share""Log",
         for subM in subMenus:
             self.subMenus[subM] = QMenu(subM,self)
             self.menuBar().addMenu(self.subMenus[subM])

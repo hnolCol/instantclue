@@ -1018,7 +1018,7 @@ class DataCollection(object):
 
 				self.setClipping(dataID,rowIdxBool)
 				funcProps = getMessageProps("Masking done.",
-										    "Mask established graph will be updated.")
+										    "Mask established. Update graph to see changes.")
 				funcProps["maskIndex"] = rowIdxBool
 				return funcProps
 		

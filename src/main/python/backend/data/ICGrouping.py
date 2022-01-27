@@ -378,7 +378,7 @@ class ICGrouping(object):
         jsonOut["Software"] = "Instant Clue"
         jsonOut["Version"] = self.sourceData.parent.version
         jsonOut["Computer"] = computerName
-        jsonOut["groupings"] = OrderedDict()
+        jsonOut["grouping"] = OrderedDict()
         jsonOut["groupingCmap"] = dict()
         jsonOut["groupingNames"] = groupingNames
         for groupingName in groupingNames:

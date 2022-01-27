@@ -22,6 +22,7 @@ class MessageBase(QDialog):
         self.setMinimumWidth(360)
         self.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Fixed)
 
+        self.setWindowTitle("Message")
         self.__controls()
         self.__layout()
 
@@ -90,7 +91,7 @@ class WarningMessage(MessageBase):
     def __init__(self,parent=None,*args,**kwargs):
         ""
         super(WarningMessage,self).__init__(parent,*args,**kwargs)
-        
+        self.setWindowTitle("Warning message!")
         self.__controls()
         self.__layout()  
 
@@ -118,6 +119,7 @@ class AskStringMessage(MessageBase):
        
         self.text = defaultText
         self.pwMode = passwordMode
+        self.setWindowTitle("Ask for string")
         self.__controls()
         self.__layout()  
         self.__connectEvents()
@@ -156,6 +158,7 @@ class AskForFile(MessageBase):
         super(AskForFile,self).__init__(parent,title="Select file.",*args,**kwargs)
         
         self.placeHolderEdit = placeHolderEdit
+        
         self.__controls()
         self.__layout()
 

@@ -131,7 +131,7 @@ def loess_fit(x, y, span=0.75):
     """
     loess fit and confidence intervals
     """
-    if useStatsmodelLoess:
+    if not useStatsmodelLoess:
         # setup
         lo = loess(x, y, span=span)
         # fit
@@ -151,7 +151,7 @@ def loess_fit(x, y, span=0.75):
         yfit = loess(y,x,frac=span)
         ymin = np.nan
         ymax = np.nan
-    return yfit, ymin, ymax
+    return yfit[:,-1], ymin, ymax
 
 class StatisticCenter(object):
 

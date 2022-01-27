@@ -278,6 +278,7 @@ class MainFigure(QDialog):
         self.mC = mainController
         self.figSize = figSize
         
+        self.setWindowTitle("Main Figure {}".format(figureID))
         self.__defineVars(figureID=figureID)
         self.__controls(mainFigure)
         self.__layout()

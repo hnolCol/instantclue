@@ -11,7 +11,7 @@ def getAxisPosition(n,nRows = None, nCols = None, maxCol = 4):
             nCols = n 
 
         else:
-            nRows = np.ceil(n / maxCol)
+            nRows = int(np.ceil(n / maxCol))
             nCols = maxCol
 
     return OrderedDict([(n,[nRows,nCols,n + 1 ]) for n in range(n)])

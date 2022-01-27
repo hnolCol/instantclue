@@ -17,6 +17,8 @@ class ICLinearFitModel(QDialog):
         super(ICLinearFitModel, self).__init__(*args,**kwargs)
         self.title = title
         self.mC = mainController
+        self.setWindowTitle("Model Fitting Settings")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()

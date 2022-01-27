@@ -81,7 +81,8 @@ class ExcelImporter(ImporterBase):
     def __init__(self,*args, **kwargs):
         super(ExcelImporter,self).__init__(*args, **kwargs)
         #self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Load Excel (.xlsx) file.")
+        self.setWindowTitle("Load Excel (.xlsx) file.") 
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__bindEvents()
@@ -142,6 +143,7 @@ class PlainTextImporter(ImporterBase):
         #self.setAttribute(Qt.WA_DeleteOnClose)
         try:
             self.setWindowTitle("Load plain text file.")
+            self.setWindowIcon(self.mC.getWindowIcon())
             self.__controls()
             self.__layout()
             self.__bindEvents()
