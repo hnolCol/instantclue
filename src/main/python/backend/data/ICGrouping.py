@@ -32,6 +32,7 @@ class ICGrouping(object):
   
         self.groupCmaps[groupingName] = colorMapper
         self.groupColorMap[groupingName] = colorMap
+
     def getCmapMapper(self,groupedItems, colorMap = None):
         ""
         norm = Normalize(vmin=-0.2, vmax=len(groupedItems)-0.8)
@@ -147,12 +148,7 @@ class ICGrouping(object):
         for attrName, attrValue in groupingState.items():
             
             setattr(self,attrName,attrValue)
-        
-        # #order of dict not given that current grouping is really set (if groups is defined afterwards)
-        # if "currentGrouping" in groupingState:
-        #     self.setCurrentGrouping(groupingState["currentGrouping"])
-        # print(self.currentGrouping)
-        # print(self.groups)
+    
         
 
     def setCurrentGrouping(self,groupingName):
@@ -235,7 +231,7 @@ class ICGrouping(object):
 
         annotatedGroupings = OrderedDict() 
         if not currentGroupingOnly:
-            for groupingName, groupedItems in self.groups.items():
+            for groupingName in self.groups.keys():
 
                 groupingColumnNames = self.getColumnNamesFromGroup(groupingName)
                 if any(colName in groupingColumnNames.values for colName in columnNames.values):
@@ -286,6 +282,11 @@ class ICGrouping(object):
         else:
            # print(list(combinations(groupNames,r=2)))
             return list(combinations(groupNames,r=2))
+    
+    def getGroupPairsOfGrouping(self,grouping):
+        ""
+        groupNames = self.getGroupNames(grouping)
+        return list(combinations(groupNames,r=2))
 
 
     def getGroupings(self):
@@ -339,6 +340,11 @@ class ICGrouping(object):
         if groupingName in self.groups:
             return self.groups[groupingName] 
 
+    def getUniqueGroupItemsByGroupingList(self,groupingNames):
+        ""
+        columnNames = [self.getColumnNamesFromGroup(groupingName) for groupingName in groupingNames]
+        return pd.concat(columnNames,ignore_index=True).unique()
+
     def getNames(self):
         ""
         return list(self.groups.keys())
@@ -372,8 +378,9 @@ class ICGrouping(object):
         jsonOut["Software"] = "Instant Clue"
         jsonOut["Version"] = self.sourceData.parent.version
         jsonOut["Computer"] = computerName
-        jsonOut["grouping"] = OrderedDict()
+        jsonOut["groupings"] = OrderedDict()
         jsonOut["groupingCmap"] = dict()
+        jsonOut["groupingNames"] = groupingNames
         for groupingName in groupingNames:
             if groupingName in self.groups:
                 jsonOut["grouping"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])

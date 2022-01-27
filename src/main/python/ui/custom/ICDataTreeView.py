@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
@@ -18,7 +20,7 @@ from backend.config.data.params import MTMethods
 
 import pandas as pd
 import numpy as np
-
+import webbrowser
 
 
 MT_MENUS = [{
@@ -48,12 +50,12 @@ dataTypeSubMenu = {
         ("Clustering",["k-means"]),
         ("Smoothing",["Aggregate rows ..","Rolling window .."]),
         ("Density Estimation", ["Kernel Density"]),
-        ("Column operation ..", ["Change data type to ..","Missing values (NaN)"]),
+        ("Column operation ..", ["Change data type to ..","Missing values (NaN)","Counting"]),
         ("Feature Selection", ["Model ..","Recursive Elimination .."]),
         ("Model Fitting",["Kinetic"]),
         ("Missing values (NaN)",["Replace NaN by .."]),
         ("Replace NaN by ..",["Iterative Imputer"]),
-        ("Groupings",["Pairwise Tests","Multiple Groups","Summarize Groups"]),
+        ("Groupings",["Pairwise Tests","Multiple Groupings","Summarize Groups"]),
         ("(Prote-)omics-toolkit", ["pulse-SILAC"])
         ],
     "Integers" : [
@@ -93,6 +95,25 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"welch-test"}
     },
+    {
+        "subM":"Groupings",
+        "name":"Within/Between correlation",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"groupings:runGroupCorrelation",
+                    "selectFromGroupings": "all",
+                    }
+    },
+    {
+        "subM":"Groupings",
+        "name":"Help",
+        "funcKey": "openWebsite",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {
+                    "link" : "https://github.com/hnolCol/instantclue/wiki/Groupings"
+                    }
+    },
+    
     {
         "subM":"(Prote-)omics-toolkit",
         "name":"Filter fasta by ids",
@@ -147,12 +168,12 @@ menuBarItems = [
     #     "funcKey": "openProteinPeptideView",
     #     "dataType": "Categories",
     # },
-    {
-        "subM":"(Prote-)omics-toolkit",
-        "name":"Intra Batch correction (lowess)",
-        "funcKey": "openBatchCorrectionDialog",
-        "dataType": "Numeric Floats",
-    },
+    # {
+    #     "subM":"(Prote-)omics-toolkit",
+    #     "name":"Intra Batch correction (lowess)",
+    #     "funcKey": "openBatchCorrectionDialog",
+    #     "dataType": "Numeric Floats",
+    # },
     {
         "subM":"pulse-SILAC",
         "name":"A * exp(-k*t) + b (Exp. Degradation)",
@@ -175,26 +196,26 @@ menuBarItems = [
     #     "dataType": "Categories",
     # },
     {
-        "subM":"Multiple Groups",
+        "subM":"Multiple Groupings",
         "name":"N-W-ANOVA",
         "funcKey": "runNWayANOVA",
         "dataType": "Numeric Floats",
         "fnKwargs":{}
     },
-    {
-        "subM":"Multiple Groups",
-        "name":"Repeated Measures 1/2 W ANOVA",
-        "funcKey": "runRMOneTwoWayANOVA",
-        "dataType": "Numeric Floats",
-        "fnKwargs":{}
-    },
-    {
-        "subM":"Multiple Groups",
-        "name":"Mixed Two-W-ANOVA",
-        "funcKey": "runMixedANOVA",
-        "dataType": "Numeric Floats",
-        "fnKwargs":{}
-    },
+    # {
+    #     "subM":"Multiple Groupings",
+    #     "name":"Repeated Measures 1/2 W ANOVA",
+    #     "funcKey": "runRMOneTwoWayANOVA",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs":{}
+    # },
+    # {
+    #     "subM":"Multiple Groupings",
+    #     "name":"Mixed Two-W-ANOVA",
+    #     "funcKey": "runMixedANOVA",
+    #     "dataType": "Numeric Floats",
+    #     "fnKwargs":{}
+    # },
     {
         "subM":"Pairwise Tests",
         "name":"Euclidean distance",
@@ -424,7 +445,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"mean"}}
     },
@@ -434,7 +456,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":["mean",np.std]}}
     },
@@ -444,7 +467,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"sum"}}
     },
@@ -454,7 +478,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"median"}}
     },
@@ -464,7 +489,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"min"}}
     },
@@ -474,7 +500,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"max"}}
     },
@@ -484,7 +511,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"count"}}
     },
@@ -494,7 +522,8 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
                     "addColumns" : True,
                     "otherKwargs": {"metric":["count" ,"size"]}}
     },
@@ -503,7 +532,7 @@ menuBarItems = [
         "name":"custom combination",
         "dataType": "Numeric Floats",
         "funcKey": "getCustomGroupByInput",
-        "fnKwargs": {}
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate"}
     },
     {
         "subM":"Group by and Aggregate ..",
@@ -511,7 +540,7 @@ menuBarItems = [
         "dataType": "Categories",
         "funcKey": "getUserInput",
         "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
-                    "requiredColumns": ["groupbyColumn"],
+                    "requireMultipleColumns" : "groupbyColumn",
                     "addColumns" : True,
                     "otherKwargs": {"metric":"nunique"}}
     },
@@ -824,17 +853,40 @@ menuBarItems = [
         "dataType": "Numeric Floats"
     },
     {
-        "subM":"Missing values (NaN)",
-        "name":"Count (Selection)",
+        "subM":"Counting",
+        "name":"Count NaN in row (Selection)",
         "funcKey": "data::countNaN",
         "dataType": "Numeric Floats",
     },
     {
-        "subM":"Missing values (NaN)",
-        "name":"Count (Grouping)",
+        "subM":"Counting",
+        "name":"Count NaN in row (Grouping)",
         "funcKey": "data::countNaN",
         "dataType": "Numeric Floats",
         "fnKwargs": {"grouping":True}
+    },
+    {
+        "subM":"Counting",
+        "name":"Count valid values in row (Selection)",
+        "funcKey": "data::countValidValues",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Counting",
+        "name":"Count valid values in row (Grouping)",
+        "funcKey": "data::countValidValues",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Counting",
+        "name":"Count valid values in subsets",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {
+                    "funcKey":"data::groupbyAndAggregate",
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"count"}}
     },
     {
         "subM":"NaN Filter (rows)",
@@ -2274,6 +2326,16 @@ class DataTreeViewTable(QTableView):
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                 self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=fnKwargs, addColumnSelection=False if not "addColumns" in kwargs else kwargs["addColumns"])
 
+        elif "requireMultipleColumns" in kwargs:
+            dataID = self.mC.mainFrames["data"].getDataID()
+            categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
+            selectedColumns = self.mC.askForItemSelection(items=categoricalColumns,title = "Please select" if "title" not in kwargs else kwargs["title"])
+            if selectedColumns is not None:
+                fnKwargs = {kwargs["requireMultipleColumns"]:selectedColumns}
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=fnKwargs, addColumnSelection=False if not "addColumns" in kwargs else kwargs["addColumns"])
+
         elif "requiredStr" in  kwargs:
             
             labelText = kwargs["info"]
@@ -2331,22 +2393,41 @@ class DataTreeViewTable(QTableView):
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                 self.prepareMenuAction(funcKey = kwargs["funcKey"],kwargs = fnKwargs) 
            
-        elif "requiredGrouping" in kwargs:
+           #
+        elif "selectFromGroupings" in kwargs:
             if self.mC.grouping.groupingExists():
                 try:
                 # columnNames = self.mC.grouping.getColumnNames()
-                    grouping = self.mC.grouping.getCurrentGroupingName()
-                    fnKwargs = {"groupingName":grouping}
+                    
+                    funcKey = kwargs["funcKey"]
+                    groupingKwargs = {"kwargs":{}}
+                    groupingKwargs = self.mC.askForGroupingSelection(groupingKwargs,False,
+                                    title="Select groupings.",
+                                    kwargName = "groupingNames")
+                    fnKwargs = groupingKwargs["kwargs"]
                     if "otherKwargs" in kwargs:
-                        fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                        fnKwargs = {**fnKwargs["kwargs"],**kwargs["otherKwargs"]}
                     funcKey = kwargs["funcKey"]
                     self.prepareMenuAction(funcKey,fnKwargs,addColumnSelection=False,addDataID=True)
                 except Exception as e:
                     print(e)
 
             else:
-                w = WarningMessage(infoText="No grouping founds. Please add a grouping first.")
-                w.exec_()
+                self.mC.sendToWarningDialog(infoText="No grouping founds. Please add a grouping first.")
+                
+
+        elif "requiredGrouping" in kwargs:
+            if self.mC.grouping.groupingExists():
+              
+                grouping = self.mC.grouping.getCurrentGroupingName()
+                fnKwargs = {"groupingName":grouping}
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                funcKey = kwargs["funcKey"]
+                self.prepareMenuAction(funcKey,fnKwargs,addColumnSelection=False,addDataID=True)
+        
+            else:
+                self.mC.sendToWarningDialog(infoText="No grouping founds. Please add a grouping first.")
     
 
     def runExponentialFit(self,fitType,*args,**kwargs):
@@ -2498,10 +2579,36 @@ class DataTreeViewTable(QTableView):
     def getCustomGroupByInput(self,*args,**kwargs):
         ""
 
+        selectableMetrices = OrderedDict([
+                    ("sum","sum"),
+                    ("median","median"),
+                    ("std","std"),
+                    ("variance","var"),
+                    ("ptp",np.ptp),
+                    ("unique values","nunique"),
+                    ("count","count"),
+                    ("size","size"),
+                    ("min","min"),
+                    ("max","max"),
+                    ("sem","sem")])
+        
+        selectedMetrices = self.mC.askForItemSelection(items=pd.Series(list(selectableMetrices.keys())),title = "Select aggreagate metrices")
+        if selectedMetrices is not None:
+            dataID = self.mC.mainFrames["data"].getDataID()
+            categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
+            selectedColumns = self.mC.askForItemSelection(items=categoricalColumns,title = "Select groupby columns")
+            if selectedColumns is not None:
+                fnKwargs = {"metric":[selectableMetrices[k] for k in selectedMetrices.values]}
+                fnKwargs["groupbyColumn"]=selectedColumns
+                self.prepareMenuAction(kwargs["funcKey"],fnKwargs)
 
     def openBatchCorrectionDialog(self):
         ""
 
+    def openWebsite(self,link):
+        "Opens a website"
+        if isinstance(link,str):
+            webbrowser.open(link)
 
     def matchModPeptideSequenceToSites(self,*args,**kwargs):
         ""
@@ -2536,17 +2643,17 @@ class DataTreeViewTable(QTableView):
             selDiag = SelectionDialog(["groupingName"],{"groupingName":groupingNames},{"groupingName":currentGrouping},title="Select Grouping for Batch correction.")
             
             if selDiag.exec_() :
-                askProceed = AskQuestionMessage(infoText="Combat is not thread safe resulting in a freeze of the graphical user interface. Proceed?")
-                askProceed.exec_()
-                if askProceed.state:
-                    fnKwargs = selDiag.savedSelection
-                    if "otherKwargs" in kwargs:
-                        fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
-                    fnKwargs["grouping"] = self.mC.grouping.getGrouping(fnKwargs["groupingName"])
-                    
-                    funcProps = {"key":kwargs["funcKey"],"kwargs":fnKwargs}
-                    funcProps["kwargs"]["dataID"] = self.mC.getDataID()
-                    self.mC.sendRequest(funcProps)
+                # askProceed = AskQuestionMessage(infoText="Combat is not thread safe resulting in a freeze of the graphical user interface. Proceed?")
+                # askProceed.exec_()
+                # if askProceed.state:
+                fnKwargs = selDiag.savedSelection
+                if "otherKwargs" in kwargs:
+                    fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
+                fnKwargs["grouping"] = self.mC.grouping.getGrouping(fnKwargs["groupingName"])
+                
+                funcProps = {"key":kwargs["funcKey"],"kwargs":fnKwargs}
+                funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+                self.mC.sendRequestToThread(funcProps)
                 #self.prepareMenuAction(funcKey=kwargs["funcKey"],kwargs=fnKwargs, addColumnSelection=False)
         else:
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found."})

@@ -8,6 +8,7 @@ import warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
 lastChange = "20211024"
+
 def buildRegex(categoriesList, withSeparator = True, splitString = None):
 		'''
 		Build regular expression that will search for the selected category. Importantly it will prevent 

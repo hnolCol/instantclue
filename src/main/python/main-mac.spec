@@ -38,7 +38,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=True )
+          console=True)
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -50,8 +50,11 @@ coll = COLLECT(exe,
 app = BUNDLE(coll,
              name='InstantClue.app',
              icon=None,
-             bundle_identifier=None,
+             version='0.11.0',
+             bundle_identifier='instantclue.de',
              info_plist={
-                'NSHighResolutionCapable': 'True'
+                'NSHighResolutionCapable': 'True',
+                'NSPrincipalClass': 'NSApplication',
+                'NSAppleScriptEnabled': False,
                 }
             )

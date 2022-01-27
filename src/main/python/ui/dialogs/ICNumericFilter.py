@@ -32,7 +32,7 @@ class NumericFilter(QDialog):
 
     def __init__(self,mainController, selectedNumericColumn = [], *args, **kwargs):
         super(NumericFilter,self).__init__(*args, **kwargs)
-
+        
         self.mC = mainController
         self.dataID = self.mC.mainFrames["data"].getDataID()
         self.numericColumns = self.mC.data.getNumericColumns(self.dataID)
@@ -43,6 +43,7 @@ class NumericFilter(QDialog):
         self.CBFilterOptions = OrderedDict()
 
         self.setWindowTitle("Numeric Filter")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()
@@ -55,12 +56,17 @@ class NumericFilter(QDialog):
         self.titleLabel = createTitleLabel("Numeric Filter")
         self.filterLabel = createLabel("Filter on: ", fontSize = 12)
         self.columnNameCombo = createCombobox(self, items = self.numericColumns.values.tolist())
-        
 
         self.operatorLabel = createLabel("Operator: ", fontSize = 12)
         self.operatorCombo = createCombobox(self,items = self.mC.numericFilter.getOperatorOptions())
         self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
+
+        self.scrollArea = QScrollArea(parent=self)
+        self.scrollFrame = QFrame(parent=self.scrollArea) 
+        self.scrollArea.setWidget(self.scrollFrame)
+        self.scrollArea.setWidgetResizable(True)
+        
 
         self.addFilterIcon = BigPlusButton(buttonSize=(30,30))
 
@@ -80,12 +86,11 @@ class NumericFilter(QDialog):
         
     def __layout(self):
         ""
-
         self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding)
-
+        
         self.setLayout(QGridLayout()) 
-        self.filterLayout = QVBoxLayout()
-        self.filterLayout.setSpacing(1)
+        self.scrollFrame.setLayout(QVBoxLayout())
+        
         self.layout().addWidget(self.titleLabel,0,0)
         self.layout().addWidget(self.filterLabel ,1,0)
         self.layout().addWidget(self.columnNameCombo,1,1,1,3)
@@ -93,8 +98,9 @@ class NumericFilter(QDialog):
         self.layout().addWidget(self.operatorLabel,2,0)
         self.layout().addWidget(self.operatorCombo,2,1,1,3)
         self.layout().setColumnStretch(2,1)
-        self.layout().addLayout(self.filterLayout,3,0,1,4)
+        self.layout().addWidget(self.scrollArea,3,0,1,4)
         self.layout().addWidget(self.addFilterIcon,4,0)
+        
         #add selection cbs
         hboxCB = QHBoxLayout()
         for cb in self.CBFilterOptions.values():
@@ -133,7 +139,7 @@ class NumericFilter(QDialog):
         if filterName not in self.filterProps:
             self.filterProps[filterName] = dict()
             self.filterProps[filterName]["frame"] = self.createFilterInfoWidgetLayout(filterName)
-            self.filterLayout.addWidget(self.filterProps[filterName]["frame"])
+            self.scrollFrame.layout().addWidget(self.filterProps[filterName]["frame"])
             self.updateComboBox()
 
     def chooseType(self,event=None,filterName = None):
@@ -271,7 +277,7 @@ class NumericFilter(QDialog):
     def deleteFilter(self,event=None,filterName = None):
         ""    
         if filterName in self.filterProps:
-            self.filterLayout.removeWidget(self.filterProps[filterName]["frame"])
+            self.scrollFrame.layout().removeWidget(self.filterProps[filterName]["frame"])
             self.filterProps[filterName]["frame"].deleteLater()
             del self.filterProps[filterName]
             self.updateComboBox()
@@ -313,8 +319,7 @@ class NumericFilter(QDialog):
         ""
         numericColumns = [col for col in self.numericColumns if col not in self.filterProps] 
         self.columnNameCombo.clear()
-        self.columnNameCombo.addItems(["Choose additional column"] + numericColumns )
-       
+        self.columnNameCombo.addItems(["Choose additional column"] + numericColumns )   
         self.columnNameCombo.model().item(0).setEnabled(False)
 
     def lineEditChanged(self,event=None,filterName = None):

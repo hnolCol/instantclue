@@ -1,4 +1,5 @@
 
+from fileinput import filename
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -21,6 +22,8 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import datetime
+import socket
+
 
 class LoadButton(BigArrowButton):
     ""
@@ -312,10 +315,53 @@ class DataHandleFrame(QFrame):
         funcProps = {"key":"data::deleteData","kwargs":{"dataID" : dataID}}
         self.mC.sendRequestToThread(funcProps)
 
+
+    def exportMultipleDataFramesToExcel(self,exportDataFormat):
+        ""
+        if len(self.mC.data.dfs) > 1 and exportDataFormat == "xlsx-multiple":
+            #select dataframes 
+            #print("multiple files.")
+            selectedItemsIdx = self.mC.askForItemSelection(items = pd.Series(self.mC.data.getFileNames())).index.values.tolist()
+            if selectedItemsIdx is None: return 
+            dataIDs = self.mC.data.getDataIDbyFileNameIndex(idx=selectedItemsIdx)
+            selectedItems = [self.mC.data.getFileNames()[n] for n in selectedItemsIdx]
+           
+        else:
+            dataIDs = [self.getDataID()]
+            selectedItems = [self.mC.data.fileNameByID[dataIDs[0]]]
+        data = [self.mC.getDataByDataID(dataID,useClipping=True) for dataID in dataIDs]
+        softwareParams = [("Software","Instant Clue"),
+					("Version",self.mC.version),
+                    ("Computer Name",socket.gethostname()),
+                    ("Date",datetime.datetime.now().strftime("%Y%m%d %H:%M:%S"))
+                    ]
+
+        fileName = self.mC.askForExcelFileName()
+        if fileName != "":
+            fkey = "data::exportDataToExcel"
+            kwargs = {
+                "pathToExcel": fileName,
+                "fileNames": selectedItems,
+                "dataFrames": data,
+                "softwareParams" : softwareParams,
+                "groupings" : self.mC.grouping.getGroupings()
+            }
+            funcProps = dict()
+            funcProps["key"] = fkey
+            funcProps["kwargs"] = kwargs
+
+            self.mC.sendRequestToThread(funcProps)
+
     def exportData(self, exportDataFormat = "txt"):
         ""
         if not self.mC.data.hasData():
             return
+
+        if exportDataFormat.startswith("xlsx"):
+            print("MULTIPLE")
+            self.exportMultipleDataFramesToExcel(exportDataFormat)
+            return
+
         dataID = self.getDataID()
 
         if dataID is not None:
@@ -352,10 +398,9 @@ class DataHandleFrame(QFrame):
             return
        
         dataID = self.getDataID()
-        columnNames = self.mC.data.getPlainColumnNames(dataID)
         useClipping = self.mC.config.getParam("data.view.use.clipping")
         clippingActive = self.mC.data.hasClipping(dataID)
-        dataFrame = self.mC.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
+        dataFrame = self.mC.getDataByDataID(dataID,useClipping=useClipping)
         self.openDataFrameinDialog(dataFrame,clippingActive = clippingActive)
 
     def openDataFrameinDialog(self,dataFrame,*args,**kwargs):
@@ -365,7 +410,7 @@ class DataHandleFrame(QFrame):
         
 
     def updateFilter(self,boolIndicator,resetData=False):
-
+        ""
         self.dlg.updateModelDataByBool(boolIndicator,resetData)
 
     def updateDataInTreeView(self,columnNamesByType, dataID = None):

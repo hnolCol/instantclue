@@ -7,15 +7,16 @@ from collections import OrderedDict
 from .buttonDesigns import ResetButton, PushHoverButton, ResortButton
 from .resortableTable import ResortableTable
 from .utils import clearLayout
-from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel
+from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel
 
 class BoxItem(PushHoverButton):
 
-    def __init__(self,itemName = "", parent=None, itemBorder = 5,  *args,**kwargs):
+    def __init__(self,itemName = "", parent=None, itemBorder = 5, fColor = "black", bgColor = "white", *args,**kwargs):
         super(BoxItem,self).__init__(parent=parent,*args,**kwargs)
         self.itemName = itemName
         self.itemBorder = itemBorder
-        
+        self.bgColor = bgColor
+        self.fColor = fColor
         self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self.setToolTip(itemName)
         self.getWidthAndHeight()
@@ -52,7 +53,7 @@ class BoxItem(PushHoverButton):
         #setup painter
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(self.fColor))
         pen.setWidthF(0.5)
         painter.setFont(self.getStandardFont())
         painter.setPen(pen)
@@ -61,7 +62,7 @@ class BoxItem(PushHoverButton):
         if self.mouseOver:
             brush = QBrush(QColor(HOVER_COLOR))
         else:
-            brush = QBrush(QColor("white"))
+            brush = QBrush(QColor(self.bgColor))
 
         painter.setBrush(brush)
         if self.drawFrame:
@@ -78,30 +79,48 @@ class BoxItem(PushHoverButton):
         self.setFixedSize(self.sizeHint())
 
 class ItemHolder(QWidget):
-    def __init__(self,direction = "H",*args,**kwargs):
+    def __init__(self,direction = "H",title = "Drag column headers here.", *args,**kwargs):
         super(ItemHolder,self).__init__(*args,**kwargs)
         #self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
         if direction == "H":
             self.setLayout(QHBoxLayout())
             self.layout().setAlignment(Qt.AlignLeft)
+            self.itemLayout = QHBoxLayout()
+            self.itemLayout.setAlignment(Qt.AlignLeft)
+            
         else:
             self.setLayout(QVBoxLayout())
             self.layout().setAlignment(Qt.AlignTop)
-        self.layout().setContentsMargins(2,1,2,1)
+            self.itemLayout = QVBoxLayout()
+            self.itemLayout.setAlignment(Qt.AlignTop)
+
+        self.layout().addLayout(self.itemLayout)
+        self.itemLayout.setContentsMargins(2,1,2,1)
         p = self.palette()
         p.setColor(self.backgroundRole(), QColor("#f6f6f6"))
         self.setPalette(p)
+
+        self.dragLabel = createTitleLabel(title,fontSize=14)
+
+        self.layout().addWidget(self.dragLabel)
         
+    def toggleDragLabelVisibility(self):
+        ""
+        self.dragLabel.setVisible(not self.dragLabel.isVisible())
+
+    def setDragLabelVisibility(self,visible):
+        ""
+        self.dragLabel.setVisible(visible)
 
     def addItem(self,boxItem):
-        ""
-        self.layout().addWidget(boxItem)
+        ""        
+        self.itemLayout.addWidget(boxItem)
     
     def deleteItem(self,boxItem):
         boxItem.deleteLater()
 
     def clear(self):
-        clearLayout(self.layout())
+        clearLayout(self.itemLayout)
         
 
 
@@ -224,30 +243,33 @@ class ReceiverBox(QFrame):
             self.reportItemRemovalToTreeView(list(self.items.keys()))
 
         self.items.clear()
+        self.handleDragLabelVisibility()
         self.update()
         if emitReceiverBoxChangeSignal:
-            self.parent().recieverBoxItemsChanged()
+            self.itemsChanged()
 
     def addItems(self,items):
         "Adds items (list) to widget"
+        
         for itemName in items:
             if itemName not in self.items:
-                
                 try:
                     w = BoxItem(itemName)
                     w.setContextMenuPolicy(Qt.CustomContextMenu)
-                    w.customContextMenuRequested.connect(self.deleteMe)
+                    w.customContextMenuRequested.connect(self.deleteBoxItem)
                 except Exception as e:
 
                     pass 
                 
                 self.items[itemName] = w
                 self.itemHolder.addItem(w)
+        self.handleDragLabelVisibility()
 
-    def deleteMe(self,event):
+    def deleteBoxItem(self,event):
         ""
         itemName = [self.sender().itemName]
         self.removeItems(itemName, reportStateToTreeView=True)
+        self.handleDragLabelVisibility()
         self.itemsChanged()
 
     def updateItems(self):
@@ -265,7 +287,17 @@ class ReceiverBox(QFrame):
 
     def itemsChanged(self):
         "Notify plotter that items changed."
+        
         self.parent().recieverBoxItemsChanged()
+
+    def handleDragLabelVisibility(self):
+        ""
+       
+        if len(self.items) == 0:
+
+            self.itemHolder.setDragLabelVisibility(True)
+        else:
+            self.itemHolder.setDragLabelVisibility(False)
 
     def renameItem(self,itemName,newItemName):
         ""

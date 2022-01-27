@@ -1,0 +1,13 @@
+Array	sample	Time	Treatment	Batch	columnname
+1	1	0	0	1	_23_1CON
+2	2	7	0	1	_23_2CON
+3	3	0	1	1	_23_3NO0
+4	4	7	1	1	_23_4NO7
+5	5	0	0	2	_26_1CON
+6	6	7	0	2	_26_2CON
+7	7	0	1	2	_26_3NO0
+8	8	7	1	2	_26_4NO7
+9	9	7	0	3	CONTROL7
+10	10	0	0	3	CONTROLZ
+11	11	7	1	3	NO_7_5
+12	12	0	1	3	NO_ZERO

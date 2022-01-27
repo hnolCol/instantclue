@@ -70,7 +70,7 @@ from ..statistics.statistics import StatisticCenter
 from ..normalization.normalizer import Normalizer
 from ..transformations.transformer import Transformer
 from ..proteomics.ICModifications import ICModPeptidePositionFinder
-from .ICExcelExport import ICHClustExporter
+from .ICExcelExport import ICDataExcelExporter, ICHClustExporter
 from .ICSmartReplace import ICSmartReplace
 from collections import OrderedDict
 import itertools
@@ -445,16 +445,15 @@ class DataCollection(object):
 
 	def groupbyAndAggregate(self,dataID,columnNames,groupbyColumn,metric="mean"):
 		"""
-		Aggregates data by a specific groupbyColumn. 
+		Aggregates data by a specific groupbyColumn(s). 
 		ColumnNames can only be numeric.
-		
 		"""
 		if dataID in self.dfs:
-			requiredColumns = columnNames.append(pd.Series([groupbyColumn]),ignore_index=True)
+			requiredColumns = columnNames.append(groupbyColumn,ignore_index=True)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
-			aggregatedData = data.groupby(by=groupbyColumn,sort=False).aggregate(metric)
+			aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric)
 			aggregatedData = aggregatedData.reset_index()
-			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),groupbyColumn))
+			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
 
@@ -587,16 +586,14 @@ class DataCollection(object):
 		return  getMessageProps("Data copied","Selected data copied to clipboard..")
 					
 
-
 	def readDataFromClipboard(self):
 		""
 		try:
-			
 			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
 			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
 		localTime = time.localtime()
-		current_time = time.strftime("%H:%M:%S", localTime)
+		current_time = time.strftime("%H_%M_%S", localTime)
 		return self.addDataFrame(data, fileName = "pastedData({})".format(current_time),cleanObjectColumns = True)
 
 	def rowWiseCalculations(self,dataID,calculationProps,operation = "subtract"):
@@ -759,6 +756,17 @@ class DataCollection(object):
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
 	
+	def exportDataToExcel(self,pathToExcel,fileNames,dataFrames,softwareParams,groupings=None):
+		""
+		groupingDetails = dict()
+		if groupings is not None and isinstance(groupings,list) and len(groupings) > 0:
+			groupingDetails["groupings"] = self.parent.grouping.getGroupingsByList(groupings)
+			groupingDetails["colors"] = self.parent.grouping.getGroupColorsByGroupingList(groupings)
+		
+		exporter = ICDataExcelExporter(pathToExcel,dataFrames,fileNames,softwareParams,groupingDetails)
+		exporter.export()
+		return getMessageProps("Saved ..","Excel file saved.")
+
 	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors,quickSelectData,hclustParams,groupings=None):
 		""
 
@@ -1654,7 +1662,42 @@ class DataCollection(object):
 		else:
 			return getMessageProps("Error ..","DataID not found.")
 
+	def countValidValues(self,dataID, columnNames, grouping = None):
+		"Counts valid values and adds integer columns"
+		if dataID in self.dfs:
+			if grouping is None:
+				
+				data = self.dfs[dataID][columnNames].count(axis=1)
+				return self.addColumnData(dataID,"count(validV):{}".format(mergeListToString(columnNames)),data)
+			else:
+				if self.parent.grouping.groupingExists():
+					grouping = self.parent.grouping.getCurrentGrouping() 
+					groupingName = self.parent.grouping.getCurrentGroupingName()
+					columnNames = self.parent.grouping.getColumnNames(groupingName)
+					X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+					countData = pd.DataFrame(index=X.index, columns = ["count(validV):{}".format(groupName) for groupName in grouping.keys()])
+					for groupName, columnNames in grouping.items():
+						
+						countData["count(validV):{}".format(groupName)] = X[columnNames].count(axis=1)
+					
+					return self.joinDataFrame(dataID,countData)
+				else:
+					return getMessageProps("Error ..","No Grouping found.")
 
+		else:
+			return getMessageProps("Error ..","DataID not found.")
+
+
+	def countValidValuesInSubset(self,dataID,columnNames,categoricalColumns,*args,**kwags):
+		""
+		if dataID in self.dfs:
+			allColumnNames = pd.concat([columnNames,categoricalColumns],ignore_index=True).unique()
+			X = self.getDataByColumnNames(dataID,allColumnNames,ignore_clipping=False)["fnKwargs"]["data"]
+			countByGroups = X.groupby(by=categoricalColumns).count()
+			print(countByGroups)
+			return self.addDataFrame(countByGroups,fileName="Subset counts") 
+		else:
+			return getMessageProps("Error ..","DataID not found.")
 
 	def removeNaN(self, dataID, columnNames, how = "any", thresh = None, axis=0,*args,**kwargs):
 		""
@@ -2327,29 +2370,20 @@ class DataCollection(object):
 		self.save_current_data()
 		return self.dfs 
 	
-	def get_file_names(self):
+	def getFileNames(self):
 		'''
 		Returns the available file names
 		'''
 		return list(self.fileNameByID.values())
-		
-	def get_number_of_columns_in_current_data(self):
-		'''
-		Returns number of columns
-		'''	
-		return len(self.df_columns) 
-		
-	def get_columns_of_current_data(self):
-		'''
-		Returns column names of current data
-		'''
-		return self.df_columns	
+
+	def getDataIDbyFileNameIndex(self,idx):
+		""
+		return [dataID for n,dataID in enumerate(self.fileNameByID.keys()) if n in idx]
 
 	def setFileNameByID(self,dataID,fileName):
-		""
+		"Renames the dataframe for the user, id is unchanged"
 		if dataID in self.fileNameByID:
-			self.fileNameByID[dataID] = fileName
-			print(self.fileNameByID)	
+			self.fileNameByID[dataID] = fileName	
 			completeKwargs = getMessageProps("Renamed.","Data frame renamed.")
 			completeKwargs["dfs"] = self.fileNameByID
 			return completeKwargs
@@ -2542,6 +2576,7 @@ class DataCollection(object):
 		modFinder = ICModPeptidePositionFinder(None,None)
 		modFinder.loadFasta(fastaFilePath)
 		matchedSiteData = modFinder.matchModPeptides(proteinGroups,modPeptideSequence,data.index.values.tolist())
+		
 		return self.joinDataFrame(dataID,matchedSiteData)
 		
 		#eturn getMessageProps("Done..","Modified peptides matched to sites.")

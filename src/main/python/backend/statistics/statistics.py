@@ -1,5 +1,8 @@
+import itertools
+from tokenize import group
 from pandas.core.accessor import delegate_names
 from pandas.core.reshape.melt import melt
+from pingouin.correlation import corr
 from scipy.sparse import data
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
@@ -21,9 +24,8 @@ from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.multitest import multipletests
 #import pingouin as pg
-from pingouin import anova
-#from .anova.anova import Anova
-from pingouin import mixed_anova
+from pingouin import anova, mixed_anova
+
 
 #mixed ANOVA import
 import hdbscan
@@ -40,7 +42,7 @@ from itertools import chain
 
 from joblib import Parallel, delayed, dump, load
 import time
-from multiprocessing import Pool
+from multiprocessing import Pool, Process, Queue
 from scipy.optimize import curve_fit
 import warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
@@ -66,6 +68,12 @@ clusteringMethodNames = OrderedDict([
                             ])
 
 manifoldFnName = {"Isomap":"runIsomap","MDS":"runMDS","TSNE":"runTSNE","LLE":"runLLE","SpecEmb":"runSE"}
+
+
+
+def runCombat(data,batchIdx):
+    
+    return pycombat(data,batchIdx)
 
 def expIncrease(x,A,k,b):
     ""
@@ -801,7 +809,7 @@ class StatisticCenter(object):
                 for category,boolIdx in boolIdxByCategory.items():
                    # print(category,boolIdx)
                    # print(groupData)
-                  
+                   
                     
                     categoryInGroup = np.sum(data[boolIdx.values].index.isin(groupData.index))
                     if categoryInGroup <= minGroupSize:
@@ -813,8 +821,10 @@ class StatisticCenter(object):
                     
                     #table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
                     table = np.array([[categoryInGroup,categoryInCompleteData],[groupSize , overallDataSize]])
+                    
                     oddsratio, pvalue = fisher_exact(table,alternative=alternative)
                     chi2,chiPValue,_,_ = chi2_contingency(table)
+                   
                     # print(category)
                     # print(np.sum(boolIdx))
 
@@ -835,8 +845,8 @@ class StatisticCenter(object):
                 if len(r) > 0:
                     r = pd.DataFrame(r)
                     
-                    boolIdxFisher, adjFisherPValue, _, _  = multipletests(r["p-value(Fisher)"].values,method=adjPvalueMethod)
-                    boolIdxChi, adjChi2PValue, _, _  = multipletests(r["p-value(Chi2)"].values,method=adjPvalueMethod)
+                    boolIdxFisher, adjFisherPValue, _, _  = multipletests(r["p-value(Fisher)"].values,method=adjPvalueMethod,alpha=adjPvalueCutoff)
+                    boolIdxChi, adjChi2PValue, _, _  = multipletests(r["p-value(Chi2)"].values,method=adjPvalueMethod,alpha=adjPvalueCutoff)
                    
                     r["{} p-value(Fisher)".format(adjPvalueMethod)] = adjFisherPValue.astype(float)
                     r["{} p-value(Chi2)".format(adjPvalueMethod)] = adjChi2PValue.astype(float)
@@ -855,7 +865,10 @@ class StatisticCenter(object):
         data = self.getData(dataID,columnNames).dropna() 
         factorizedColumns = self.sourceData.parent.grouping.getFactorizedColumns(groupingName)
         batchIdx = [factorizedColumns[colName] for colName in columnNames if colName in factorizedColumns]
-        XCorrected = pycombat(data,batchIdx)
+        with Pool(1) as p:
+                poolResult = p.starmap(runCombat,[(data,batchIdx)])
+        XCorrected = poolResult[0]
+
         #attach all other data
         rawDf = self.sourceData.dfs[dataID]
         columnsToJoin = [colName for colName in rawDf.columns if colName not in XCorrected.columns]
@@ -1339,5 +1352,45 @@ class StatisticCenter(object):
         ""
         if isinstance(n,int):
             self.n_jobs = n
+
+    def _getCombinationsOfTwoLists(self,a,b):
+        ""
+        return [(x,y) for x in a for y in b]
+        
+
+    def runGroupCorrelations(self,dataID,groupingNames=[]):
+        ""
+        corrMethod = "pearson"
+        columnNames = self.sourceData.parent.grouping.getUniqueGroupItemsByGroupingList(groupingNames)
+        
+        data = self.getData(dataID, columnNames = columnNames)
+        corrMatrix = data.corr(method=corrMethod)
+        #groupings = self.sourceData.parent.grouping.getGroupingsByList(groupingNames)
+       #r = pd.DataFrame(columns=["Grouping","Group1","Group2","colName1","colName2","type","coeff"])
+        rr = []
+        for groupingName in groupingNames:
+            #groupNameCombinations = self.sourceData.parent.grouping.getGroupPairsOfGrouping(groupingName)
+            groupNameByColumn = self.sourceData.parent.grouping.getGroupNameByColumn(groupingName)
+            columnNames = list(groupNameByColumn.keys())
+            #withing groups 
+            for colName1, colName2 in itertools.combinations(columnNames,r=2):
+                if all(colName in corrMatrix.columns for colName in [colName1,colName2]):
+                    r = corrMatrix.loc[colName1,colName2]
+                    groupName1 = groupNameByColumn[colName1]
+                    groupName2 = groupNameByColumn[colName2]
+                    rr.append({
+                        "Grouping":groupingName,
+                        "Group1":groupName1,
+                        "Group2":groupName2,
+                        "colName1":colName1,
+                        "colName2":colName2,
+                        "coeff":r,
+                        "type":"within" if groupName1 == groupName2 else "between"
+                        })
+        R = pd.DataFrame(rr)
+        return self.sourceData.addDataFrame(R,fileName="GroupCorrelation") 
+            
+
+
 
 

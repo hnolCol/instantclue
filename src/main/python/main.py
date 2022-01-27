@@ -2,10 +2,8 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+
 from matplotlib.pyplot import get, text
-
-
-
 
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
@@ -13,6 +11,13 @@ from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
 from ui.custom.warnMessage import AskStringMessage
 from ui.dialogs.ICDSelectItems import ICDSelectItems
+from ui.dialogs.ICWorkfowBuilder import ICWorkflowBuilder
+from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl, createMenu
+from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
+from ui.custom.ICWelcomeScreen import ICWelcomeScreen
+from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
+from ui.dialogs.ICAppValidation import ICValidateEmail
+
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
 from backend.data.ICGrouping import ICGrouping
@@ -24,15 +29,8 @@ from backend.utils.Logger import ICLogger
 from backend.config.config import Config
 from backend.saver.ICSessionHandler import ICSessionHandler
 from backend.webapp.ICAppValidator import ICAppValidator
-
 from backend.plotting.plotterCalculations import PlotterBrain
 
-    
-from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl, createMenu
-from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
-from ui.custom.ICWelcomeScreen import ICWelcomeScreen
-from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
-from ui.dialogs.ICAppValidation import ICValidateEmail
 
 import sys, os
 import numpy as np
@@ -49,7 +47,7 @@ import multiprocessing
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
-__VERSION__ = "0.10.10.20211105"
+__VERSION__ = "0.11.0"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -76,7 +74,7 @@ menuBarItems = [
     {
         "subM":"Help",
         "name":"Discussions (New Features)",
-        "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/discussions/13")
+        "fn": lambda : webbrowser.open("https://github.com/hnolCol/instantclue/discussions")
     },
     {
         "subM":"Help",
@@ -138,41 +136,46 @@ menuBarItems = [
         "name":"Save log",
         "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
     },
-    {
-        "subM":"Share",
-        "name":"Validate App",
-        "fn": {"obj":"self","fn":"openAppValidationDialog"}
-    },
-    {
-        "subM":"Share",
-        "name":"Add app id",
-        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
-    },
-    {
-        "subM":"Share",
-        "name":"Copy App ID",
-        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
-    },
-    {
-        "subM":"Share",
-        "name":"Manage Graphs",
-        "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
-    },
-    {
-        "subM":"Share",
-        "name":"Retrieve Data",
-        "fn": {"obj":"self","fn":"getChartData"}
-    },
-    {
-        "subM":"Share",
-        "name":"Display shared charts",
-        "fn": {"obj":"webAppComm","fn":"displaySharedCharts"}
-    },
+    # {
+    #     "subM":"Share",
+    #     "name":"Validate App",
+    #     "fn": {"obj":"self","fn":"openAppValidationDialog"}
+    # },
+    # {
+    #     "subM":"Share",
+    #     "name":"Add app id",
+    #     "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    # },
+    # {
+    #     "subM":"Share",
+    #     "name":"Copy App ID",
+    #     "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    # },
+    # {
+    #     "subM":"Share",
+    #     "name":"Manage Graphs",
+    #     "fn": {"obj":"webAppComm","fn":"copyAppIDToClipboard"}
+    # },
+    # {
+    #     "subM":"Share",
+    #     "name":"Retrieve Data",
+    #     "fn": {"obj":"self","fn":"getChartData"}
+    # },
+    # {
+    #     "subM":"Share",
+    #     "name":"Display shared charts",
+    #     "fn": {"obj":"webAppComm","fn":"displaySharedCharts"}
+    # },
     {
         "subM":"Windows",
         "name":"Main Window",
         "fn": {"obj":"self","fn":"showWindow"}
-    }
+    },
+    # {
+    #     "subM":"Workflow",
+    #     "name":"Build Workflow",
+    #     "fn": {"obj":"self","fn":"startBuildWorkflowDialog"}
+    # }
     
 ] + exampleFuncs 
 
@@ -193,7 +196,7 @@ class InstantClue(QMainWindow):
         super(InstantClue, self).__init__(parent)
 
         self.mainPath = os.path.dirname(sys.argv[0])
-        self.setWindowIcon(QIcon(os.path.join(self.mainPath,"icons","instantClueLogo.png")))
+        self.setWindowIcon(self.getWindowIcon())
         
         self.config = Config(mainController = self)
         self.version = __VERSION__
@@ -243,7 +246,7 @@ class InstantClue(QMainWindow):
         #update parameters saved in parents (e.g data, plotter etc)
         self.config.updateAllParamsInParent()
         ##### 
-        self.webAppComm.isAppIDValidated()
+        #self.webAppComm.isAppIDValidated()
         #self.webAppComm.getChartData()
         #self.webAppComm.getChartsByAppID()
         #self.validateApp()
@@ -310,7 +313,7 @@ class InstantClue(QMainWindow):
     def _addMenu(self):
         "Main window menu."
         self.subMenus = {}
-        subMenus = ["File","Settings","Log","Share","Help","About","Windows"]
+        subMenus = ["File","Settings","Log","Help","About","Windows"] #"Workflow","Share"
         for subM in subMenus:
             self.subMenus[subM] = QMenu(subM,self)
             self.menuBar().addMenu(self.subMenus[subM])
@@ -349,6 +352,20 @@ class InstantClue(QMainWindow):
             self.subMenus[subMenuName] = QMenu(subMenuName,parentMenu)
             parentMenu.addMenu(self.subMenus[subMenuName])
         
+
+    def getWindowIcon(self):
+        ""
+        pathToIcon = os.path.join(self.mainPath,"icons","instantClueLogo.png")
+        if os.path.exists(pathToIcon):
+            return QIcon(pathToIcon)
+        return QIcon()
+
+    def getDataByDataID(self,dataID, columnNames = None, useClipping = False):
+        ""
+        if columnNames is None:
+            columnNames = self.data.getPlainColumnNames(dataID)
+        dataFrame = self.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
+        return dataFrame
 
     def progress_fn(self, n):
         ""
@@ -454,7 +471,20 @@ class InstantClue(QMainWindow):
             dlg.exec_()
         else:
             self.sendToWarningDialog(infoText="Web AppID is already validated.")
-
+    
+    def askForExcelFileName(self,title="Save Data to Excel",defaultName="ExcelExport.xlsx",*args,**kwargs):
+        ""
+        workingDir = self.config.getParam("WorkingDirectory")
+        fileName,_ = QFileDialog.getSaveFileName(self,title,os.path.join(workingDir,defaultName),"Excel Files (*.xlsx)")
+        return fileName
+    
+    def askForItemSelection(self, items ,title = "Categorical column selection.",**kwargs):
+        ""
+        dlg = ICDSelectItems(data = pd.DataFrame(items), title = title, **kwargs)
+        if dlg.exec_():
+            selectedItems = pd.Series(dlg.getSelection().values.flatten())
+            if selectedItems.size > 0: #check
+                return selectedItems
 
     def askForGroupingSelection(self, funcKey, numericColumnsInKwargs = True, title = "Groupings to display in h. clustering.", kwargName = "groupingName", **kwargs):
         ""
@@ -587,6 +617,11 @@ class InstantClue(QMainWindow):
         self.config.saveParameters()
         event.accept()
 
+    def startBuildWorkflowDialog(self,event=None):
+        ""
+        dlg = ICWorkflowBuilder(self)
+        dlg.exec_()
+
     def getUserLoginInfo(self):
         "Visionary ..."
         try:
@@ -653,9 +688,12 @@ class InstantClue(QMainWindow):
         "Display message on user screen in the top right corner"
         # check if all keys present
         if all(x in messageProps for x in ["title","message"]): 
-            self.notification.setNotify(
-                messageProps["title"],
-                messageProps["message"])
+            if self.config.getParam("errorShownInDialog") and "Error" in messageProps["title"]:
+                self.sendToWarningDialog(infoText=messageProps["message"])
+            else:
+                self.notification.setNotify(
+                    messageProps["title"],
+                    messageProps["message"])
 
     def sendToWarningDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
         ""

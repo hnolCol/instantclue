@@ -19,9 +19,9 @@ class ICClusterplot(ICChart):
         ""
         menus["main"].addAction("Show data in cluster", self.displayClusterSpecificData)
     
-    def initClusters(self,onlyForID = None, targetAx = None):
+    def initClusters(self,onlyForID = None, targetAx = None, plotType = "boxplot"):
         ""
-        if self.getParam("clusterplot.type") == "boxplot": 
+        if plotType == "boxplot": 
             for n, boxplotProps in self.data["plotData"].items():
                 if n in self.axisDict and onlyForID is None:
                     self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
@@ -29,7 +29,7 @@ class ICClusterplot(ICChart):
                     self.targetBoxplotItems = dict()
                     self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
 
-        elif self.getParam("clusterplot.type") == "lineplot":
+        elif plotType == "lineplot":
             self.colorGroupArtists = OrderedDict()
             self.groupColor = OrderedDict() 
             for n, lineProps in self.data["plotData"].items():
@@ -65,9 +65,6 @@ class ICClusterplot(ICChart):
             
             self.initAxes(data["axisPositions"])
             
-            if "tickPositions" in data and "tickLabels" in data:
-                self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90, onlyLastRow=True)
-            
             if "axisLimits" in data:
                 for n,ax in self.axisDict.items():
                     if n in data["axisLimits"]:
@@ -77,16 +74,28 @@ class ICClusterplot(ICChart):
                 self.setAxisLabels(self.axisDict,data["axisLabels"], onlyLastRowForX=True, onlyFirstColumnForY=True)
          
             self.addTitles()
-            self.initClusters()
+            self.initClusters(plotType=data["plotType"])
             self.savePatches()
             self.addExtraLines(self.axisDict,self.data["extraLines"])
-           
+            
+            if "tickPositions" in data and "tickLabels" in data:
+               
+                self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90, onlyLastRow=True)
+
+            if "axisLimits" in data:
+                for n,ax in self.axisDict.items():
+                    if n in data["axisLimits"]:
+                        self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
+            
+            if "axisLabels" in data:
+                self.setAxisLabels(self.axisDict,data["axisLabels"], onlyLastRowForX=True, onlyFirstColumnForY=True)
+         
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
                 #adda qucik select hover
                 self.addQuickSelectHoverScatter()
-            self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
+            self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"],isEditable=data["plotType"] == "boxplot")
             self.checkForQuickSelectDataAndUpdateFigure()
 
         except Exception as e:
@@ -108,10 +117,9 @@ class ICClusterplot(ICChart):
         ""
         return self.data["clusterLabels"], self.data["dataID"]
     
-
     def savePatches(self):
         ""
-        if self.getParam("clusterplot.type") == "boxplot":
+        if self.data["plotType"] == "boxplot":
             colorGroupData = self.data["dataColorGroups"]
             self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
             self.groupColor = dict() 
@@ -145,7 +153,7 @@ class ICClusterplot(ICChart):
             if intID in self.colorGroupArtists:
                 if self.groupColor[intID] != color:
                     artists = self.colorGroupArtists[intID]
-                    if self.getParam("clusterplot.type") == "lineplot":
+                    if self.data["plotType"] == "lineplot":
                         #Line collection at list position 0
                         artists[0].set_colors(color)
                     else:
@@ -239,8 +247,8 @@ class ICClusterplot(ICChart):
         data = self.data
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
         self.addTitles(onlyForID = axisID, targetAx = targetAx)
-        self.initClusters(onlyForID=axisID,targetAx=targetAx)
-        if self.getParam("clusterplot.type") == "boxplot":
+        self.initClusters(onlyForID=axisID,targetAx=targetAx,plotType=data["plotType"])
+        if data["plotType"] == "boxplot":
             self.setFacecolors(onlyForID=axisID)
         
         self.addExtraLines(self.axisDict,self.data["extraLines"],axisID,targetAx)

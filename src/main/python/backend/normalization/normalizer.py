@@ -28,6 +28,18 @@ class Normalizer(object):
 
         self.sourceData = sourceData
 
+    def _addToSourceData(self,dataID,columnNames,transformedData):
+        ""
+        if self._transformInPlace():
+            return self.sourceData.replaceColumns(dataID,columnNames,transformedData.values)
+        else:
+            return self.sourceData.joinDataFrame(dataID,transformedData)
+
+    def _transformInPlace(self):
+        ""
+        return self.sourceData.parent.config.getParam("perform.transformation.in.place")
+
+
     def normalizeData(self, dataID, normKey, columnNames = [], **kwargs):
         ""
         if dataID in self.sourceData.dfs:
@@ -35,7 +47,6 @@ class Normalizer(object):
                 return getattr(self,funcKeys[normKey])(dataID,columnNames, **kwargs)
             elif hasattr(self,normKey):
                 return getattr(self,normKey)(dataID,**kwargs)
-
 
     def calculateZScore(self,dataID, columnNames,axis=1):
         ""
@@ -46,7 +57,8 @@ class Normalizer(object):
                             columns = transformedColumnNames
                             )
 
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+        return self._addToSourceData(dataID,columnNames,transformedValues)
+
 
     def calculateQuantiles(self,dataID,columnNames,axis=1):
         ""
@@ -61,7 +73,7 @@ class Normalizer(object):
                             index= self.sourceData.dfs[dataID].index,
                             columns = transformedColumnNames
                             )
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+        return self._addToSourceData(dataID,columnNames,transformedValues)
 
     def minMaxNorm(self,dataID,columnNames,axis=1):
         ""
@@ -76,7 +88,7 @@ class Normalizer(object):
                             columns = transformedColumnNames
                             )
 
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+        return self._addToSourceData(dataID,columnNames,transformedValues)
 
     def normalizeGroupMedian(self,dataID,**kwargs):
         ""
@@ -95,7 +107,7 @@ class Normalizer(object):
             normColumnNames = ["groupColMedian:{}".format(colName) for colName in groupColumns]
             transformedValues[normColumnNames] = X[groupColumns].subtract(distToGroupMedian, axis="columns")
 
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+        return self._addToSourceData(dataID,columnNames,transformedValues)
 
     def normalizeMedianBySubset(self,dataID,columnNames,subsetColumn):
         "Normalize data on a specific subset."
@@ -115,7 +127,7 @@ class Normalizer(object):
             r.append(normData)
         transformedValues = pd.concat(r,axis=1)
 
-        return self.sourceData.joinDataFrame(dataID, transformedValues)
+        return self._addToSourceData(dataID,columnNames,transformedValues)
 
 
     def fitLowess(self,y,x,**kwargs):
@@ -141,13 +153,11 @@ class Normalizer(object):
         data = self.sourceData.dfs[dataID][columnNames]
         globalMedian = np.nanmedian(data.values)
         diffToColumnMedain = np.nanmedian(data.values,axis=0) - globalMedian
-        print(diffToColumnMedain)
-        print(globalMedian)
-        print(np.subtract(data.values,diffToColumnMedain))
+        
         transformedColumnNames = ["medianCorr:{}".format(colName) for colName in columnNames.values]
         transformedValues = pd.DataFrame(np.subtract(data.values,diffToColumnMedain),index=data.index,columns=transformedColumnNames)
-        print(transformedValues)
-        return self.sourceData.joinDataFrame(dataID,transformedValues)
+        
+        return self._addToSourceData(dataID,columnNames,transformedValues)
 
 
        # lowessLine = lowess(y,x, it=it, frac=frac)

@@ -74,9 +74,12 @@ class CustomCategoricalFilter(FilterBase):
 
     def __init__(self,mainController,categoricalColumns,*args,**kwargs):
         super(CustomCategoricalFilter,self).__init__(*args, **kwargs)
+
         self.mC = mainController
         self.categoricalColumns = categoricalColumns
+
         self.setWindowTitle("Categorical Filter ({}).".format(mergeListToString(categoricalColumns,",")))
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()
@@ -202,6 +205,7 @@ class CategoricalFilter(FilterBase):
         self.mC = mainController
         self.categoricalColumns = categoricalColumns
         self.setWindowTitle("Categorical Filter ({}).".format(mergeListToString(categoricalColumns,",")))
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()
@@ -307,6 +311,7 @@ class FindStrings(FilterBase):
         self.categoricalColumns = categoricalColumns
         self.lastSearch = ""
         self.setWindowTitle("Find strings ({}).".format(mergeListToString(categoricalColumns,",")))
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()

@@ -203,6 +203,7 @@ class CollapsableDataTreeView(QWidget):
         
         for fileFormat, actionName in [("txt","Tab del. txt"),
                                         ("xlsx", "Excel file"),
+                                        ("xlsx-multiple", "Excel file (multiple data frames)"),
                                         ("json", "Json file"),
                                         ("md","Markdown file")]:
 
@@ -462,7 +463,7 @@ class CollapsableDataTreeView(QWidget):
                     groupingMenus["Export .."] = createMenu("Export ..")
 
                     groupingMenus["Export .."].addAction("to json", self.exportGrouping) 
-                    groupingMenus["Export .."].addAction("to json (MitoCube)")
+                    #groupingMenus["Export .."].addAction("to json (MitoCube)")
                     menus["Grouping .. "].addMenu(groupingMenus["Export .."])
 
                 groupingMenus["Load .."] = createMenu("Load ..")
@@ -473,8 +474,8 @@ class CollapsableDataTreeView(QWidget):
             action.triggered.connect(self.createSampleList)
 
 
-            action = menus["Proteomics Toolkit"].addAction("Protein/Peptide View")
-            action.triggered.connect(self.openProteinPeptideView)
+            # action = menus["Proteomics Toolkit"].addAction("Protein/Peptide View")
+            # action.triggered.connect(self.openProteinPeptideView)
 
 
             if False:#self.mC.data.hasTwoDataSets():

@@ -57,8 +57,16 @@ class Config(object):
 
     def getParam(self,paramName):
         ""
+        if not paramName not in self.parameters:
+            #check if it in default params (e.g. if an old profile config was used)
+            self.updateParamsFromProfile(DEFAULT_PARAMETER,overwriteOnlyWhenNotPresent=True)
+
         if paramName in self.parameters:
             return self.parameters[paramName].getAttr("value")
+       
+            
+            
+            
         
     def getParams(self, paramNames):
         ""
@@ -170,10 +178,16 @@ class Config(object):
         for param in self.parameters.values():
             param.updateAttrInParent()
 
-    def updateParamsFromProfile(self,savedParams):
+    def updateParamsFromProfile(self,savedParams,overwriteOnlyWhenNotPresent=False):
         ""
         for n,dictAttr in enumerate(savedParams):
             param = Parameter(paramID=n, updateParamInParent = self.updateParamInParent)
             param.readFromDict(dictAttr)
-            self.parameters[param.getAttr("name")] = param
+            paramName = param.getAttr("name")
+            if not overwriteOnlyWhenNotPresent:
+                self.parameters[paramName] = param
+            elif overwriteOnlyWhenNotPresent and paramName not in self.parameters:
+                self.parameters[paramName] = param
+            else:
+                continue
             param.updateAttrInParent()

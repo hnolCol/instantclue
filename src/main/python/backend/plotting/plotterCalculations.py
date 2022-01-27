@@ -604,6 +604,7 @@ class PlotterBrain(object):
        
 
         return {"data":{
+            "plotType" : plottype,
             "plotData": plotData,
             "axisPositions" : axisPositions,
             "axisLabels"    :   axisLabels,
@@ -2570,6 +2571,7 @@ class PlotterBrain(object):
 
         axisIntsDiagonal = np.diag(axisInts)
 
+        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
 
         kdeKwargs = {"bw" :  self.sourceData.parent.config.getParam("multi.scatter.kde.bandwidth"),
                     "kernel" :  self.sourceData.parent.config.getParam("multi.scatter.kde.kernel"),
@@ -2581,9 +2583,13 @@ class PlotterBrain(object):
         lowessKwargs = {"frac":lowessFrac , "it" : lowessIt, "delta" : lowessDelta}
                             # if addLowess:
                             #     lowessFit[nA] = self.sourceData.statCenter.runLowess(dataID,numericPairs,frac=lowessFrac , it = lowessIt, delta = lowessDelta)
-        #multi processing to calculate the axisInts (topRight,bottomleft,and diagonal simult.)        
-        with Pool(3) as p:
-            rPool = p.starmap(buildScatterMatrix,[(data,
+        #multi processing to calculate the axisInts (topRight,bottomleft,and diagonal simult.)      
+        #
+        # 
+
+        if nNumCols > 5:  
+            with Pool(NProcesses) as p:
+                rPool = p.starmap(buildScatterMatrix,[(data,
                                             numericColumns,
                                             plotType, 
                                             axisInts,
@@ -2603,13 +2609,33 @@ class PlotterBrain(object):
                                             lowessKwargs) for plotType, axisInts in zip([topPlotType,bottomPlotType,diagPlotType],
                                                                                                     [axisIntsTop,axisIntsBottom,axisIntsDiagonal])])
            # print(rPool) #output of pool - merged:(scatterColumnPairs,backgroundColors,linregressFit,histogramData,kdeData,labelData,lowessData)
-            scatterColumnPairs = {k: v for d in rPool for k, v in d[0].items()}
-            backgroundColors = {k: v for d in rPool for k, v in d[1].items()}
-            linregressFit = {k: v for d in rPool for k, v in d[2].items()}
-            histogramData = {k: v for d in rPool for k, v in d[3].items()}
-            kdeData = {k: v for d in rPool for k, v in d[4].items()}
-            labelData = {k: v for d in rPool for k, v in d[5].items()}
-            lowessFit = {k: v for d in rPool for k, v in d[6].items()}
+        else:
+            rPool = [buildScatterMatrix(data,
+                                            numericColumns,
+                                            plotType, 
+                                            axisInts,
+                                            backgroundColorHex,
+                                            scatterColumnPairs,
+                                            colorBackground,
+                                            addLinReg,
+                                            addLowess,
+                                            columnPairs,
+                                            kdeKwargs,
+                                            groupColorDict,
+                                            addToPlotType,
+                                            addPearson,
+                                            addSpearman,
+                                            corrmatrix,
+                                            spearmanCorrMatrix,
+                                            lowessKwargs) for plotType,axisInts in zip([topPlotType,bottomPlotType,diagPlotType],
+                                                                                                    [axisIntsTop,axisIntsBottom,axisIntsDiagonal])]
+        scatterColumnPairs = {k: v for d in rPool for k, v in d[0].items()}
+        backgroundColors = {k: v for d in rPool for k, v in d[1].items()}
+        linregressFit = {k: v for d in rPool for k, v in d[2].items()}
+        histogramData = {k: v for d in rPool for k, v in d[3].items()}
+        kdeData = {k: v for d in rPool for k, v in d[4].items()}
+        labelData = {k: v for d in rPool for k, v in d[5].items()}
+        lowessFit = {k: v for d in rPool for k, v in d[6].items()}
            
                 
 
@@ -3422,7 +3448,7 @@ class PlotterBrain(object):
         if n_pairs < 5:
             return 2,2, subplotProps
         else: 
-            rows = np.ceil(n_pairs/3)
+            rows = int(np.ceil(n_pairs/3))
             columns = 3 
             return rows, columns, subplotProps
 
