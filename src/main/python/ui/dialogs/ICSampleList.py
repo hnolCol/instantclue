@@ -40,6 +40,8 @@ class ICSampleListCreater(QDialog):
             "addDate" : self.addDateDefault
         }
         self.sampleListCreator = ICSampleListCreator(**fnKwargs)
+        self.setWindowTitle("Create Sample List.")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()

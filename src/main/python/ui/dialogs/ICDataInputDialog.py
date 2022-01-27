@@ -24,6 +24,7 @@ class ICDataInput(QDialog):
         self.lineEdits = OrderedDict()
         self.providedValues = OrderedDict()
         
+        
         self.__conrols()
         self.__layout()
 

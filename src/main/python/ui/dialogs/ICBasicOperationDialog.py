@@ -32,7 +32,8 @@ class BasicOperationDialog(QDialog):
 
         self.selectedColumns = selectedColumns
         self.selectableColumns = self.mC.mainFrames["data"].dataTreeView.getColumns("Numeric Floats")["Numeric Floats"]
-
+        self.setWindowTitle("Row-wise operations")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         self.__connectEvents()

@@ -2817,9 +2817,11 @@ class PlotterBrain(object):
             lineKwargs = {"xdata":lowessFit[:,0],"ydata":lowessFit[:,1]}
             lineData[n] = lineKwargs
             areaData[n] = {"x" : lowessFit[:,0], "y1": lowessFit[:,2], "y2":lowessFit[:,3], "facecolor":"lightgrey","edgecolor":"None","alpha":0.5}
+        
         funcProps = getMessageProps("Done..","Lowess line added.")
         funcProps["lineData"] = lineData
         funcProps["areaData"] = areaData
+        
         return funcProps
 
     def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None, userMinMax = None):

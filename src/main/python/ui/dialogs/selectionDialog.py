@@ -29,6 +29,8 @@ class SelectionDialog(QDialog):
 
        # self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowOpacity(0.95)
+        self.setWindowTitle("Selection Dialog")
+       
     
     def __controls(self):
         """Init widgets"""
