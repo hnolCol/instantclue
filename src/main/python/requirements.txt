@@ -20,7 +20,7 @@ macholib==1.14
 matplotlib==3.4.0
 mccabe==0.6.1
 numba==0.51.2
-numpy==1.20.2
+numpy==1.21.0
 openpyxl==3.0.6
 outdated==0.2.0
 pandas==1.2.1
