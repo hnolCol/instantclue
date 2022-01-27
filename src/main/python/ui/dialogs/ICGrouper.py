@@ -61,7 +61,7 @@ class ICGrouper(QDialog):
         self.initNGroups = initNGroups
         self.editGrouping = loadGrouping
 
-        
+        self.setWindowTitle("Create Grouping")
         self.setWindowIcon(self.mC.getWindowIcon())
         self.__createMenu()
         self.__controls()

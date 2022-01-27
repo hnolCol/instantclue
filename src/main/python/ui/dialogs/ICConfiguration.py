@@ -19,7 +19,8 @@ class ConfigDialog(QDialog):
         
         self.mC = mainController
         self.specificSettingsTab = specificSettingsTab
-
+        self.setWindowTitle("Settings.")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.__controls()
         self.__layout()
         

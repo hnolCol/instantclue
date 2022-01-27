@@ -1127,7 +1127,7 @@ class LabelButton(PushHoverButton):
         painter.setRenderHint(QPainter.Antialiasing,True)
         
         b = QBrush(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#2776BC"))
-        painter.setFont(self.getStandardFont(fontSize=8))
+        painter.setFont(self.getStandardFont(fontSize=10))
         #painter.setFont(self.getStd
         #draw sublabel
         painter.drawText(QPointF(x0+0.5*r,y0-h/5),"text")

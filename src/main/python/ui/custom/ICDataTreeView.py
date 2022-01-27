@@ -76,12 +76,6 @@ dataTypeSubMenu = {
 
 menuBarItems = [
     {
-        "subM":"Groupings",
-        "name":"Annotate Groups",
-        "funcKey": "createGroups",
-        "dataType": "Numeric Floats",
-    },
-    {
         "subM":"Pairwise Tests",
         "name":"t-test",
         "funcKey": "compareGroups",
@@ -103,6 +97,12 @@ menuBarItems = [
         "fnKwargs": {"funcKey":"groupings:runGroupCorrelation",
                     "selectFromGroupings": "all",
                     }
+    },
+     {
+        "subM":"Groupings",
+        "name":"Annotate Groups",
+        "funcKey": "createGroups",
+        "dataType": "Numeric Floats",
     },
     {
         "subM":"Groupings",
@@ -1853,8 +1853,12 @@ class DataTreeViewTable(QTableView):
                 for menuAction in filteredMenuBarItems:
                     if menuAction["subM"] in menuCollection:
                         if menuAction["subM"] == "main":
+                           
                             action = self.menu.addAction(menuAction["name"])
                         else:
+                            if menuAction["name"] == "Help":
+                                menuCollection[menuAction["subM"]].addSeparator()
+                                
                             action = menuCollection[menuAction["subM"]].addAction(menuAction["name"])
                             if "fnKwargs" in menuAction:
                                 action.triggered.connect(lambda _,funcKey = menuAction["funcKey"], kwargs = menuAction["fnKwargs"]: self.prepareMenuAction(funcKey=funcKey,kwargs = kwargs))

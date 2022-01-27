@@ -472,7 +472,7 @@ class PlotOptionFrame(QWidget):
 					("Software","Instant Clue"),
 					("Version",self.mC.version),
                     ("Computer Name",socket.gethostname()),
-                    ("Date",datetime.now().strftime("%Y%m%d %H:%M:%S"))
+                    ("Date",datetime.now().strftime("%Y%m%d %H:%M:%S")),
                     ("File Name",self.mC.data.getFileNameByID(dataID))
 					] + graph.data["params"]
 

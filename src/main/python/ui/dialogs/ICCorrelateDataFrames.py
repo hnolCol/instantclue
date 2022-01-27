@@ -14,9 +14,10 @@ from collections import OrderedDict
 class ICCorrelateDataFrames(QDialog):
     def __init__(self, mainController, *args, **kwargs):
         super(ICCorrelateDataFrames, self).__init__(*args, **kwargs)
-        self.setWindowTitle("Correlate data frames.")
+       
         self.mC = mainController
-        
+        self.setWindowTitle("Correlate data frames.")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.corrParams = dict()
         self.dfWidgets = dict()
         #dict to collect merge parameters
