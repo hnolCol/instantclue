@@ -2,7 +2,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox
+from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows
 from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
@@ -26,6 +26,18 @@ CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.
                "Creates a new data frame with rows where numeric filter matches.",
                "Values that fulfill the condition are replaced with NaN",
                "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
+
+class ICSCrollArea(QScrollArea):
+    def __init__(self,*args,**kwargs):
+        super(ICSCrollArea,self).__init__(*args,**kwargs)
+
+    def viewportEvent(self, a0: QEvent) -> bool:
+        
+        super().viewportEvent(a0)
+        if isWindows():
+            print(self.parent().filterProps)
+
+
 
 
 class NumericFilter(QDialog):
@@ -62,7 +74,8 @@ class NumericFilter(QDialog):
         self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
 
-        self.scrollArea = QScrollArea(parent=self)
+        self.scrollArea = ICSCrollArea(parent=self)
+        
         self.scrollFrame = QFrame(parent=self.scrollArea) 
         self.scrollArea.setWidget(self.scrollFrame)
         self.scrollArea.setWidgetResizable(True)
