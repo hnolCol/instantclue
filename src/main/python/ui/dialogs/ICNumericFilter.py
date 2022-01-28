@@ -174,8 +174,8 @@ class NumericFilter(QDialog):
         frame.layout().setContentsMargins(10,10,10,10)
         hbox = frame.layout()
         
-        columnLabel = LabelLikeButton(parent = self, text = columnName, tooltipStr="Selected column to apply filter on. Only one filter per column is allowed.", itemBorder=5)
-        filterLabel = LabelLikeButton(parent = self, text = filterType, tooltipStr="Filter Type: Between, Greater, Smaller ...", itemBorder=5)
+        columnLabel = LabelLikeButton(parent = frame, text = columnName, tooltipStr="Selected column to apply filter on. Only one filter per column is allowed.", itemBorder=5)
+        filterLabel = LabelLikeButton(parent = frame, text = filterType, tooltipStr="Filter Type: Between, Greater, Smaller ...", itemBorder=5)
         
         minValue, maxValue = self.mC.data.getMinMax(self.dataID,columnName)
         nValues = self.mC.data.getNumValidValues(self.dataID,columnName)
@@ -192,7 +192,7 @@ class NumericFilter(QDialog):
                                                 maxValue,
                                                 columnName)  
 
-        specColumnLabel = LabelLikeButton(parent = self, text = "Select column(s)", tooltipStr="If set NaN in spec column is selected specific column.\nIf a column is selected multiple times, the nan replacements will be performed in order of listed filter...", itemBorder=5)                     
+        specColumnLabel = LabelLikeButton(parent = frame, text = "Select column(s)", tooltipStr="If set NaN in spec column is selected specific column.\nIf a column is selected multiple times, the nan replacements will be performed in order of listed filter...", itemBorder=5)                     
         
         resetButton = ResetButton()
 

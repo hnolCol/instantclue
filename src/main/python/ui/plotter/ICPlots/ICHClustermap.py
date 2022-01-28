@@ -709,6 +709,7 @@ class ICClustermap(ICChart):
         self.numOfColorColumns = colorData.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
         self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
+        self.updateQuickSelectItemsCoords()
         self.onClusterYLimChange()
         
         
@@ -756,10 +757,8 @@ class ICClustermap(ICChart):
             self.rowDendroBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axRowDendro"].bbox)	
         if self.tooltipActive:
             self.clusterMapBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axClusterMap"].bbox)	
-        
-    def updateQuickSelectItems(self,propsData=None):
-        ""
-        self.quickSelectProps = propsData
+
+    def getQuickSelectDataCoords(self): 
 
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
@@ -767,7 +766,14 @@ class ICClustermap(ICChart):
         else:
             dataIndex = self.getDataIndexOfQuickSelectSelection()
             intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
+        
+        return dataIndex, intIDMatch
 
+    def updateQuickSelectItems(self,propsData=None):
+        ""
+        
+        self.quickSelectProps = propsData
+        dataIndex, intIDMatch = self.getQuickSelectDataCoords()
         idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIndex)
         #subset for indices that are actually in the clustering
         intIDMatch = pd.DataFrame(intIDMatch,index=dataIndex, columns = ["intID"]).loc[dataIndexInClust,"intID"].values.flatten()
@@ -792,6 +798,26 @@ class ICClustermap(ICChart):
         df["x"] = coords[:,0]
         df["y"] = coords[:,1]
         self.quickSelectScatterDataIdx[ax] = {
+                                            "idxPosition":idxPosition,
+                                            "dataIndexInClust":dataIndexInClust,
+                                            "coords":df,
+                                            "idx":dataIndexInClust}
+
+    def updateQuickSelectItemsCoords(self):
+        ""
+        ax = self.axisDict["axLabelColor"]
+        if hasattr(self,"quickSelectScatter") and ax in self.quickSelectScatterDataIdx:
+            dataIndex, intIDMatch = self.getQuickSelectDataCoords()
+            idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIndex)
+            inv = self.axisDict["axLabelColor"].transLimits.inverted()
+            xOffset,_= inv.transform((0.02, 0.25))
+            coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
+            self.quickSelectScatter[ax].set_offsets(coords)
+            df = pd.DataFrame(intIDMatch,columns=["intID"])
+            df["idx"] = dataIndexInClust
+            df["x"] = coords[:,0]
+            df["y"] = coords[:,1]
+            self.quickSelectScatterDataIdx[ax] = {
                                             "idxPosition":idxPosition,
                                             "dataIndexInClust":dataIndexInClust,
                                             "coords":df,
