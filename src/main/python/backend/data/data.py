@@ -2129,20 +2129,24 @@ class DataCollection(object):
 		""
 		
 		X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
-		
-		#find indices to be replaced
-		if fillBy == "Row mean":
-			arr = X.values
-			nanMean = np.nanmean(arr,axis=1, keepdims = True)
-			self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMean,arr)
-		elif fillBy == "Row median":
-			arr = X.values
-			nanMedian = np.nanmedian(arr,axis=1, keepdims = True)
-			self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMedian.reshape(-1,1),arr)
-		elif fillBy == "Column median":
-			self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.median()) 
-		elif fillBy == "Column mean":
-			self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.mean()) 
+		if isinstance(fillBy,float):
+			self.dfs[dataID].loc[X.index,X.columns] = X.fillna(fillBy)
+		elif isinstance(fillBy,str):
+			#find indices to be replaced
+			if fillBy == "Row mean":
+				arr = X.values
+				nanMean = np.nanmean(arr,axis=1, keepdims = True)
+				self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMean,arr)
+			elif fillBy == "Row median":
+				arr = X.values
+				nanMedian = np.nanmedian(arr,axis=1, keepdims = True)
+				self.dfs[dataID].loc[X.index,X.columns] = np.where(np.isnan(arr),nanMedian.reshape(-1,1),arr)
+			elif fillBy == "Column median":
+				self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.median()) 
+			elif fillBy == "Column mean":
+				self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.mean()) 
+			else:
+				return getMessageProps("Error..","FillBy method not found.")
 		else:
 			return getMessageProps("Error..","FillBy method not found.")
 		return getMessageProps("Done ..","NaN were replaced.")

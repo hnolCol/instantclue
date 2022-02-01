@@ -1296,6 +1296,18 @@ menuBarItems = [
     },
     {
         "subM":"Replace NaN by ..",
+        "name":"Constant value",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::fillNa", 
+                      "info":"Provide constant value to fill nans.",
+                      "min": -np.inf,
+                      "default": 0.0,
+                      "max": np.inf,
+                      "requiredFloat":"fillBy"}
+    },  
+    {
+        "subM":"Replace NaN by ..",
         "name":"Smart Group Replace",
         "funcKey": "smartReplace",
         "dataType": "Numeric Floats",
