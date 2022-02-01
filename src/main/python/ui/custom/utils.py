@@ -2,7 +2,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit
+from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit, isWindows
 from .buttonDesigns import LabelLikeButton
 from ..dialogs.ICColorChooser import ColorLabel
 import numpy as np
@@ -43,6 +43,29 @@ def clearLayout(layout):
             child.widget().deleteLater()
 
 
+class ICSCrollArea(QScrollArea):
+    def __init__(self,getUpdatabelWidgets = None,*args,**kwargs):
+        super(ICSCrollArea,self).__init__(*args,**kwargs)
+        self.verticalScrollBar().valueChanged.connect(self.sliderMoved)
+        self.getUpdatabelWidgets = getUpdatabelWidgets
+
+    def sliderMoved(self,*args,**kwargs):
+        ""
+        self.updateWidgetsOnWindows()
+
+    def viewportEvent(self, a0: QEvent) -> bool:
+        
+        return super().viewportEvent(a0)
+
+    def updateWidgetsOnWindows(self):
+        if isWindows() and self.getUpdatabelWidgets is not None:
+        #print(self.parent().filterProps)
+            
+            for _, widgetCollection in self.getUpdatabelWidgets().items():
+                for w in widgetCollection["widgetsToUpdate"]:
+                    w.update()
+           
+      
 
 class BuddyLabel(QLabel):
     def __init__(self, buddy, parent = None):

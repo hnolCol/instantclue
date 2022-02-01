@@ -414,6 +414,7 @@ class LabelLikeButton(PushHoverButton):
 
     def paintEvent(self,event):
         ""
+    
         #calculate rectangle props
         rect, h, w, x0, y0 = self.getRectProps(event)
         painter = QPainter(self)
@@ -423,7 +424,6 @@ class LabelLikeButton(PushHoverButton):
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)
         rect.adjust(self.itemBorder,0,0,0)
-        
         painter.drawText(rect,
                          Qt.AlignLeft | Qt.AlignVCenter, 
                          self.text)
@@ -451,6 +451,7 @@ class LabelLikeButton(PushHoverButton):
         self.updateSize()
         self.adjustWidth()
         self.update()
+
     
     
 

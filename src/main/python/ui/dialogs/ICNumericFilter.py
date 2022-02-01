@@ -6,9 +6,9 @@ from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, W
 from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
-
+from ..custom.utils import  ICSCrollArea
 #external imports
-import pandas as pd
+import pandas as pds
 import numpy as np 
 from collections import OrderedDict 
 
@@ -26,17 +26,6 @@ CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.
                "Creates a new data frame with rows where numeric filter matches.",
                "Values that fulfill the condition are replaced with NaN",
                "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
-
-class ICSCrollArea(QScrollArea):
-    def __init__(self,*args,**kwargs):
-        super(ICSCrollArea,self).__init__(*args,**kwargs)
-
-    def viewportEvent(self, a0: QEvent) -> bool:
-        
-        super().viewportEvent(a0)
-        if isWindows():
-            print(self.parent().filterProps)
-
 
 
 
@@ -74,7 +63,7 @@ class NumericFilter(QDialog):
         self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
 
-        self.scrollArea = ICSCrollArea(parent=self)
+        self.scrollArea = ICSCrollArea(parent=self,getUpdatabelWidgets=self.sendUpdatabelWidgets)
         
         self.scrollFrame = QFrame(parent=self.scrollArea) 
         self.scrollArea.setWidget(self.scrollFrame)
@@ -239,11 +228,16 @@ class NumericFilter(QDialog):
         self.filterProps[columnName]["minValue"] = minValue
         self.filterProps[columnName]["maxValue"] = maxValue
         self.filterProps[columnName]["filterType"] = filterType
+        self.filterProps[columnName]["widgetsToUpdate"] = [columnLabel,specColumnLabel,filterLabel,resetButton]
         self.filterProps[columnName]["N"] = nValues
         self.filterProps[columnName]["specColumns"] = []
         self.updateLineEdits(columnName, filterType)
 
         return outerFrame
+
+    def sendUpdatabelWidgets(self):
+        ""
+        return self.filterProps
     
     def chooseSpecColumn(self,filterName):
         ""
