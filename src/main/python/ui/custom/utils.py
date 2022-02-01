@@ -34,6 +34,11 @@ INSTANT_CLUE_ANAYLSIS = [
     #{"Cluster Analysis":["k-means","DBSCAN","Birch","Affinity Propagation","Agglomerative Clustering"]}
 ]
 
+dataFileExport = [("txt","Text File"),
+                    ("xlsx", "Excel file"),
+                    ("xlsx-multiple", "Excel file (multiple data frames)"),
+                    ("json", "Json file"),
+                    ("md","Markdown file")]
 
 def clearLayout(layout):
     "Clears all widgets from layout"
@@ -44,9 +49,12 @@ def clearLayout(layout):
 
 
 class ICSCrollArea(QScrollArea):
-    def __init__(self,getUpdatabelWidgets = None,*args,**kwargs):
+    def __init__(self,getUpdatabelWidgets = None, updateSrollbar = "V",*args,**kwargs):
         super(ICSCrollArea,self).__init__(*args,**kwargs)
-        self.verticalScrollBar().valueChanged.connect(self.sliderMoved)
+        if updateSrollbar == "V":
+            self.verticalScrollBar().valueChanged.connect(self.sliderMoved)
+        else:
+            self.horizontalScrollBar().valueChanged.connect(self.sliderMoved)
         self.getUpdatabelWidgets = getUpdatabelWidgets
 
     def sliderMoved(self,*args,**kwargs):

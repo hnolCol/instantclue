@@ -358,7 +358,6 @@ class DataHandleFrame(QFrame):
             return
 
         if exportDataFormat.startswith("xlsx"):
-            print("MULTIPLE")
             self.exportMultipleDataFramesToExcel(exportDataFormat)
             return
 

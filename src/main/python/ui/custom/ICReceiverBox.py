@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 from .buttonDesigns import ResetButton, PushHoverButton, ResortButton
 from .resortableTable import ResortableTable
-from .utils import clearLayout
-from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel
+from .utils import clearLayout, ICSCrollArea
+from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel, isWindows
 
 class BoxItem(PushHoverButton):
 
@@ -161,8 +161,11 @@ class ReceiverBox(QFrame):
 
         self.itemHolder = ItemHolder()
 
-        self.itemFrame = QScrollArea()
-        self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.itemFrame = ICSCrollArea(self.getBoxItemsToUpdate,updateSrollbar="H",parent=self)
+        if isWindows():
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        else:
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemFrame.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemFrame.setWidgetResizable(True)
         self.itemFrame.setWidget(self.itemHolder)
@@ -193,6 +196,11 @@ class ReceiverBox(QFrame):
         ""
         self.clearButton.clicked.connect(self.clearDroppedItems)
         self.sortButton.clicked.connect(self.openSortDialog)
+
+    def getBoxItemsToUpdate(self):
+        ""
+        w = self.items.values()
+        return {"BoxItems":{"widgetsToUpdate":w}}
 
     def sizeHint(self):
         ""

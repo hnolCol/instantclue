@@ -12,7 +12,7 @@ from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
 from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
 from ..dialogs.ICSampleList import ICSampleListCreater
 from ..dialogs.ICProteinPeptideView import ICProteinProteinView
-
+from .utils import dataFileExport
 from ..custom.warnMessage import AskForFile, WarningMessage, AskStringMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
 
@@ -201,11 +201,7 @@ class CollapsableDataTreeView(QWidget):
             sender.mouseLostFocus()
         menu = createMenu()
         
-        for fileFormat, actionName in [("txt","Tab del. txt"),
-                                        ("xlsx", "Excel file"),
-                                        ("xlsx-multiple", "Excel file (multiple data frames)"),
-                                        ("json", "Json file"),
-                                        ("md","Markdown file")]:
+        for fileFormat, actionName in dataFileExport:
 
             action = menu.addAction(actionName)
             action.triggered.connect(lambda _, txtFileFormat = fileFormat: self.mC.mainFrames["data"].exportData(txtFileFormat))

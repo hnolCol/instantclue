@@ -15,6 +15,7 @@ from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
 from ..dialogs.ICDSelectItems import ICDSelectItems
+from .utils import dataFileExport 
 #data import 
 from backend.config.data.params import MTMethods
 
@@ -31,6 +32,16 @@ MT_MENUS = [{
         "fnKwargs":{"method":methodName}
     } for methodName in MTMethods]
 
+
+EXPORT_MENU = [
+    {
+        "subM":"Export Data",
+        "name":actionName,
+        "funcKey": "exportData",
+        "dataType": "All",
+        "fnKwargs" : {"txtFileFormat":fileFormat}
+    } for fileFormat, actionName in dataFileExport + [("clipboard","To Clipboard")]]
+
 dataTypeSubMenu = {
     "Numeric Floats": [
         ("main",["Column operation ..",
@@ -42,7 +53,8 @@ dataTypeSubMenu = {
                 "Clustering",
                 "Model Fitting",
                 "Groupings",
-                "(Prote-)omics-toolkit"
+                "(Prote-)omics-toolkit",
+                "Export Data" 
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
@@ -59,11 +71,16 @@ dataTypeSubMenu = {
         ("(Prote-)omics-toolkit", ["pulse-SILAC"])
         ],
     "Integers" : [
-        ("main",["Column operation ..","Sorting"]),
+        ("main",["Column operation ..","Sorting","Export Data"]),
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
-        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]), #
+        ("main",["Column operation ..",
+            "Sorting",
+            "Data Format Transformation", 
+            "Filter",
+            "(Prote-)omics-toolkit",
+            "Export Data"]), #
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
         ("String operation",["Split on .."]),
@@ -1359,8 +1376,8 @@ menuBarItems = [
         "funcKey": "data::imputeByModel",
         "dataType": "Numeric Floats",
         "fnKwargs": {"estimator":"KNeighborsRegressor"}
-    },
-] + MT_MENUS
+    }
+] + MT_MENUS + EXPORT_MENU
 
 class DataTreeView(QWidget):
     def __init__(self,parent=None, mainController = None, dataID = None, tableID = None):
@@ -2128,7 +2145,12 @@ class DataTreeViewTable(QTableView):
             
             self.sendToThread(funcProps = funcProps, addDataID=True)
 
-        
+    def exportData(self,txtFileFormat,*args,**kwargs):
+        ""
+        if txtFileFormat == "clipboard":
+            self.mC.mainFrames["data"].copyDataFrameToClipboard()
+        else:
+            self.mC.mainFrames["data"].exportData(txtFileFormat)
    
 
     def compareGroups(self, event=None, test = None, *args, **kwargs):
