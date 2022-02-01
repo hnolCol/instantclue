@@ -53,7 +53,10 @@ class ICSCrollArea(QScrollArea):
         super(ICSCrollArea,self).__init__(*args,**kwargs)
         if updateSrollbar == "V":
             self.verticalScrollBar().valueChanged.connect(self.sliderMoved)
-        else:
+        elif updateSrollbar == "H":
+            self.horizontalScrollBar().valueChanged.connect(self.sliderMoved)
+        elif updateSrollbar == "B":
+            self.verticalScrollBar().valueChanged.connect(self.sliderMoved)
             self.horizontalScrollBar().valueChanged.connect(self.sliderMoved)
         self.getUpdatabelWidgets = getUpdatabelWidgets
 
