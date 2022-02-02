@@ -732,7 +732,6 @@ class InstantClue(QMainWindow):
                     background-color: white;
                     color: black;
                     font-family: Arial;
-                    font: 12pt;
                     line-height: 1.75;
                     padding: 2px;
                     border: 0.5px;
