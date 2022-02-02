@@ -36,6 +36,12 @@ a = Analysis(['main.py'],
              noarchive=False)
 
 
+splash = Splash('C:\\Users\\HNolte\\Documents\\GitHub\\instantclue\\src\\main\\python\\icons\splashScreen.jpg',
+                binaries=a.binaries,
+                datas=a.datas,
+                text_pos=(10, 50),
+                text_size=12,
+                text_color='black')
 
 
 
@@ -53,6 +59,8 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
+          splash,                   # <-- both, splash target
+          splash.binaries,          # <-- and splash binaries
           [],
           name='InstantClue',
           debug=False,

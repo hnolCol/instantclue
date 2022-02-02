@@ -41,6 +41,7 @@ import webbrowser
 import requests
 import warnings
 import multiprocessing
+import importlib
 
 
 
@@ -896,6 +897,13 @@ class MainWindowSplitter(QWidget):
 
 def main():
     "Start the main window."
+
+    if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash") and isWindows():
+        import pyi_splash
+        if pyi_splash.is_alive():
+            pyi_splash.update_text('UI Loaded ...')
+            pyi_splash.close()
+        
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
