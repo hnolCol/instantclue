@@ -46,6 +46,7 @@ import multiprocessing
 
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
+warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
 __VERSION__ = "0.11.0"
 

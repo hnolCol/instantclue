@@ -52,8 +52,8 @@ dataTypeSubMenu = {
                 "Filter",
                 "Clustering",
                 "Model Fitting",
-                "Groupings",
                 "(Prote-)omics-toolkit",
+                "Groupings",
                 "Export Data" 
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
@@ -86,7 +86,7 @@ dataTypeSubMenu = {
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
-        ("(Prote-)omics-toolkit", ["Annotations"]),
+        # ("(Prote-)omics-toolkit", ["Annotations"]),
         ]
 }
 
@@ -143,30 +143,30 @@ menuBarItems = [
         "funcKey": "fisherCategoricalEnrichmentTest",
         "dataType": "Categories",
     },
-    {
-        "subM":"Annotations",
-        "name":"MitoCarta 3.0 (member)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"MitoCarta 3.0 (full)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"Human MitoCoP (member)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"Human MitoCoP (full)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"MitoCarta 3.0 (member)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"MitoCarta 3.0 (full)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"Human MitoCoP (member)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"Human MitoCoP (full)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
     {
         "subM":"(Prote-)omics-toolkit",
         "name":"1D-Enrichment",

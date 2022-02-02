@@ -211,9 +211,10 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
             startPos = m if m == 0 else m + (widthBox/3 * m)
             endPos = startPos + widthBox * (nColorCats-1)
             positions = np.linspace(startPos,endPos,num=nColorCats)
+           
             if singleNumericValue:
                 tickPositions.extend(positions)
-                tickLabels.extend([key for key, _ in axisGroupBy])
+                tickLabels.extend([key for key in colorCategories])
             else:
                 tickPos = np.median(positions)
                 tickPositions.append(tickPos)
@@ -309,35 +310,6 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                             }
             
             colorCategoricalColumn = categoricalColumns[0]
-
-
-        # for n,numericColumn in enumerate(numericColumns):
-        #     #axis iteration 
-            
-        #     filteredData = []
-        #     catTickPositions = []
-        #     catBoxPositions = []
-        #     catFaceColors = []
-        #     catTickLabels = []
-        #     catGroupNames = []
-            
-
-        #     numData = data.dropna(subset=[numericColumn])
-        #     if not numData.empty:
-        #         for m,(axisCat,catData) in enumerate(numData.groupby(categoricalColumns[1],sort=False)):
-
-        #             startPos = m if m == 0 else m + (border * m) #add border
-        #             endPos = startPos + widthBox * nColorCats - widthBox
-        #             positions = np.linspace(startPos,endPos,num=nColorCats)
-        #             tickPos = np.median(positions)
-        #             catTickPositions.append(tickPos)
-        #             catTickLabels.append(axisCat)
-                    
-        #             for nColCat,(groupName,groupData) in enumerate(catData.groupby(categoricalColumns[0],sort=False)):
-                        
-        #                 if groupData.index.size > 0:
-                            
-                            
                             
 
             
@@ -360,8 +332,8 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         #get color cats
         colorCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
         tickCats = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
-        axisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[2])
-        nXAxisCats = tickCats.size
+        #axisCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[2])
+        #nXAxisCats = tickCats.size
         colorCategoricalColumn = categoricalColumns[0]
         nColorCats = colorCategories.size
         colors, _  = sourceData.colorManager.createColorMapDict(colorCategories, 
