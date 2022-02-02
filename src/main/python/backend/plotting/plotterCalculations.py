@@ -401,9 +401,10 @@ class PlotterBrain(object):
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
         groupSizes = groupbyCatColumns.size().sort_values(ascending=False).reset_index(name='counts')
-        
-        #
-      #  print(groupSizes)
+        if groupbyCatColumns.ngroups > 50:
+            return getMessageProps("Error..","More than 50 unique categories found. This plot type is not appropiate for so many categories.")
+      
+    
         colorGroups["group"] = categoricalColumns
         colorGroups["color"] = colors
         colorGroups["internalID"] = [getRandomString() for _ in categoricalColumns]

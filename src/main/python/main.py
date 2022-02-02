@@ -49,7 +49,7 @@ import importlib
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "0.11.0"
+__VERSION__ = "v0.11.0"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -100,14 +100,14 @@ menuBarItems = [
     },
     {
         "subM":"About",
-        "name":"Cite us (orig)",
+        "name":"Citation",
         "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
     },
-    {
-        "subM":"About",
-        "name":"Cite us (extend.)",
-        "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
-    },
+    # {
+    #     "subM":"About",
+    #     "name":"Cite us (extend.)",
+    #     "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
+    # },
     {
         "subM":"About",
         "name":"v. {}".format(__VERSION__),

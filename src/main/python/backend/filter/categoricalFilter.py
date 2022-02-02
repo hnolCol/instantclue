@@ -503,20 +503,13 @@ class CategoricalFilter(object):
             fileName = self.sourceData.getFileNameByID(dataID)
             # join column names
             columnNamesJoined = mergeListToString(columnNames, joinString = " ")
-            nIgnored = 0
-            for groupName, dataFrame in groupedData:
-                #create name
-                subsetName = '{}({}): {}'.format(groupName,columnNamesJoined,fileName)
-                if config.getParam("data.quick.subset.ignore.nanString") and groupName == self.sourceData.replaceObjectNan:
-                    #count ignore files
-                    nIgnored += 1
-                    continue
-                #add to collection
-                self.sourceData.addDataFrame(dataFrame,fileName=subsetName)
-                
+
+            ignoreNaNGroups = config.getParam("data.quick.subset.ignore.nanString")
+            fileNameAndData = [('{}({}): {}'.format(groupName,columnNamesJoined,fileName),dataFrame) for groupName, dataFrame in groupedData if not (ignoreNaNGroups and groupName == self.sourceData.replaceObjectNan)]
+            nAddedDfs = self.sourceData.addDataFrames(fileNameAndData,copyTypesFromDataID = dataID)
                 
             messageProps = getMessageProps("Split Data Frame","Data frame {} was split on column(s): {} ".format(fileName,columnNamesJoined)+
-                                           "In total {} dataframes added.".format(groupedData.ngroups - nIgnored))
+                                           "In total {} dataframes added.".format(nAddedDfs))
             #add dataframe names
             messageProps["dfs"] = self.sourceData.fileNameByID
             #do not select last df after update

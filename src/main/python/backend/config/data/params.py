@@ -1257,7 +1257,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["None","euclidean","nanEuclidean","correlation","nanCorrelation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"], #"nanCorrelation"
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean and nanCorrelation can handle nans and is significantly slower.",
@@ -1762,12 +1762,21 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, warnings given by the backend are shown in a new dialog window instead of a small notification window in the top right screen corner."
     }, 
     {
+    "name"          :   "melt.data.add.column.names",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Transformation",
+    "description"   :   "If enabled, the melt_variable and melt_value column names will contain the numeric column headers used for melting."
+    }, 
+    {
     "name"          :   "exclusivesMinNonNaN",
     "value"         :   1,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "grouping",
-    "parentType"    :   "Groups",
+    "parentType"    :   "Groupings",
     "description"   :   "Minimum required non-nan values in background to be called significant in target group."
     },
     {
@@ -2366,7 +2375,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xy.plot.against.index",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
@@ -2393,7 +2402,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xy.plot.stem.mode",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",

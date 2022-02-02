@@ -362,7 +362,7 @@ class DataCollection(object):
 		dataFrame = self.checkForInternallyUsedColumnNames(dataFrame)
 		self.dfs[dataID] = dataFrame
 		self.extractDataTypeOfColumns(dataID)
-		self.rename_data_frame(dataID,fileName)
+		self.saveFileName(dataID,fileName)
 
 		rows,columns = self.dfs[dataID].shape
 
@@ -377,6 +377,17 @@ class DataCollection(object):
 				"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
 				"dfs":self.fileNameByID
 			}
+
+	def addDataFrames(self,fileNameAndDataFrame,copyTypesFromDataID):
+		"Not used from outside (e.g. new data frame)"
+		if copyTypesFromDataID in self.dfsDataTypesAndColumnNames:
+			for fileName,dataFrame in fileNameAndDataFrame:
+				dataID  = self.get_next_available_id()
+				self.dfs[dataID] = dataFrame
+				self.saveFileName(dataID,fileName)
+				self.dfsDataTypesAndColumnNames[dataID] = self.dfsDataTypesAndColumnNames[copyTypesFromDataID].copy()
+			return len(fileNameAndDataFrame)
+		return 0 
 	
 	def checkForInternallyUsedColumnNames(self,dataFrame):
 		""
@@ -1694,7 +1705,7 @@ class DataCollection(object):
 			allColumnNames = pd.concat([columnNames,categoricalColumns],ignore_index=True).unique()
 			X = self.getDataByColumnNames(dataID,allColumnNames,ignore_clipping=False)["fnKwargs"]["data"]
 			countByGroups = X.groupby(by=categoricalColumns).count()
-			print(countByGroups)
+			#rint(countByGroups)
 			return self.addDataFrame(countByGroups,fileName="Subset counts") 
 		else:
 			return getMessageProps("Error ..","DataID not found.")
@@ -2591,10 +2602,10 @@ class DataCollection(object):
 		'''
 		
 		if dataID in self.dfs:
-			
+			addColumnNames = self.parent.config.getParam("melt.data.add.column.names")
 			idVars = [column for column in self.dfs[dataID].columns if column not in columnNames.values] #all columns but the selected ones
-			valueName = self.evaluateColumnName(['melt_value{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]
-			variableName = self.evaluateColumnName(['melt_variable{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]		
+			valueName = self.evaluateColumnName(["melt_value" if not addColumnNames else 'melt_value:{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]
+			variableName = self.evaluateColumnName(["melt_variable" if not addColumnNames else 'melt_variable:{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]		
 			meltedDataFrame = pd.melt(self.dfs[dataID], id_vars = idVars, value_vars = columnNames,
 									var_name = variableName,
 									value_name = valueName)
@@ -3082,10 +3093,10 @@ class DataCollection(object):
 			return errorMessage
 
 			
-	def rename_data_frame(self,id,fileName):
+	def saveFileName(self,dataID,fileName):
 		'''
 		'''
-		self.fileNameByID[id] = fileName
+		self.fileNameByID[dataID] = fileName
 						
 			
 	def rename_columnNames_in_current_data(self,replaceDict):
