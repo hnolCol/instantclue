@@ -73,10 +73,15 @@ class ICWelcomeScreen(QWidget):
                 if "tag_name" in data[0] and "html_url" in data[0]:
                     tagName = data[0]["tag_name"]
                     releaseURL = data[0]["html_url"]
-                    self.versionLabel.setText("{} .. new version found".format(self.version))
+                
                     if tagName != self.version:
+                        self.versionLabel.setText("{} .. new version found".format(self.version))
                         self.versionCheckedDone = True
                         self.parent().showMessageForNewVersion(releaseURL)
+                    else:
+                        self.versionLabel.setText("{} .. up to date.".format(self.version))
+                        self.versionCheckedDone = True
+
             except:
                 self.versionCheckedDone = True
         else:
