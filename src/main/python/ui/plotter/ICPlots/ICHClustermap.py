@@ -393,7 +393,7 @@ class ICClustermap(ICChart):
                 self.buildTooltip()
                 self.addYLimChangeEvent(ax= self.axisDict["axClusterMap"],
                                         callbackFn = self.onClusterYLimChange)
-                if self.mC.getPlotType() == "corrmatrix":
+                if self.mC.getPlotType() == "corrmatrix" and self.getParam("corrmatrix.show.tooltip"):
                     self.tooltipActive = True
 
             # if self.mC.groupingActive() and self.mC.getPlotType() == "corrmatrix":
@@ -567,11 +567,11 @@ class ICClustermap(ICChart):
 
     def onHover(self,event=None):
         ""
-        print(event.inaxes)
+        #check if cluster line is moved
         if self.movingMaxDLine and event.inaxes != self.axisDict["axRowDendro"]:
             self.setRowClusterLineData(self.data["rowMaxD"],self.axisDict["axRowDendro"])
             self.movingMaxDLine = False
-
+        #check if mouse left main axis
         if hasattr(self,"ax") and self.tooltipActive and event.inaxes != self.ax:
                 if self.tooltip.get_visible():
                     self.tooltip.set_visible(False)
@@ -585,12 +585,9 @@ class ICClustermap(ICChart):
                 self.movingMaxDLine = False
 
             elif event.button == 1 and self.rowClusterLine.contains(event)[0]:
-                #print("beatufiul")
-                #print(event.xdata)
-                #print(self.rowClusterLine.get_xdata())
                 self.setRowClusterLineData(event.xdata,self.axisDict["axRowDendro"])
                 self.movingMaxDLine = True
-
+        #handle corrmatrix tooltip (auto on)
         elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
             yDataEvent = int(event.ydata)
             xDataEvent = int(event.xdata)

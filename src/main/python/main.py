@@ -726,8 +726,18 @@ class InstantClue(QMainWindow):
         "Style setup of the graphical user interface."
         
         self.setWindowTitle("Instant Clue")
-        self.setStyleSheet(" QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 0px}")
+        #self.setStyleSheet("QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 5px}")
         self.setStyleSheet("""
+                QToolTip {
+                    background-color: white;
+                    color: black;
+                    font-family: Arial;
+                    font: 12pt;
+                    line-height: 1.75;
+                    padding: 2px;
+                    border: 0.5px;
+                }
+
                 QScrollBar:horizontal {
                     border: none;
                     background: none;

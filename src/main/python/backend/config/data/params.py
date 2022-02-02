@@ -1327,7 +1327,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "pixel.width.per.column",
-    "value"         :   20,
+    "value"         :   25,
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
@@ -1396,6 +1396,15 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
+    },
+    {
+    "name"          :   "corrmatrix.show.tooltip",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, a tooltip will be automatically initiated for a correlation matrix showing the column names and the correlation coefficient.",
     },
     {
     "name"          :   "add.column.names.in.emb.name",
