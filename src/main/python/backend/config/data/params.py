@@ -2375,7 +2375,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xy.plot.against.index",
-    "value"         :   False,
+    "value"         :   True,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
@@ -2389,7 +2389,7 @@ DEFAULT_PARAMETER = [
     "range"         :   [True,False],
     "parent"        :   "intern",
     "parentType"    :   "XYPlot",
-    "description"   :   "If enabled, the first column is used as a common x axis. If disabled, eevery second column will be considered as a x-axis.",
+    "description"   :   "If enabled, the first column is used as a common x axis. If disabled, eevery second column will be considered as a x-axis. This option is overwritten if xy.plot.against.index is enabled.",
     },
     {
     "name"          :   "xy.plot.show.marker",

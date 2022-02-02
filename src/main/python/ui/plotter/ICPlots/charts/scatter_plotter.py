@@ -34,7 +34,7 @@ class scatterPlot(object):
 		data entry row in each plot. 
 		Additional information of data can be added due to additional color and size levels.
 		'''
-		print("AA")
+		
 		self.parent = parent
 		self.ax = ax
 		self.plotter = plotter
