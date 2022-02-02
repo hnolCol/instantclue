@@ -435,8 +435,8 @@ class CollapsableDataTreeView(QWidget):
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)
 
-                action = menus["Data frames .. "].addAction("Correlate")
-                action.triggered.connect(self.openCorrelateDialog)
+                # action = menus["Data frames .. "].addAction("Correlate")
+                # action.triggered.connect(self.openCorrelateDialog)
 
                 action = menus["Data frames .. "].addAction("Correlate features")
                 action.triggered.connect(self.openFeatureCorrelateDialog)
