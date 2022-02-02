@@ -910,7 +910,8 @@ def main():
     if os.path.exists(iconPath):
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
-    screenGeom = QDesktopWidget().screenGeometry()
+
+    screenGeom = app.primaryScreen().geometry()
     win.setGeometry(50,50,screenGeom.width()-100,screenGeom.height()-120)
     win.show()    
     win.raise_()
