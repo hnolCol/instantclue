@@ -1,3 +1,4 @@
+import time
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -54,14 +55,14 @@ class ICWelcomeScreen(QWidget):
         ""
         self.timer = QTimer()
         self.timer.timeout.connect(self.changeAppearance)
-        self.timer.setInterval(400)
+        self.timer.setInterval(350)
         self.timer.start()
 
     def checkVersion(self):
         "Check for a new version using the GitHub release api"
         self.versionLabel.setText("v. {} .. checking for new version".format(self.version))
         try:
-            response = requests.get(GITHUB_URL)
+            response = requests.get(GITHUB_URL, timeout=2)
         except (requests.ConnectionError, requests.Timeout) as exception:
             self.versionLabel.setText("v. {} .. error - connection to GitHub failed.".format(self.version))
             self.versionCheckedDone = True
@@ -69,12 +70,18 @@ class ICWelcomeScreen(QWidget):
         if response.status_code == 200:
             try:
                 data = response.json()
-                tagName = data[0]["tag_name"]
-                releaseURL = data[0]["html_url"]
-                self.versionLabel.setText("v. {} .. new version found".format(self.version))
-                if tagName != self.version:
-                    self.versionCheckedDone = True
-                    self.parent().showMessageForNewVersion(releaseURL)
+                if "tag_name" in data[0] and "html_url" in data[0]:
+                    tagName = data[0]["tag_name"]
+                    releaseURL = data[0]["html_url"]
+                
+                    if tagName != self.version:
+                        self.versionLabel.setText("{} .. new version found".format(self.version))
+                        self.versionCheckedDone = True
+                        self.parent().showMessageForNewVersion(releaseURL)
+                    else:
+                        self.versionLabel.setText("{} .. up to date.".format(self.version))
+                        self.versionCheckedDone = True
+
             except:
                 self.versionCheckedDone = True
         else:

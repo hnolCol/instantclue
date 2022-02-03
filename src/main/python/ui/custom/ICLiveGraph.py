@@ -154,6 +154,8 @@ class LiveGraph(QWidget):
     def dropEvent(self,e):
         ""
         e.accept()
+        self.zScoreNorm = False #reset z-score 
+        self.zScoreButton.setTxtColor("black")
         dataID = self.mC.mainFrames["data"].getDataID()
         columnNames = self.getDragColumns()
         data = self.mC.data.getDataByColumnNames(dataID = dataID, columnNames = columnNames)["fnKwargs"]["data"]

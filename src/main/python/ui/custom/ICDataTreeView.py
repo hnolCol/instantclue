@@ -15,6 +15,7 @@ from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
 from ..dialogs.ICDSelectItems import ICDSelectItems
+from .utils import dataFileExport 
 #data import 
 from backend.config.data.params import MTMethods
 
@@ -31,6 +32,16 @@ MT_MENUS = [{
         "fnKwargs":{"method":methodName}
     } for methodName in MTMethods]
 
+
+EXPORT_MENU = [
+    {
+        "subM":"Export Data",
+        "name":actionName,
+        "funcKey": "exportData",
+        "dataType": "All",
+        "fnKwargs" : {"txtFileFormat":fileFormat}
+    } for fileFormat, actionName in dataFileExport + [("clipboard","To Clipboard")]]
+
 dataTypeSubMenu = {
     "Numeric Floats": [
         ("main",["Column operation ..",
@@ -41,8 +52,9 @@ dataTypeSubMenu = {
                 "Filter",
                 "Clustering",
                 "Model Fitting",
+                "(Prote-)omics-toolkit",
                 "Groupings",
-                "(Prote-)omics-toolkit"
+                "Export Data" 
                 ]),
         ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
@@ -59,17 +71,22 @@ dataTypeSubMenu = {
         ("(Prote-)omics-toolkit", ["pulse-SILAC"])
         ],
     "Integers" : [
-        ("main",["Column operation ..","Sorting"]),
+        ("main",["Column operation ..","Sorting","Export Data"]),
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
-        ("main",["Column operation ..","Sorting","Data Format Transformation", "Filter","(Prote-)omics-toolkit"]), #
+        ("main",["Column operation ..",
+            "Sorting",
+            "Data Format Transformation", 
+            "Filter",
+            "(Prote-)omics-toolkit",
+            "Export Data"]), #
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
         ("String operation",["Split on .."]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
-        ("(Prote-)omics-toolkit", ["Annotations"]),
+        # ("(Prote-)omics-toolkit", ["Annotations"]),
         ]
 }
 
@@ -126,30 +143,30 @@ menuBarItems = [
         "funcKey": "fisherCategoricalEnrichmentTest",
         "dataType": "Categories",
     },
-    {
-        "subM":"Annotations",
-        "name":"MitoCarta 3.0 (member)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"MitoCarta 3.0 (full)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"Human MitoCoP (member)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
-    {
-        "subM":"Annotations",
-        "name":"Human MitoCoP (full)",
-        "funcKey": "annotate::",
-        "dataType": "Categories",
-    },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"MitoCarta 3.0 (member)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"MitoCarta 3.0 (full)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"Human MitoCoP (member)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
+    # {
+    #     "subM":"Annotations",
+    #     "name":"Human MitoCoP (full)",
+    #     "funcKey": "annotate::",
+    #     "dataType": "Categories",
+    # },
     {
         "subM":"(Prote-)omics-toolkit",
         "name":"1D-Enrichment",
@@ -1279,6 +1296,18 @@ menuBarItems = [
     },
     {
         "subM":"Replace NaN by ..",
+        "name":"Constant value",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs" : {"funcKey":"data::fillNa", 
+                      "info":"Provide constant value to fill nans.",
+                      "min": -np.inf,
+                      "default": 0.0,
+                      "max": np.inf,
+                      "requiredFloat":"fillBy"}
+    },  
+    {
+        "subM":"Replace NaN by ..",
         "name":"Smart Group Replace",
         "funcKey": "smartReplace",
         "dataType": "Numeric Floats",
@@ -1359,8 +1388,8 @@ menuBarItems = [
         "funcKey": "data::imputeByModel",
         "dataType": "Numeric Floats",
         "fnKwargs": {"estimator":"KNeighborsRegressor"}
-    },
-] + MT_MENUS
+    }
+] + MT_MENUS + EXPORT_MENU
 
 class DataTreeView(QWidget):
     def __init__(self,parent=None, mainController = None, dataID = None, tableID = None):
@@ -2128,7 +2157,12 @@ class DataTreeViewTable(QTableView):
             
             self.sendToThread(funcProps = funcProps, addDataID=True)
 
-        
+    def exportData(self,txtFileFormat,*args,**kwargs):
+        ""
+        if txtFileFormat == "clipboard":
+            self.mC.mainFrames["data"].copyDataFrameToClipboard()
+        else:
+            self.mC.mainFrames["data"].exportData(txtFileFormat)
    
 
     def compareGroups(self, event=None, test = None, *args, **kwargs):

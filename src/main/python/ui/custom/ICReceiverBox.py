@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 from .buttonDesigns import ResetButton, PushHoverButton, ResortButton
 from .resortableTable import ResortableTable
-from .utils import clearLayout
-from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel
+from .utils import clearLayout, ICSCrollArea
+from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel, isWindows
 
 class BoxItem(PushHoverButton):
 
@@ -81,18 +81,21 @@ class BoxItem(PushHoverButton):
 class ItemHolder(QWidget):
     def __init__(self,direction = "H",title = "Drag column headers here.", *args,**kwargs):
         super(ItemHolder,self).__init__(*args,**kwargs)
-        #self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        
         if direction == "H":
             self.setLayout(QHBoxLayout())
             self.layout().setAlignment(Qt.AlignLeft)
             self.itemLayout = QHBoxLayout()
             self.itemLayout.setAlignment(Qt.AlignLeft)
             
+            
+            
         else:
             self.setLayout(QVBoxLayout())
             self.layout().setAlignment(Qt.AlignTop)
             self.itemLayout = QVBoxLayout()
             self.itemLayout.setAlignment(Qt.AlignTop)
+            
 
         self.layout().addLayout(self.itemLayout)
         self.itemLayout.setContentsMargins(2,1,2,1)
@@ -161,15 +164,20 @@ class ReceiverBox(QFrame):
 
         self.itemHolder = ItemHolder()
 
-        self.itemFrame = QScrollArea()
-        self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.itemFrame = ICSCrollArea(self.getBoxItemsToUpdate,updateSrollbar="B",parent=self)
+        if isWindows():
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        else:
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.itemFrame.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemFrame.setWidgetResizable(True)
         self.itemFrame.setWidget(self.itemHolder)
-        #self.itemFrame.setStyleSheet("background-color:red;");
+        #self.itemFrame.setStyleSheet("background-color:red;")s;
         self.itemFrame.setFrameShape(QFrame.NoFrame)
         self.itemFrame.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
-        self.itemFrame.setMaximumHeight(25)
+        self.itemFrame.setMaximumHeight(50)
+        self.itemFrame.setMinimumHeight(50)
 
         
 
@@ -193,6 +201,11 @@ class ReceiverBox(QFrame):
         ""
         self.clearButton.clicked.connect(self.clearDroppedItems)
         self.sortButton.clicked.connect(self.openSortDialog)
+
+    def getBoxItemsToUpdate(self):
+        ""
+        w = self.items.values()
+        return {"BoxItems":{"widgetsToUpdate":w}}
 
     def sizeHint(self):
         ""

@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from .ICColorChooser import ColorLabel
 from ..custom.buttonDesigns import BigPlusButton, ResetButton, ICStandardButton
 from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps, createMenu
-from ..custom.utils import clearLayout, BuddyLabel, LabelLikeCombo
+from ..custom.utils import clearLayout, BuddyLabel, LabelLikeCombo, ICSCrollArea
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 from ..custom.ICReceiverBox import ItemHolder, BoxItem
 from ..custom.warnMessage import WarningMessage
@@ -82,7 +82,7 @@ class ICGrouper(QDialog):
         ""
         self.rightFrame = QFrame(parent=self)
         
-        self.scrollArea = QScrollArea(parent=self.rightFrame)
+        self.scrollArea = ICSCrollArea(self.sendWidgetsToUpdate,parent=self.rightFrame)
         
         self.scrollFrame = QFrame(parent=self.scrollArea) 
         self.cmapComboLabel = createLabel("Grouping Colormap:",
@@ -339,7 +339,7 @@ class ICGrouper(QDialog):
             
             groupFrame.setLayout(QVBoxLayout())
 
-            itemFrame = QScrollArea(parent=groupFrame)
+            itemFrame = ICSCrollArea(self.sendWidgetsToUpdate,parent=groupFrame)
             itemHolder =  ItemHolder(direction="V",parent=itemFrame)
             itemFrame.setMinimumHeight(200)
             itemFrame.setWidgetResizable(True)
@@ -352,6 +352,7 @@ class ICGrouper(QDialog):
             self.groupItems[groupID]["label"] = groupLabel
             self.groupItems[groupID]["name"] = groupID
             self.groupItems[groupID]["colorButton"] = colorButton
+            self.groupItems[groupID]["widgetsToUpdate"] = [colorButton,deleteButton]
         except Exception as e:
             print(e)
 
@@ -413,10 +414,15 @@ class ICGrouper(QDialog):
                 self.model.showHiddenLabels(self.groupItems[groupID]["items"].loc[boolIdx])
                 self.model.layoutChanged.emit()
                 self.model.completeDataChanged()
+            self.groupItems[groupID]["widgetsToUpdate"] = [item for item in self.groupItems[groupID]["widgetsToUpdate"] if item != self.sender()]
             self.groupItems[groupID]["itemHolder"].deleteItem(self.sender())
             self.groupItems[groupID]["items"] = self.groupItems[groupID]["items"].loc[~boolIdx]
             if self.groupItems[groupID]["items"].size == 0: self.groupItems[groupID]["itemHolder"].setDragLabelVisibility(True)
-            
+        
+
+    def sendWidgetsToUpdate(self):
+        ""
+        return self.groupItems
 
     def saveGrouping(self,event=None):
         ""
@@ -476,6 +482,7 @@ class ICGrouper(QDialog):
                 bItem.customContextMenuRequested.connect(lambda _,groupID = groupID, itemName = l: self.deleteBoxTimeFromGroup(groupID=groupID,itemName=itemName))
 
                 self.groupItems[groupID]["itemHolder"].addItem(bItem)
+                self.groupItems[groupID]["widgetsToUpdate"].append(bItem)
 
         if self.groupItems[groupID]["items"].size > 0: self.groupItems[groupID]["itemHolder"].setDragLabelVisibility(False)
 

@@ -132,7 +132,7 @@ class DataHandleFrame(QFrame):
         vbox1 = QHBoxLayout()
         loadDataButton = BigPlusButton(
                 callback = self.addTxtFiles, 
-                tooltipStr ="Load Data from file.\nThis will reset the view.",
+                tooltipStr ="Load Data from file.\nThis will reset the current plot.",
                 menuFn = self.showSettingMenu,
                 menuKeyWord = "Load Data")
         
@@ -142,11 +142,11 @@ class DataHandleFrame(QFrame):
         loadSessionButton = BigArrowButton(direction="up", tooltipStr="Load session.")
         loadSessionButton.clicked.connect(self.loadSession)
 
-        saveSessionButton = BigArrowButton(direction="down", tooltipStr="Saves session. Note: the current figure is not saved.")
+        saveSessionButton = BigArrowButton(direction="down", tooltipStr="Saves session. Note: the current figure is not saved with full properties\nMake sure to save the figure before.")
         saveSessionButton.clicked.connect(self.saveSession)
 
         viewDataButton = ViewDataButton(self, 
-                    tooltipStr="View selected data.",
+                    tooltipStr="View selected data. The table allow you to filter and sort data.",
                     menuFn = self.showSettingMenu,
                     menuKeyWord = "Data View")
         viewDataButton.clicked.connect(self.showData)
@@ -358,7 +358,6 @@ class DataHandleFrame(QFrame):
             return
 
         if exportDataFormat.startswith("xlsx"):
-            print("MULTIPLE")
             self.exportMultipleDataFramesToExcel(exportDataFormat)
             return
 

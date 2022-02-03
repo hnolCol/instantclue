@@ -2,13 +2,13 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
 
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox
+from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows
 from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
-
+from ..custom.utils import  ICSCrollArea
 #external imports
-import pandas as pd
+import pandas as pds
 import numpy as np 
 from collections import OrderedDict 
 
@@ -26,6 +26,7 @@ CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.
                "Creates a new data frame with rows where numeric filter matches.",
                "Values that fulfill the condition are replaced with NaN",
                "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
+
 
 
 class NumericFilter(QDialog):
@@ -62,7 +63,8 @@ class NumericFilter(QDialog):
         self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
 
-        self.scrollArea = QScrollArea(parent=self)
+        self.scrollArea = ICSCrollArea(parent=self,getUpdatabelWidgets=self.sendUpdatabelWidgets)
+        
         self.scrollFrame = QFrame(parent=self.scrollArea) 
         self.scrollArea.setWidget(self.scrollFrame)
         self.scrollArea.setWidgetResizable(True)
@@ -174,8 +176,8 @@ class NumericFilter(QDialog):
         frame.layout().setContentsMargins(10,10,10,10)
         hbox = frame.layout()
         
-        columnLabel = LabelLikeButton(parent = self, text = columnName, tooltipStr="Selected column to apply filter on. Only one filter per column is allowed.", itemBorder=5)
-        filterLabel = LabelLikeButton(parent = self, text = filterType, tooltipStr="Filter Type: Between, Greater, Smaller ...", itemBorder=5)
+        columnLabel = LabelLikeButton(parent = frame, text = columnName, tooltipStr="Selected column to apply filter on. Only one filter per column is allowed.", itemBorder=5)
+        filterLabel = LabelLikeButton(parent = frame, text = filterType, tooltipStr="Filter Type: Between, Greater, Smaller ...", itemBorder=5)
         
         minValue, maxValue = self.mC.data.getMinMax(self.dataID,columnName)
         nValues = self.mC.data.getNumValidValues(self.dataID,columnName)
@@ -192,7 +194,7 @@ class NumericFilter(QDialog):
                                                 maxValue,
                                                 columnName)  
 
-        specColumnLabel = LabelLikeButton(parent = self, text = "Select column(s)", tooltipStr="If set NaN in spec column is selected specific column.\nIf a column is selected multiple times, the nan replacements will be performed in order of listed filter...", itemBorder=5)                     
+        specColumnLabel = LabelLikeButton(parent = frame, text = "Select column(s)", tooltipStr="If set NaN in spec column is selected specific column.\nIf a column is selected multiple times, the nan replacements will be performed in order of listed filter...", itemBorder=5)                     
         
         resetButton = ResetButton()
 
@@ -226,11 +228,16 @@ class NumericFilter(QDialog):
         self.filterProps[columnName]["minValue"] = minValue
         self.filterProps[columnName]["maxValue"] = maxValue
         self.filterProps[columnName]["filterType"] = filterType
+        self.filterProps[columnName]["widgetsToUpdate"] = [columnLabel,specColumnLabel,filterLabel,resetButton]
         self.filterProps[columnName]["N"] = nValues
         self.filterProps[columnName]["specColumns"] = []
         self.updateLineEdits(columnName, filterType)
 
         return outerFrame
+
+    def sendUpdatabelWidgets(self):
+        ""
+        return self.filterProps
     
     def chooseSpecColumn(self,filterName):
         ""

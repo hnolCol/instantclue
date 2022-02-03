@@ -401,9 +401,10 @@ class PlotterBrain(object):
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
         groupSizes = groupbyCatColumns.size().sort_values(ascending=False).reset_index(name='counts')
-        
-        #
-      #  print(groupSizes)
+        if groupbyCatColumns.ngroups > 50:
+            return getMessageProps("Error..","More than 50 unique categories found. This plot type is not appropiate for so many categories.")
+      
+    
         colorGroups["group"] = categoricalColumns
         colorGroups["color"] = colors
         colorGroups["internalID"] = [getRandomString() for _ in categoricalColumns]
@@ -764,7 +765,7 @@ class PlotterBrain(object):
                                        "yLimit":[minQ-marginY,maxQ+marginY]}) for n in axisPositions.keys()])
                 tickPositions = dict([(n,np.arange(nNumCol)) for n in axisPositions.keys()])
                 tickLabels = dict([(n, numericColumns) for n in axisPositions.keys()])
-                axisTitles[n] = "{}\n{}".format(categoricalColumns[1],axisName)
+                axisTitles[n] = "{}: {}".format(categoricalColumns[1],axisName)
                 colorGroups["color"] = colors.values()
                 colorGroups["group"] = colorCategories
                 colorGroups["internalID"] = [getRandomString() for n in range(colorCategories.size)]
@@ -2176,7 +2177,7 @@ class PlotterBrain(object):
                             if axisID == numUniqueCat:
                                 firstAxisRow = False
                             elif firstAxisRow:
-                                axisTitles[axisID] = {"title":"{}\n{}".format(categoricalColumns[0],groupName),
+                                axisTitles[axisID] = {"title":"{}: {}".format(categoricalColumns[0],groupName),
                                                                 "appendWhere":"top",
                                                                 "textRotation" : 0}
                             pair = []
@@ -3319,7 +3320,7 @@ class PlotterBrain(object):
                     tickLabels[nAxis] = catTickLabels
                     axisLimits[nAxis] = {"yLimit":[globalMin-yMargin,globalMax+yMargin],"xLimit":[0-widthBox/2-border,nXAxisCats+widthBox/2+border]}
                     if not nAxisCat in axisTitles:   
-                        axisTitles[nAxisCat] = "{}\n{}".format(categoricalColumns[2],axisCat)
+                        axisTitles[nAxisCat] = "{}:{}".format(categoricalColumns[2],axisCat)
                 #saving internal id and color matches with pandas index (to allow easy manipulation)
         
 

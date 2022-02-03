@@ -387,10 +387,10 @@ class ICGrouping(object):
                 jsonOut["groupingCmap"][groupingName] = self.getColorMap(groupingName)
         with open(filePath, 'w', encoding='utf-8') as f:
             json.dump(jsonOut, f, ensure_ascii=False, indent=4)
-
+        
         return getMessageProps("Done","Grouping saved to json file. You can upload groupings from this file into Instant Clue.")
         
-
+        
     def loadGroupingFromJson(self,filePath):
         ""
         try:

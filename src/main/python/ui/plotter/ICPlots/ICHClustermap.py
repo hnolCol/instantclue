@@ -382,7 +382,8 @@ class ICClustermap(ICChart):
                 
                 self.addHoverText()
                 self.addHoverScatter(ax = self.axisDict["axLabelColor"])
-
+                print("bindings")
+                print(self.interactive)
                 self.addHoverBinding()
                 #add potential tooltip 
                 self.ax = self.axisDict["axClusterMap"]
@@ -392,6 +393,8 @@ class ICClustermap(ICChart):
                 self.buildTooltip()
                 self.addYLimChangeEvent(ax= self.axisDict["axClusterMap"],
                                         callbackFn = self.onClusterYLimChange)
+                if self.mC.getPlotType() == "corrmatrix" and self.getParam("corrmatrix.show.tooltip"):
+                    self.tooltipActive = True
 
             # if self.mC.groupingActive() and self.mC.getPlotType() == "corrmatrix":
             #     colorData = self.mC.plotterBrain.getColorGroupingForCorrmatrix(
@@ -564,14 +567,16 @@ class ICClustermap(ICChart):
 
     def onHover(self,event=None):
         ""
+        #check if cluster line is moved
         if self.movingMaxDLine and event.inaxes != self.axisDict["axRowDendro"]:
             self.setRowClusterLineData(self.data["rowMaxD"],self.axisDict["axRowDendro"])
             self.movingMaxDLine = False
-
+        #check if mouse left main axis
         if hasattr(self,"ax") and self.tooltipActive and event.inaxes != self.ax:
-            self.tooltip.set_visible(False)
-            self.drawTooltip(self.clusterMapBackground)
-            return
+                if self.tooltip.get_visible():
+                    self.tooltip.set_visible(False)
+                    self.drawTooltip(self.clusterMapBackground)
+                    return
         elif "axRowDendro" in self.axisDict and event.inaxes == self.axisDict["axRowDendro"]:
             if event.button is None and self.movingMaxDLine:
                 newMaxD = self.rowClusterLine.get_xdata()[0]
@@ -580,14 +585,19 @@ class ICClustermap(ICChart):
                 self.movingMaxDLine = False
 
             elif event.button == 1 and self.rowClusterLine.contains(event)[0]:
-                #print("beatufiul")
-                #print(event.xdata)
-                #print(self.rowClusterLine.get_xdata())
                 self.setRowClusterLineData(event.xdata,self.axisDict["axRowDendro"])
                 self.movingMaxDLine = True
-
-
-        #on hover qick select/ Live graph only works for hierarchical clustering
+        #handle corrmatrix tooltip (auto on)
+        elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
+            yDataEvent = int(event.ydata)
+            xDataEvent = int(event.xdata)
+            
+            r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
+            yName = self.data["plotData"].index[yDataEvent]
+            xName = self.data["plotData"].columns[xDataEvent]
+            self.updateTooltipPosition(event,"{}↓\n{}→\ncoeff = {}".format(xName,yName,round(r,2)))
+            self.drawTooltip(self.clusterMapBackground)
+        #on hover qick select/ Live graph only works for hierarchical clustering not on corrmatrix (columns are summarized)
         elif (self.isQuickSelectActive() or self.isLiveGraphActive() or self.tooltipActive) and self.mC.getPlotType() != "corrmatrix":
             idxData = None
             if event.inaxes == self.axisDict["axClusterMap"]:
@@ -616,8 +626,7 @@ class ICClustermap(ICChart):
             #send data to live graph
             if self.isLiveGraphActive():
                 self.sendIndexToLiveGraph(idxData)
-        elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
-            print("HERE")
+        
 
     def updateColorMap(self):
         ""
@@ -709,6 +718,7 @@ class ICClustermap(ICChart):
         self.numOfColorColumns = colorData.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
         self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
+        self.updateQuickSelectItemsCoords()
         self.onClusterYLimChange()
         
         
@@ -756,10 +766,8 @@ class ICClustermap(ICChart):
             self.rowDendroBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axRowDendro"].bbox)	
         if self.tooltipActive:
             self.clusterMapBackground = self.p.f.canvas.copy_from_bbox(self.axisDict["axClusterMap"].bbox)	
-        
-    def updateQuickSelectItems(self,propsData=None):
-        ""
-        self.quickSelectProps = propsData
+
+    def getQuickSelectDataCoords(self): 
 
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
@@ -767,7 +775,14 @@ class ICClustermap(ICChart):
         else:
             dataIndex = self.getDataIndexOfQuickSelectSelection()
             intIDMatch = np.array(list(self.quickSelectCategoryIndexMatch.keys()))
+        
+        return dataIndex, intIDMatch
 
+    def updateQuickSelectItems(self,propsData=None):
+        ""
+        
+        self.quickSelectProps = propsData
+        dataIndex, intIDMatch = self.getQuickSelectDataCoords()
         idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIndex)
         #subset for indices that are actually in the clustering
         intIDMatch = pd.DataFrame(intIDMatch,index=dataIndex, columns = ["intID"]).loc[dataIndexInClust,"intID"].values.flatten()
@@ -792,6 +807,26 @@ class ICClustermap(ICChart):
         df["x"] = coords[:,0]
         df["y"] = coords[:,1]
         self.quickSelectScatterDataIdx[ax] = {
+                                            "idxPosition":idxPosition,
+                                            "dataIndexInClust":dataIndexInClust,
+                                            "coords":df,
+                                            "idx":dataIndexInClust}
+
+    def updateQuickSelectItemsCoords(self):
+        ""
+        ax = self.axisDict["axLabelColor"]
+        if hasattr(self,"quickSelectScatter") and ax in self.quickSelectScatterDataIdx:
+            dataIndex, intIDMatch = self.getQuickSelectDataCoords()
+            idxPosition, dataIndexInClust = self.getPositionFromDataIndex(dataIndex)
+            inv = self.axisDict["axLabelColor"].transLimits.inverted()
+            xOffset,_= inv.transform((0.02, 0.25))
+            coords = self.getOffsets(idxPosition,xOffset + self.getColorMeshXOffset())
+            self.quickSelectScatter[ax].set_offsets(coords)
+            df = pd.DataFrame(intIDMatch,columns=["intID"])
+            df["idx"] = dataIndexInClust
+            df["x"] = coords[:,0]
+            df["y"] = coords[:,1]
+            self.quickSelectScatterDataIdx[ax] = {
                                             "idxPosition":idxPosition,
                                             "dataIndexInClust":dataIndexInClust,
                                             "coords":df,

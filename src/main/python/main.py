@@ -41,13 +41,15 @@ import webbrowser
 import requests
 import warnings
 import multiprocessing
+import importlib
 
 
 
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
+warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "0.11.0"
+__VERSION__ = "v0.11.0"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -98,14 +100,14 @@ menuBarItems = [
     },
     {
         "subM":"About",
-        "name":"Cite us (orig)",
+        "name":"Citation",
         "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
     },
-    {
-        "subM":"About",
-        "name":"Cite us (extend.)",
-        "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
-    },
+    # {
+    #     "subM":"About",
+    #     "name":"Cite us (extend.)",
+    #     "fn": lambda : webbrowser.open("https://www.nature.com/articles/s41598-018-31154-6/")
+    # },
     {
         "subM":"About",
         "name":"v. {}".format(__VERSION__),
@@ -724,8 +726,17 @@ class InstantClue(QMainWindow):
         "Style setup of the graphical user interface."
         
         self.setWindowTitle("Instant Clue")
-        self.setStyleSheet(" QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 0px}")
+        #self.setStyleSheet("QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 5px}")
         self.setStyleSheet("""
+                QToolTip {
+                    background-color: white;
+                    color: black;
+                    font-family: Arial;
+                    line-height: 1.75;
+                    padding: 2px;
+                    border: 0.5px;
+                }
+
                 QScrollBar:horizontal {
                     border: none;
                     background: none;
@@ -895,13 +906,21 @@ class MainWindowSplitter(QWidget):
 
 def main():
     "Start the main window."
+
+    if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash") and isWindows():
+        import pyi_splash
+        if pyi_splash.is_alive():
+            pyi_splash.update_text('UI Loaded ...')
+            pyi_splash.close()
+        
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
     if os.path.exists(iconPath):
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
-    screenGeom = QDesktopWidget().screenGeometry()
+
+    screenGeom = app.primaryScreen().geometry()
     win.setGeometry(50,50,screenGeom.width()-100,screenGeom.height()-120)
     win.show()    
     win.raise_()

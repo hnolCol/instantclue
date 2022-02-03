@@ -34,6 +34,7 @@ class scatterPlot(object):
 		data entry row in each plot. 
 		Additional information of data can be added due to additional color and size levels.
 		'''
+		
 		self.parent = parent
 		self.ax = ax
 		self.plotter = plotter
@@ -53,7 +54,6 @@ class scatterPlot(object):
 		self.adjustLimits = adjustLimits
 		self.multiScatterKwargs = multiScatterKwargs
 		self.defineVariables()
-		#self.get_size_interval()
 		self.adjustAxisLimits()
 		self.addKwargsToData()
 		self.replot(ax=self.ax,**self.scatterKwargs)
@@ -212,8 +212,8 @@ class scatterPlot(object):
 		""
 		if not self.adjustLimits:
 			return
-		self.data[self.numericColumns] = self.data[self.numericColumns].astype(float)
-		#self.ax.axis('scaled')
+		
+		
 		if self.multiScatter:
 			xMin = np.nanmin(self.data[self.numericColumns[0::2]].values)
 			xMax = np.nanmax(self.data[self.numericColumns[0::2]].values)

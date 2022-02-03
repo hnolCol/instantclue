@@ -1180,7 +1180,7 @@ class ICChart(QObject):
 		""
 		if self.hasScatters():
 			return any(scatterPlot.hasToolTip() for scatterPlot in self.scatterPlots.values())
-		elif self.plotType == "hclust":
+		elif self.plotType in ["hclust","corrmatrix"]:
 			return self.hasTooltip()
 		return False
 

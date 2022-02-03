@@ -1257,7 +1257,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["None","euclidean","nanEuclidean","correlation","nanCorrelation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"], #"nanCorrelation"
     "parent"        :   "statCenter",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean and nanCorrelation can handle nans and is significantly slower.",
@@ -1327,7 +1327,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "pixel.width.per.column",
-    "value"         :   20,
+    "value"         :   25,
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
@@ -1396,6 +1396,15 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
+    },
+    {
+    "name"          :   "corrmatrix.show.tooltip",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, a tooltip will be automatically initiated for a correlation matrix showing the column names and the correlation coefficient.",
     },
     {
     "name"          :   "add.column.names.in.emb.name",
@@ -1762,12 +1771,21 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, warnings given by the backend are shown in a new dialog window instead of a small notification window in the top right screen corner."
     }, 
     {
+    "name"          :   "melt.data.add.column.names",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Transformation",
+    "description"   :   "If enabled, the melt_variable and melt_value column names will contain the numeric column headers used for melting."
+    }, 
+    {
     "name"          :   "exclusivesMinNonNaN",
     "value"         :   1,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "grouping",
-    "parentType"    :   "Groups",
+    "parentType"    :   "Groupings",
     "description"   :   "Minimum required non-nan values in background to be called significant in target group."
     },
     {
@@ -2380,7 +2398,7 @@ DEFAULT_PARAMETER = [
     "range"         :   [True,False],
     "parent"        :   "intern",
     "parentType"    :   "XYPlot",
-    "description"   :   "If enabled, the first column is used as a common x axis. If disabled, eevery second column will be considered as a x-axis.",
+    "description"   :   "If enabled, the first column is used as a common x axis. If disabled, eevery second column will be considered as a x-axis. This option is overwritten if xy.plot.against.index is enabled.",
     },
     {
     "name"          :   "xy.plot.show.marker",
@@ -2393,7 +2411,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xy.plot.stem.mode",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
