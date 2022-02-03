@@ -912,14 +912,15 @@ def main():
         if pyi_splash.is_alive():
             pyi_splash.update_text('UI Loaded ...')
             pyi_splash.close()
-        
+
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
     if os.path.exists(iconPath):
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
-
     screenGeom = app.primaryScreen().geometry()
     win.setGeometry(50,50,screenGeom.width()-100,screenGeom.height()-120)
     win.show()    

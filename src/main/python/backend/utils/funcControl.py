@@ -572,6 +572,11 @@ funcPropControl = {
             "threadRequest":{"obj":"numericFilter","fn":"applyFilter","requiredKwargs":["dataID","filterProps"]},
             "completedRequest":refreshColumnView               
         },
+    "filter::selectionNumericFilter":
+        {
+            "threadRequest":{"obj":"numericFilter","fn":"applyFilterForSelection","requiredKwargs":["dataID","columnNames","metric","filterMode","filterProps"]},
+            "completedRequest":addDataAndRefresh             
+        },
 
     "filter::subsetNumericFilter":
         {

@@ -1,9 +1,10 @@
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * #works for pyqt5
-
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows
-from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton
+from backend.transformations.transformer import summarizeMetric
+from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR
+from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
 from ..custom.utils import  ICSCrollArea
@@ -11,7 +12,7 @@ from ..custom.utils import  ICSCrollArea
 import pandas as pds
 import numpy as np 
 from collections import OrderedDict 
-
+import webbrowser
 LINE_EDIT_STATUS = {"Greater than":(True,False),
                     "Greater Equal than":(True,False),
                     "Between":(False,False),
@@ -26,8 +27,214 @@ CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.
                "Creates a new data frame with rows where numeric filter matches.",
                "Values that fulfill the condition are replaced with NaN",
                "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
+filterTypes = ["Greater than","Greater Equal than","Smaller than","Smaller Equal than","Between", "Not between","n largest","n smallest"]
+
+def createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue):
+    validator = QDoubleValidator()
+    validator.setRange(minValue,maxValue,12)
+    validator.setNotation(QDoubleValidator.StandardNotation)
+    validator.setLocale(QLocale("en_US"))
+    validator.setDecimals(20)
+    #self.alphaLineEdit.setValidator(validator)
+    
+    valueEdit = QLineEdit(placeholderText = placeholderText, toolTip = tooltipStr)
+    valueEdit.setStyleSheet("background: white")
+    
+    valueEdit.setValidator(validator)
+    return valueEdit
+class ICNumericFilterForSelection(QDialog):
+
+    def __init__(self,mainController,selectedNumericColumns,*args,**kwargs):
+        super(ICNumericFilterForSelection,self).__init__(*args,**kwargs)
+        self.mC = mainController
+        self.columnNames = selectedNumericColumns
+        self.CBFilterOptions = dict()
+        self.__controls()
+        self.__layout()
+        self.__connectEvents()
+
+        self.filterTypeCombo.setCurrentText(filterTypes[0])
+
+    def __controls(self):
+        ""
+        self.setWindowTitle("Numeric Filter For Selection")
+        self.setWindowIcon(self.mC.getWindowIcon())
+        self.titleLabel = createTitleLabel("Numeric Filter for Column Selection")
+       
+        self.operatorLabel = createLabel("Operator: ", fontSize = 12)
+        self.operatorCombo = createCombobox(self,items = self.mC.numericFilter.getOperatorOptions())
+        self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
+        
+        self.helpButton = HelpButton(
+            buttonSize=(30,30), 
+            tooltipStr="Opens the specific GitHub Wiki Page for selected Settings (requires Internet connection).")
+    
+        self.scrollFrame = QFrame(parent=self) 
+
+        self.selectionlabel = createLabel("Selection:")
+        self.selectedColumnlabel = LabelLikeButton("{} Columns selected.".format(self.columnNames.size),fontSize=14,txtColor=WIDGET_HOVER_COLOR)
+        self.selectedColumnlabel.setToolTip("Click to change selection of column names.")
+        
+        
+        self.filterModeLabel = createLabel("Filter mode:")
+        
+        self.filterMode = createCombobox(self.scrollFrame,items=["On individual columns","On columns metric"])
+        self.filterMode.setToolTip("Choose 'on individual columns' if you want to filter based on the individual values in each of the selected columns.\nYou can also first summarize the columns by calculation a specific metric (e.g. mean, sum etc) per row and the apply the filtering. ")
+        
+        
+
+        self.filterMetricLabel = createLabel("Filter metric:","Enabled only if 'On columns metric' is selected as mode.\nAllows to summarize selected columns first and then apply the filter.")
+        self.filterMetric = createCombobox(self.scrollFrame,items=list(summarizeMetric.keys()))
+        self.filterMetric.setEnabled(False) 
+
+        self.filterTypeLabel = createLabel("Filter Type:")
+        self.filterTypeCombo = createCombobox(self.scrollFrame,items=filterTypes)
+        
+
+        self.filterRangeLabel = createLabel("Filter range:","Filter range defined by min and max value. \nFor some filters the edit will be read only.")
+        self.minValue = createValueLineEdit("Min Value..","Set min value",-np.inf,np.inf)
+        self.maxValue = createValueLineEdit("Max Value..","Set max value",-np.inf,np.inf)
+
+        self.applyButton = ICStandardButton(itemName="Apply")
+        self.closeButton = ICStandardButton(itemName="Close")
+
+       
+        for n,filtOption in enumerate(CB_OPTIONS[0:3]):
+            cb = QCheckBox(filtOption, toolTip = CB_TOOLTIPS[n])
+            cb.setTristate(False)
+            if n == 0:
+                cb.setCheckState(True)
+            cb.clicked.connect(self.setCBCheckStates)
+            self.CBFilterOptions[filtOption] = cb
+      
+        
+        
+    def __layout(self):
+        ""
+        labelArgs = [1,1,Qt.AlignRight]
+        self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding)
+        
+        self.setLayout(QGridLayout()) 
+        
+        self.layout().addWidget(self.titleLabel,0,0,2,1)
+        self.layout().addWidget(self.helpButton,0,4,1,1)
+        self.scrollFrame.setLayout(QGridLayout())
+        scrollFrameGrid = self.scrollFrame.layout() 
+        scrollFrameGrid.addWidget(self.selectionlabel,0,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.selectedColumnlabel,0,1,1,2,)
+        scrollFrameGrid.addWidget(self.filterModeLabel,1,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.filterMode,1,1,1,2)
+
+        scrollFrameGrid.addWidget(self.filterMetricLabel,2,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.filterMetric,2,1,1,2)
+        scrollFrameGrid.addWidget(self.operatorLabel,3,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.operatorCombo,3,1,1,2)
+
+        scrollFrameGrid.addWidget(self.filterTypeLabel,4,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.filterTypeCombo,4,1,1,2)
+
+        scrollFrameGrid.addWidget(self.filterRangeLabel,5,0,*labelArgs)
+        scrollFrameGrid.addWidget(self.minValue,5,1,1,1)
+        scrollFrameGrid.addWidget(self.maxValue,5,2,1,1)
+        scrollFrameGrid.setSpacing(10)
+        self.layout().addWidget(self.scrollFrame,3,0,1,4)
 
 
+        #add selection cbs
+        hboxCB = QHBoxLayout()
+        for cb in self.CBFilterOptions.values():
+            hboxCB.addWidget(cb)
+        self.layout().addLayout(hboxCB,6,0,1,2)
+
+        hboxB = QHBoxLayout() 
+        hboxB.addWidget(self.applyButton)
+        hboxB.addWidget(self.closeButton)
+        
+        self.layout().addLayout(hboxB,7,3,1,1)
+        self.layout().setAlignment(Qt.AlignTop)
+
+
+    def __connectEvents(self):
+        ""
+        self.operatorCombo.currentTextChanged.connect(self.setOperator)
+        self.filterTypeCombo.currentTextChanged.connect(self.onFilterTypeChange)
+        self.filterMode.currentTextChanged.connect(self.onFilterModeChange)
+        self.selectedColumnlabel.clicked.connect(self.columnSelection)
+        self.closeButton.clicked.connect(self.close)
+        self.applyButton.clicked.connect(self.applyFilter)
+        self.helpButton.clicked.connect(lambda: webbrowser.open("https://github.com/hnolCol/instantclue/wiki/Filtering#data-filtering"))
+
+    def columnSelection(self,*args,**kwargs):
+        "Update Column Selection"
+        selectedColumns = self.mC.askForItemSelection(self.mC.data.getNumericColumns(self.mC.getDataID()))
+        if selectedColumns is not None and selectedColumns.size > 0:
+
+            self.selectedColumnlabel.setText("{} Columns selected.".format(selectedColumns.size))
+            self.columnNames = selectedColumns
+
+    def onFilterModeChange(self,filterMode):
+        ""
+        self.filterMetric.setEnabled(not filterMode == "On individual columns")
+
+    def onFilterTypeChange(self,filterType):
+        ""
+        minReadOnly,maxReadOnly = LINE_EDIT_STATUS[filterType]
+        self.minValue.setReadOnly(minReadOnly)
+        self.maxValue.setReadOnly(maxReadOnly)
+
+    def setOperator(self,newOperator):
+        ""
+        self.mC.numericFilter.setOperator(newOperator)
+    def getFilterProps(self):
+        ""
+        return {"min":float(self.minValue.text()) if self.minValue.text() != "" else -np.inf,
+                "max":float(self.maxValue.text()) if self.maxValue.text() != "" else np.inf,
+                "filterType" : self.filterTypeCombo.currentText()}
+
+    def applyFilter(self):
+        ""
+        #check user input
+        try:
+            filterProps = self.getFilterProps()
+        except:
+            self.mC.sendToWarningDialog(infoText = "Could not convert min/max value to floating number.",parent=self)
+            return
+        if filterProps["min"] == -np.inf and filterProps["max"] == np.inf:
+            self.mC.sendToWarningDialog(infoText = "Please enter limits/range for filtering.",parent=self)
+            return
+        filterType = self.filterTypeCombo.currentText()
+        minReadOnly,maxReadOnly = LINE_EDIT_STATUS[filterType]
+
+        if not minReadOnly and  filterProps["min"] == -np.inf:
+            self.mC.sendToWarningDialog(infoText = "Please enter min value.",parent=self)
+            return
+        if not maxReadOnly and filterProps["max"] == np.inf:
+            self.mC.sendToWarningDialog(infoText = "Please enter max value.",parent=self)
+            return
+            
+        #send to Thread
+        funcProps = {
+            "key" : "filter::selectionNumericFilter",
+            "kwargs" : {
+                "dataID" : self.mC.getDataID(),
+                "columnNames" : self.columnNames,
+                "metric" : self.filterMetric.currentText(),
+                "filterMode" : self.filterMode.currentText(),
+                "filterProps" : filterProps,
+                "setNonMatchNan" : self.CBFilterOptions["Set NaN"].checkState(),
+                "subsetData" : self.CBFilterOptions["Subset Matches"].checkState()
+            }
+        }
+
+        self.mC.sendRequestToThread(funcProps)
+
+    def setCBCheckStates(self,event=None):
+        ""
+        for cbKey,cb in self.CBFilterOptions.items():
+            if cb != self.sender():
+                cb.setCheckState(False)
+            else:
+                cb.setCheckState(True)
 
 class NumericFilter(QDialog):
 
@@ -43,8 +250,7 @@ class NumericFilter(QDialog):
         self.filterProps = OrderedDict() 
         self.CBFilterOptions = OrderedDict()
 
-        self.setWindowTitle("Numeric Filter")
-        self.setWindowIcon(self.mC.getWindowIcon())
+        
         self.__controls()
         self.__layout()
         self.__connectEvents()
@@ -54,6 +260,8 @@ class NumericFilter(QDialog):
 
     def __controls(self):
         ""
+        self.setWindowTitle("Numeric Filter")
+        self.setWindowIcon(self.mC.getWindowIcon())
         self.titleLabel = createTitleLabel("Numeric Filter")
         self.filterLabel = createLabel("Filter on: ", fontSize = 12)
         self.columnNameCombo = createCombobox(self, items = self.numericColumns.values.tolist())
@@ -148,7 +356,7 @@ class NumericFilter(QDialog):
         ""
         menu = createMenu(parent=self)
 
-        for filterType in ["Greater than","Greater Equal than","Smaller than","Smaller Equal than","Between", "Not between","n largest","n smallest"]:
+        for filterType in filterTypes:
             menu.addAction(filterType)
         senderGeom = self.sender().geometry()
         topLeft = self.filterProps[filterName]["frame"].mapToGlobal(senderGeom.bottomLeft())
@@ -265,17 +473,7 @@ class NumericFilter(QDialog):
 
     def createValueLineEdit(self, placeholderText = "", tooltipStr = "", minValue = -np.inf, maxValue = np.inf, columnName = ""):
         
-        validator = QDoubleValidator()
-        validator.setRange(minValue,maxValue,12)
-        validator.setNotation(QDoubleValidator.StandardNotation)
-        validator.setLocale(QLocale("en_US"))
-        validator.setDecimals(20)
-        #self.alphaLineEdit.setValidator(validator)
-        
-        valueEdit = QLineEdit(placeholderText = placeholderText, toolTip = tooltipStr)
-        valueEdit.setStyleSheet("background: white")
-        
-        valueEdit.setValidator(validator)
+        valueEdit = createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue)
         valueEdit.textChanged.connect(lambda _,filterName = columnName : self.lineEditChanged(filterName = filterName))
        
         return valueEdit
@@ -299,12 +497,10 @@ class NumericFilter(QDialog):
                                     "max":float(filtProps["max"].text()) if filtProps["max"].text() != "" else np.inf,
                                     "filterType":filtProps["filterType"]}
                 except:
-                    warn = WarningMessage(infoText = "Entered values could not be converted to floats. Please use . instead of , for decimal numbers.", iconDir = self.mC.mainPath)
-                    warn.exec_()
+                    self.mC.sendToWarningDialog(infoText = "Entered values could not be converted to floats. Please use . instead of , for decimal numbers.",parent=self)
                     return
         if len(funcProps) == 0:
-            warn = WarningMessage(infoText = "Please enter values to specifiy the numeric filter.",iconDir = self.mC.mainPath)
-            warn.exec_()
+            self.mC.sendToWarningDialog(infoText = "Please enter values to specifiy the numeric filter.",parent=self)
             return
 
         funcProps = {"key":"filter::numericFilter",

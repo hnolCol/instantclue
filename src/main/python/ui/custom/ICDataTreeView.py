@@ -2,7 +2,9 @@ from collections import OrderedDict
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt5.QtWidgets import *
+
+
 
 from .resortableTable import ResortableTable
 from .warnMessage import WarningMessage, AskQuestionMessage, AskForFile
@@ -15,6 +17,7 @@ from ..dialogs.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
 from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
 from ..dialogs.ICDSelectItems import ICDSelectItems
+from ..dialogs.ICNumericFilter import ICNumericFilterForSelection 
 from .utils import dataFileExport 
 #data import 
 from backend.config.data.params import MTMethods
@@ -409,7 +412,12 @@ menuBarItems = [
         "funcKey": "applyFilter",
         "dataType": "Numeric Floats"
     },
-    
+    {
+        "subM":"Filter",
+        "name":"Numeric Filtering (Selection)",
+        "funcKey": "applyNumericFilterForSelection",
+        "dataType": "Numeric Floats"
+    },
     {
         "subM":"Smoothing",
         "name":"IIR Filter",
@@ -2029,6 +2037,18 @@ class DataTreeViewTable(QTableView):
         
         self.mC.mainFrames["sliceMarks"].applyFilter(dragType = self.tableID, **kwargs)
         
+    def applyNumericFilterForSelection(self,*args,**kwargs):
+        ""
+
+        columnNames = self.getSelectedData()
+        if columnNames.size < 2:
+            self.mC.sendToWarningDialog(infoText="Please select at least 2 column headers.")
+            return 
+        dlg = ICNumericFilterForSelection(self.mC,columnNames)
+        dlg.exec_()
+        
+
+
     def leaveEvent(self, event):
    
         if self.rightClick:
