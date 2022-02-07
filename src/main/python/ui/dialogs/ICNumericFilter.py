@@ -42,8 +42,22 @@ def createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue):
     
     valueEdit.setValidator(validator)
     return valueEdit
-class ICNumericFilterForSelection(QDialog):
 
+class ICNumericFilterForSelection(QDialog):
+    """
+    QDialog - ICNumericFilterForSelection
+    -----------------------------------------------
+
+    This dialog handles numeric filter data input. 
+    The numeric filtering is applied to the selected 
+    columns. 
+    Users can choose if they want to apply the filter
+    on selected column individually, or calculate
+    a metric such as mean/max etc before the filter is
+    applied on the calculated metric. A new column containing 
+    the metric is added.
+
+    """
     def __init__(self,mainController,selectedNumericColumns,*args,**kwargs):
         super(ICNumericFilterForSelection,self).__init__(*args,**kwargs)
         self.mC = mainController
@@ -211,7 +225,7 @@ class ICNumericFilterForSelection(QDialog):
         if not maxReadOnly and filterProps["max"] == np.inf:
             self.mC.sendToWarningDialog(infoText = "Please enter max value.",parent=self)
             return
-            
+
         #send to Thread
         funcProps = {
             "key" : "filter::selectionNumericFilter",
@@ -225,12 +239,11 @@ class ICNumericFilterForSelection(QDialog):
                 "subsetData" : self.CBFilterOptions["Subset Matches"].checkState()
             }
         }
-
         self.mC.sendRequestToThread(funcProps)
 
     def setCBCheckStates(self,event=None):
         ""
-        for cbKey,cb in self.CBFilterOptions.items():
+        for _,cb in self.CBFilterOptions.items():
             if cb != self.sender():
                 cb.setCheckState(False)
             else:
@@ -480,7 +493,7 @@ class NumericFilter(QDialog):
         
 
     def deleteFilter(self,event=None,filterName = None):
-        ""    
+        "Removes widgets."    
         if filterName in self.filterProps:
             self.scrollFrame.layout().removeWidget(self.filterProps[filterName]["frame"])
             self.filterProps[filterName]["frame"].deleteLater()
@@ -488,7 +501,7 @@ class NumericFilter(QDialog):
             self.updateComboBox()
 
     def applyFilter(self,event=None):
-        ""
+        "Collect data and apply filter."
         funcProps = OrderedDict()
         for columnName, filtProps in self.filterProps.items():
             if filtProps["min"].text() != "" or filtProps["max"].text() != "":
@@ -526,8 +539,7 @@ class NumericFilter(QDialog):
         self.columnNameCombo.model().item(0).setEnabled(False)
 
     def lineEditChanged(self,event=None,filterName = None):
-        ""
-        
+        "Handles line edit changes"
         self.evaluateEditInput(self.sender())
 
         if self.sender().hasAcceptableInput() and "n " not in self.filterProps[filterName]["filterType"]:
@@ -551,7 +563,7 @@ class NumericFilter(QDialog):
 
 
     def resetValidator(self, filterName, topN = False):
-        ""
+        "Reset the Validator"
         for lineEdit in ["min","max"]:
             validator = self.filterProps[filterName][lineEdit].validator()
             if not topN:
