@@ -382,8 +382,6 @@ class ICClustermap(ICChart):
                 
                 self.addHoverText()
                 self.addHoverScatter(ax = self.axisDict["axLabelColor"])
-                print("bindings")
-                print(self.interactive)
                 self.addHoverBinding()
                 #add potential tooltip 
                 self.ax = self.axisDict["axClusterMap"]

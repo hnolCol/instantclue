@@ -114,6 +114,55 @@ class NumericFilter(object):
             annotationColumnName = "{}({})".format(self.sourceData.parent.config.getParam("leading.string.numeric.filter")," ".join(columnNameStr))
             return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , annotationColumnName)
 
+
+    def applyFilterForSelection(self,dataID,columnNames,metric,filterMode,filterProps,setNonMatchNan=False,subsetData=False):
+        ""
+        if setNonMatchNan:
+            filterIdx = dict()
+        else:
+            arr = np.array([])
+
+        filterType = filterProps["filterType"]
+       
+        data = self.sourceData.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+        if filterMode == "On individual columns":
+            for columnName in columnNames.values:
+                if not filterType in funcFilter:continue
+                    
+                idx = getattr(self,funcFilter[filterType])(data[columnName],filterProps)
+                
+                if setNonMatchNan:
+                    filterIdx[columnName] = idx
+                else:
+                    arr = np.append(arr,idx.values)
+            
+            if setNonMatchNan:
+                return self.sourceData.setDataByIndexNaN(dataID,filterIdx,columnNames)     
+            elif self.operator == "or":
+                filterIdx = np.unique(arr)
+            elif self.operator == "and":
+                filterIdx, counts = np.unique(arr, return_counts=True)
+                filterIdx = filterIdx[np.where(counts == columnNames.size)]
+
+            if subsetData:
+                return self.sourceData.subsetDataByIndex(dataID, filterIdx, "subsetNumericFilter({})".format(self.sourceData.getFileNameByID(dataID)))
+            else:
+                return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , "subsetNumericFilter")
+        else:
+            #summarize columns first
+            summarizedValues = self.sourceData.transformer.summarizeTransformation(dataID,columnNames,metric=metric,justValues = True)
+
+            filterIdx = getattr(self,funcFilter[filterType])(pd.Series(summarizedValues,index=self.sourceData.dfs[dataID].index),filterProps)
+            
+            self.sourceData.addColumnData(dataID,"summarizedFilterColumns({})".format(metric),summarizedValues)
+            if subsetData:
+                return self.sourceData.subsetDataByIndex(dataID, filterIdx, "subsetNumericFilter({}:{})".format(metric,self.sourceData.getFileNameByID(dataID)))
+            elif setNonMatchNan:
+                filterIdx = dict([(colName,filterIdx) for colName in columnNames.values])
+                return self.sourceData.setDataByIndexNaN(dataID,filterIdx,None) 
+            else:
+                return self.sourceData.addAnnotationColumnByIndex(dataID, filterIdx , "subsetNumericFilter:({})".format(metric))
+
     def findConsecutiveValues(self,dataID,columnNames,increasing=True,annotationString=None):
         ""
         

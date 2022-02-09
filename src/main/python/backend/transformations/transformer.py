@@ -2,6 +2,7 @@
 
 
 
+from collections import OrderedDict
 import pandas as pd 
 import numpy as np 
 from ..utils.stringOperations import getMessageProps, mergeListToString, findCommonStart
@@ -21,14 +22,17 @@ logarithmicBase =  {'log2': np.log2,
 					'-log10':lambda x: np.log10(x)*(-1),
 					'ln':np.log,
 					}	
-summarizeMetric = {"min"    :   np.nanmin, 
-                   "max"    :   np.nanmax,    
-                   "median" :   np.nanmedian,
-                   "mean"   :   np.nanmean,
-                   "quantile":  np.nanquantile,
-                   "std"    :   np.nanstd,
-                   "var"    :   np.nanvar
-                   }
+summarizeMetric = OrderedDict(
+                    [
+                        ("min"    ,   np.nanmin),
+                        ("max"    ,   np.nanmax),    
+                        ("median" ,   np.nanmedian),
+                        ("mean"   ,   np.nanmean),
+                        ("quantile",  np.nanquantile),
+                        ("std"    ,   np.nanstd),
+                        ("var"    ,   np.nanvar),
+                        ("coeff var", lambda x,axis: np.nanstd(x, ddof=1,axis=axis) / np.nanmean(x,axis=axis) * 100 ) 
+                    ])
 	
 class Transformer(object):
     ""

@@ -419,7 +419,7 @@ class LabelLikeButton(PushHoverButton):
         rect, h, w, x0, y0 = self.getRectProps(event)
         painter = QPainter(self)
         painter.setFont(self.getStandardFont())
-        pen = QPen(QColor("black" if not self.mouseOver else INSTANT_CLUE_BLUE))
+        pen = QPen(QColor(self.txtColor if not self.mouseOver else INSTANT_CLUE_BLUE))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.Antialiasing,True)

@@ -49,7 +49,7 @@ import importlib
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.0"
+__VERSION__ = "v0.11.1"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -353,7 +353,6 @@ class InstantClue(QMainWindow):
             parentMenu = self.subMenus[parentMenu]
             self.subMenus[subMenuName] = QMenu(subMenuName,parentMenu)
             parentMenu.addMenu(self.subMenus[subMenuName])
-        
 
     def getWindowIcon(self):
         ""
@@ -912,16 +911,18 @@ def main():
         if pyi_splash.is_alive():
             pyi_splash.update_text('UI Loaded ...')
             pyi_splash.close()
-        
+
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
     if os.path.exists(iconPath):
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
-
     screenGeom = app.primaryScreen().geometry()
-    win.setGeometry(50,50,screenGeom.width()-100,screenGeom.height()-120)
+    win.setGeometry(10,10,screenGeom.width()-100,screenGeom.height()-140)
+    #win.showMaximized()
     win.show()    
     win.raise_()
     app.exec_()
