@@ -335,6 +335,7 @@ class DataCollection(object):
 				loadFileProps["sheet_name"] = loadFileProps["sheet_name"].split(";")
 			df = pd.read_excel(pathToFile,**loadFileProps)
 		except Exception as e:
+			print(e)
 			return errorMessage
 		if returnPlainDf:
 			return df
