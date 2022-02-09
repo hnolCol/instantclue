@@ -49,7 +49,7 @@ import importlib
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.0"
+__VERSION__ = "v0.11.1"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
