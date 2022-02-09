@@ -353,7 +353,6 @@ class InstantClue(QMainWindow):
             parentMenu = self.subMenus[parentMenu]
             self.subMenus[subMenuName] = QMenu(subMenuName,parentMenu)
             parentMenu.addMenu(self.subMenus[subMenuName])
-        
 
     def getWindowIcon(self):
         ""
@@ -922,7 +921,8 @@ def main():
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
     screenGeom = app.primaryScreen().geometry()
-    win.setGeometry(50,50,screenGeom.width()-100,screenGeom.height()-120)
+    win.setGeometry(10,10,screenGeom.width()-100,screenGeom.height()-140)
+    #win.showMaximized()
     win.show()    
     win.raise_()
     app.exec_()

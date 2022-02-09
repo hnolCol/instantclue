@@ -23,10 +23,16 @@ class CollapsableFrames(QWidget):
 
         
         
-    def parentGeometry(self):
-        self.parentHeight = self.parent().frameGeometry().height()
-        self.parentWidth = self.parent().frameGeometry().width()
-    
+    def parentGeometry(self, justReturn = False):
+        
+        if justReturn:
+            return self.parent().frameGeometry().height(), self.parent().frameGeometry().width()
+        else:
+            self.parentHeight = self.parent().frameGeometry().height()
+            self.parentWidth = self.parent().frameGeometry().width()
+
+            return self.parentHeight, self.parentWidth
+        
     def resizeHeaders(self):
         ""
         
@@ -49,7 +55,6 @@ class CollapsableFrames(QWidget):
 
     def resizeEvent(self,event):
         ""
-        
         self.parentGeometry()
         self.startAnimation() 
         self.update()

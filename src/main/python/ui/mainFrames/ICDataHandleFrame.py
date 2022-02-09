@@ -200,6 +200,9 @@ class DataHandleFrame(QFrame):
         self.ctrlH = QShortcut(QKeySequence("Ctrl+f"), self)
         self.ctrlH.activated.connect(self.openFindReplaceDialog)
 
+
+    
+
     def askForFile(self):
         "Get File Names"
         dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *tsv *xlsx);;Text files (*.txt *.csv *tsv);;Excel files (*.xlsx)")
