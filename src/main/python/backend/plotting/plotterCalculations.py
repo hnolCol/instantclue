@@ -1735,7 +1735,7 @@ class PlotterBrain(object):
                             xy = (0+10*n,-0.5+ii),
                             width = 10, 
                             height = 1,
-                            faceColor =  colorsByColumnNamesForGn[columnName] if columnName in  colorsByColumnNamesForGn else self.sourceData.colorManager.nanColor,
+                            facecolor =  colorsByColumnNamesForGn[columnName] if columnName in  colorsByColumnNamesForGn else self.sourceData.colorManager.nanColor,
                             alpha = 0.75) for n,columnName in enumerate(data.columns.values)]
                     groupingRectangles.extend(groupingGNRectangles)
         except Exception as e:
