@@ -398,7 +398,7 @@ class DataCollection(object):
 					try:
 						if numberOfGroupings > 0:
 							groupingValues = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],nrows=numberOfGroupings+1,header=None,index_col=0).dropna(axis=1,how="all")
-							print(groupingValues)
+							
 							for n,groupingName in enumerate(groupingValues.index):
 								if n == groupingValues.index.size-1:
 									continue
@@ -416,7 +416,7 @@ class DataCollection(object):
 												
 											replaceGrouping[groupName] = groupedItems
 										groupings[groupingName] = groupedItems
-							print(groupings)
+							
 					except:
 						funcProps["messageProps"] = getMessageProps("Error","File was loaded, and grouping detected. However the grouping could not be loaded.")
 

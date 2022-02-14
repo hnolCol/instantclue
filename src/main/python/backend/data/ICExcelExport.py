@@ -32,6 +32,8 @@ class ICDataExcelExporter(object):
         workbook = xlsxwriter.Workbook(self.pathToExcel, {'constant_memory': True, "nan_inf_to_errors":True} )
         self.headerFormat = workbook.add_format({"bg_color":"#efefef","text_wrap":True,"valign":"vcenter"})
         for sheetName in self.sheetNames:
+            if len(sheetName) > 30:
+                sheetName = sheetName[0:39]
             self.worksheets[sheetName] = workbook.add_worksheet(name=sheetName)
         self.paramWorksheet = workbook.add_worksheet(name="Software Info")
         self.addDataToWorksheet(workbook)
