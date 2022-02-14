@@ -3046,7 +3046,7 @@ class PlotterBrain(object):
             
             plotData = pd.DataFrame(rawData, index = rawData.index) 
             columnNames = []
-            border = 1/5
+            
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             nColorCats = colorCategories.size
             colorDict,_ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -3055,6 +3055,8 @@ class PlotterBrain(object):
             multiScatterKwargs[0] = dict()
             interalIDColumnPairs[0] = dict() #0 = axis ID
 
+            globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
+            yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             colorGroupsData["color"] = colorDict.values() 
             colorGroupsData["group"] = colorCategories
             colorGroupsData["internalID"] = [getRandomString() for _ in range(colorCategories.size)]
@@ -3066,10 +3068,11 @@ class PlotterBrain(object):
             tickPositions = []
             tickLabels = []
             widthBox= 1/(nColorCats)
+            border = widthBox/3
             
             for m,numColumn in enumerate(numericColumns):
 
-                startPos = m if m == 0 else m + (widthBox/3 * m) #add border
+                startPos = m if m == 0 else m + (border * m) #add border
                 endPos = startPos + widthBox * (nColorCats-1)
                 positions = np.linspace(startPos,endPos,num=nColorCats)
 
@@ -3111,13 +3114,13 @@ class PlotterBrain(object):
                             interalIDColumnPairs[0][internalID].append((xName,numColumn))
                     
             
-
             numericColumnPairs = {0:tuple(columnNames)}
             
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
             axisLabels = dict([(n,{"x":"Numeric Column(s)","y":"Value"}) for n in range(1)])
             tickLabels = {0:tickLabels}
+            axisLimits[0] = {"xLimit":[-2*border,endPos+2*border],"yLimit":[globalMin-yMargin,globalMax+yMargin]}
             tickPositions = {0:tickPositions}
             #print(tickPositions,tickLabels)
 

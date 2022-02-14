@@ -10,7 +10,7 @@ from ..custom.utils import clearLayout, BuddyLabel, LabelLikeCombo, ICSCrollArea
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 from ..custom.ICReceiverBox import ItemHolder, BoxItem
 from ..custom.warnMessage import WarningMessage
-from .selectionDialog import SelectionDialog
+from .selectionDialog import SelectionDialog,GroupingSelectionDialog
 from backend.color.data import colorParameterRange
 from collections import OrderedDict
 import pandas as pd
@@ -183,7 +183,7 @@ class ICGrouper(QDialog):
         selectedColumnNames = self.findSelectedColumns()
         if selectedColumnNames is None: return
 
-        selDialog = SelectionDialog(
+        selDialog = GroupingSelectionDialog(
             title="Select split string extraction props.",
             selectionNames = ["splitString","splitFrom","index","maxSplit","remove N from right"],
             selectionOptions={
@@ -193,7 +193,8 @@ class ICGrouper(QDialog):
                 "maxSplit":["inf"] + [str(x+1) for x in range(29)],
                 "remove N from right":[str(x) for x in range(30)]},
             selectionDefaultIndex={"splitString":"_","splitFrom":"left","index":"0","maxSplit":"inf","remove N from right":"0"},
-            selectionEditable=["splitString"]
+            selectionEditable=["splitString"],
+            previewString=selectedColumnNames.values[0]
             )
         if selDialog.exec_():
             selectedItems = selDialog.savedSelection
@@ -231,6 +232,7 @@ class ICGrouper(QDialog):
         
         if groupNames is not None:
                 self.addGroupsByDataFrame(groupNames)
+
 
 
     def extractGroupsByColumnNames(self,selectedColumnNames,splitString = "_",index = 0,rsplit = False,maxsplit=-1,removeNFromRight = "0"):

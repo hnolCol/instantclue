@@ -67,7 +67,7 @@ class ICNumericFilterForSelection(QDialog):
         self.__layout()
         self.__connectEvents()
 
-        self.filterTypeCombo.setCurrentText(filterTypes[0])
+        self.onFilterTypeChange(filterTypes[0])
 
     def __controls(self):
         ""
@@ -240,6 +240,7 @@ class ICNumericFilterForSelection(QDialog):
             }
         }
         self.mC.sendRequestToThread(funcProps)
+        self.close()
 
     def setCBCheckStates(self,event=None):
         ""

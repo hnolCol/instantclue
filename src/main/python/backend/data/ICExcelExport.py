@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from matplotlib.colors import to_hex
+from ..utils.stringOperations import getRandomString
 
 baseNumFormat =   {'align': 'center',
                     'valign': 'vcenter',
@@ -20,9 +21,13 @@ class ICDataExcelExporter(object):
         """
         self.pathToExcel = pathToExcel
         self.groupings = groupings
+       
         self.data = data
         self.softwareParams = softwareParams
-        self.sheetNames = sheetNames 
+        self.sheetNames = [sheetName[0:30] if len(sheetName) > 30 else sheetName for sheetName in sheetNames]
+        if len(self.sheetNames) != np.unique(self.sheetNames).size:
+            #lazy . just create random names if the shortening leads to duplicates!
+            self.sheetNames = [getRandomString(N=5) for _ in self.sheetNames]
         self.worksheets = dict() 
        
 
@@ -34,7 +39,7 @@ class ICDataExcelExporter(object):
             self.worksheets[sheetName] = workbook.add_worksheet(name=sheetName)
         self.paramWorksheet = workbook.add_worksheet(name="Software Info")
         self.addDataToWorksheet(workbook)
-        self.addParams()
+        self.addParams(len(self.groupings["groupings"]) if "groupings" in self.groupings else 0)
         workbook.close()
         
 
@@ -92,13 +97,18 @@ class ICDataExcelExporter(object):
                 writeRow += 1
         return writeRow, rowOffset, columnOffset
 
-    def addParams(self):
+    def addParams(self, numberGroupings = 0):
         ## add params
         self.paramWorksheet.write_string(0,0,"Parameters",self.headerFormat)
+        self.paramWorksheet.write_string(0,1,"Value",self.headerFormat)
         
         for n, (paramName,value) in enumerate(self.softwareParams):
             self.paramWorksheet.write_string(n+1,0,paramName)
             self.paramWorksheet.write_string(n+1,1,value)
+
+        #add grouping
+        self.paramWorksheet.write_string(n+2,0,"Groupings")
+        self.paramWorksheet.write_string(n+2,1,str(numberGroupings))
 
 
 class ICHClustExporter(object):

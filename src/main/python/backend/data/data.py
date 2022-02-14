@@ -37,6 +37,7 @@ activity is performed like:
    The liver filter is a dialog window. If closed, all masking is lost.
 """
 
+from ast import Or
 from math import isnan
 from multiprocessing import Pool
 from numba.core.decorators import njit
@@ -236,6 +237,7 @@ class DataCollection(object):
 		self.dfs = OrderedDict()
 		self.dfsDataTypesAndColumnNames = OrderedDict() 
 		self.fileNameByID = OrderedDict() 
+		self.excelFileIO = OrderedDict()
 		self.rememberSorting = dict()
 		self.replaceObjectNan = '-'
 		self.clippings = dict()
@@ -352,6 +354,90 @@ class DataCollection(object):
 			elif isinstance(df,pd.DataFrame):
 				return self.addDataFrame(df,fileName=fileName, cleanObjectColumns = True)
 	
+	def readExcelFile(self,pathToFiles):
+		""
+		if hasattr(self,"excelFileIO"):
+			self.excelFileIO = OrderedDict()
+		fileSheetNames = OrderedDict([("Sheet",[]),("File",[])])
+		for filePath in pathToFiles:
+			fileName = os.path.basename(filePath)
+			if fileName in self.excelFileIO and filePath == self.excelFileIO[fileName]["path"]:
+				sheetNames = self.excelFileIO[fileName]["excelFile"].sheet_names
+				fileSheetNames["File"].extend([fileName]*len(sheetNames))
+				fileSheetNames["Sheet"].extend(sheetNames)
+				continue
+			elif fileName in self.excelFileIO and filePath != self.excelFileIO[fileName]["path"]:
+				fileName = fileName + getRandomString(N=6)
+			self.excelFileIO[fileName] = {}
+			excelFile = pd.ExcelFile(filePath)
+			sheetNames = np.array(excelFile.sheet_names)
+			self.excelFileIO[fileName]["sheetNames"] = sheetNames
+			self.excelFileIO[fileName]["path"] = filePath
+			self.excelFileIO[fileName]["excelFile"] = excelFile
+
+			fileSheetNames["File"].extend([fileName]*len(sheetNames))
+			fileSheetNames["Sheet"].extend(sheetNames)
+		
+		return {"fileSheetNames":{"df":pd.DataFrame().from_dict(fileSheetNames)}}
+
+
+	def readExcelSheetFromFile(self,ioAndSheets,props,instantClueImport):
+		""
+		#df = pd.read_excel(self.excelFiles[fileName]['excelFile'],sheetName)
+		groupings = OrderedDict()
+		for dataFrameName, readExcelProps in ioAndSheets.items():
+			if readExcelProps["io"] in self.excelFileIO:
+				excelFile = self.excelFileIO[readExcelProps["io"]]["excelFile"]
+				if instantClueImport:
+					params = pd.read_excel(excelFile,sheet_name="Software Info", index_col="Parameters")
+					numberOfGroupings = int(float(params.loc["Groupings"]))
+					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],skiprows=numberOfGroupings).dropna(axis=1,how="all")
+					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					#groupings
+					
+					try:
+						if numberOfGroupings > 0:
+							groupingValues = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],nrows=numberOfGroupings+1,header=None,index_col=0).dropna(axis=1,how="all")
+							
+							for n,groupingName in enumerate(groupingValues.index):
+								if n == groupingValues.index.size-1:
+									continue
+								
+								X = pd.DataFrame(groupingValues.values[[n,-1],:].T,columns=["groupName","columnName"]).dropna()
+								if X.index.size > 0:
+									grouping = OrderedDict([(groupName,groupData["columnName"]) for groupName, groupData in X.groupby(by="groupName",sort=False)])
+									if groupingName not in groupings:
+										groupings[groupingName] = grouping
+									else:
+										replaceGrouping = OrderedDict()
+										for groupName, groupedItems in groupings[groupingName].items():
+											if groupName in grouping:
+												groupedItems = np.concatenate([groupedItems.values,grouping[groupingName].values])
+												
+											replaceGrouping[groupName] = groupedItems
+										groupings[groupingName] = groupedItems
+							
+					except:
+						funcProps["messageProps"] = getMessageProps("Error","File was loaded, and grouping detected. However the grouping could not be loaded.")
+
+					funcProps["groupings"] = groupings
+				else:
+					props = self.checkLoadProps(props)
+					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],**props)
+					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					
+		# if deleteExcelFiles:
+		# 	for v in excelFiles.values():
+		# 		if "excelFile" in v:
+		# 			v["excelFile"].close()
+		# 	del excelFiles 
+		# 	for v in ioAndSheets.values():
+		# 		if "io" in v:
+		# 			v["io"].close()
+		# 	del ioAndSheets
+
+		return funcProps
+
 
 	def addDataFrame(self,dataFrame, dataID = None, fileName = '', 
 							cleanObjectColumns = False):
@@ -500,7 +586,7 @@ class DataCollection(object):
 		""
 		if loadFileProps is None:
 			return {"sep":"\t"}
-		if loadFileProps["sep"] in ["tab","space"]:
+		if "sep" in loadFileProps and loadFileProps["sep"] in ["tab","space"]:
 			loadFileProps["sep"] = sepConverter[loadFileProps["sep"]]
 		if "na_values" in loadFileProps and loadFileProps["na_values"] == "None":
 			loadFileProps["na_values"] = None
