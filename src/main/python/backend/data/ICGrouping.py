@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from turtle import color
 import pandas as pd
 from matplotlib.colors import Normalize, to_hex
 from matplotlib import cm 
@@ -54,9 +55,9 @@ class ICGrouping(object):
         colors = dict([(groupName,to_hex(cmapMapper.to_rgba(x))) for x,groupName in enumerate(groupedItems.keys())])
         return colors
 
-    def addGrouping(self,groupingName,groupedItems, setToCurrent = True, colorMap = None):
+    def addGrouping(self,groupingName,groupedItems, setToCurrent = True, colorMap = None,overwrite=True):
         "Add grouping to collection"
-        if groupingName in self.groups:
+        if groupingName in self.groups and overwrite:
             self.deleteGrouping(groupingName)
         
         self.groups[groupingName] = groupedItems
@@ -64,6 +65,15 @@ class ICGrouping(object):
 
         if setToCurrent:
             self.currentGrouping = groupingName
+
+
+    def addGroupingsFromDict(self,groupings, colorMaps = {}):
+        ""
+        if not hasattr(groupings,"items"):
+            return
+        for groupingName, groupedItems in groupings.items():
+            self.addGrouping(groupingName,groupedItems, setToCurrent=True, colorMap=None if groupingName not in colorMaps else colorMaps[groupingName])
+
     
     def checkGroupsForExistingColumnNames(self,columnNames):
         "Removes groupings if columnNames are removed from the data"

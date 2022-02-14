@@ -58,6 +58,20 @@ funcPropControl = {
             "completedRequest":
                             addDataAndRefresh      
         },
+    "data::readExcelFile":
+        {
+            "threadRequest":{"obj":"data","fn":"readExcelFile","requiredKwargs":["pathToFiles"]},
+            "completedRequest":
+                [{"obj":"self","fn":"updateExcelFileInDialog","objKey":"data","objName":"mainFrames","requiredKwargs":["fileSheetNames"]}]      
+        },
+    "data::readExcelSheetsFromFile":
+        {
+            "threadRequest":{"obj":"data","fn":"readExcelSheetFromFile","requiredKwargs":["ioAndSheets","props","instantClueImport"]},
+            "completedRequest":
+                addDataAndRefresh   + [{"obj":"grouping","fn":"addGroupingsFromDict","requiredKwargs":["groupings"]}, updateGrouping]
+        },
+
+        
     "data::addDataFrameFromClipboard":
         {
             "threadRequest":{"obj":"data","fn":"readDataFromClipboard","requiredKwargs":[]},

@@ -250,7 +250,7 @@ class DataHandleFrame(QFrame):
     def openDialog(self, selectedFiles = []):
         ""
         try:
-            if any(f.endswith(".txt") for f in selectedFiles):
+            if any(f.endswith(".txt") | f.endswith(".csv") | f.endswith(".tsv") for f in selectedFiles):
                 d = PlainTextImporter(mainController = self.mC) 
                 d.exec_()
                 if d.result():
@@ -262,15 +262,26 @@ class DataHandleFrame(QFrame):
                     self.addTxtFiles(txtFiles,d.getSettings())
 
             if any(f.endswith(".xlsx") for f in selectedFiles):
-                d = ExcelImporter(mainController = self.mC) 
-                d.exec_()
-                if d.result():
-                    #set replace object
-                    xlsxFiles = [f for f in selectedFiles if f.endswith(".xlsx")]
-                    #load files on thread
-                    self.addExcelFiles(xlsxFiles,d.getSettings())
+               
+                self.excelImporter = ExcelImporter(mainController = self.mC, selectedFiles = selectedFiles) 
+                
+                self.excelImporter.exec_()
+                del self.excelImporter
+                # if d.result():
+                #     #set replace object
+                #     xlsxFiles = [f for f in selectedFiles if f.endswith(".xlsx")]
+                #     #load files on thread
+                #     self.addExcelFiles(xlsxFiles,d.getSettings())
         except Exception as e:
             print(e)
+
+
+    def updateExcelFileInDialog(self,fileSheetNames):
+        ""
+        if hasattr(self,"excelImporter"):
+            self.excelImporter.setIsLoading(False)
+            #self.excelImporter.setExcelFiles(excelFiles)
+            self.excelImporter.setSheetsToSelectTable(fileSheetNames["df"])
 
     def openFindReplaceDialog(self,e=None):
         ""
@@ -425,6 +436,7 @@ class DataHandleFrame(QFrame):
     
     def updateGroupingInTreeView(self):
         #update grouping
+        
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 
     def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None,sessionIsBeeingLoaded=False):
