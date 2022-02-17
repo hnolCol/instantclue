@@ -1335,6 +1335,87 @@ DEFAULT_PARAMETER = [
     "description"   :   "Width of columns in pixel. If the numer of columns times the width is bigger than the available space the column width will be adjusted.",
     },
     {
+    "name"          :   "hclust.color.axis.border.left",
+    "value"         :   25,
+    "dtype"         :   int,
+    "range"         :   [5,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Border on the left side of the categorical color map in pixels.",
+    },
+    {
+    "name"          :   "hclust.color.column.label.position",
+    "value"         :   "top",
+    "dtype"         :   str,
+    "range"         :   ["top","bottom"],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Position of the labeling of the color column map on the x-axis.",
+    },
+    {
+    "name"          :   "hclust.color.column.show",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled column name of the color column is added at the desired position.",
+    },
+    {
+    "name"          :   "hclust.color.sort.unique.values",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, detected unique categories will be sorted before colors are assigned.",
+    },
+    {
+    "name"          :   "hclust.treat.integers.as.categories",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, columns of Integer type will be considered as categories (color columns) E.g. each value gets a unique color assigned.",
+    },
+    {
+    "name"          :   "hclust.color.combine.categories",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled identical categorical values of different categorical columns such as '+' will get the same color in the plot.",
+    },
+    {
+    "name"          :   "hclust.color.combine.numeric.values",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled and multiple numeric columns are used for color encoding, one color scale is calculated. If disabled, each column is assigned a individual color to.",
+    },
+    {
+    "name"          :   "hclust.color.column.categories.colormap",
+    "value"         :   "Paired",
+    "dtype"         :   str,
+    "range"         :   colorParameterRange,
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Color map to be used to encode categorical data.",
+    },
+    {
+    "name"          :   "hclust.color.column.numeric.colormap",
+    "value"         :   "Blues",
+    "dtype"         :   str,
+    "range"         :   colorParameterRange,
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Color map to be used to encode numerical data.",
+    }, 
+    {
     "name"          :   "colorMapLimits",
     "value"         :   "raw values",
     "dtype"         :   str,
@@ -1902,7 +1983,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [3,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Number of bins to calculate for a histogram."
     }, 
     {
@@ -1911,7 +1992,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Enable/Disable cumulative histogram."
     }, 
     {
@@ -1920,7 +2001,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Enable/Disable density calculation insteat of frequency."
     }, 
     {
@@ -1929,7 +2010,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["bar", "barstacked", "step", "stepfilled"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Enable/Disable cumulative histogram."
     }, 
     {
@@ -1938,7 +2019,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Enable/Disable log transformation of values before histograms are calculated."
     }, 
     {
@@ -1947,7 +2028,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [0.01,np.inf],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Linewidth if histtype == step."
     }, 
     {
@@ -1956,7 +2037,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Histogram",
+    "parentType"    :   "Histogram (Density)",
     "description"   :   "Enable/Disable sorting of categories on grouping."
     }, 
     {

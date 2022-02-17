@@ -402,7 +402,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         }
     
     
-    groupedPlotData["metric"] = groupedPlotData.index    
+    groupedPlotData["metric"] = groupedPlotData.index .map(lambda idx: '_'.join([str(x) for x in idx]))   
 
     return plotData, axisPostions, boxPositions, tickPositions, \
             tickLabels, colorGroups, faceColors, colorCategoricalColumn, widthBox, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData

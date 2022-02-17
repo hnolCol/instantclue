@@ -876,7 +876,11 @@ class QuickSelectModel(QAbstractTableModel):
 
     def readFavoriteSelection(self, selectionData):
         ""
+        
         if not self._inputLabels.empty:
+            if isinstance(selectionData,dict):
+                selectionData = pd.DataFrame().from_dict(selectionData)
+
             checkedData = selectionData["checkedValues"]
             caseSensitive = self.parent().mC.config.getParam("quick.select.case.sensitive")
             if caseSensitive: #make each string lowercase and match then
