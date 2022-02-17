@@ -1044,7 +1044,7 @@ class DataCollection(object):
 		
 		return resultDict
 
-	def getUniqueValues(self, dataID, categoricalColumn, forceListOutput = False,*args,**kwargs):
+	def getUniqueValues(self, dataID, categoricalColumn, forceListOutput = False, *args,**kwargs):
 		'''
 		Return unique values of a categorical column. If multiple columns are
 		provided in form of a list. It returns a list of pandas series having all

@@ -14,11 +14,11 @@ Please find the executables for Windows and Mac in the [Releases](https://github
 
 ### Tutorials
 
-A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly. We are working on video tutorials which will be available here https://www.instantclue.uni-koeln.de.
+A written tutorial is available at the [Wiki Page](https://github.com/hnolCol/instantclue/wiki). Please let us now in the discussions for urgent topics to cover in the tutorial. We are now focusing on providing much better introduction material to get you started swiftly. We are working on video tutorials which will be available here https://www.instantclue.de.
 
 ### Share Web Application 
 
-We are establishing a web application to share app graphs with collaborators. The website is available at [https://app.instantclue.de](https://app.instantclue.de)
+We are establishing a web application to share app graphs with collaborators. The website is available at [https://app.instantclue.de](https://app.instantclue.de) and will be avaiable for everyone soon.
 
 ### Status
 

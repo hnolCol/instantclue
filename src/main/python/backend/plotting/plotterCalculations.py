@@ -1626,7 +1626,7 @@ class PlotterBrain(object):
         
         #display grouping setting
         displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
-        
+        distanceBetweenClusterMapAndColor = self.sourceData.parent.config.getParam("hclust.color.axis.border.left")
         colorsByColumnNames = OrderedDict()
         colorsByColumnNamesFiltered = OrderedDict()
 
@@ -1692,7 +1692,8 @@ class PlotterBrain(object):
                     rowOn = rowMetric != "None" and rowMethod != "None", 
                     columnOn =  columnMethod != "None" and columnMetric != "None",
                     numberOfGroups=len(colorsByColumnNamesFiltered),
-                    displayGrouping = displayGrouping 
+                    displayGrouping = displayGrouping,
+                    distanceBetweenClusterMapAndColor = distanceBetweenClusterMapAndColor
                     )
             
 
@@ -1792,7 +1793,7 @@ class PlotterBrain(object):
         max_dependent_coord = max(map(max, dependent_coord))
 
         if rotate:
-            lines = LineCollection([list(zip(x, y))
+            lines = dict(segments = [list(zip(x, y))
                                             for x, y in zip(dependent_coord,
                                             independent_coord)],
                                             **line_kwargs)
@@ -1803,7 +1804,7 @@ class PlotterBrain(object):
             #ax.invert_xaxis()
 
         else:
-            lines = LineCollection([list(zip(x, y))
+            lines = dict(segments = [list(zip(x, y))
                                             for x, y in zip(independent_coord,
                                             dependent_coord)],
                                             **line_kwargs)	
@@ -1827,7 +1828,7 @@ class PlotterBrain(object):
         clusterColors = self.sourceData.colorManager.getNColorsByCurrentColorMap(uniqueCluster.size,"hclustClusterColorMap")
         clusterColorMap = dict([(k,v) for k,v in zip(ytickLabels,clusterColors)])
         #clusterColors = sns.color_palette(self.clusterColorMap,uniqueCluster.size)
-        rectangles = [Rectangle(
+        rectangles = [dict(
                         xy = (0,n if n == 0 else sum(countsClust[:n] * 10)),
                         width = rowMaxD, 
                         height = yLimit * 10,
@@ -1842,7 +1843,15 @@ class PlotterBrain(object):
         '''
         return sch.fcluster(linkage,maxD,'distance')	
 
-    def getClusterAxes(self, numericColumns, figureSize, corrMatrix=False, rowOn = True,columnOn = True ,numberOfGroups = 0, displayGrouping = False):
+    def getClusterAxes(self, 
+                    numericColumns, 
+                    figureSize, 
+                    corrMatrix=False, 
+                    rowOn = True,
+                    columnOn = True,
+                    numberOfGroups = 0, 
+                    displayGrouping = False,
+                    distanceBetweenClusterMapAndColor = 25):
         ""
         x0,y0 = 0.04,0.15
         x1,y1 = 0.95,0.95
@@ -1871,6 +1880,7 @@ class PlotterBrain(object):
             widthInPixel = len(numericColumns) * pixelPerColumn
             clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
             
+        borderForColorMap = distanceBetweenClusterMapAndColor/pixelFigureWidth
 
         if corrMatrix:
             
@@ -1940,7 +1950,7 @@ class PlotterBrain(object):
                                     clusterMapWidth,
                                     heightMain]
         
-        axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+clusterMapWidth/2/len(numericColumns), #add margin
+        axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+borderForColorMap, #add margin
                                     y0,
                                     width-clusterMapWidth-rowDendroWidth if clusterMapWidth < 0.75 else 0.1,
                                     heightMain]		
@@ -3370,36 +3380,92 @@ class PlotterBrain(object):
             colorColumn = self.colorColumn
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
+
         colorColumnNames = colorColumn.values
+        treatIntegersAsCategories = self.sourceData.parent.config.getParam("hclust.treat.integers.as.categories")
 
-        rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
-        #unique values. add nan value first -> by default light grey
-        uniqueValuesList = self.sourceData.getUniqueValues(dataID,colorColumn.values.tolist(), forceListOutput=True)
-        #aüüend replaceObjectNan - should be first item!
-        uniqueValuesTotal = pd.Series([self.sourceData.replaceObjectNan]).append(
-                            pd.Series(np.concatenate(uniqueValuesList)) , ignore_index=True).unique()
+        if colorColumnType == "Categories" or (colorColumnType == "Integer" and treatIntegersAsCategories):
+            combineCategoricalValues = self.sourceData.parent.config.getParam("hclust.color.combine.categories")
+            sortUniqueValues = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values")
+            colorMap = self.sourceData.parent.config.getParam("hclust.color.column.categories.colormap")
+            
+            rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
+            if not combineCategoricalValues  and colorColumn.values.size > 1:
+                for columnName in colorColumn.values:
+                    rawData[columnName] = rawData[columnName].astype(str) + "({})".format(columnName)
+                uniqueValuesList = [rawData[columName].unique() for columName in colorColumn.values]
+            else:
+                uniqueValuesList = self.sourceData.getUniqueValues(dataID,colorColumn.values.tolist(), forceListOutput=True)
+
+            #unique values. add nan value first -> by default light grey
+            # #append replaceObjectNan - should be first item!
+            #we need pandas unique to preserve ordering
+            if sortUniqueValues:
+                uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList)).sort_values()
+            else:
+                uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList))
+            
+            uniqueValuesTotal = pd.Series([self.sourceData.replaceObjectNan]).append(
+                                uniqueValuesAsSeries, ignore_index=True).unique()
+            factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
+            #map color data to data
+            colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
+            for columnName in colorColumn.values:
+                colorData.loc[rawData.index,columnName] = rawData.loc[rawData.index,columnName].map(factorMapper)
+
+            colorValues = sns.color_palette(colorMap,len(factorMapper)).as_hex()
+            colorValues[0] = self.sourceData.colorManager.nanColor
         
-        factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
-       # print(factorMapper)
-        #ensure -1 is first in color chooser
-       # factorMapper = OrderedDict(sorted(factorMapper.items(), key=lambda x:x[1]))
+            cmap = ListedColormap(colorValues)
         
+            colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
+            colorGroupData["color"] = colorValues
+            colorGroupData["group"] = list(factorMapper.keys())
+            colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
 
-        colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
+        else:
+            colorMap = self.sourceData.parent.config.getParam("hclust.color.column.numeric.colormap")
+            combinedScale = self.sourceData.parent.config.getParam("hclust.color.combine.numeric.values")
 
-        for columnName in colorColumn.values:
-            colorData.loc[rawData.index,columnName] = rawData.loc[rawData.index,columnName].map(factorMapper)
+            colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
+            
+            minV, q25, median, q75, maxV = np.nanquantile(rawData.values,q = [0,0.25,0.5,0.75,1])
+            cmap = self.sourceData.parent.colorManager.get_max_colors_from_pallete(colorMap)
+            cmap.set_bad(self.sourceData.parent.config.getParam("nanColor")) 
+            colorMeshLimits = {"vmin":minV,"vmax":maxV}
+            
 
+            colorData =  pd.DataFrame(rawData.values,
+                                    columns=["color"],
+                                    index=rawData.index)
 
-        colorValues = sns.color_palette("Paired",len(factorMapper)).as_hex()
-        colorValues[0] = self.sourceData.colorManager.nanColor
-       
-        cmap = ListedColormap(colorValues)
-      
-        colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
-        colorGroupData["color"] = colorValues
-        colorGroupData["group"] = list(factorMapper.keys())
-        colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
+            colorMeshKwargs = {"colorMeshLimits":colorMeshLimits,"cmap":cmap,"data":colorData}
+
+            
+            
+            #save colors for legend
+            #scaledColorVs = [to_hex(cmap( (x - minV) / (maxV - minV))) for x in [maxV,q75,median,q25,minV]]
+            legendColors, _ = self.sourceData.colorManager.matchColorsToValues(arr = [maxV,q75,median,q25,minV], colorMapName = colorMap, vmin = minV, vmax = maxV, asHex=True)
+            colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
+            
+            colorGroupData = pd.DataFrame(columns=["color","group"])
+            groupNames = ["Max ({})".format(getReadableNumber(maxV)),
+                        "75% Quantile ({})".format(getReadableNumber(q75)),
+                        "Median ({})".format(getReadableNumber(median)),
+                        "25% Quantile ({})".format(getReadableNumber(q25)),
+                        "Min ({})".format(getReadableNumber(minV)),
+                        "NaN"]
+            colorGroupData["color"] = colorLimitValues
+            colorGroupData["group"] = groupNames
+
+        #     def getNumericColorMappingGroupNames(self, maxV,q75,median,q25,minV):
+        # ""
+        # groupNames = ["Max ({})".format(getReadableNumber(maxV)),
+        #                     "75% Quantile ({})".format(getReadableNumber(q75)),
+        #                     "Median ({})".format(getReadableNumber(median)),
+        #                     "25% Quantile ({})".format(getReadableNumber(q25)),
+        #                     "Min ({})".format(getReadableNumber(minV))]
+        # return groupNames
 
         return {"colorData":colorData,"colorGroupData":colorGroupData,"cmap":cmap,"title":mergeListToString(colorColumnNames,"\n"),"isEditable":False}
         

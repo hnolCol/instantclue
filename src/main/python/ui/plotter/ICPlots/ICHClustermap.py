@@ -1,4 +1,7 @@
  
+from asyncio import FastChildWatcher
+
+from matplotlib.collections import LineCollection
 from .ICChart import ICChart
 import numpy as np
 from backend.color.data import colorParameterRange
@@ -62,7 +65,10 @@ class ICClustermap(ICChart):
         self.updateBackgrounds()
 
     def hasTooltip(self):
-        return self.toolTipsActive
+        if hasattr(self,"toolTipsActve"):
+            return self.toolTipsActive
+        else:
+            return False
 
     def removeTooltip(self):
         ""
@@ -85,7 +91,9 @@ class ICClustermap(ICChart):
     def addDendrogram(self,ax,lineCollection):
         ""
         if lineCollection is not None:
-            ax.add_collection(lineCollection)
+            if isinstance(lineCollection,dict):
+                lc = LineCollection(**lineCollection)
+                ax.add_collection(lc)
 
     def annotateDataByIndex(self,dataIndex,annotationColumn):
         ""
@@ -170,7 +178,10 @@ class ICClustermap(ICChart):
         self.axisDict["axRowDendro"].tick_params(which='minor', length=0)
         if "tickLabels" in self.data and "rowDendrogram" in self.data["tickLabels"]:
             self.addTicksToRowDendro()
-            for rect in self.data["clusterRectangles"]:
+            self.clusterRectangles = []
+            for rectProps in self.data["clusterRectangles"]:
+                rect = patches.Rectangle(**rectProps)
+                self.clusterRectangles.append(rect)
                 self.axisDict["axRowDendro"].add_patch(rect)
 
     def addTicksToGroupingAxis(self):
@@ -244,8 +255,9 @@ class ICClustermap(ICChart):
         
     def setClusterRectanglesVisibilty(self, visible = False):
         "Set cluster rectangles invisible. Mainly used to update the clusters"
-        for rect in self.data["clusterRectangles"]:
-            rect.set_visible(visible)
+        if hasattr(self,"clusterRectangles") and len(self.clusterRectangles) > 0:
+            for rect in self.clusterRectangles:
+                rect.set_visible(visible)
 
     def addClusterDistanceLine(self):
         ""
@@ -293,7 +305,6 @@ class ICClustermap(ICChart):
     
         try:
             self.adjustColorMapLimits()
-            
             self.axisDict = self.initAbsAxes(data["absoluteAxisPositions"])
             #add row dendro
             if "axRowDendro" in self.axisDict:
@@ -330,7 +341,6 @@ class ICClustermap(ICChart):
                 self.setTicksOff(self.axisDict["axRowDendro"])
             else:  
                 self.setYTicks(self.axisDict["axLabelColor"],[],[])
-            
             #handle ticks
             if "axRowDendro" in self.axisDict:
                 self.setXTicks(self.axisDict["axRowDendro"],[],[])
@@ -362,7 +372,6 @@ class ICClustermap(ICChart):
             else:
                 self.setXTicks(self.axisDict["axClusterMap"], [], [])
             self.setYTicks(self.axisDict["axClusterMap"],[],[])
-            
             #add colorbar
             self.addColorMap(mappable=self.colorMesh,cax=self.axisDict["axColormap"], label="")
             #set title
@@ -699,10 +708,11 @@ class ICClustermap(ICChart):
         self.addColorMesh(self.axisDict["axLabelColor"],sizeData.loc[self.data["plotData"].index].values,paramName="hclustSizeColorMap")
         self.onClusterYLimChange()
 
-    def updateHclustColor(self,colorData, colorGroupData, cmap=None, title="",colorMaPParamName = "hclustLabelColorMap"):
+    def updateHclustColor(self,colorData, colorGroupData, cmap=None, title="",colorMaPParamName = "hclustLabelColorMap", colorMeshLimits=None):
         ""
         #print(colorData.loc[self.data["plotData"].index].values)
         colorColumnNames = colorData.columns.values
+        #resort color data by index (as identified by clustering)
         colorData = colorData.loc[self.data["plotData"].index].astype(np.float64).values
         self.resetColorGroupElements()
         self.colorLabelMesh = self.addColorMesh(
@@ -711,7 +721,7 @@ class ICClustermap(ICChart):
                         cmap= cmap,
                         paramName=colorMaPParamName,
                         clearAxis = False,
-                        colorMeshLimits = (0,np.nanmax(colorData))
+                        colorMeshLimits = (0,np.nanmax(colorData) if colorMeshLimits is None else colorMeshLimits)
                         )
         self.numOfColorColumns = colorData.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
@@ -732,21 +742,32 @@ class ICClustermap(ICChart):
         self.labeColumnNames = labelColumnNames
         self.axisDict["axLabelColor"].set_xlim(self.labelColumnLimits)
         self.axisDict["axLabelColor"].set_axis_off()
-
+        labelPosition = self.getParam("hclust.color.column.label.position")
+        showLabel = self.getParam("hclust.color.column.show")
         if addRectangleAndLabels:
             # get 0.5% offset
             self.rectangleAndLabels = []
-            yOffset = self.axisDict["axLabelColor"].get_ylim()[1] * 0.0075
-            
-            for n, labelColumnName in enumerate(labelColumnNames):
-                t = self.axisDict["axLabelColor"].text(
-                            x = 0.5+n,
-                            y = dataShape[0] + yOffset, 
-                            s = labelColumnName, 
-                            rotation=90, 
-                            ha = "center",
-                            va = "bottom", 
-                            fontproperties = self.getStdFontProps())
+            if showLabel:
+                yOffset = self.axisDict["axLabelColor"].get_ylim()[1] * 0.0075
+                for n, labelColumnName in enumerate(labelColumnNames):
+                    if labelPosition == "top":
+                        t = self.axisDict["axLabelColor"].text(
+                                    x = 0.5+n,
+                                    y = dataShape[0] + yOffset, 
+                                    s = labelColumnName, 
+                                    rotation=90, 
+                                    ha = "center",
+                                    va = "bottom", 
+                                    fontproperties = self.getStdFontProps())
+                    else:
+                        t = self.axisDict["axLabelColor"].text(
+                                    x = 0.5+n,
+                                    y = 0-yOffset, 
+                                    s = labelColumnName, 
+                                    rotation=90, 
+                                    ha = "center",
+                                    va = "top", 
+                                    fontproperties = self.getStdFontProps())
                 self.rectangleAndLabels.append(t)
             for rN in range(dataShape[1]):
                 p = patches.Rectangle((rN,0),width=1,height=dataShape[0], edgecolor = "black", linewidth = 0.6, fill=False)
