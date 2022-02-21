@@ -251,11 +251,11 @@ class MatplotlibFigure(QWidget):
         if exists:
             graph.updateHclustSize(sizeData)
 
-    def updateHclustColor(self, colorData, colorGroupData, cmap = None, title=""):
+    def updateHclustColor(self, colorData, colorGroupData, **kwargs):
         ""
         exists, graph = self.mC.getGraph()
         if exists:
-            graph.updateHclustColor(colorData,colorGroupData,cmap,title)
+            graph.updateHclustColor(colorData,colorGroupData, **kwargs)
 
     def updateDataInPlotter(self):
         ""

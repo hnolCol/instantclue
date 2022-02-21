@@ -1371,6 +1371,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, detected unique categories will be sorted before colors are assigned.",
     },
     {
+    "name"          :   "hclust.color.sort.unique.values.ascending",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "Defines the sorting for color categorical values.",
+    },
+    {
     "name"          :   "hclust.treat.integers.as.categories",
     "value"         :   True,
     "dtype"         :   bool,

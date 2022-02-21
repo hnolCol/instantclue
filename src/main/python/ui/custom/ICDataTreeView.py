@@ -2387,6 +2387,9 @@ class DataTreeViewTable(QTableView):
         elif "requireMultipleColumns" in kwargs:
             dataID = self.mC.mainFrames["data"].getDataID()
             categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
+            if len(categoricalColumns) == 0:
+                self.mC.sendToWarningDialog(infoText="This method requires a categorical column.")
+                return
             selectedColumns = self.mC.askForItemSelection(items=categoricalColumns,title = "Please select" if "title" not in kwargs else kwargs["title"])
             if selectedColumns is not None:
                 fnKwargs = {kwargs["requireMultipleColumns"]:selectedColumns}
