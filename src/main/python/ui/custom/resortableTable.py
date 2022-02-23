@@ -312,6 +312,8 @@ class ResortTableModel(QAbstractTableModel):
             return
         else:
             selectedRows = self.hiddenIndex 
+            if len(selectedRows) == 0:
+                return
             firstRow = selectedRows[0]
             
             boolIdx = self._dragLabels.index.isin(self.draggedIndices.values) == False

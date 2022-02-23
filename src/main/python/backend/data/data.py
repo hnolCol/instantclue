@@ -865,13 +865,28 @@ class DataCollection(object):
 		exporter.export()
 		return getMessageProps("Saved ..","Excel file saved.")
 
-	def exportHClustToExcel(self,dataID,pathToExcel,clusteredData,colorArray,totalRows,clusterLabels,clusterColors,quickSelectData,hclustParams,groupings=None):
+	def exportHClustToExcel(self,
+							dataID,
+							pathToExcel,
+							clusteredData,
+							colorArray,
+							totalRows,
+							clusterLabels,
+							clusterColors,
+							quickSelectData,
+							hclustParams,
+							groupings=None,
+							colorData = None,
+							colorDataArray = None,
+							colorColumnNames = []):
 		""
-
+		print(colorDataArray)
+		print("H?")
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
 		clusterColumns = clusteredData.columns.values.tolist() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]
-		columnHeaders = ["Cluster ID"] + clusterColumns + extraDataColumns
+		
+		columnHeaders = ["Cluster ID"] + clusterColumns + colorColumnNames + extraDataColumns
 		groupingDetails = dict()
 		rowIdx = clusteredData.index
 		extraData = self.getDataByColumnNames(dataID,extraDataColumns,rowIdx=rowIdx)["fnKwargs"]["data"]
@@ -884,7 +899,7 @@ class DataCollection(object):
 			groupingDetails["groupings"] = self.parent.grouping.getGroupingsByList(groupings)
 			groupingDetails["colors"] = self.parent.grouping.getGroupColorsByGroupingList(groupings)
 	
-		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors,hclustParams,groupingDetails)
+		exporter = ICHClustExporter(pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors,hclustParams,groupingDetails,colorData,colorDataArray,colorColumnNames)
 		exporter.export()
 		
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))

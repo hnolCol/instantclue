@@ -633,7 +633,14 @@ funcPropControl = {
                 sendMessageProps]
                     
         },
-    
+    "normalizer::normalizeGroupQuantile":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeGroupQuantile","requiredKwargs":["dataID","normKey"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
     "normalizer::adjustMedianBySubset":
         {
             "threadRequest":{"obj":"normalizer","fn":"normalizeMedianBySubset","requiredKwargs":["dataID","columnNames","subsetColumn"]},

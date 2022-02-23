@@ -3380,7 +3380,7 @@ class PlotterBrain(object):
             colorColumn = self.colorColumn
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
-
+        colorMeshLimits = None
         colorColumnNames = colorColumn.values
         treatIntegersAsCategories = self.sourceData.parent.config.getParam("hclust.treat.integers.as.categories")
         rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
@@ -3391,7 +3391,6 @@ class PlotterBrain(object):
             ascendingOrder = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values.ascending")
             colorMap = self.sourceData.parent.config.getParam("hclust.color.column.categories.colormap")
             
-           
             if not combineCategoricalValues  and colorColumn.values.size > 1:
                 for columnName in colorColumn.values:
                     rawData[columnName] = rawData[columnName].astype(str) + "({})".format(columnName)

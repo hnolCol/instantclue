@@ -458,10 +458,29 @@ class ICClustermap(ICChart):
         else:
             return None, None 
 
-    def getColorArray(self):
-        ""
-        return self.colorMesh.get_facecolors()
 
+    def getColorDataArray(self):
+        ""
+        if hasattr(self,"colorLabelMesh") and hasattr(self.colorLabelMesh,"get_facecolors"):
+            return self.colorLabelMesh.get_facecolors()
+
+    def getColorData(self):
+        ""
+        print(self.colorData)
+        if hasattr(self,"colorData"):
+            return self.colorData
+
+    def getColorColumnNames(self):
+        ""
+        if hasattr(self,"colorColumnNames"):
+            return self.colorColumnNames.tolist() 
+        else:
+            return []
+	
+    def getHeatmapColorArray(self):
+        "Return facecolors"
+        return self.colorMesh.get_facecolors()
+   
     def getClusteredData(self, reverseRows = True):
         ""
        
@@ -737,31 +756,33 @@ class ICClustermap(ICChart):
 
     def updateHclustColor(self,colorData, colorGroupData, cmap=None, title="",colorMaPParamName = "hclustLabelColorMap", colorMeshLimits=None):
         ""
-        print(colorData,colorMeshLimits)
+        #print(colorData,colorMeshLimits)
         #print(colorData.loc[self.data["plotData"].index].values)
         colorColumnNames = colorData.columns.values
-       
+        colorFloats = colorData.loc[self.data["plotData"].index].astype(np.float64)# prevent integer error
         #resort color data by index (as identified by clustering)
-        colorData = colorData.loc[self.data["plotData"].index].astype(np.float64).values # prevent integer error
+        colorValues = colorFloats.values 
         
         self.resetColorGroupElements()
        
         self.colorLabelMesh = self.addColorMesh(
                         self.axisDict["axLabelColor"],
-                        colorData,
+                        colorValues,
                         cmap= cmap,
                         paramName=colorMaPParamName,
                         clearAxis = False,
-                        colorMeshLimits = (0,np.nanmax(colorData)) if colorMeshLimits is None else colorMeshLimits
+                        colorMeshLimits = (0,np.nanmax(colorValues)) if colorMeshLimits is None else colorMeshLimits
                         )
         
-        self.numOfColorColumns = colorData.shape[1]
+        self.numOfColorColumns = colorValues.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
-        self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
-        
+        self.updateXlimForLabelColor(colorValues.shape, colorColumnNames)
         self.updateQuickSelectItemsCoords()
-        
         self.onClusterYLimChange()
+
+        self.colorData = colorFloats
+        self.colorColumnNames = colorColumnNames
+        
         
         
     def updateXlimForLabelColor(self,dataShape, labelColumnNames, addRectangleAndLabels = True):
@@ -949,6 +970,9 @@ class ICClustermap(ICChart):
         if hasattr(self,"colorLabelMesh"):
             self.colorLabelMesh.remove() 
             del self.colorLabelMesh
+        if hasattr(self,"colorData"):
+            del  self.colorData
+        self.colorColumnNames= []
         self.numOfColorColumns = 0
         if hasattr(self , "rectangleAndLabels"):
             for n in range(len(self.rectangleAndLabels)):

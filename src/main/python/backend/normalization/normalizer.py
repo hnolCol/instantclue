@@ -18,7 +18,8 @@ funcKeys = {
         "loessRowNorm" : "fitCorrectLoess",
         "loesColNorm" : "globalLoessCorrection",
         "globalMedian" : "globalMedian",
-        "normalizeMedianBySubset" : "normalizeMedianBySubset"
+        "normalizeMedianBySubset" : "normalizeMedianBySubset",
+        "DivideByColSum" : "divideByColumnSum"
          }
 
 
@@ -75,6 +76,19 @@ class Normalizer(object):
                             )
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
+
+    def divideByColumnSum(self,dataID,columnNames,axis=0):
+        ""
+        transformedColumnNames = ["DivSum:{}".format(col) for col in columnNames.values]
+        X = self.sourceData.dfs[dataID][columnNames].values
+        transformedX = X/np.nansum(X,axis=0,keepdims=True)
+        transformedValues = pd.DataFrame(
+                            transformedX,
+                            index= self.sourceData.dfs[dataID].index,
+                            columns = transformedColumnNames
+                            )
+        return self._addToSourceData(dataID,columnNames,transformedValues)
+
     def minMaxNorm(self,dataID,columnNames,axis=1):
         ""
         transformedColumnNames = ["0-1({}):{}".format("row" if axis else "column",col) for col in columnNames.values]
@@ -106,6 +120,35 @@ class Normalizer(object):
             distToGroupMedian = columnMedians.values - groupMedian
             normColumnNames = ["groupColMedian:{}".format(colName) for colName in groupColumns]
             transformedValues[normColumnNames] = X[groupColumns].subtract(distToGroupMedian, axis="columns")
+
+        return self._addToSourceData(dataID,columnNames,transformedValues)
+
+    def normalizeGroupQuantile(self,dataID,**kwargs):
+        ""
+        if not self.sourceData.parent.grouping.groupingExists():
+            return getMessageProps("No Grouping","No Grouping set.")
+        groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
+        grouping = self.sourceData.parent.grouping.getCurrentGrouping() 
+        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
+
+        X = self.sourceData.dfs[dataID][columnNames]
+        transformedValues = pd.DataFrame(index = X.index, columns = ["groupColQuantile:{}".format(colName) for colName in columnNames])
+        for groupName, groupColumns in grouping.items():
+            columnMedians = X[groupColumns].median()
+            q25,q75 = np.nanquantile(X[groupColumns].values,q=[0.25,0.75])
+            groupIQR = q75-q25
+            groupMedian = np.nanmedian(columnMedians.values)
+
+            scaledGroupValues = X[groupColumns].values / groupIQR
+            distToGroupMedian = columnMedians.values - groupMedian
+            
+                        # scaledGroupValues = robust_scale(X[groupColumns].values,
+            #             axis=0, 
+            #             with_centering = self.sourceData.parent.config.getParam("quantile.norm.centering"),
+            #             with_scaling = self.sourceData.parent.config.getParam("quantile.norm.scaling"))
+            print(scaledGroupValues)
+            normColumnNames = ["groupColQuantile:{}".format(colName) for colName in groupColumns]
+            transformedValues[normColumnNames] = np.subtract(scaledGroupValues,distToGroupMedian)
 
         return self._addToSourceData(dataID,columnNames,transformedValues)
 

@@ -455,7 +455,7 @@ class PlotOptionFrame(QWidget):
     def exportHClustToExcel(self,event=None):
         ""
         if self.mC.getPlotType() != "hclust":
-            w = WarningMessage(infoText="Perform hierarchical clustering first.")
+            w = WarningMessage(infoText="No hierarchical clustering / heatmap detected.")
             w.exec_()
             return
 
@@ -465,9 +465,17 @@ class PlotOptionFrame(QWidget):
             if exists:
                 dataID = self.mC.getDataID()
 
-                colorArray = graph.getColorArray()
+                heatmapColorArray = graph.getHeatmapColorArray()
+                colorDataColorArray = graph.getColorDataArray()
+                print(colorDataColorArray)
+                print("ASD")
+                colorData = graph.getColorData()
+                print("===")
                 clusteredData = graph.getClusteredData()
                 quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
+                colorColumnNames = graph.getColorColumnNames()
+                print(colorData)
+                print(colorColumnNames)
                 hclustParams = [
 					("Software","Instant Clue"),
 					("Version",self.mC.version),
@@ -485,13 +493,16 @@ class PlotOptionFrame(QWidget):
                 kwargs = dict(dataID = dataID,
                                         pathToExcel = fileName,
                                         clusteredData = clusteredData,
-                                        colorArray = colorArray,
+                                        colorArray = heatmapColorArray,
                                         totalRows = clusteredData.index.size,
                                         clusterLabels = clusterLabels,
                                         clusterColors = clusterColors,
                                         quickSelectData = quickSelectData,
                                         hclustParams = hclustParams,
-                                        groupings = groupings
+                                        groupings = groupings,
+                                        colorData = colorData,
+                                        colorDataArray = colorDataColorArray,
+                                        colorColumnNames = colorColumnNames
                                         )
                 funcProps = {"key":fkey,"kwargs":kwargs}
                 #send to thread

@@ -734,6 +734,13 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "Quantile (25 - 75)","axis": 0}
     },
+        {
+        "subM":"Normalization (column)",
+        "name":"Divide by column sum",
+        "funcKey": "normalizer::normalizeData",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "DivideByColSum","axis": 0}
+    },
     {
         "subM":"Normalization (column)",
         "name":"Adjust Median",
@@ -757,6 +764,13 @@ menuBarItems = [
         "funcKey": "normalizer::normalizeGroupMedian",
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "normGroupColumnMedian"}
+    },
+    {
+        "subM":"Normalization (column)",
+        "name":"Adjust Group Quantiles",
+        "funcKey": "normalizer::normalizeGroupQuantile",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "normGroupColumnQuantile"}
     },
     {
         "subM":"Change data type to ..",

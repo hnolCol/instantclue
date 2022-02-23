@@ -1453,8 +1453,13 @@ class ICChart(QObject):
 		""
 		if self.isQuickSelectActive():
 			return self.mC.mainFrames["data"].qS.getDataIndexOfCurrentSelection()
-
-	def getColorArray(self):
+	def getColorColumnNames(self):
+		""
+		return []
+	def getColorDataArray(self):
+		"Hclust overload function"
+	
+	def getHeatmapColorArray(self):
 		"Hclust overload function"
         
 	def getClusterIDsByDataIndex(self):
