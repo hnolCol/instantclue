@@ -398,13 +398,18 @@ class PlotterBrain(object):
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         subplotBorders = dict(wspace=0.15, hspace = 0.0,bottom=0.15,right=0.95,top=0.95)
-        axisDict = getAxisPosition(2, maxCol = 1)
+        axisDict = OrderedDict([(0,[2,4,(1,3)]),(1,[2,4,(5,7)]),(2,[2,4,8])]) #getAxisPosition(3, maxCol = 1)
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
         groupSizes = groupbyCatColumns.size().sort_values(ascending=False).reset_index(name='counts')
+        totalCountData = []
+        for categoricalColumn in categoricalColumns:
+            for groupName, groupData in groupSizes.groupby(by=categoricalColumn,sort=False):
+                c = groupData["counts"].sum()
+                totalCountData.append((groupName,c))
+       
         if groupbyCatColumns.ngroups > 50:
             return getMessageProps("Error..","More than 50 unique categories found. This plot type is not appropiate for so many categories.")
-      
     
         colorGroups["group"] = categoricalColumns
         colorGroups["color"] = colors
@@ -435,7 +440,6 @@ class PlotterBrain(object):
         lines = {}
         hoverData = {}
         for idx in groupSizes.index:
-
             groupValues = groupSizes.loc[idx,categoricalColumns].values
             if len(categoricalColumns) > 1:
 
@@ -445,20 +449,23 @@ class PlotterBrain(object):
 
             vs = np.array([(idx, factors[categoricalColumns[n]][idx]) for n,x in enumerate(groupValues)])
             lines[idx] = {"xdata" :vs[:,0],"ydata" : vs[:,1]}
-            #lines.append(l)
+            
 
-        
-        
         return {"data":{
             "axisPositions":axisDict,
             "subplotBorders":subplotBorders,
             "rawCounts" : rawCounts,
             "tickColors" : tickColors,
-            "plotData" : {"bar" : 
+            "plotData" : {
+                    "bar-counts" : 
                             {"x":xCountValues,"height" : yCountValues},
-                          "lineplot": lines},
+                    "total-bar-count" : 
+                            {"width" : [x[1] for x in totalCountData], "y" : np.arange(len(totalCountData))},
+                    "lineplot": lines},
             "axisLimits" : {0:{"xLimit" : [-0.5,xLimitMax-0.5], "yLimit" : [0,maxCountValue+0.01*maxCountValue]},
-                            1:{"xLimit" : [-0.5,xLimitMax-0.5], "yLimit" : [-0.5,numUniqueValues]}},
+                            1:{"xLimit" : [-0.5,xLimitMax-0.5], "yLimit" : [-0.5,numUniqueValues]},
+                            2:{"xLimit" : None, "yLimit" : [-0.5,numUniqueValues]}
+                            },
             "tickPositions" : {1:{"y":yTicksPoints,"x":np.arange(xLimitMax)}},
             "tickLabels" : {1:{"y":uniqueValueList,"x": [""] * xLimitMax}},
             "barLabels" : yCountValues,

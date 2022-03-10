@@ -84,7 +84,10 @@ class ICCountplot(ICChart):
     def initBarplot(self):
         ""
 
-        self.rects = self.axisDict[0].bar(**self.data["plotData"]["bar"])
+        self.rects = self.axisDict[0].bar(**self.data["plotData"]["bar-counts"])
+        self.rects2 = self.axisDict[2].barh(**self.data["plotData"]["total-bar-count"])
+        
+        
 
     def initLineplot(self):
         ""
@@ -104,6 +107,7 @@ class ICCountplot(ICChart):
             self.initBarplot()
             self.addLabelsToBar(self.rects,self.axisDict[0])
             self.setXTicks(self.axisDict[0],[],[])
+            self.setYTicks( self.axisDict[2],[],[])
             if self.interactive:
                 self.addHoverBinding()
                 self.addHoverLine()
@@ -126,6 +130,7 @@ class ICCountplot(ICChart):
                     )
             self.axisDict[0].set_ylabel("Counts" if self.getParam("countTransform") == "none" else "Counts ({})".format(self.getParam("countTransform")))
             self.axisDict[1].set_xlabel("Categorical Groups")
+            self.axisDict[2].set_xlabel("Total Categorical Counts")
 
             self.coloredTicks = dict() 
             for ytick, color in zip(self.axisDict[1].get_yticklabels(), self.data["tickColors"]):
@@ -137,22 +142,6 @@ class ICCountplot(ICChart):
                 ytick.set_fontweight("bold")
 
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-
-            # #if self.interactive:
-            #  #   self.addHoverLine()
-            #   #  self.addHoverBinding() 
-
-            # self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-        
-            # self.setXTicksForAxes(self.axisDict,
-            #             data["tickPositions"],
-            #             data["tickLabels"],
-            #             rotation=90)
-            # qsData = self.getQuickSelectData()
-            # if qsData is not None:
-            #     self.mC.quickSelectTrigger.emit()
-            # else:
-            
             self.updateFigure.emit() 
            
            

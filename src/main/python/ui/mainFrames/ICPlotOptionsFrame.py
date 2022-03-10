@@ -467,15 +467,13 @@ class PlotOptionFrame(QWidget):
 
                 heatmapColorArray = graph.getHeatmapColorArray()
                 colorDataColorArray = graph.getColorDataArray()
-                print(colorDataColorArray)
-                print("ASD")
+                
                 colorData = graph.getColorData()
-                print("===")
+                
                 clusteredData = graph.getClusteredData()
                 quickSelectData = graph.getQuickSelectDataIdxForExcelExport()
                 colorColumnNames = graph.getColorColumnNames()
-                print(colorData)
-                print(colorColumnNames)
+               
                 hclustParams = [
 					("Software","Instant Clue"),
 					("Version",self.mC.version),

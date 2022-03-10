@@ -1,12 +1,9 @@
-
-
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-
 
 from backend.data.data import DataCollection 
 from backend.plotting.plotterCalculations import PlotterBrain 
@@ -15,8 +12,10 @@ from ui.plotter.plotManager import ICPlotter
 
 from ui.plotter.ICPlots.ICScatter import ICScatterPlot
 from matplotlib.pyplot import figure
+
 import os 
 import sys 
+#link to tab delimted file
 tabDelFile = "./examples/Tutorial_Data_02.txt" 
 
 #create fake app to get a config which is required for some plot types
@@ -32,11 +31,11 @@ sourceData = DataCollection(parent=fakeApp)
 sourceData.addDataFrameFromTxtFile(tabDelFile,"TutorialData2")
 dataID = list(sourceData.dfs.keys())[0]
 print(dataID)
-#print columns 
+#print columns by data type
 print(sourceData.dfsDataTypesAndColumnNames[dataID])
 
 #define plot type and get plotData 
-plotType = "boxplot"
+plotType = "scatter"
 plotter = PlotterBrain(sourceData)
 plotData = plotter.getPlotProps(dataID,numericColumns=["CTRL_1","CTRL_2"], categoricalColumns=[],plotType=plotType)
 
@@ -44,6 +43,7 @@ plotData = plotter.getPlotProps(dataID,numericColumns=["CTRL_1","CTRL_2"], categ
 print(plotData)
 
 
+#show the figure
 class MainWindow(QMainWindow):
 
     def __init__(self, plotData, *args, **kwargs):
