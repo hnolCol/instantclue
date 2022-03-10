@@ -57,24 +57,10 @@ class MatplotlibFigure(QWidget):
 
     def copyFigureToClipboard(self,*args,**kwargs):
         ""
-
-
-#         def f(name):
-#     print('hello', name)
-
-# if __name__ == '__main__':
-  #  p = Process(target=f, args=('bob',))
-        
         fkey = "plotter:figToClipboard"
         kwargs = {"figure":self.figure}
         self.mC.sendRequestToThread({"key":fkey,"kwargs":kwargs})
-        # buf = io.BytesIO()
-        # fig.savefig(buf,format="png")
-    
-        
-        # #self.figure.savefig(buf,format="png")
-        
-       # buf.close()
+       
 
     def initiateChart(self, *args, **kwargs):
         ""
@@ -251,11 +237,11 @@ class MatplotlibFigure(QWidget):
         if exists:
             graph.updateHclustSize(sizeData)
 
-    def updateHclustColor(self, colorData, colorGroupData, cmap = None, title=""):
+    def updateHclustColor(self, colorData, colorGroupData, **kwargs):
         ""
         exists, graph = self.mC.getGraph()
         if exists:
-            graph.updateHclustColor(colorData,colorGroupData,cmap,title)
+            graph.updateHclustColor(colorData,colorGroupData, **kwargs)
 
     def updateDataInPlotter(self):
         ""

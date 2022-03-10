@@ -113,7 +113,20 @@ class ICDataExcelExporter(object):
 
 class ICHClustExporter(object):
     ""
-    def __init__(self,pathToExcel,clusteredData,columnHeaders,colorArray,totalRows,extraData,clusterLabels,clusterColors,hclustParams = [], groupings=None):
+    def __init__(self,
+            pathToExcel,
+            clusteredData,
+            columnHeaders,
+            colorArray,
+            totalRows,
+            extraData,
+            clusterLabels,
+            clusterColors,
+            hclustParams = [],
+            groupings=None,
+            colorData = None,
+            colorDataArray=None,
+            colorColumnNames=[]):
         ""
         self.pathToExcel = pathToExcel
         self.clusteredData = clusteredData
@@ -125,20 +138,28 @@ class ICHClustExporter(object):
         self.clusterColors = clusterColors
         self.groupings = groupings
         self.hclustParams = hclustParams
-        
+        self.colorData = colorData 
+        self.colorDataArray = colorDataArray
+        self.colorColumnNames = colorColumnNames
 
     def export(self):
 
         try:
        
             self.clusteredData = self.clusteredData.iloc[::-1]
+            
             self.extraData = self.extraData.iloc[::-1]
             self.columnHeaders.extend(["IC Cluster Index","IC Data Index"])
             if self.clusterLabels is not None:
                 self.clusterLabels = self.clusterLabels.loc[self.clusteredData.index]
             #reshape color array to fit.
             self.colorArray = self.colorArray.reshape(self.clusteredData.index.size,-1,4)
-           
+            if self.colorDataArray is not None:
+                self.colorDataArray = self.colorDataArray.reshape(self.clusteredData.index.size,-1,4)
+            if self.colorData is not None:
+                self.colorData = self.colorData.iloc[::-1]
+               
+                
             workbook = xlsxwriter.Workbook(self.pathToExcel, {'constant_memory': True, "nan_inf_to_errors":True} )
             worksheet = workbook.add_worksheet(name="data")
             paramWorksheet = workbook.add_worksheet(name="params")
@@ -185,12 +206,27 @@ class ICHClustExporter(object):
                         cell_format = workbook.add_format(formatDict)
                         worksheet.write_string(nWRow,nCol+columnOffset,clustID,cell_format)
 
-                    elif nCol < self.clusteredData.columns.size + 1:#indlucate all columns (first one is alsoway "Cluster ID") 
+                    elif nCol < self.clusteredData.columns.size + 1:#include all columns (first one is alsoway "Cluster ID") 
                         c = self.colorArray[self.totalRows-nRow-1,nCol - 1].tolist()
                         formatDict = baseNumFormat.copy()
                         formatDict["bg_color"] = to_hex(c)
                         cell_format = workbook.add_format(formatDict)
                         worksheet.write_number(nWRow ,nCol+columnOffset,self.clusteredData.iloc[nRow,nCol - 1], cell_format) #-1 to account for first Cluster ID column
+                    elif nCol < self.clusteredData.columns.size + 1 + len(self.colorColumnNames) and self.colorData is not None and self.columnHeaders[nCol] in self.colorColumnNames:
+                        print(self.colorDataArray)
+                        print(self.colorColumnNames)
+                        print(self.columnHeaders[nCol])
+                        print(nCol - 1- self.clusteredData.columns.size)
+                        colIdx = nCol - 1- self.clusteredData.columns.size
+                        print(self.colorDataArray.shape)
+                        print(self.colorData.iloc[nRow,colIdx])
+                        c = self.colorDataArray[self.totalRows-nRow-1,colIdx].tolist()
+                        print(c)
+                        formatDict = baseNumFormat.copy()
+                        formatDict["bg_color"] = to_hex(c)
+                        cell_format = workbook.add_format(formatDict)
+                        worksheet.write_number(nWRow ,nCol+columnOffset,self.colorData.iloc[nRow,colIdx], cell_format) 
+                        print("=")
                     elif self.columnHeaders[nCol] == "IC Data Index":
                         worksheet.write_number(nWRow,nCol+columnOffset, self.clusteredData.index.values[nRow])
                     elif self.columnHeaders[nCol] == "IC Cluster Index":

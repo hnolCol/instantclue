@@ -633,7 +633,14 @@ funcPropControl = {
                 sendMessageProps]
                     
         },
-    
+    "normalizer::normalizeGroupQuantile":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeGroupQuantile","requiredKwargs":["dataID","normKey"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
     "normalizer::adjustMedianBySubset":
         {
             "threadRequest":{"obj":"normalizer","fn":"normalizeMedianBySubset","requiredKwargs":["dataID","columnNames","subsetColumn"]},
@@ -890,7 +897,7 @@ funcPropControl = {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorQuadMeshForHeatmap","requiredKwargs":["dataID"]},
             "completedRequest":[
                 #{"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title"]},
-                {"obj":"self","fn":"updateHclustColor","objKey":"middle","objName":"mainFrames","requiredKwargs":["colorData","colorGroupData","cmap"],"optionalKwargs":["title","colorMaPParamName"]},
+                {"obj":"self","fn":"updateHclustColor","objKey":"middle","objName":"mainFrames","requiredKwargs":["colorData","colorGroupData","cmap"],"optionalKwargs":["title","colorMaPParamName","colorMeshLimits"]},
                 #{"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                 #sendMessageProps
             ]           

@@ -242,7 +242,7 @@ class ICChart(QObject):
 	def onPress(self,event):
 		""
 		
-		if self.mC.mainFrames["middle"].getToolbarState() is not None:
+		if hasattr(self.mC,"mainFrames") and self.mC.mainFrames["middle"].getToolbarState() is not None:
 			#if zoom or pan is activated. Reset stat data
 			self.statData.clear() 
 			return
@@ -1275,11 +1275,16 @@ class ICChart(QObject):
 
 	def isLiveGraphActive(self):
 		""
-		return self.mC.mainFrames["data"].liveGraph.hasData()
-
+		if hasattr(self.mC,"mainFrames"):
+			return self.mC.mainFrames["data"].liveGraph.hasData()
+		else:
+			return False
+			
 	def isQuickSelectActive(self):
 		""
-		return self.mC.mainFrames["data"].qS.hasData()
+		if hasattr(self.mC,"mainFrames"):
+			return self.mC.mainFrames["data"].qS.hasData()
+		return False
 
 	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
@@ -1453,8 +1458,13 @@ class ICChart(QObject):
 		""
 		if self.isQuickSelectActive():
 			return self.mC.mainFrames["data"].qS.getDataIndexOfCurrentSelection()
-
-	def getColorArray(self):
+	def getColorColumnNames(self):
+		""
+		return []
+	def getColorDataArray(self):
+		"Hclust overload function"
+	
+	def getHeatmapColorArray(self):
 		"Hclust overload function"
         
 	def getClusterIDsByDataIndex(self):
@@ -1608,6 +1618,7 @@ class ICChart(QObject):
 	
 	def getDataInColorTable(self):
 		""
+
 		colorTable = self.mC.mainFrames["sliceMarks"].colorTable
 		if hasattr(colorTable,"model") and colorTable.model._labels.index.size > 0:
 			return colorTable.model._labels
@@ -1627,15 +1638,18 @@ class ICChart(QObject):
 
 	def setDataInColorTable(self,data = pd.DataFrame(), title = "Colors",isEditable=True):
 		""
-		self.mC.mainFrames["sliceMarks"].colorTable.setData(data, title, isEditable)
+		if hasattr(self.mC,"mainFrames") and "sliceMarks" in self.mC.mainFrames:
+			self.mC.mainFrames["sliceMarks"].colorTable.setData(data, title, isEditable)
 
 	def setDataInSizeTable(self,data = pd.DataFrame(), title = "Sizes"):
 		""
-		self.mC.mainFrames["sliceMarks"].sizeTable.setData(data, title)
+		if hasattr(self.mC,"mainFrames") and "sliceMarks" in self.mC.mainFrames:
+			self.mC.mainFrames["sliceMarks"].sizeTable.setData(data, title)
 	
 	def setDataInStatisticTable(self,data = pd.DataFrame(), title = "Statistics"):
 		""
-		self.mC.mainFrames["sliceMarks"].statisticTable.setData(data, title)
+		if hasattr(self.mC,"mainFrames") and "sliceMarks" in self.mC.mainFrames:
+			self.mC.mainFrames["sliceMarks"].statisticTable.setData(data, title)
 
 	def setDataInLabelTable(self, data = pd.DataFrame(), title = ""):
 		""

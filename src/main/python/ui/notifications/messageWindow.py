@@ -68,7 +68,7 @@ class Notification(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         
         #get sreenWidth
-        resolution = QDesktopWidget().screenGeometry(-1)
+        resolution = QApplication.primaryScreen().size()
         self.screenWidth = resolution.width()
 
         self.nMessages = 0
@@ -86,7 +86,6 @@ class Notification(QWidget):
 
     def setNotify(self, title, message):
         ""
-        
         m = Message(title, message, parent = self)
         self.mainLayout.addWidget(m)
         self.setLocation(m.sizeHint())

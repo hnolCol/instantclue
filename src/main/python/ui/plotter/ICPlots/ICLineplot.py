@@ -22,7 +22,7 @@ class ICLineplot(ICChart):
         for ax in self.axisDict.values():
             hoverLine = ax.plot([],[],
                             linewidth=self.getParam("linewidth.median"), 
-                            marker= self.getParam("marker.median"), 
+                            marker= None if  self.getParam("marker.median")  == "none" else self.getParam("marker.median"), 
                             color = self.getParam("scatter.hover.color"),
                             markeredgecolor = "black", 
                             linestyle = "-",
@@ -35,7 +35,9 @@ class ICLineplot(ICChart):
         ""
         self.hoverAreas = {}
         for ax in self.axisDict.values():
-            hoverArea  = Polygon([[0,0],[1,1]],visible=False,
+            hoverArea  = Polygon(
+                            [[0,0],[1,1]],
+                            visible=False,
                             alpha=self.getParam("alpha.IQR"),
                             facecolor=self.getParam("scatter.hover.color"),
                             edgecolor="black",
@@ -69,7 +71,7 @@ class ICLineplot(ICChart):
                     linestyle="-",
                     color="black" if single else color,
                     linewidth=self.getParam("linewidth.median"), 
-                    marker= self.getParam("marker.median"),
+                    marker= None if self.getParam("marker.median") == "none" else self.getParam("marker.median"),
                     markerfacecolor = color, 
                     markeredgecolor = "black", 
                     markeredgewidth = self.getParam("markeredgewidth.median"))

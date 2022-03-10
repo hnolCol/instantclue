@@ -381,13 +381,14 @@ class PlotterBrain(object):
                 x0 = np.linspace(0,nNumCol-1, num = nNumCol) - width/2
                 return x0,width
             
-    def getPlotProps(self, dataID, numericColumns, categoricalColumns = None, plotType = "Scatter", **kwargs):
+    def getPlotProps(self, dataID, numericColumns, categoricalColumns = None, plotType = "scatter", **kwargs):
         ""
 
         self.numericColumns = numericColumns
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
         with threadpool_limits(limits=1, user_api='blas'): 
+            print(plotType in plotFnDict)
             graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
             graphData["plotType"] = plotType
             return graphData
@@ -3380,16 +3381,17 @@ class PlotterBrain(object):
             colorColumn = self.colorColumn
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
-
+        colorMeshLimits = None
         colorColumnNames = colorColumn.values
         treatIntegersAsCategories = self.sourceData.parent.config.getParam("hclust.treat.integers.as.categories")
-
+        rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
+        
         if colorColumnType == "Categories" or (colorColumnType == "Integer" and treatIntegersAsCategories):
             combineCategoricalValues = self.sourceData.parent.config.getParam("hclust.color.combine.categories")
             sortUniqueValues = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values")
+            ascendingOrder = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values.ascending")
             colorMap = self.sourceData.parent.config.getParam("hclust.color.column.categories.colormap")
             
-            rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
             if not combineCategoricalValues  and colorColumn.values.size > 1:
                 for columnName in colorColumn.values:
                     rawData[columnName] = rawData[columnName].astype(str) + "({})".format(columnName)
@@ -3401,7 +3403,7 @@ class PlotterBrain(object):
             # #append replaceObjectNan - should be first item!
             #we need pandas unique to preserve ordering
             if sortUniqueValues:
-                uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList)).sort_values()
+                uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList)).sort_values(ascending=ascendingOrder)
             else:
                 uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList))
             
@@ -3436,16 +3438,17 @@ class PlotterBrain(object):
             
 
             colorData =  pd.DataFrame(rawData.values,
-                                    columns=["color"],
+                                    columns=colorColumn,
                                     index=rawData.index)
 
-            colorMeshKwargs = {"colorMeshLimits":colorMeshLimits,"cmap":cmap,"data":colorData}
+   
+            legendColors, _ = self.sourceData.colorManager.matchColorsToValues(
+                        arr = [maxV,q75,median,q25,minV], 
+                        colorMapName = colorMap, 
+                        vmin = minV, 
+                        vmax = maxV, 
+                        asHex=True)
 
-            
-            
-            #save colors for legend
-            #scaledColorVs = [to_hex(cmap( (x - minV) / (maxV - minV))) for x in [maxV,q75,median,q25,minV]]
-            legendColors, _ = self.sourceData.colorManager.matchColorsToValues(arr = [maxV,q75,median,q25,minV], colorMapName = colorMap, vmin = minV, vmax = maxV, asHex=True)
             colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
             
             colorGroupData = pd.DataFrame(columns=["color","group"])
@@ -3467,7 +3470,14 @@ class PlotterBrain(object):
         #                     "Min ({})".format(getReadableNumber(minV))]
         # return groupNames
 
-        return {"colorData":colorData,"colorGroupData":colorGroupData,"cmap":cmap,"title":mergeListToString(colorColumnNames,"\n"),"isEditable":False}
+        return {
+            "colorData":colorData,
+            "colorGroupData":colorGroupData,
+            "cmap":cmap,
+            "title":mergeListToString(colorColumnNames,"\n"),
+            "isEditable":False,
+            "colorMeshLimits" : colorMeshLimits
+            }
         
 
     def getSizeQuadMeshForHeatmap(self,dataID,sizeColumn = None,sizeColumnType = None):

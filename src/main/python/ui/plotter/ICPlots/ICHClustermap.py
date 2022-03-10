@@ -1,5 +1,6 @@
  
 from asyncio import FastChildWatcher
+from turtle import color
 
 from matplotlib.collections import LineCollection
 from .ICChart import ICChart
@@ -41,7 +42,7 @@ class ICClustermap(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        if "clusterRectangles" in self.data and len(self.data["clusterRectangles"]) != 0 and self.data["clusterRectangles"][0].get_visible():
+        if "clusterRectangles" in self.data and len(self.data["clusterRectangles"]) != 0 and len(self.clusterRectangles) >0 and self.clusterRectangles[0].get_visible():
             menus["main"].addAction("Remove Clusters", self.setClusterInvisible)
         elif "clusterRectangles" in self.data:
             menus["main"].addAction("Show Clusters", self.setClusterVisible)
@@ -49,6 +50,9 @@ class ICClustermap(ICChart):
             menus["main"].addAction("Show Labels", self.showLabels)
         for cMap in colorParameterRange:
             menus["Color Map (Cluster)"].addAction(cMap,self.updateColorMapOfClusterMesh)
+            if self.plotType == "hclust":
+                menus["Color Map (Color column)"].addAction(cMap,self.updateColorMapOfColorColumns)
+        
         menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
         if self.plotType == "hclust":
             menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
@@ -109,15 +113,16 @@ class ICClustermap(ICChart):
         ""
         if clearAxis:
             ax.clear()
+       
         if cmap is None:
             cmap = self.mC.colorManager.get_max_colors_from_pallete(self.mC.config.getParam(paramName))
             cmap.set_bad(self.mC.config.getParam("nanColor"))
-
+        
         elif isinstance(cmap,ScalarMappable):
             #camp is scalarmappable
             norm = cmap.norm
             cmap = cmap.get_cmap()
-            
+       
         if addLineKwargs and data.shape[0] < self.getParam("quad.linewidth.rowLimit") and data.shape[1] < self.getParam("quad.linewidth.columnLimit"):
 
             colorMeshLineKwargs = dict(
@@ -127,12 +132,21 @@ class ICClustermap(ICChart):
         else:
             colorMeshLineKwargs = {}
 
+        print(colorMeshLimits)
         if colorMeshLimits is not None:
-            vmin, vmax = colorMeshLimits
-            valueLimitKwargs = {"vmin":vmin,"vmax":vmax}
+            if isinstance(colorMeshLimits,dict) and "vmin" in colorMeshLimits and "vmax" in colorMeshLimits and len(colorMeshLimits) == 2:
+                valueLimitKwargs = colorMeshLimits.copy()
+            elif isinstance(colorMeshLimits,dict) and "vmin" in colorMeshLimits and "vmax" in colorMeshLimits and len(colorMeshLimits) != 2:
+                valueLimitKwargs = {"vmin":colorMeshLimits["vmin"],"vmax":colorMeshLimits["vmax"]}
+            elif isinstance(colorMeshLimits,tuple) or  isinstance(colorMeshLimits,list):
+                vmin, vmax = colorMeshLimits
+                valueLimitKwargs = {"vmin":vmin,"vmax":vmax}
             
         else:
             valueLimitKwargs = {}
+            
+        print(valueLimitKwargs)
+        print(data)
 
         colorMesh = ax.pcolormesh(data, 
 					  cmap = cmap,
@@ -158,20 +172,33 @@ class ICClustermap(ICChart):
         
         mesh.update(colorMeshLineKwargs)
 
+    def updateColorMapOfColorColumns(self,event = None,cmapName=None):
+        ""
+        self.updateColorMapOfColorMesh("colorLabelMesh",cmapName=cmapName)
+
+
     def updateColorMapOfClusterMesh(self,event = None, cmapName = None):
         ""
-        if hasattr(self,"colorMesh"):
+        self.updateColorMapOfColorMesh(cmapName=cmapName)
+
+
+    def updateColorMapOfColorMesh(self,attrName = "colorMesh",cmapName = None):
+        ""
+        if hasattr(self,attrName):
             if cmapName is None:
                 if hasattr(self,"sender") and hasattr(self.sender(),"text"):
                     cmapName = self.sender().text()
                 else:
                     return
-            
-            #get map
-            cmap = self.mC.colorManager.get_max_colors_from_pallete(cmapName)
-            cmap.set_bad(self.mC.config.getParam("nanColor"))
-            self.colorMesh.set_cmap(cmap)
-            self.updateFigure.emit() 
+            colorMesh = getattr(self,attrName)
+            self.updateColorMapOfMesh(colorMesh,cmapName)
+
+    def updateColorMapOfMesh(self,colorMesh,cmapName):
+        ""
+        cmap = self.mC.colorManager.get_max_colors_from_pallete(cmapName)
+        cmap.set_bad(self.mC.config.getParam("nanColor"))
+        colorMesh.set_cmap(cmap)
+        self.updateFigure.emit() 
 
     def addClusters(self):
         "Add cluster rectangles to dendrogram."
@@ -431,10 +458,29 @@ class ICClustermap(ICChart):
         else:
             return None, None 
 
-    def getColorArray(self):
-        ""
-        return self.colorMesh.get_facecolors()
 
+    def getColorDataArray(self):
+        ""
+        if hasattr(self,"colorLabelMesh") and hasattr(self.colorLabelMesh,"get_facecolors"):
+            return self.colorLabelMesh.get_facecolors()
+
+    def getColorData(self):
+        ""
+        print(self.colorData)
+        if hasattr(self,"colorData"):
+            return self.colorData
+
+    def getColorColumnNames(self):
+        ""
+        if hasattr(self,"colorColumnNames"):
+            return self.colorColumnNames.tolist() 
+        else:
+            return []
+	
+    def getHeatmapColorArray(self):
+        "Return facecolors"
+        return self.colorMesh.get_facecolors()
+   
     def getClusteredData(self, reverseRows = True):
         ""
        
@@ -483,7 +529,7 @@ class ICClustermap(ICChart):
 
     def getGraphSpecMenus(self):
         ""
-        return ["Color Map (Cluster)"]
+        return ["Color Map (Cluster)","Color Map (Color column)"]
 
     def onClusterYLimChange(self,ax = None):
         ""
@@ -710,24 +756,33 @@ class ICClustermap(ICChart):
 
     def updateHclustColor(self,colorData, colorGroupData, cmap=None, title="",colorMaPParamName = "hclustLabelColorMap", colorMeshLimits=None):
         ""
+        #print(colorData,colorMeshLimits)
         #print(colorData.loc[self.data["plotData"].index].values)
         colorColumnNames = colorData.columns.values
+        colorFloats = colorData.loc[self.data["plotData"].index].astype(np.float64)# prevent integer error
         #resort color data by index (as identified by clustering)
-        colorData = colorData.loc[self.data["plotData"].index].astype(np.float64).values
+        colorValues = colorFloats.values 
+        
         self.resetColorGroupElements()
+       
         self.colorLabelMesh = self.addColorMesh(
                         self.axisDict["axLabelColor"],
-                        colorData,
+                        colorValues,
                         cmap= cmap,
                         paramName=colorMaPParamName,
                         clearAxis = False,
-                        colorMeshLimits = (0,np.nanmax(colorData) if colorMeshLimits is None else colorMeshLimits)
+                        colorMeshLimits = (0,np.nanmax(colorValues)) if colorMeshLimits is None else colorMeshLimits
                         )
-        self.numOfColorColumns = colorData.shape[1]
+        
+        self.numOfColorColumns = colorValues.shape[1]
         self.setDataInColorTable(colorGroupData, title = title)
-        self.updateXlimForLabelColor(colorData.shape, colorColumnNames)
+        self.updateXlimForLabelColor(colorValues.shape, colorColumnNames)
         self.updateQuickSelectItemsCoords()
         self.onClusterYLimChange()
+
+        self.colorData = colorFloats
+        self.colorColumnNames = colorColumnNames
+        
         
         
     def updateXlimForLabelColor(self,dataShape, labelColumnNames, addRectangleAndLabels = True):
@@ -915,6 +970,9 @@ class ICClustermap(ICChart):
         if hasattr(self,"colorLabelMesh"):
             self.colorLabelMesh.remove() 
             del self.colorLabelMesh
+        if hasattr(self,"colorData"):
+            del  self.colorData
+        self.colorColumnNames= []
         self.numOfColorColumns = 0
         if hasattr(self , "rectangleAndLabels"):
             for n in range(len(self.rectangleAndLabels)):

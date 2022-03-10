@@ -481,11 +481,13 @@ class InstantClue(QMainWindow):
     
     def askForItemSelection(self, items ,title = "Categorical column selection.",**kwargs):
         ""
-        dlg = ICDSelectItems(data = pd.DataFrame(items), title = title, **kwargs)
-        if dlg.exec_():
-            selectedItems = pd.Series(dlg.getSelection().values.flatten())
-            if selectedItems.size > 0: #check
-                return selectedItems
+        dataFrame = pd.DataFrame(items)
+        if not dataFrame.empty:
+            dlg = ICDSelectItems(data = dataFrame, title = title, **kwargs)
+            if dlg.exec_():
+                selectedItems = pd.Series(dlg.getSelection().values.flatten())
+                if selectedItems.size > 0: #check
+                    return selectedItems
 
     def askForGroupingSelection(self, funcKey, numericColumnsInKwargs = True, title = "Groupings to display in h. clustering.", kwargName = "groupingName", **kwargs):
         ""
