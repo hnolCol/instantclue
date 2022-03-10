@@ -139,11 +139,13 @@ class ICScatterPlot(ICChart):
         
     def onDataLoad(self, data):
         ""
+    
         if not all(kwarg in data for kwarg in self.requiredKwargs):
             return
             
         self.data = data
         self.initAxes(data["axisPositions"])
+        print("INIIIT")
         self.initScatterPlots()
 
         if "axisLabels" in self.data:

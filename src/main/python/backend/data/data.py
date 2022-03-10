@@ -880,8 +880,8 @@ class DataCollection(object):
 							colorDataArray = None,
 							colorColumnNames = []):
 		""
-		print(colorDataArray)
-		print("H?")
+		# print(colorDataArray)
+		# print("H?")
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
 		clusterColumns = clusteredData.columns.values.tolist() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]

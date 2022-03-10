@@ -37,7 +37,10 @@ import numpy as np
 import fastcluster
 from collections import OrderedDict
 #pycombat import
-from combat.pycombat import pycombat
+try:
+    from combat.pycombat import pycombat
+except:
+    print("PyCombat not found.")
 from itertools import chain
 
 from joblib import Parallel, delayed, dump, load
@@ -52,6 +55,8 @@ try:
 except:
     from statsmodels.nonparametric.smoothers_lowess import lowess as loess
     useStatsmodelLoess = True
+
+
 def _matchRegExToPandasSeries(data,regEx,uniqueCategory):
     return (uniqueCategory, data.str.contains(regEx, case = True))
 def _matchMultipleRegExToPandasSeries(data,regExs,uniqueCategories):

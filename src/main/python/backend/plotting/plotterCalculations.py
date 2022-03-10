@@ -381,13 +381,14 @@ class PlotterBrain(object):
                 x0 = np.linspace(0,nNumCol-1, num = nNumCol) - width/2
                 return x0,width
             
-    def getPlotProps(self, dataID, numericColumns, categoricalColumns = None, plotType = "Scatter", **kwargs):
+    def getPlotProps(self, dataID, numericColumns, categoricalColumns = None, plotType = "scatter", **kwargs):
         ""
 
         self.numericColumns = numericColumns
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
         with threadpool_limits(limits=1, user_api='blas'): 
+            print(plotType in plotFnDict)
             graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
             graphData["plotType"] = plotType
             return graphData
