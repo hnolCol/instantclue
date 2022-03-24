@@ -10,6 +10,7 @@ from .ICPlots.ICViolinplot import ICViolinplot
 from .ICPlots.ICLineplot import ICLineplot
 from .ICPlots.ICHistogram import ICHistogram
 from .ICPlots.ICCountplot import ICCountplot
+from .ICPlots.ICBoxenplot import ICBoxenplot
 from .ICPlots.ICXYPlot import ICXYPlot
 #from .ICPlots.ICForestplot import ICForestplot
 from .ICPlots.ICWordCloud import ICWordCloud
@@ -19,6 +20,7 @@ plotTypeGraph = {
                 "scatter"       :       ICScatterPlot,
                 "hclust"        :       ICClustermap,
                 "boxplot"       :       ICBoxplot,
+                "boxenplot"     :       ICBoxenplot,
                 "mulitscatter"  :       ICMultiScatterPlot,
                 "swarmplot"     :       ICSwarmplot,
                 "barplot"       :       ICBarplot,

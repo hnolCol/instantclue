@@ -1,56 +1,110 @@
  
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
+from matplotlib.collections import PatchCollection
+from matplotlib.colors import LinearSegmentedColormap
 from .ICChart import ICChart
 from collections import OrderedDict
 import numpy as np 
 import pandas as pd
-class ICBoxplot(ICChart):
+
+class ICBoxenplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
         ""
-        super(ICBoxplot,self).__init__(*args,**kwargs)
-
+        super(ICBoxenplot,self).__init__(*args,**kwargs)
+        self.colorGroupArtists = OrderedDict()
+        self.groupColor = dict()
         self.boxplotItems = dict() 
     
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Show summary data", self.displaySummaryData)
+        # menus["main"].addAction("Show summary data", self.displaySummaryData)
 
     def displaySummaryData(self,*args,**kwargs):
         ""
-        if "groupedPlotData" in self.data:
-            self.mC.mainFrames["data"].openDataFrameinDialog(self.data["groupedPlotData"], 
-                                    ignoreChanges=True, 
-                                    headerLabel="Boxplot data.", 
-                                    tableKwargs={"forwardSelectionToGraph":False})
+        # if "groupedPlotData" in self.data:
+        #     self.mC.mainFrames["data"].openDataFrameinDialog(self.data["groupedPlotData"], 
+        #                             ignoreChanges=True, 
+        #                             headerLabel="Boxplot data.", 
+        #                             tableKwargs={"forwardSelectionToGraph":False})
         
-    def initBoxplots(self,onlyForID = None, targetAx = None):
+   
+    def initBoxenplots(self,onlyForID=None,targetAx=None):
         ""
-        for n, boxplotProps in self.data["plotData"].items():
+        self.boxenCollection = OrderedDict()
+        for n,rectProps in self.data["plotData"].items():
             if n in self.axisDict and onlyForID is None:
+                ax = self.axisDict[n]
                 
-                if len(boxplotProps["x"]) == 1 and boxplotProps["x"][0].size == 1:
-                    self.axisDict[n].plot(boxplotProps["positions"],boxplotProps["x"][0],
-                        marker = self.getParam("boxplot.flierprops.marker"),
-                        markeredgewidth = self.getParam("boxplot.flierprops.markeredgewidth"),
-                        markeredgecolor = self.getParam("boxplot.flierprops.markeredgecolor"),
-                        markersize = self.getParam("boxplot.flierprops.markersize"),
-                        color="black")
+                for r in rectProps:
+                    if "rectProps" in r and len(r["rectProps"]) > 0 and r["cmap"] is not None:
+                        boxes = [Rectangle(**rProps) for rProps in r["rectProps"]]
+                        collection = PatchCollection(
+                            boxes, 
+                            cmap=r["cmap"], 
+                            edgecolor="black", 
+                            linewidth=self.getParam("boxen.boxprops.linewidth")
+                            )
+                        
+                            # Set the color gradation, first box will have color=hex_color
+                        collection.set_array(np.array(np.linspace(1, 0, len(boxes))))
+                        
+                        ax.add_collection(collection)
+                    if "medianLine" in r and len(r["medianLine"]) > 0:
+                        l = Line2D(**r["medianLine"])
+                        ax.add_line(l)
+                    
+                    if "internalID" in r and "faceColor" in r:
+                        intID = r["internalID"]
+                        if intID not in self.colorGroupArtists:
+                            self.colorGroupArtists[intID] = []
+                        self.colorGroupArtists[intID].append(collection)
+                        if intID not in self.groupColor:
+                            self.groupColor[intID] = r["faceColor"]
+                    
+                    if "outlierProps" in r and len(r["outlierProps"]) > 0:
+                        l = Line2D(**r["outlierProps"])
+                        ax.add_line(l)
 
-                else:
-                    self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
-                
-            elif n == onlyForID and targetAx is not None:
-                self.targetBoxplotItems = dict()
-                self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
-           
+            elif targetAx is not None and n == onlyForID:
+                for r in rectProps:
+                    ax = targetAx
+                    boxes = [Rectangle(**rProps) for rProps in r["rectProps"]]
+                    intID = r["internalID"]
+                    hexColor = self.groupColor[intID]
+                    cmap = self._getCampForBoxes(hexColor)
+                    collection = PatchCollection(
+                                boxes, 
+                                cmap=cmap, 
+                                edgecolor="black", 
+                                linewidth=self.getParam("boxen.boxprops.linewidth")
+                                )
+                            
+                                # Set the color gradation, first box will have color=hex_color
+                    collection.set_array(np.array(np.linspace(1, 0, len(boxes))))
+                    ax.add_collection(collection)
+                    l = Line2D(**r["medianLine"])
+                    ax.add_line(l)
+                        
+    def _getCampForBoxes(self, hexColor):
+        ""
+        rgb = [hexColor, (1, 1, 1)]
+        cmap = LinearSegmentedColormap.from_list('new_map', rgb)
+        # Make sure that the last boxes contain hue and are not pure white
+        rgb = [hexColor, cmap(.85)]
+        cmap = LinearSegmentedColormap.from_list('new_map', rgb)
+
+        return cmap
+
     def onDataLoad(self, data):
         ""
         try:
             self.data = data
             self.initAxes(data["axisPositions"])
             
-            self.initBoxplots()
-          
+            self.initBoxenplots()
+            
             self.setXTicksForAxes(self.axisDict,data["tickPositions"],data["tickLabels"],rotation=90)
      
             for n,ax in self.axisDict.items():
@@ -64,7 +118,6 @@ class ICBoxplot(ICChart):
 
             self.addVerticalLines()
                 
-            self.savePatches()
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
@@ -76,49 +129,7 @@ class ICBoxplot(ICChart):
         except Exception as e:
         
             print(e)
-        
-
-    def reorderBoxplotItemsForHover(self):
-        ""
-        try:
-            hoverGroupItems = {}
-            for n, boxprops in self.boxplotItems.items():
-                artists = dict([(m,box) for m,box in enumerate(boxprops["boxes"])])
-                colors = dict([(m,box.get_facecolor()) for m,box in enumerate(boxprops["boxes"])])
-                texts = dict([(m,self.data["tooltipsTexts"][n][m]) for m,box in enumerate(boxprops["boxes"])])
-                hoverGroupItems[self.axisDict[n]] = {"artists":artists,"texts":texts,"colors":colors}# [[box,*boxprops["whiskers"][n*2:n*2+2],*boxprops["caps"][n*2:n*2+2]] for n,box in enumerate(boxprops["boxes"])]
-        except Exception as e:
-            print(e)
-        return hoverGroupItems
-
-    def savePatches(self):
-        ""
-        colorGroupData = self.data["dataColorGroups"]
-        self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
-        self.groupColor = dict() 
-        self.setFacecolors(colorGroupData)
-
-
-    def setFacecolors(self, colorGroupData = None, onlyForID = None):
-        ""
-        if onlyForID is not None and hasattr(self,"targetBoxplotItems"):
-            for n, boxprops in self.targetBoxplotItems.items():
-                plottedBoxProps = self.boxplotItems[onlyForID] #get boxes from plotted items
-                for artist, plottedArtist in zip(boxprops["boxes"],plottedBoxProps["boxes"]):
-                    artist.set_facecolor(plottedArtist.get_facecolor())
-        else:
-            for n, boxprops in self.boxplotItems.items():
-                for artist, fc in zip(boxprops["boxes"],self.data["facecolors"][n]):
-                    
-                    artist.set_facecolor(fc)
-
-                    if colorGroupData is not None and hasattr(self,"groupColor"):
-                        idx = colorGroupData.index[colorGroupData["color"] == fc]
-                       
-                        intID = colorGroupData.loc[idx,"internalID"].iloc[0]
-                        self.colorGroupArtists[intID].append(artist)
-                        if intID not in self.groupColor:
-                            self.groupColor[intID] = fc
+    
 
     def highlightGroupByColor(self,colorGroup,highlightCategory):
         """
@@ -127,14 +138,21 @@ class ICBoxplot(ICChart):
        
         nanColor = self.getParam("nanColor")
         for color, _ , intID in colorGroup.values:
+
             if intID in self.colorGroupArtists:
-                artists = self.colorGroupArtists[intID]
+                    
                 if intID != highlightCategory and highlightCategory is not None:
-                    #overwrite color with nana color (default = grey)
-                    color = nanColor
-                for artist in artists:
-                    artist.set_facecolor(color)
-        self.updateFigure.emit() 
+                    cmap = self._getCampForBoxes(nanColor)
+                    
+                else:
+                    cmap = self._getCampForBoxes(color)
+                collections = self.colorGroupArtists[intID]
+                for collection in collections:
+                    collection.set_cmap(cmap)
+                
+                self.groupColor[intID] = color
+       
+        self.updateFigure.emit()
 
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
@@ -143,9 +161,11 @@ class ICBoxplot(ICChart):
         for color, _ , intID in colorGroup.values:
             if intID in self.colorGroupArtists:
                 if self.groupColor[intID] != color:
-                    artists = self.colorGroupArtists[intID]
-                    for artist in artists:
-                        artist.set_facecolor(color)
+                    collections = self.colorGroupArtists[intID]
+                    cmap = self._getCampForBoxes(color)
+                    
+                    for collection in collections:
+                        collection.set_cmap(cmap)
                     self.groupColor[intID] = color
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
@@ -212,11 +232,13 @@ class ICBoxplot(ICChart):
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
     
         self.addTitles(onlyForID = axisID, targetAx = targetAx)
-        self.initBoxplots(onlyForID=axisID,targetAx=targetAx)
-        self.setFacecolors(onlyForID=axisID)
+        self.initBoxenplots(onlyForID=axisID,targetAx=targetAx)
         self.mirrorStats(targetAx,axisID)
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)          
-        self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
+        #self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
         self.addVerticalLines(axisID,targetAx)
 
+
+     
+       
 

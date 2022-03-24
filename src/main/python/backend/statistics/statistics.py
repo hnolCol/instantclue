@@ -14,7 +14,7 @@ import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
 from scipy.optimize import curve_fit
-from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact, chi2_contingency
+from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact, chi2_contingency, ttest_1samp
 
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
@@ -1160,6 +1160,24 @@ class StatisticCenter(object):
 
         return self.sourceData.joinDataFrame(dataID,results)
 
+    def performOneSampleTest(self,data, kind= "One-sample t-test"):
+        ""
+        
+        try:
+            X = data[0].values.flatten()
+            if kind == "One-sample t-test":
+                popmean = self.sourceData.parent.config.getParam("one.sample.t.test.popmean")
+                alternative = self.sourceData.parent.config.getParam("one.sample.t.test.alternative")
+                return ttest_1samp(X,popmean,alternative=alternative,nan_policy="omit")
+            elif kind == "Wilcoxon signed-rank test":
+                alternative = self.sourceData.parent.config.getParam("one.sample.wilcoxon.alternative")
+                correction = self.sourceData.parent.config.getParam("one.sample.wilcoxon.correction")
+                zero_method = self.sourceData.parent.config.getParam("one.sample.wilcoxon.zero_method")
+                return wilcoxon(X,alternative=alternative,correction=correction,zero_method=zero_method)
+        except:
+            return [None,None]
+
+            
     def performPairwiseTest(self,XY,kind = "t-test", props = {}):
         X,Y = XY
         if X.values.size < 2 or Y.values.size < 3:

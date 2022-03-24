@@ -145,7 +145,6 @@ class ICScatterPlot(ICChart):
             
         self.data = data
         self.initAxes(data["axisPositions"])
-        print("INIIIT")
         self.initScatterPlots()
 
         if "axisLabels" in self.data:

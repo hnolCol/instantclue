@@ -205,11 +205,13 @@ class ICColorTable(ICColorSizeTableBase):
         if exists and hasattr(graph,"highlightGroupByColor"):
             colorGroupData = self.table.model().getLabels()
             if reset:
+                graph.setHoverObjectsInvisible()
                 graph.highlightGroupByColor(colorGroupData,None)
                 self.currentHighLight = None 
             else:
                 internalID = self.table.model().getCurrentInternalID()
                 if internalID != self.currentHighLight:
+                    graph.setHoverObjectsInvisible()
                     graph.highlightGroupByColor(colorGroupData,internalID)
                     self.currentHighLight = internalID
                

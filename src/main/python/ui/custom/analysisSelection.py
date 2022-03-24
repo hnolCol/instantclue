@@ -191,10 +191,11 @@ class AnalysisSelection(QWidget):
                                 "kwargs":{"dataID":dataID,"numericColumnPairs":columnPairs}}
                     self.mC.sendRequestToThread(funcProps)
 
-            elif task in ["t-test","Welch-test","Wilcoxon","(Whitney-Mann) U-test"]:
+            elif task in ["t-test","Welch-test","Wilcoxon","(Whitney-Mann) U-test","One-sample t-test","Wilcoxon signed-rank test"]:
 
                 exists, graph = self.mC.getGraph() 
-                if exists:
+                
+                if exists and graph.isChartCompatibleWithInteractiveStats():
                     graph.enableInteractiveStats()
                     
         except Exception as e:

@@ -3,6 +3,62 @@ import numpy as np
 from collections import OrderedDict
 from ..utils.stringOperations import getRandomString
 
+
+def _lv_outliers(vals, k):
+        """Find the outliers based on the letter value depth."""
+        box_edge = 0.5 ** (k + 1)
+        perc_ends = (100 * box_edge, 100 * (1 - box_edge))
+        edges = np.percentile(vals, perc_ends)
+        lower_out = vals[np.where(vals < edges[0])[0]]
+        upper_out = vals[np.where(vals > edges[1])[0]]
+        return np.concatenate((lower_out, upper_out))
+
+def _lv_box_ends(vals, k_depth="tukey",trust_alpha=0.05,):
+    """Get the number of data points and calculate `depth` of
+    letter-value plot."""
+    vals = np.asarray(vals)
+    # Remove infinite values while handling a 'object' dtype
+    # that can come from pd.Float64Dtype() input
+    with pd.option_context('mode.use_inf_as_null', True):
+        vals = vals[~pd.isnull(vals)]
+    n = len(vals)
+    p = 0.007
+    if n > 0:
+        # Select the depth, i.e. number of boxes to draw, based on the method
+        if k_depth == 'full':
+            # extend boxes to 100% of the data
+            k = int(np.log2(n)) + 1
+        elif k_depth == 'tukey':
+            # This results with 5-8 points in each tail
+            k = int(np.log2(n)) - 3
+        elif k_depth == 'proportion':
+            k = int(np.log2(n)) - int(np.log2(n * p)) + 1
+        elif k_depth == 'trustworthy':
+            point_conf = 2 * qf((1 - trust_alpha / 2)) ** 2
+            k = int(np.log2(n / point_conf)) + 1
+        else:
+            k = int(k_depth)  # allow having k as input
+        # If the number happens to be less than 1, set k to 1
+        if k < 1:
+            k = 1
+
+        # Calculate the upper end for each of the k boxes
+        upper = [100 * (1 - 0.5 ** (i + 1)) for i in range(k, 0, -1)]
+        # Calculate the lower end for each of the k boxes
+        lower = [100 * (0.5 ** (i + 1)) for i in range(k, 0, -1)]
+        # Stitch the box ends together
+        percentile_ends = [(i, j) for i, j in zip(lower, upper)]
+        box_ends = [np.percentile(vals, q) for q in percentile_ends]
+        return box_ends, k
+
+def _width_functions(width_func):
+    # Dictionary of functions for computing the width of the boxes
+    width_functions = {'linear': lambda h, i, k: (i + 1.) / k,
+                        'exponential': lambda h, i, k: 2**(-k + i - 1),
+                        'area': lambda h, i, k: (1 - 2**(-k + i - 2)) / h}
+    return width_functions[width_func]
+
+
 def getAxisPosition(n,nRows = None, nCols = None, maxCol = 4):
     ""
     if nRows is None:
@@ -222,14 +278,17 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                 tickPos = np.median(positions)
                 tickPositions.append(tickPos)
                 tickLabels.append(numericColumn)
-            for n,(groupName,groupData) in enumerate(axisGroupBy):
-                if groupData.index.size > 0:
+                
+            for n,groupName in enumerate(colorCategories):
+                if groupName in axisGroupBy.groups:
+                    groupData = axisGroupBy.get_group(groupName)
+                    
                     filteredData.append(groupData[numericColumn])
                     faceColors.append(colors[groupName])
                     boxPositions.append(positions[n])
                     groupNames.append("({}:{})::({})".format(categoricalColumns[0],groupName,numericColumn))
                     
-        axisLimits[0] = {"xLimit" :  (boxPositions[0] - widthBox, boxPositions[-1] + widthBox), "yLimit" : None} 
+        axisLimits[0] = {"xLimit" :  (0 - widthBox, endPos + widthBox), "yLimit" : None} 
         
         #overriding names, idiot. change!
         tickPositions = {0:tickPositions}

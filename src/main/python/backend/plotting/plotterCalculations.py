@@ -1,5 +1,6 @@
 
 from multiprocessing import Pool
+from sys import intern
 from numba.np.ufunc import parallel
 import numpy as np
 from numpy.core import numeric
@@ -13,7 +14,7 @@ from backend.statistics.statistics import loess_fit
 
 from ..utils.stringOperations import getMessageProps, getReadableNumber, getRandomString, mergeListToString
 from ..utils.misc import scaleBetween, replaceKeyInDict
-from .postionCalculator import calculatePositions, getAxisPosition
+from .postionCalculator import calculatePositions, getAxisPosition, _width_functions, _lv_box_ends, _lv_outliers
 
 from threadpoolctl import threadpool_limits
 from statsmodels.stats.contingency_tables import Table2x2
@@ -22,9 +23,9 @@ import scipy.cluster.hierarchy as sch
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Rectangle, Polygon
 from matplotlib.lines import Line2D
-from matplotlib.colors import Normalize, ListedColormap
+from matplotlib.colors import Normalize, ListedColormap, LinearSegmentedColormap
 from matplotlib.colors import to_hex
-from matplotlib.pyplot import get, hist, sca
+from matplotlib.pyplot import box, get, hist, sca
 import matplotlib.cm as cm
 from matplotlib import rcParams
 
@@ -35,6 +36,7 @@ import numpy as np
 import scipy.stats as st
 from sklearn.neighbors import KernelDensity
 from scipy.spatial.distance import pdist, squareform
+from scipy.stats import truncnorm
 from sklearn.model_selection import GridSearchCV
 from numba import jit, njit, prange
 from wordcloud import WordCloud
@@ -211,6 +213,22 @@ def _findBwByGridSearch(x,minBW,maxBW,numCrossValidations=5,kernel="gaussian"):
     
     return grid.best_params_["bandwidth"]
 
+def distKDEData(kdeData):
+    ""
+    boolIdx = np.isnan(kdeData)
+    kdeData[boolIdx] = 1e-6
+
+    # t1 = time.time()
+    # np.random.uniform(low=kdeData*(-0.75),high=kdeData*0.75,size=kdeData.size)
+    # print(time.time()-t1,"s")
+
+    # t1 = time.time()
+    # np.array([0 if np.isnan(x) else np.random.uniform(-x * 0.75 , x * 0.75) for x in kdeData])
+    # print(time.time()-t1,"l")
+
+    return  np.random.uniform(low=kdeData*(-0.75),high=kdeData*0.75,size=kdeData.size)
+   
+
 def buildKdeData(axisInts,data,numericColumns,kdeData,bw,kernel,bwGridSearch,logDensity,gridMin,gridMax,numCVs):
     ""
 
@@ -275,7 +293,7 @@ def kdeCalc(X, bw = None, kernel = "gaussian", widthBox=1, addToX=0, numColumn =
         else:
             kdeData = scaleBetween(kdeData,(0,widthBox/2))
         #kdeData = spreadSwarm(kdeData.flatten())
-        kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+        kdeData = distKDEData(kdeData)
         #print(time.time()-t1,"numpy")
         kdeData = kdeData + addToX
         #save data
@@ -299,6 +317,7 @@ def CI(a, ci = 0.95):
 plotFnDict = {
     "boxplot":"getBoxplotProps",
     "barplot":"getBarplotProps",
+    "boxenplot" : "getBoxenProps",
     "pointplot":"getPointplotProps",
     "swarmplot":"getSwarmplotProps",
     "scatter":"getScatterProps",
@@ -388,7 +407,7 @@ class PlotterBrain(object):
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
         with threadpool_limits(limits=1, user_api='blas'): 
-            print(plotType in plotFnDict)
+            
             graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
             graphData["plotType"] = plotType
             return graphData
@@ -397,7 +416,7 @@ class PlotterBrain(object):
         ""
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-        subplotBorders = dict(wspace=0.15, hspace = 0.0,bottom=0.15,right=0.95,top=0.95)
+        subplotBorders = dict(wspace=0.05, hspace = 0.0,bottom=0.15,right=0.95,top=0.95)
         axisDict = OrderedDict([(0,[2,4,(1,3)]),(1,[2,4,(5,7)]),(2,[2,4,8])]) #getAxisPosition(3, maxCol = 1)
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
@@ -1053,6 +1072,177 @@ class PlotterBrain(object):
                 "colorCategoricalColumn" : colorCategoricalColumn,
                 "dataID":dataID}}
 
+    def getBoxenProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
+        """
+        Part of this code was adapted from the great seaborn package! 
+        """
+        def height(b):
+                return b[1] - b[0]
+
+        def vertRectProps(x, b, i, k, w,widths):
+            rect = dict(
+                    xy = (x - widths * w / 2, b[0]),
+                    width = widths * w,
+                    height = height(b), 
+                    fill=True
+                    )
+            return rect
+
+        subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
+        if len(categoricalColumns) > 3:
+            splitByCats = False
+        else:
+            splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
+
+        plotCalcData, axisPositions, boxPositions, tickPositions, tickLabels, colorGroups, \
+            faceColors, colorCategoricalColumn, xWidth, axisLabels, axisLimits, \
+                axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(dataID,
+                                                                    self.sourceData,
+                                                                    numericColumns,
+                                                                    categoricalColumns,
+                                                                    self.maxColumns, 
+                                                                    splitByCategories = splitByCats)
+       
+        rectData = OrderedDict()
+        hoverData = OrderedDict() 
+        positionData = OrderedDict() 
+        outlierData = OrderedDict()
+        widthFn = self.sourceData.parent.config.getParam("boxen.width.calculation")
+
+        for n,plotData in plotCalcData.items():
+            data = plotData["x"]
+            hoverData[n] = {"x" : data}
+            positionData[n] = []
+            rectData[n] = []
+            outlierData[n] = []
+            for m,boxData in enumerate(data):
+                outlierProps = {}
+                hexColor = faceColors[n][m]
+                internalID = colorGroups.loc[colorGroups["color"] == hexColor,"internalID"].values[0]
+                x = boxPositions[n][m]
+                positionData[n].append(x)
+                if boxData.size == 0:
+                    rectData[n].append({
+                        "rectProps":[],
+                        "cmap":None,
+                        "medianLine":{},
+                        "internalID":internalID,
+                        "outlierProps" : outlierProps})
+                    
+                elif boxData.size == 1:
+                    y = boxData.iloc[0]
+                    medianLineProps = {
+                        "xdata" : [x-xWidth/2,x+xWidth/2],
+                        "ydata" : [y,y],
+                        "linewidth" : 0.5,
+                        "color" : "black",
+                        "solid_capstyle" : "butt"
+                    }
+                    rectData[n].append({
+                            "rectProps":[],
+                            "cmap":None,
+                            "medianLine":{},
+                            "internalID":internalID,
+                            "outlierProps" : outlierProps})
+                else:
+                    
+                    #fncs form seaborn package
+                    vals = boxData.values.flatten()
+                    boxEnds, k = _lv_box_ends(vals)
+                    width = _width_functions(widthFn)
+                    # Scale the width of the boxes so the biggest starts at 1
+                    w_area = np.array([width(height(b), i, k)
+                                    for i, b in enumerate(boxEnds)])
+                    w_area = w_area / np.max(w_area)
+                    
+                    
+                    outliers = _lv_outliers(vals,k)
+                    if len(outliers) > 0:
+                        xdata = np.full(len(outliers), x)
+                        ydata = outliers
+                    
+                        outlierProps.update({
+                            "xdata" : xdata,
+                            "ydata" : ydata,
+                            "linewidth" : 0,
+                            "markerfacecolor" : "black",
+                            "markeredgecolor" : "black",
+                            "markeredgewidth" : 0.5,
+                            "markersize" : 3, 
+                            "marker" : "+"
+                         })
+                         
+                    boxes = [vertRectProps(x, b[0], i, k, b[1],xWidth)
+                        for i, b in enumerate(zip(boxEnds, w_area))]
+                    
+                    y = np.median(boxData)
+                    
+                    medianLineProps = {
+                        "xdata" : [x-xWidth/2,x+xWidth/2],
+                        "ydata" : [y,y],
+                        "linewidth" : 0.5,
+                        "color" : "black",
+                        "solid_capstyle" : "butt"
+                    }
+
+                    # Construct a color map from the input color
+                    rgb = [hexColor, (1, 1, 1)]
+                    cmap = LinearSegmentedColormap.from_list('new_map', rgb)
+                    # Make sure that the last boxes contain hue and are not pure white
+                    rgb = [hexColor, cmap(.85)]
+                    cmap = LinearSegmentedColormap.from_list('new_map', rgb)
+
+                    rectData[n].append({"rectProps":boxes,
+                            "cmap":cmap,
+                            "medianLine":medianLineProps,
+                            "internalID":internalID,
+                            "faceColor" : hexColor,
+                            "outlierProps" : outlierProps
+                            })
+
+                outlierData[n].append(outlierProps)
+
+        
+        return {"data":{
+                "plotData":rectData,#"
+                
+                "positions" : positionData,
+                "hoverData" : hoverData,
+                "facecolors" : faceColors,
+                "axisPositions":axisPositions,
+                "axisLimits" : axisLimits,
+                "tickLabels": tickLabels,
+                "tickPositions": tickPositions,
+                "axisLabels" : axisLabels,
+                "axisTitles" : axisTitles,
+                "groupNames" : groupNames,
+                "dataColorGroups": colorGroups,
+                "subplotBorders":subplotBorders,
+                "colorCategoricalColumn" : colorCategoricalColumn,
+                "verticalLines" : verticalLines,
+                "groupedPlotData" : groupedPlotData,
+                "dataID":dataID}}
+
+
+
+#  
+#         for n,plotData in plotData.items():
+#             data = plotData["x"]
+#             hoverData[n] = {"x" : data}
+#             plotData["height"] = [np.mean(x) for x in data]
+#             plotData["width"] = xWidth
+#             plotData["color"] = faceColors[n]
+#             if "CI" in self.barplotError:
+#                 plotData["yerr"] = [CI(a.values) for a in data]
+#             elif self.barplotError == "Std":
+#                 plotData["yerr"] = [np.std(a.values) for a in data]
+#             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
+
+#             plotData["x"] = boxPositions[n] 
+#             filteredData[n] = plotData
+
+#         return {"data":{
+#                 "plotData":filteredData,#"
     def getBoxplotProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         
@@ -1070,8 +1260,6 @@ class PlotterBrain(object):
                                                                     categoricalColumns,
                                                                     self.maxColumns, 
                                                                     splitByCategories = splitByCats)
-
-
         
         filteredData = OrderedDict()
         for n,plotData in plotCalcData.items():
@@ -1080,13 +1268,6 @@ class PlotterBrain(object):
             plotData["positions"] = boxPositions[n] 
             plotData["capprops"] = {"linewidth":rcParams["boxplot.whiskerprops.linewidth"]} 
             filteredData[n] = plotData
-
-        
-        #get data to display
-
-
-
-        #print(axisPositions)
         
     
         return {"data":{
@@ -2997,7 +3178,7 @@ class PlotterBrain(object):
             sizeGroupsData["group"] = numericColumns
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
 
-            if rawData.size > 15000 and rawData.shape[1] > 4:
+            if rawData.size > 100000 and rawData.shape[1] > 4:
                 #if big data, use multiprocessing, otherwise not
                 with Pool(NProcesses) as p:
                     r = p.starmap(kdeCalc,[(rawData[[numColumn]].dropna(),0.75,"gaussian",widthBox,tickPositions[0][n],numColumn,n)  for n,numColumn in enumerate(numericColumns)])
@@ -3032,7 +3213,7 @@ class PlotterBrain(object):
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
-                        kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+                        kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
                         kdeData = kdeData + tickPositions[0][n]
                         #save data
@@ -3112,7 +3293,8 @@ class PlotterBrain(object):
                             kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                             #get random x position around 0 to spread data between - and + kdeData
                             kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
-                            kdeData = np.array([np.random.uniform(-x * 0.80 , x * 0.80) for x in kdeData])
+                         
+                            kdeData = distKDEData(kdeData)
                             kdeData = kdeData + positions[nColCat]
                             data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                         plotData = plotData.join(data)
@@ -3209,7 +3391,7 @@ class PlotterBrain(object):
                                 else:
                                     kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
                                 
-                                kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+                                kdeData = distKDEData(kdeData)
                                 kdeData = kdeData + positions[nColCat]
                                 data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                             plotData = plotData.join(data)
@@ -3316,7 +3498,7 @@ class PlotterBrain(object):
                                     else:
                                         kdeData = scaleBetween(kdeData,(0,widthBox/2))
                                     
-                                    kdeData = np.array([np.random.uniform(-x*0.85,x*0.85) for x in kdeData])
+                                    kdeData = distKDEData(kdeData)
                                     kdeData = kdeData + positions[nColCat]
                                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                                 plotData = plotData.join(data)

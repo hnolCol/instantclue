@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from matplotlib.pyplot import get, text
+from pynndescent import NNDescent, PyNNDescentTransformer
 
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
@@ -49,7 +50,7 @@ import importlib
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.1"
+__VERSION__ = "v0.11.2-dev.snap17032022"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")

@@ -33,6 +33,10 @@ class ICCountplot(ICChart):
         self.hoverRectangle.set_visible(False)
         self.axisDict[0].add_artist(self.hoverRectangle)
 
+        self.hoverRectangle2 = Rectangle(xy = (-100,0), width = 1, height = 0)
+        self.hoverRectangle2.set_visible(False)
+        self.axisDict[2].add_artist(self.hoverRectangle2)
+
     def addLabelsToBar(self,rects,ax):
         ""
         if self.getParam("show.counts"):
@@ -159,6 +163,7 @@ class ICCountplot(ICChart):
 
         if self.isLiveGraphActive() or self.isQuickSelectActive():
             ax = event.inaxes
+            
             if ax == self.axisDict[0]:
                 itemIdx = [n for n,rect in enumerate(self.rects) if rect.contains(event)[0]]                
             else:
@@ -171,6 +176,9 @@ class ICCountplot(ICChart):
             idx = itemIdx[0]
             self.updateHoverLineData(self.axisDict[1],idx)
             self.updateHoverBar(self.axisDict[0],idx)
+           
+            if isinstance(event.ydata,float):
+                self.updateHoverBar(self.axisDict[2],int(event.ydata+0.5),self.rects2)
         
             dataIndex = self.data["hoverData"][idx]
             
@@ -181,7 +189,7 @@ class ICCountplot(ICChart):
 
     def openCountDataInDialog(self):
         ""
-        if "chartData" in self.data:
+        if "chartData" in self.data and hasattr(self.mC,"mainFrames"):
             self.mC.mainFrames["data"].openDataFrameinDialog(self.data["chartData"],
                                                             ignoreChanges=True, 
                                                             headerLabel="Count plot data.", 
@@ -196,18 +204,22 @@ class ICCountplot(ICChart):
         ax.draw_artist(self.hoverLine)
         self.p.f.canvas.blit(ax.bbox)
 
-    def updateHoverBar(self,ax,idx):
+    def updateHoverBar(self,ax,idx,rects=None):
         ""
-        rect = self.rects[idx]
-                
+        if rects is None:
+            rect = self.rects[idx]
+            hoverRectangle = self.hoverRectangle
+        else:
+            rect = rects[idx]   
+            hoverRectangle = self.hoverRectangle2    
     # self.hoverRectangle.update_from(rect)
         self.p.f.canvas.restore_region(self.axBackground[ax])
-        self.hoverRectangle.set_facecolor(self.getParam("scatter.hover.color"))
-        self.hoverRectangle.set_xy(rect.get_xy())
-        self.hoverRectangle.set_width(rect.get_width())
-        self.hoverRectangle.set_height(rect.get_height())
-        self.hoverRectangle.set_visible(True)
-        ax.draw_artist(self.hoverRectangle)
+        hoverRectangle.set_facecolor(self.getParam("scatter.hover.color"))
+        hoverRectangle.set_xy(rect.get_xy())
+        hoverRectangle.set_width(rect.get_width())
+        hoverRectangle.set_height(rect.get_height())
+        hoverRectangle.set_visible(True)
+        ax.draw_artist(hoverRectangle)
         self.p.f.canvas.blit(ax.bbox)
 
     def setHoverData(self,dataIndex, showText = False):
@@ -239,6 +251,8 @@ class ICCountplot(ICChart):
            
         if hasattr(self,"hoverRectangle"):
             self.hoverRectangle.set_visible(False)
+        if hasattr(self,"hoverRectangle2"):
+            self.hoverRectangle2.set_visible(False)
             
     def getInternalIDByColor(self, color):
         ""

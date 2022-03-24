@@ -27,6 +27,10 @@ INSTANT_CLUE_ANAYLSIS = [
                         "Welch-test",
                         "Wilcoxon",
                         "(Whitney-Mann) U-test"]},
+                    {"One group tests":
+                    [
+                        "One-sample t-test",
+                        "Wilcoxon signed-rank test"]}
 
     #{"Compare multiple groups":["1W-ANOVA","1W-ANOVA (rep. measures)"]},
    # {"Dimensional Reduction":}

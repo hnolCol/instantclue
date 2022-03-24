@@ -68,6 +68,7 @@ class ICBarplot(ICChart):
     def highlightGroupByColor(self,colorGroup,highlightCategory):
         """
         highlightCategory = None -> reset
+        Copied code - generalize! 
         """
         nanColor = self.getParam("nanColor")
         for color, _ , intID in colorGroup.values:
@@ -79,6 +80,7 @@ class ICBarplot(ICChart):
                 else:
                     for artist in artists:
                         artist.set_facecolor(color)
+        #update figure
         self.updateFigure.emit() 
 
     def updateGroupColors(self,colorGroup,changedCategory=None):

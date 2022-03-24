@@ -466,7 +466,6 @@ class ICClustermap(ICChart):
 
     def getColorData(self):
         ""
-        print(self.colorData)
         if hasattr(self,"colorData"):
             return self.colorData
 

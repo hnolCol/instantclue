@@ -40,6 +40,53 @@ WIKI_LINKGS = {
 
 DEFAULT_PARAMETER = [
     {
+    "name"          :   "one.sample.t.test.popmean",
+    "value"         :   0.0,
+    "dtype"         :   float,
+    "range"         :   [-np.inf,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (one sample tests)",
+    "description"   :   "Expected value in null hypothesis."
+    },
+    {
+    "name"          :   "one.sample.t.test.alternative",
+    "value"         :   "two-sided",
+    "dtype"         :   str,
+    "range"         :   ["two-sided","less","greater"],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (one sample tests)",
+    "description"   :   "The alternative hypothesis to be tested."
+    },
+    {
+    "name"          :   "one.sample.wilcoxon.alternative",
+    "value"         :   "two-sided",
+    "dtype"         :   str,
+    "range"         :   ["two-sided","less","greater"],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (one sample tests)",
+    "description"   :   "The alternative hypothesis to be tested."
+    },
+    {
+    "name"          :   "one.sample.wilcoxon.correction",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (one sample tests)",
+    "description"   :   "If True, apply continuity correction by adjusting the Wilcoxon rank statistic by 0.5 towards the mean value when computing the z-statistic if a normal approximation is used."
+    },
+    {
+    "name"          :   "one.sample.wilcoxon.zero_method",
+    "value"         :   "wilcox",
+    "dtype"         :   str,
+    "range"         :   ["wilcox","pratt","zsplit"],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (one sample tests)",
+    "description"   :   "If True, apply continuity correction by adjusting the Wilcoxon rank statistic by 0.5 towards the mean value when computing the z-statistic if a normal approximation is used."
+    },
+
+    
+    {
     "name"          :   "label.font.size",
     "value"         :   12,
     "dtype"         :   float,
@@ -679,6 +726,26 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Matplotlib",
     "description"   :   "Set fonttype for pdf exports.",
     },
+    {
+    "name"          :   "boxen.boxprops.linewidth",
+    "value"         :   0.5,
+    "dtype"         :   float,
+    "range"         :   [0.1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Boxenplot",
+    "description"   :   "Line style of boxes in boxenplot.",
+    },
+    {
+    "name"          :   "boxen.width.calculation",
+    "value"         :   "exponential",
+    "dtype"         :   str,
+    "range"         :   ["linear","exponential","area"],
+    "parent"        :   "intern",
+    "parentType"    :   "Boxenplot",
+    "description"   :   "Line style of boxes in boxenplot.",
+    },
+
+
     {
     "name"          :   "boxplot.showfliers",
     "value"         :   True,
@@ -2445,6 +2512,17 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Main Figure",
     "description"   :   "Enable/Disable scaling if scatter point sizes by calculating the ratio between axes (main vs export).",
     },
+    {
+    "name"          :   "main.figure.label.size",
+    "value"         :   12,
+    "dtype"         :   float,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Main Figure",
+    "description"   :   "Size of the label of a subplot (a,b,c,d).",
+    },
+
+    
     {
     "name"          :   "quick.select.separator",
     "value"         :   ";",
