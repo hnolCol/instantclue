@@ -728,6 +728,12 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView          
         },
+    "stats::fitTwoThreeCompModel": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"fitPulseSILACCompartmentModel","requiredKwargs":["dataID", "timeGroupingName"]},
+            "completedRequest":
+                    refreshColumnView          
+        }, 
     "stats::runCombat": 
         {
             "threadRequest":{"obj":"statCenter","fn":"runBatchCorrection","requiredKwargs":["dataID", "groupingName","grouping"]},

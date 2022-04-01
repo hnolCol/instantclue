@@ -45,7 +45,7 @@ import multiprocessing
 import importlib
 
 
-
+os.environ["OUTDATED_IGNORE"] = "1"
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")

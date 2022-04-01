@@ -24,7 +24,7 @@ from threadpoolctl import threadpool_limits
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.multitest import multipletests
 #import pingouin as pg
-from pingouin import anova, mixed_anova
+from pingouin import anova, mixed_anova, mwu
 
 
 #mixed ANOVA import
@@ -55,6 +55,141 @@ try:
 except:
     from statsmodels.nonparametric.smoothers_lowess import lowess as loess
     useStatsmodelLoess = True
+
+from lmfit import Model
+
+
+def threeCompModel(x, k_st, k_0a, k_bt, k_bi):
+    "According to https://pubs.acs.org/doi/10.1021/ac203330z. Please cite this paper when using the three compartment model"
+    u = 0.5 * ((k_st + k_0a + k_bt) - np.sqrt( (k_st + k_0a + k_bt) ** 2 - (4 * k_0a * k_bt)))
+
+    v = 0.5 * ((k_st + k_0a + k_bt) + np.sqrt ( (k_st + k_0a + k_bt) ** 2 - (4 * k_0a * k_bt)))
+
+    y_u = (k_0a*k_bi* (u - k_bt)) / ((u-v)*(u-k_bi)*u)
+
+    y_v = (k_0a * k_bi * (v - k_bt)) / ((v-u) * (v-k_bi) * v)
+
+    y_kbi = (k_0a * (k_bi - k_bt)) / ((u-k_bi) * (v-k_bi) )
+    #print(x, k_st, k_0a, k_bt, k_bi)
+    return 1 + y_u * np.exp(-u*x) + y_v * np.exp(-v*x) + y_kbi * np.exp(-k_bi*x)
+
+
+def twoCompModel(x,k_0, k_b):
+    ""
+    d = k_0-k_b
+    return 1 + (k_b/d) * np.exp(-k_0*x) - (k_0 / d) * np.exp(-k_b*x)
+
+
+def fitTwoCompartmentModelToEachRow(Y,x,batchID = "None"):
+    ""
+    gmodel = Model(twoCompModel,independent_vars = "x", method="powell")
+    _ = gmodel.make_params(k_0 = 0.2, k_b = 0.2)
+    gmodel.set_param_hint("k_0",min=0,max=np.inf, value = 0.2)
+    gmodel.set_param_hint("k_b",min=0.0,max=0.5, value = 0.001)
+    
+    kwsCollect = []
+    
+    
+    for y in Y:
+        nanBoolIdx = np.isnan(y)
+        xfit = x[~nanBoolIdx]
+        yfit  = y[~nanBoolIdx]
+        yfit = yfit / (yfit+1) 
+
+        if yfit.size < 4:
+            emptyDict = dict([(paramName,np.nan) for paramName in ["k_0","k_b","r2"]])
+            kwsCollect.append(emptyDict)
+        else:
+            try:
+                result = gmodel.fit(yfit, x=xfit)
+                kws = result.values
+                rss = (result.residual**2).sum() 
+                tss = sum(np.power(yfit - np.nanmean(yfit), 2)) 
+                r2 = 1 - rss/tss
+                kws["r2"] = r2
+                kwsCollect.append(kws)
+            except Exception as e:
+               
+                emptyDict = dict([(paramName,np.nan) for paramName in ["k_0","k_b","r2"]])
+                kwsCollect.append(emptyDict)
+    
+    return (batchID,pd.DataFrame().from_dict(kwsCollect))
+
+def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize):
+    "Moving the U test to a process - bus10 error when using on thread-seems not thread-safe"
+    r = []
+    for categoricalColumn, boolIdxCatSpec in boolIdxByCategory.items():
+        for uniqueCat, boolIdx in boolIdxCatSpec.items():
+            N = np.sum(boolIdx)
+            if N >= minGroupSize: #check the group size
+                X = data.loc[boolIdx,numericColumn].dropna().copy().values.flatten()
+                Y = data.loc[~boolIdx,numericColumn].dropna().copy().values.flatten()
+                if X.size == 0 or Y.size == 0:
+                    continue
+                uniqueCatMean = np.mean(X)
+                uniqueCatMedian = np.median(X)
+                stdev = np.std(X)
+                populationMean = np.mean(Y)
+                groupDifference = uniqueCatMean - populationMean
+                if minGroupDifference > 0 and abs(groupDifference) < minGroupDifference:
+                    continue
+                try:
+                    df = mwu( x = X, y = Y,)
+                
+                    p,U = df[["p-val","U-val"]].values[0]
+                except:
+                    p, U = 1, 0
+                
+                
+                r.append({"numericColumn":numericColumn,
+                            "category":uniqueCat,
+                            "categoricalColumn" : categoricalColumn,
+                            "p-value":p,
+                            "U-statistic":U,
+                            "n":N,
+                            "mean":uniqueCatMean,
+                            "categorySize(noNaN)":X.size,
+                            "median":uniqueCatMedian,
+                            "categorySize":N,
+                            "stdev":stdev,
+                            "difference":groupDifference}
+                            )
+    return (numericColumn,r) 
+
+
+def fitThreeComparmentModelToEachRow(Y,x,batchID = "None"):
+    ""
+    gmodel = Model(threeCompModel,independent_vars = "x")
+    params = gmodel.make_params(k_st = 0.2, k_0a = 0.2, k_bt = 0.2, k_bi = 0.21)
+    gmodel.set_param_hint("k_st",min=0,max=0.1, value = 0.002)
+    gmodel.set_param_hint("k_0a",min=0,max=0.1, value = 0.002)
+    gmodel.set_param_hint("k_bt",min=0.8,max=0.15, value = 0.01)
+    gmodel.set_param_hint("k_bi",min=0,max=5, value = 0.001)
+    kwsCollect = []
+    for y in Y:
+        nanBoolIdx = np.isnan(y)
+        xfit = x[~nanBoolIdx]
+        yfit  = y[~nanBoolIdx]
+        yfit = yfit / (yfit+1) 
+
+        if yfit.size < 4:
+            emptyDict = dict([(paramName,np.nan) for paramName in ["k_st","k_0a","k_bt","k_bi","r2"]])
+            kwsCollect.append(emptyDict)
+        else:
+            try:
+                result = gmodel.fit(yfit, x=xfit)
+                kws = result.values
+                rss = (result.residual**2).sum() 
+                tss = sum(np.power(yfit - np.nanmean(yfit), 2)) 
+                r2 = 1 - rss/tss
+                kws["r2"] = r2
+                kwsCollect.append(kws)
+            except Exception as e:
+               
+                emptyDict = dict([(paramName,np.nan) for paramName in ["k_st","k_0a","k_bt","k_bi","r2"]])
+                kwsCollect.append(emptyDict)
+    
+    return (batchID,pd.DataFrame().from_dict(kwsCollect))
 
 
 def _matchRegExToPandasSeries(data,regEx,uniqueCategory):
@@ -646,6 +781,35 @@ class StatisticCenter(object):
         else:
             return self.sourceData.joinDataFrame(dataID,df)
 
+
+    def fitPulseSILACCompartmentModel(self,dataID,timeGroupingName,compartments = 2):
+        ""
+        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        columnNames = self.sourceData.parent.grouping.getColumnNames(timeGroupingName)
+        if columnNames.size < 4:
+            return getMessageProps("Error..","Time data below 4. No fit possible.")
+
+       # timeGrouping = self.sourceData.parent.grouping.getGrouping(timeGroupingName)
+        data = self.getData(dataID,columnNames)
+        Ys = np.array_split(data.values,NProcesses,axis=0)
+       
+        mappedColumnNames = self.sourceData.parent.grouping.getGroupingsByColumnNames(columnNames)
+        t = mappedColumnNames[timeGroupingName] #get t
+
+        with Pool(NProcesses) as p:
+                if compartments == 3:
+                    rs = p.starmap(fitThreeComparmentModelToEachRow,[(Y,t,n) for n,Y in enumerate(Ys)])
+                elif compartments == 2:
+                    rs = p.starmap(fitTwoCompartmentModelToEachRow,[(Y,t,n) for n,Y in enumerate(Ys)])
+                else:
+                    return getMessageProps("Error","Compartments must be 2 or 3.")
+                rs.sort(key=lambda x: x[0])
+                fitData = pd.concat([r[1] for r in rs], ignore_index=True)
+            
+        returnProps = self.sourceData.joinDataFrame(dataID, pd.DataFrame(fitData,index=data.index))
+        return returnProps
+                    
+
     def fitModel(self, dataID, columnNames, timeGrouping, compGrouping, replicateGrouping = "None", model="First Order Kinetic", normalization = "None", transformation = "None", sortTimeGroup = True, addDataAUC = True, addFitAUC = True):
         "Fit Model to Data"
         
@@ -890,6 +1054,7 @@ class StatisticCenter(object):
         minGroupSize = self.sourceData.parent.config.getParam("1D.enrichment.min.category.group.size")
         minGroupDifference = self.sourceData.parent.config.getParam("1D.enrichment.min.abs.group.difference")
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        boolIdxByCategory = dict()
         for categoricalColumn in categoricalColumns:
             
             splitData = data[categoricalColumn].astype("str").str.split(splitString).values
@@ -897,51 +1062,72 @@ class StatisticCenter(object):
             regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
             #boolIdxByCategory = dict([(uniqueCategory,data[categoricalColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
             X = data[categoricalColumn]
-            t1=time.time()
+            
             with Pool(NProcesses) as p:
                 poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
-            boolIdxByCategory = dict(poolResult)
+                boolIdxByCategory[categoricalColumn] = dict(poolResult)
             
-            
-        resultDF  = pd.DataFrame(columns=["numericColumn","Category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value"])
+        print("done")
+        resultDF  = pd.DataFrame(columns=["numericColumn","categoricalColumn","category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value"])
         r = []
-        for numericColumn in columnNames.values:
+        with Pool(1) as p:
+            rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize) for numericColumn in columnNames.values])
+            r = [x for r in rs for x in  r[1]]
             
-            for uniqueCat, boolIdx in boolIdxByCategory.items():
-                N = np.sum(boolIdx)
-                if N >= minGroupSize: #check the group size
-                    X = data.loc[boolIdx,numericColumn].dropna().values.flatten()
-                    Y = data.loc[~boolIdx,numericColumn].dropna().values.flatten()
-                    if X.size == 0 or Y.size == 0:
-                        continue
-                    uniqueCatMean = np.mean(X)
-                    uniqueCatMedian = np.median(X)
-                    stdev = np.std(X)
-                    populationMean = np.mean(Y)
-                    groupDifference = uniqueCatMean - populationMean
-                    if minGroupDifference > 0 and abs(groupDifference) < minGroupDifference:
-                        continue
-                    
-                    U, p = mannwhitneyu(
-                                x = X,
-                                y = Y,
-                                alternative=alternative
-                                )
-                    
-                    
-                    r.append({"numericColumn":numericColumn,
-                                "Category":uniqueCat,
-                                "p-value":p,
-                                "U-statistic":U,
-                                "n":N,
-                                "mean":uniqueCatMean,
-                                "categorySize(noNaN)":X.size,
-                                "median":uniqueCatMedian,
-                                "categorySize":N,
-                                "stdev":stdev,
-                                "difference":groupDifference}
-                                )
+
+
             
+            
+            # for numericColumn in columnNames.values:
+            #     for categoricalColumn, boolIdxCatSpec in boolIdxByCategory.items():
+            #         for uniqueCat, boolIdx in boolIdxCatSpec.items():
+            #             N = np.sum(boolIdx)
+            #             if N >= minGroupSize: #check the group size
+            #                 X = data.loc[boolIdx,numericColumn].dropna().copy().values.flatten()
+            #                 Y = data.loc[~boolIdx,numericColumn].dropna().copy().values.flatten()
+            #                 if X.size == 0 or Y.size == 0:
+            #                     continue
+            #                 uniqueCatMean = np.mean(X)
+            #                 uniqueCatMedian = np.median(X)
+            #                 stdev = np.std(X)
+            #                 populationMean = np.mean(Y)
+            #                 groupDifference = uniqueCatMean - populationMean
+            #                 if minGroupDifference > 0 and abs(groupDifference) < minGroupDifference:
+            #                     continue
+            #                 print("1,",X,Y)
+            #                 print(uniqueCat)
+            #                 U = 0
+            #                 p = 0.002
+            #                 df = mwu( x = X, y = Y,)
+            #                 print(df[["p-val","U-val"]].values[0])
+            #                 p,U = df[["p-val","U-val"]].values[0]
+            #                 print(p,U)
+            #                 #                 y = Y,)
+            #                 # try:
+            #                 #     U, p = mannwhitneyu(
+            #                 #                 x = X,
+            #                 #                 y = Y,
+            #                 #                 alternative=alternative
+            #                 #                 )
+            #                 # except Exception as e:
+            #                 #     print(e)
+            #                 #     continue
+            #                 print("this works?")
+                            
+            #                 r.append({"numericColumn":numericColumn,
+            #                             "category":uniqueCat,
+            #                             "categoricalColumn" : categoricalColumn,
+            #                             "p-value":p,
+            #                             "U-statistic":U,
+            #                             "n":N,
+            #                             "mean":uniqueCatMean,
+            #                             "categorySize(noNaN)":X.size,
+            #                             "median":uniqueCatMedian,
+            #                             "categorySize":N,
+            #                             "stdev":stdev,
+            #                             "difference":groupDifference}
+            #                             )
+        print("DD")
         resultDF = resultDF.append(r,ignore_index=True)
         pValues = resultDF["p-value"].values.flatten()
         resultDF.loc[:,"-log10 p-value"] = (-1)*np.log10(pValues)
@@ -1177,7 +1363,7 @@ class StatisticCenter(object):
         except:
             return [None,None]
 
-            
+
     def performPairwiseTest(self,XY,kind = "t-test", props = {}):
         X,Y = XY
         if X.values.size < 2 or Y.values.size < 3:

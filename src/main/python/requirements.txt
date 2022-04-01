@@ -24,3 +24,4 @@ wordcloud==1.8.1
 PyQt5==5.15.2
 joblib==0.17.0
 Cython==0.29.21
+lmfit==1.0.3

@@ -208,7 +208,24 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs" : {"fitType":"increase"}
     },
-    
+        {
+       "subM":"pulse-SILAC",
+        "name":"Two-compartment model (in-vivo)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"stats::fitTwoThreeCompModel",
+                    "requiredGrouping": ["timeGroupingName"],
+                    "otherKwargs": {"compartments":2}}
+    },
+    {
+       "subM":"pulse-SILAC",
+        "name":"Three-compartment model (in-vivo)",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"stats::fitTwoThreeCompModel",
+                    "requiredGrouping": ["timeGroupingName"],
+                    "otherKwargs": {"compartments":3}}
+    },
     # {
     #     "subM":"Organization",
     #     "name":"Create Sample List",
@@ -1346,6 +1363,7 @@ menuBarItems = [
         "funcKey": "fitModel",
         "dataType": "Numeric Floats",
     },
+
     {
         "subM":"Outlier",
         "name":"Remove outliers (Group)",
@@ -2493,12 +2511,13 @@ class DataTreeViewTable(QTableView):
 
         elif "requiredGrouping" in kwargs:
             if self.mC.grouping.groupingExists():
-              
+                groupingName = kwargs["requiredGrouping"][0]
                 grouping = self.mC.grouping.getCurrentGroupingName()
-                fnKwargs = {"groupingName":grouping}
+                fnKwargs = {groupingName:grouping}
                 if "otherKwargs" in kwargs:
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                 funcKey = kwargs["funcKey"]
+                print(fnKwargs)
                 self.prepareMenuAction(funcKey,fnKwargs,addColumnSelection=False,addDataID=True)
         
             else:
