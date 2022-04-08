@@ -1007,14 +1007,15 @@ class ICChart(QObject):
 	def addSwarm(self,dataID,numericColumns,categoricalColumns, onlyForID = None, targetAx = None):
 		"Add Swarm Scatter"
 		try:
-			if not self.isBoxplotViolinBar():
-				w = WarningMessage(infoText = "Swarms can only be added to box, bar and violinplots.")
+			if not (self.isBoxplotViolinBar() or self.isBoxenplot()):
+				w = WarningMessage(infoText = "Swarms can only be added to box, boxen, bar and violinplots.")
 				w.exec_()
 				return
 			
 			
 			if hasattr(self,"swarmData") and onlyForID is not None and hasattr(self,"swarmScatterKwargs"):
 				for n, scatter in self.swarmScatter.items():
+					print("SCA",scatter.getScatterInvisibility())
 					if not scatter.getScatterInvisibility():
 						#if visibility is Flase -> dont plot anything
 						return
@@ -1032,6 +1033,7 @@ class ICChart(QObject):
 							interactive = False,
 							adjustLimits = False
 							)
+				print("reached")
 			elif hasattr(self,"swarmData"):
 				#if swarm data are present -> just toggle visibility of swarm scatters#
 				#setting swarm invisisble

@@ -132,7 +132,7 @@ class ICClustermap(ICChart):
         else:
             colorMeshLineKwargs = {}
 
-        print(colorMeshLimits)
+        
         if colorMeshLimits is not None:
             if isinstance(colorMeshLimits,dict) and "vmin" in colorMeshLimits and "vmax" in colorMeshLimits and len(colorMeshLimits) == 2:
                 valueLimitKwargs = colorMeshLimits.copy()
@@ -145,9 +145,7 @@ class ICClustermap(ICChart):
         else:
             valueLimitKwargs = {}
             
-        print(valueLimitKwargs)
-        print(data)
-
+       
         colorMesh = ax.pcolormesh(data, 
 					  cmap = cmap,
                       norm = norm,

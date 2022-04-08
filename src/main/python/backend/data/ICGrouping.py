@@ -388,12 +388,12 @@ class ICGrouping(object):
         jsonOut["Software"] = "Instant Clue"
         jsonOut["Version"] = self.sourceData.parent.version
         jsonOut["Computer"] = computerName
-        jsonOut["grouping"] = OrderedDict()
+        jsonOut["groupings"] = OrderedDict()
         jsonOut["groupingCmap"] = dict()
         jsonOut["groupingNames"] = groupingNames.tolist()
         for groupingName in groupingNames:
             if groupingName in self.groups:
-                jsonOut["grouping"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])
+                jsonOut["groupings"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])
                 jsonOut["groupingCmap"][groupingName] = self.getColorMap(groupingName)
        
         with open(filePath, 'w', encoding='utf-8') as f:
@@ -407,7 +407,7 @@ class ICGrouping(object):
         try:
             with open(filePath, 'r', encoding='utf-8') as f:
                 jsonLoaded = json.load(f)
-                for groupingName, groups in jsonLoaded["grouping"].items():
+                for groupingName, groups in jsonLoaded["groupings"].items():
                     groupedItems = dict([(k,pd.Series(v)) for k,v in groups.items()])
                     if groupingName in jsonLoaded["groupingCmap"]:
                         cmapName = jsonLoaded["groupingCmap"][groupingName]

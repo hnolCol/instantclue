@@ -392,7 +392,7 @@ class DataCollection(object):
 					params = pd.read_excel(excelFile,sheet_name="Software Info", index_col="Parameters")
 					numberOfGroupings = int(float(params.loc["Groupings"]))
 					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],skiprows=numberOfGroupings).dropna(axis=1,how="all")
-					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					funcProps = self.addDataFrame(df,fileName=dataFrameName, cleanObjectColumns=True)
 					#groupings
 					
 					try:
@@ -424,7 +424,7 @@ class DataCollection(object):
 				else:
 					props = self.checkLoadProps(props)
 					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],**props)
-					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					funcProps = self.addDataFrame(df,fileName=dataFrameName,cleanObjectColumns=True)
 					
 		# if deleteExcelFiles:
 		# 	for v in excelFiles.values():
@@ -579,7 +579,8 @@ class DataCollection(object):
 			"thousands":config.getParam("load.file.float.thousands"),
 			"decimal": config.getParam("load.file.float.decimal"),
 			"skiprows": config.getParam("load.file.skiprows"),
-			"na_values":config.getParam("load.file.na.values")}
+			"na_values":config.getParam("load.file.na.values"),
+			"index_col":False}
 		return self.checkLoadProps(props)
 
 	def checkLoadProps(self,loadFileProps):
@@ -717,7 +718,13 @@ class DataCollection(object):
 			collectResults[newColumnName] = XYCalc
 
 		return self.joinDataFrame(dataID,collectResults)
-	
+
+
+	def randomSelection(self, dataID, N,*args,**kwargs):
+		""
+		sampleIdx = self.getDataByDataID(dataID).sample(n=N).index
+		return self.addAnnotationColumnByIndex(dataID,sampleIdx,"RandomSelection(N={})".format(N))
+
 	def sortColumns(self,dataID,sortedColumnDict):
 		""
 		sortedColumns = []
@@ -905,19 +912,19 @@ class DataCollection(object):
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))
 
 	def explodeDataByColumn(self,dataID,columnNames,splitString=None):
-			"Splits rows by splitString into lists and then applies explode on that particular column"
-			if dataID in self.dfs:
-				columnName = columnNames.values[0]
-				data = self.dfs[dataID].copy()
-				if splitString is None:
-					splitString = self.parent.config.getParam("explode.split.string")
-				data[columnName] = data[columnName].str.split(splitString,expand=False)
-				explodedData = data.explode(columnName, ignore_index=True)
-				fileName = self.getFileNameByID(dataID)
-				return self.addDataFrame(explodedData, fileName="explode({})::{}".format(fileName,columnName))
+		"Splits rows by splitString into lists and then applies explode on that particular column"
+		if dataID in self.dfs:
+			columnName = columnNames.values[0]
+			data = self.dfs[dataID].copy()
+			if splitString is None:
+				splitString = self.parent.config.getParam("explode.split.string")
+			data[columnName] = data[columnName].str.split(splitString,expand=False)
+			explodedData = data.explode(columnName, ignore_index=True)
+			fileName = self.getFileNameByID(dataID)
+			return self.addDataFrame(explodedData, fileName="explode({})::{}".format(fileName,columnName))
 
-			else:
-				return errorMessage
+		else:
+			return errorMessage
 
 	def fillNaInObjectColumns(self,dataID,columnLabelList, naFill = None):
 		'''

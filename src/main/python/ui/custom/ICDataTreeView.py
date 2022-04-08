@@ -436,6 +436,20 @@ menuBarItems = [
         "dataType": "Numeric Floats"
     },
     {
+        "subM":"Filter",
+        "name":"Random Selection",
+        "funcKey": "applyNumericFilterForSelection",
+        "funcKey": "getUserInput",
+        "dataType" : "All",
+        "fnKwargs" : {"funcKey":"data::randomSelection",
+                      "info":"Number of rows that should be randomly selected..",
+                      "min": 1,
+                      "max": "nDataRows",
+                      "requiredInt":"N",
+                      }
+    },
+    
+    {
         "subM":"Smoothing",
         "name":"IIR Filter",
         "funcKey": "data::transformData",

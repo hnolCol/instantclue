@@ -39,6 +39,15 @@ funcPropControl = {
                             [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
                             sendMessageProps]
         }, 
+    "data::randomSelection":
+        {
+            "threadRequest":{"obj":"data","fn":"randomSelection","requiredKwargs":["dataID","N"]},
+            "completedRequest": 
+                            [updateTreeView,
+                            sendMessageProps]
+        }, 
+
+        
     "data::addDataFrame":
         {
             "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},

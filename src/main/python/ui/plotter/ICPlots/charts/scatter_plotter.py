@@ -287,13 +287,13 @@ class scatterPlot(object):
 		else:
 			self.mainCollecion.set_visible(visible)
 
-	def getScatterInvisibility(self,visible = False):
+	def getScatterInvisibility(self):
 		""
 		if isinstance(self.mainCollecion, dict):
 			for scatterCollection in self.mainCollecion.values():
 				return scatterCollection.get_visible()
 		else:
-			return self.mainCollecion.set_visible(visible)
+			return self.mainCollecion.get_visible()
 
 	def toggleVisibility(self):
 		""
