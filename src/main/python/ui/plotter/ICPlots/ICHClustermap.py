@@ -1,6 +1,3 @@
- 
-from asyncio import FastChildWatcher
-from turtle import color
 
 from matplotlib.collections import LineCollection
 from .ICChart import ICChart
