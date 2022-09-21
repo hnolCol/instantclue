@@ -111,7 +111,7 @@ menuBarItems = [
     # },
     {
         "subM":"About",
-        "name":"v. {}".format(__VERSION__),
+        "name":"{}".format(__VERSION__),
         "fn": lambda : pd.DataFrame([__VERSION__]).to_clipboard(index=False,header=False)
     },
     {
