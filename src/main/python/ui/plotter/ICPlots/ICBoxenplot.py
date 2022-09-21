@@ -173,7 +173,8 @@ class ICBoxenplot(ICChart):
 
  
     def updateQuickSelectItems(self,propsData=None):
-               
+
+        
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
             intIDMatch = np.concatenate([np.full(idx.size,intID) for intID,idx in self.quickSelectCategoryIndexMatch.items()]).flatten()
@@ -186,14 +187,16 @@ class ICBoxenplot(ICChart):
         if not hasattr(self,"backgrounds"):
             self.updateBackgrounds()
         
+        #print(dataIndex)
+
         if hasattr(self,"quickSelectScatter"):
             try:
                 for n,ax in self.axisDict.items():
-                    if n in self.data["plotData"] and ax in self.backgrounds and ax in self.quickSelectScatter:                        
-                        data = self.data["plotData"][n]["x"]
-                        coords = [(self.data["plotData"][n]["positions"][m], X.loc[dataIdx], intIDMatch[mIdx],dataIdx) for mIdx,dataIdx in enumerate(dataIndex) for m,X in enumerate(data) if dataIdx in X.index.values ]
+                    if n in self.data["hoverData"] and ax in self.backgrounds and ax in self.quickSelectScatter: 
+                        data = self.data["hoverData"][n]["x"]
+                    
+                        coords = [(self.data["positions"][n][m], X.loc[dataIdx], intIDMatch[mIdx],dataIdx) for mIdx,dataIdx in enumerate(dataIndex) for m,X in enumerate(data) if dataIdx in X.index.values ]
                         coords = pd.DataFrame(coords, columns = ["x","y","intID","idx"])
-                        
                         sortedDataIndex = coords["idx"].values
                         scatterColors = [propsData.loc[idx,"color"] for idx in sortedDataIndex]
                         scatterSizes = [propsData.loc[idx,"size"] for idx in sortedDataIndex]
@@ -201,6 +204,7 @@ class ICBoxenplot(ICChart):
                         self.updateQuickSelectScatter(ax,coords,scatterColors,scatterSizes)
 
             except Exception as e:
+               
                 print(e)
 
     def updateBackgrounds(self):
@@ -216,10 +220,10 @@ class ICBoxenplot(ICChart):
         ""
         if hasattr(self,"backgrounds"):
             for n, ax in self.axisDict.items():
-                if n in self.data["plotData"] and ax in self.backgrounds:
-                    data = self.data["plotData"][n]["x"]
-                    coords = np.array([(self.data["plotData"][n]["positions"][m], X.loc[dataIdx]) for dataIdx in dataIndex for m,X in enumerate(data) if dataIdx in X.index.values ])
-                    self.p.f.canvas.restore_region(self.backgrounds[ax])
+                if n in self.data["hoverData"] and ax in self.backgrounds:
+                    data = self.data["hoverData"][n]["x"]
+                    coords = np.array([(self.data["positions"][n][m], X.loc[dataIdx]) for dataIdx in dataIndex for m,X in enumerate(data) if dataIdx in X.index.values ])
+                    self.p.f.canvas.restore_region(self.backgrounds[ax])                  
                     if coords.size > 0:
                         
                         self.setHoverScatterData(coords,ax)

@@ -1,6 +1,8 @@
 
+from cmath import pi
 from multiprocessing import Pool
 from sys import intern
+from tokenize import group
 from numba.np.ufunc import parallel
 import numpy as np
 from numpy.core import numeric
@@ -1359,9 +1361,10 @@ class PlotterBrain(object):
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
                 #define axis limits
+                marginY = np.sqrt((maxValue+3*maxErrorValue)**2-(minValue-2*maxErrorValue)**2)*0.05
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
-                        "yLimit" : (minValue-3*maxErrorValue,maxValue+3*maxErrorValue)
+                        "yLimit" : (minValue-maxErrorValue-marginY,maxValue+maxErrorValue+marginY)
                         }
                 
                 colorGroups["color"] = colorList
@@ -1876,6 +1879,7 @@ class PlotterBrain(object):
 
 
             axisDict = self.getClusterAxes(numericColumns, 
+                    numberOfRows = rawIndex.size,
                     figureSize = figureSize,
                     corrMatrix=corrMatrix, 
                     rowOn = rowMetric != "None" and rowMethod != "None", 
@@ -2034,6 +2038,7 @@ class PlotterBrain(object):
 
     def getClusterAxes(self, 
                     numericColumns, 
+                    numberOfRows,
                     figureSize, 
                     corrMatrix=False, 
                     rowOn = True,
@@ -2055,6 +2060,7 @@ class PlotterBrain(object):
         pixelFigureWidth = figureSize["width"]
         pixelFigureHeight = figureSize["height"]
         pixelPerColumn = self.sourceData.parent.config.getParam("pixel.width.per.column")
+        squareRectangles = self.sourceData.parent.config.getParam("pixel.height.equals.width")
         maxPixelForHeatmap = (width - 0.1) * pixelFigureWidth #0.1 = min margin
         maxPixelHeightHeatmap = height * pixelFigureHeight
         
@@ -2075,7 +2081,7 @@ class PlotterBrain(object):
             
             if widthInPixel <= maxPixelHeightHeatmap:
                
-                heightInPixel = widthInPixel
+               # heightInPixel = widthInPixel
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
                 
             else:
@@ -2083,10 +2089,20 @@ class PlotterBrain(object):
                 clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
         
-           
+        elif squareRectangles:
+            # print(heightMain)
+            # print(numberOfRows)
+            # print(widthInPixel)
+            # print(maxPixelHeightHeatmap)
+            # print("w",pixelFigureWidth)
+            # print("h",pixelFigureHeight, pixelFigureHeight * heightMain)
+            pixelRelativeHeight = (widthInPixel/len(numericColumns) * numberOfRows) / (pixelFigureHeight)
+            if pixelRelativeHeight < heightMain:
+                heightMain = pixelRelativeHeight
+            #print(heightMain)
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
             
-            y0 = 1 - heightMain - 0.22 #bit of margin
+        y0 = 1 - heightMain - 0.22 #bit of margin
             
         #widthPer pixelWidth / len(numericColumns)
         #correctHeight = 1
@@ -2154,7 +2170,6 @@ class PlotterBrain(object):
     def getDimRedProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
         return {"data":{}}
-
 
     def getForestplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
@@ -3200,7 +3215,9 @@ class PlotterBrain(object):
                 for n,numColumn in enumerate(numericColumns):
                     xName = "x({})".format(numColumn)
                     groupData = rawData[[numColumn]].dropna()
-                    if groupData.index.size == 1:
+                    if groupData.empty:
+                        continue
+                    elif groupData.index.size == 1:
                         kdeData = np.array([0]) +  positions[n]
                         data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                         kdeIndex = data.index

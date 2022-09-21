@@ -10,6 +10,7 @@ from ..utils.stringOperations import getMessageProps, getRandomString, mergeList
 from backend.utils.stringOperations import getNumberFromTimeString
 from backend.utils.misc import getKeyMatchInValuesFromDict
 from backend.filter.utils import buildRegex
+from backend.statistics.permutationFDR import calculatePermutationBasedFDR
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
@@ -1067,7 +1068,7 @@ class StatisticCenter(object):
                 poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
                 boolIdxByCategory[categoricalColumn] = dict(poolResult)
             
-        print("done")
+        #print("done")
         resultDF  = pd.DataFrame(columns=["numericColumn","categoricalColumn","category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value"])
         r = []
         with Pool(1) as p:
@@ -1295,10 +1296,13 @@ class StatisticCenter(object):
         #print(grouping)
         #print(test)
         colNameStart = {"euclidean":"eclD:","t-test":"tt:","Welch-test":"wt"}
-  
-        groupComps = self.sourceData.parent.grouping.getGroupPairs(referenceGroup)
-        groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
-        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames())
+       
+        groupingName = grouping 
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        groupComps = self.sourceData.parent.grouping.getGroupPairs(groupingName,referenceGroup)
+        #groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
+        
+        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames(groupingName))
         results = pd.DataFrame(index = data.index)
         if test == "1W-ANOVA":
             testGroupData = [data[columnNames].values for columnNames in grouping.values()]
@@ -1310,9 +1314,7 @@ class StatisticCenter(object):
                 results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
             else:
                 results["p-1WANOVA({})".format(groupingName)] = p
-        elif test == "2W-ANOVA":
-
-            self.runANOVA(dataID)
+        
         else:
             resultColumnNames = [colNameStart[test] + "({})_({})".format(group1,group0) for group0,group1 in groupComps]
             for n,(group0, group1) in enumerate(groupComps):
@@ -1335,16 +1337,29 @@ class StatisticCenter(object):
                 elif test in ["t-test","Welch-test"]:
 
                     t, p = ttest_ind(X,Y,axis=1,nan_policy="omit",equal_var = test == "t-test")
+                    boolIdx, p_adj , _ , _ = multipletests(p,0.05,method="fdr_bh")
                     if logPValues:
                         pValueColumn = "-log10-p-value:({})".format(resultColumnNames[n])
                         results[pValueColumn] = np.log10(p) * (-1)
                         results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
                     else:
                         results["p-value:({})".format(resultColumnNames[n])] = p 
+                    
                     results["T-stat:({})".format(resultColumnNames[n])] = t
-                    results["diff:({})".format(resultColumnNames[n])] = np.nanmean(Y,axis=1) - np.nanmean(X,axis=1) 
+                    results["t-test diff:({})".format(resultColumnNames[n])] = np.nanmean(Y,axis=1) - np.nanmean(X,axis=1) 
+                    results["adj. p-value (fdr_bh)({})".format(resultColumnNames[n])] = p_adj
+                    results["Significant ({})".format(resultColumnNames[n])] = pd.Series(boolIdx).map({True:"+",False:"-"})
+                    q, samStat = self.performPermutationFDREstimation(X,Y,data[columnNames1.values.tolist()+columnNames2.values.tolist()].values)
+                    print(q)
+                    results["q-value:({})".format(resultColumnNames[n])] = q
+                    results["sam-stat:({})".format(resultColumnNames[n])] = samStat
 
         return self.sourceData.joinDataFrame(dataID,results)
+
+    def performPermutationFDREstimation(self,X,Y,PP,P=200,s0=0.1):
+        ""
+        
+        return calculatePermutationBasedFDR(X,Y,PP,P,s0)
 
     def performOneSampleTest(self,data, kind= "One-sample t-test"):
         ""

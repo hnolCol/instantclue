@@ -623,7 +623,8 @@ class ICChart(QObject):
 
 
 	def shareGraph(self):
-		""
+		"Not available yet"
+	
 		shareDialog = ICShareGraph(mainController=self.mC)
 		shareDialog.exec_()
 
@@ -732,6 +733,54 @@ class ICChart(QObject):
 			"name":"Line({})".format(lineID) if name is None else name,
 			"ax":ax,
 			"lkwargs":lKwargs}
+
+	def addGroupingLegendToGraph(self, groupData, ax, title =  "",update=True, export = False, legendKwargs = {}):
+		""
+		try:
+			if len(groupData) > 200:
+				w = WarningMessage(title="To many items for grouping legend.",
+								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
+				w.exec_()	
+				return			
+			
+			legendItems = []
+			maxItems = np.max([len(groupItems) for  groupItems in groupData.values()])
+			for groupingName, groupItems in groupData.items():
+				legendItems.append(Patch(fill=False,edgecolor='none', linewidth=0, label=groupingName))
+				for n, (groupName, groupColor) in enumerate(groupItems.items()):
+
+					legendItems.append(Patch(
+							facecolor=groupColor,
+							edgecolor="black",
+							label = groupName))
+				if maxItems-(n+1) != 0:
+					for n in range(maxItems-(n+1)):
+						legendItems.append(Patch(fill=False,edgecolor='none', linewidth=0, label=""))
+
+			if not export and hasattr(self,"colorLegend"):
+				self.groupingLegend.remove() 
+			
+			legend = ax.legend(handles=legendItems, 
+								title = title, 
+								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
+								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = 0.2,#self.getParam("legend.label.spacing"),
+								borderpad  = 0.2,#self.getParam("legend.label.borderpad"),
+								**legendKwargs)
+			if not export:
+				self.groupingLegend = legend
+				self.checkLegend(ax,attrName="sizeLegend")
+				self.checkLegend(ax,attrName="markerLegend")
+				self.checkLegend(ax,attrName="quickSelectLegend")
+				self.lastAddedLegend = legend
+				self.groupingLegendKwargs = {"colorData":groupData,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
+				
+			if update:
+				self.updateFigure.emit()
+			return legend
+		except Exception as e:
+			print(e)
+
 
 	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
 		""
@@ -1033,7 +1082,7 @@ class ICChart(QObject):
 							interactive = False,
 							adjustLimits = False
 							)
-				print("reached")
+				#print("reached")
 			elif hasattr(self,"swarmData"):
 				#if swarm data are present -> just toggle visibility of swarm scatters#
 				#setting swarm invisisble

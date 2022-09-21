@@ -1399,7 +1399,16 @@ DEFAULT_PARAMETER = [
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
     "parentType"    :   "Cluster (HClust)",
-    "description"   :   "Width of columns in pixel. If the numer of columns times the width is bigger than the available space the column width will be adjusted.",
+    "description"   :   "Width of columns in pixel. If the number of columns times the width is bigger than the available space the column width will be adjusted.",
+    },
+        {
+    "name"          :   "pixel.height.equals.width",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, rectangles of heatmap will be adjusted to be squared if possible.",
     },
     {
     "name"          :   "hclust.color.axis.border.left",

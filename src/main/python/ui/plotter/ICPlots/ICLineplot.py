@@ -346,12 +346,12 @@ class ICLineplot(ICChart):
         ""
         c = quickSelectGroup.loc[quickSelectGroup["internalID"] == changedCategory]["color"].values[0]
         for ax in self.axisDict.values():
-            if ax in self.quickSelectLines and changedCategory in self.quickSelectLines[ax]:
+            if hasattr(self,"quickSelectLines") and ax in self.quickSelectLines and changedCategory in self.quickSelectLines[ax]:
                 qSLine = self.quickSelectLines[ax][changedCategory]
                 qSLine.set_color(c)
                 qSLine.set_markerfacecolor(c)
 
-            if ax in self.quickSelectPolygon and changedCategory in self.quickSelectPolygon[ax]:
+            if hasattr(self,"quickSelectPolygon") and ax in self.quickSelectPolygon and changedCategory in self.quickSelectPolygon[ax]:
 
                     poly = self.quickSelectPolygon[ax][changedCategory]
                     poly.set_facecolor(c)
@@ -383,15 +383,19 @@ class ICLineplot(ICChart):
     def resetQuickSelectArtists(self):
         ""
         for ax in self.axisDict.values():
-            if ax in self.quickSelectPolygon:
+            if hasattr(self,"quickSelectPolygon") and ax in self.quickSelectPolygon:
                 for poly in self.quickSelectPolygon[ax].values():
                     poly.set_visible(False)
-            if ax in self.quickSelectLines:
+            if hasattr(self,"quickSelectLines") and ax in self.quickSelectLines:
                 for line in self.quickSelectLines[ax].values():
                     line.set_visible(False)
 
         self.quickSelectPolygonKwargs.clear()
-        self.quickSelectPolygon.clear()
         self.quickSelectLineKwargs.clear()
-        self.quickSelectLines.clear()
+
+        if hasattr(self,"quickSelectPolygon"):
+            self.quickSelectPolygon.clear()
+        if hasattr(self,"quickSelectLines"):
+            self.quickSelectLines.clear()
+            
         self.updateFigure.emit()

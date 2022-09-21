@@ -665,7 +665,7 @@ class ColorTable(QTableView):
         else:
             self.mouseOverItem = rowAtEvent
             
-            self.parent().highlightColorGroup()
+            #self.parent().highlightColorGroup()
             
 
         self.model().rowDataChanged(rowAtEvent)

@@ -426,12 +426,12 @@ class DataHandleFrame(QFrame):
         ""
         self.dlg.updateModelDataByBool(boolIndicator,resetData)
 
-    def updateDataInTreeView(self,columnNamesByType, dataID = None):
+    def updateDataInTreeView(self,columnNamesByType, tooltipData = {}, dataID = None):
         "Updating data in treeview (Numeric Floats, Integers, Categories)"
         if dataID is not None:
             if not self.dataTreeView.getDataID() == dataID:
                 return
-        self.dataTreeView.updateDataInTreeView(columnNamesByType)
+        self.dataTreeView.updateDataInTreeView(columnNamesByType, tooltipData)
         self.updateGroupingInTreeView()
     
     def updateGroupingInTreeView(self):

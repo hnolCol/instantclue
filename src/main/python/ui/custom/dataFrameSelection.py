@@ -313,13 +313,13 @@ class CollapsableDataTreeView(QWidget):
         for treeView in self.dataHeaders.values():
             treeView.hideShowShortCuts()
 
-    def updateDataInTreeView(self,columnNamesByType):
+    def updateDataInTreeView(self,columnNamesByType, tooltipData = {}):
         """Add data to the data treeview"""
         if isinstance(columnNamesByType,dict):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
-                        self.dataHeaders[headerName].addData(values) 
+                        self.dataHeaders[headerName].addData(values, tooltipData) 
                         self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
                         if values.size == 0:
                             self.frames.setInactiveByTitle(headerName)

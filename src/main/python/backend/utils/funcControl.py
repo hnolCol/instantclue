@@ -2,7 +2,7 @@
 
 
 
-updateTreeView = {"obj":"self","fn":"updateDataInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":["columnNamesByType"],"optionalKwargs":["dataID"]}
+updateTreeView = {"obj":"self","fn":"updateDataInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":["columnNamesByType"],"optionalKwargs":["dataID","tooltipData"]}
 sendMessageProps = {"obj":"self","fn":"sendMessageRequest","requiredKwargs":["messageProps"]}
 updateGrouping = {"obj":"self","fn":"updateGroupingInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":[]}
 refreshColumnView = [
@@ -663,6 +663,15 @@ funcPropControl = {
     "normalizer::normalizeData":
         {
             "threadRequest":{"obj":"normalizer","fn":"normalizeData","requiredKwargs":["dataID","columnNames","normKey"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
+
+    "normalize::toSpecificGroup":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeToGroup","requiredKwargs":["dataID","groupingName","toGroups","withinGroupingName"]},
             "completedRequest": [
                 updateTreeView,
                 sendMessageProps]

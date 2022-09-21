@@ -241,5 +241,4 @@ class ICShareGraph(QDialog):
             return True
         else:
             self.mC.sendToWarningDialog(infoText="Please set a chart title.")
-           
             return False

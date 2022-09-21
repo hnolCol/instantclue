@@ -737,6 +737,13 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "loessRowNorm"}
     },
+    {
+        "subM":"Normalization (row)",
+        "name":"To specific group",
+        "funcKey": "normalizeToSpecificGroup",
+        "dataType": "Numeric Floats",
+        #"fnKwargs": {"normKey": "loessRowNorm"}
+    },
     # {
     #     "subM":"Normalization (row)",
     #     "name":"Relative within Group",
@@ -1567,10 +1574,12 @@ class DataTreeView(QWidget):
 
         self.showShortcuts = not self.showShortcuts
 
-    def addData(self,X, dataID = None):
+    def addData(self,X, tooltipData = {} ,dataID = None):
         ""
+        #print(tooltipData)
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
+        self.table.model().setTooltipdata(tooltipData)
         self.table.selectionModel().clear()
         self.table.model().layoutChanged.emit()
 
@@ -1616,11 +1625,13 @@ class DataTreeModel(QAbstractTableModel):
     def __init__(self, labels = pd.Series(), parent=None):
         super(DataTreeModel, self).__init__(parent)
         self.initData(labels)
+        
 
     def initData(self,labels):
 
         self._labels = labels
         self._inputLabels = labels.copy()
+        self.tooltipData = OrderedDict()
         self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
         self.resetGrouping()
         self.setDefaultSize()
@@ -1794,32 +1805,45 @@ class DataTreeModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole): 
         ""
+
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.DisplayRole and index.column() == 0: 
+
+        columnIndex = index.column()
+
+        if role == Qt.DisplayRole and columnIndex == 0: 
             rowIndex = index.row() 
             if rowIndex >= 0 and rowIndex < self._labels.index.size:
                 return str(self._labels.iloc[index.row()])
         elif role == Qt.FontRole:
-            font = getStandardFont
+            font = getStandardFont()
             return font
         elif role == Qt.ToolTipRole:
-            if index.column() == 3:
+            if columnIndex == 3:
                 groupName = self.getGroupNameByTableIndex(index)
                 if groupName:
                     groupingName = self.parent().mC.grouping.getCurrentGroupingName()
                     return "Grouping: {}\nGroupName: {}".format(groupingName,groupName)
                 else:
                     return "Group Indicator"
-            elif index.column() == 2:
+            elif columnIndex == 2:
                 return "Filter Data"
-            elif index.column() == 4:
+            elif columnIndex == 4:
                 return "Delete Column"
-            elif index.column() == 1:
+            elif columnIndex == 1:
                 if self.getColumnStateByTableIndex(index):
                     return "Remove Column from Graph"
                 else:
                     return "Add column to Graph"
+            elif columnIndex == 0:
+                dataIndex = self.getDataIndex(index.row())
+                tooltipText = self._labels.loc[dataIndex]
+                #print(self._labels)
+                #print(self.tooltipData)
+                if tooltipText in self.tooltipData:
+                    return self.tooltipData[tooltipText]
+                else:
+                    return ""
             else:
                 return ""
 
@@ -1833,6 +1857,11 @@ class DataTreeModel(QAbstractTableModel):
         ""
         self.initData(labels)
         self.completeDataChanged()
+
+    def setTooltipdata(self,tooltipData):
+        ""
+        if isinstance(tooltipData,dict):
+            self.tooltipData = tooltipData
 
     def search(self,searchString):
         ""
@@ -2684,6 +2713,43 @@ class DataTreeViewTable(QTableView):
                 self.mC.sendRequestToThread(funcProps)
             
 
+    def normalizeToSpecificGroup(self,*args,**kwargs):
+        ""
+        
+        if self.mC.grouping.groupingExists():
+            groupingNames = self.mC.grouping.getNames()
+            currentGrouping = self.mC.grouping.getCurrentGroupingName()
+            groupItems = self.mC.grouping.getGrouping(currentGrouping)
+            selectableGroups = pd.Series(groupItems.keys())
+            selectedColumns = self.mC.askForItemSelection(items=selectableGroups,title = "Please provide group to normalize to.")
+            if selectedColumns is None: return
+            fkey = "normalize::toSpecificGroup"
+            defaultKwargs = {
+                        "dataID": self.mC.getDataID(),
+                        "groupingName":currentGrouping,
+                        "toGroups": selectedColumns.values.tolist(),
+                        "withinGroupingName": None
+                    }
+          
+            if len(groupingNames) > 1:
+                w = AskQuestionMessage(
+                    parent=self.mC,
+                    infoText = "Another grouping was found. Would you like to normalize within another grouping?", 
+                    title="Within Grouping",
+                    iconDir = self.mC.mainPath,
+                    yesCallback = None)
+                if w.exec_():
+                    
+                    withinGroupings = pd.Series([x for x in groupingNames if x != currentGrouping])
+                    withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values[0]
+                    if withinGrouping is None:return
+                    defaultKwargs["withinGroupingName"] = withinGrouping
+                    
+            funcProps = {"key":fkey,"kwargs":defaultKwargs}
+            self.mC.sendRequestToThread(funcProps)
+
+        else:
+            self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found. Please add a grouping first."})
     def getCustomGroupByInput(self,*args,**kwargs):
         ""
 
