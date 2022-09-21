@@ -744,7 +744,15 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Boxenplot",
     "description"   :   "Line style of boxes in boxenplot.",
     },
-
+    {
+    "name"          :   "boxen.show.means",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Boxenplot",
+    "description"   :   "Enable/disable rendering of the mean in a Boxenplot."
+    }, 
 
     {
     "name"          :   "boxplot.showfliers",

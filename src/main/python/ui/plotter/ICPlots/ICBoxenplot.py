@@ -21,6 +21,19 @@ class ICBoxenplot(ICChart):
         ""
         # menus["main"].addAction("Show summary data", self.displaySummaryData)
 
+    def addMeans(self, onlyForID=None, targetAx=None):
+
+        if self.getParam("boxen.show.means") and "meanData" in self.data:
+
+            for n, meanDataForLine in self.data["meanData"].items():
+
+                if n in self.axisDict:
+                    ax = self.axisDict[n] if targetAx is None else targetAx
+                    if targetAx is not None and onlyForID is not None and onlyForID != n:
+                        continue
+                    ax.scatter(**meanDataForLine,**self.getScatterKwargs())
+
+
     def displaySummaryData(self,*args,**kwargs):
         ""
         # if "groupedPlotData" in self.data:
@@ -86,6 +99,7 @@ class ICBoxenplot(ICChart):
                     ax.add_collection(collection)
                     l = Line2D(**r["medianLine"])
                     ax.add_line(l)
+        
                         
     def _getCampForBoxes(self, hexColor):
         ""
@@ -117,7 +131,7 @@ class ICBoxenplot(ICChart):
             #self.setHoverItemGroups(hoverGroupItems)
 
             self.addVerticalLines()
-                
+            self.addMeans()
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
@@ -241,6 +255,7 @@ class ICBoxenplot(ICChart):
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)          
         #self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
         self.addVerticalLines(axisID,targetAx)
+        self.addMeans(onlyForID = axisID, targetAx = targetAx)
 
 
      

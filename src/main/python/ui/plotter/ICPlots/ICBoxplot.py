@@ -15,6 +15,8 @@ class ICBoxplot(ICChart):
         ""
         menus["main"].addAction("Show summary data", self.displaySummaryData)
 
+    
+
     def displaySummaryData(self,*args,**kwargs):
         ""
         if "groupedPlotData" in self.data:

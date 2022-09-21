@@ -1,4 +1,5 @@
 
+from ast import Or
 from cmath import pi
 from multiprocessing import Pool
 from sys import intern
@@ -1091,6 +1092,7 @@ class PlotterBrain(object):
             return rect
 
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
+        showMeans = self.sourceData.parent.config.getParam("boxen.show.means")
         if len(categoricalColumns) > 3:
             splitByCats = False
         else:
@@ -1107,6 +1109,7 @@ class PlotterBrain(object):
        
         rectData = OrderedDict()
         hoverData = OrderedDict() 
+        meanData = OrderedDict()
         positionData = OrderedDict() 
         outlierData = OrderedDict()
         widthFn = self.sourceData.parent.config.getParam("boxen.width.calculation")
@@ -1117,6 +1120,7 @@ class PlotterBrain(object):
             positionData[n] = []
             rectData[n] = []
             outlierData[n] = []
+            meanData[n] = {"x":[],"y":[]}
             for m,boxData in enumerate(data):
                 outlierProps = {}
                 hexColor = faceColors[n][m]
@@ -1146,6 +1150,10 @@ class PlotterBrain(object):
                             "medianLine":{},
                             "internalID":internalID,
                             "outlierProps" : outlierProps})
+                    if showMeans:
+                        meanData[n]["x"].append(x)
+                        meanData[n]["y"].append(y)
+                        
                 else:
                     
                     #fncs form seaborn package
@@ -1187,6 +1195,11 @@ class PlotterBrain(object):
                         "solid_capstyle" : "butt"
                     }
 
+                    if showMeans:
+                        meanData[n]["x"].append(x)
+                        meanData[n]["y"].append(np.nanmean(vals))
+                       # meanData[n].append({"x":[x],"":[np.nanmean(vals)]})
+
                     # Construct a color map from the input color
                     rgb = [hexColor, (1, 1, 1)]
                     cmap = LinearSegmentedColormap.from_list('new_map', rgb)
@@ -1207,7 +1220,7 @@ class PlotterBrain(object):
         
         return {"data":{
                 "plotData":rectData,#"
-                
+                "meanData" : meanData,
                 "positions" : positionData,
                 "hoverData" : hoverData,
                 "facecolors" : faceColors,
