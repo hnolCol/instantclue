@@ -1856,6 +1856,17 @@ DEFAULT_PARAMETER = [
     "description"   :   "Error value in barplots."
     }, 
     {
+    "name"          :   "barplot.width.scale",
+    "value"         :   1.0,
+    "dtype"         :   float,
+    "range"         :   [0.1,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Barplot",
+    "description"   :   "Width scale of bars, if you desire some space between bars in grouped bars, set this value below 1."
+    }, 
+
+    
+    {
     "name"          :   "boxbarviolin.border",
     "value"         :   0.25,
     "dtype"         :   float,

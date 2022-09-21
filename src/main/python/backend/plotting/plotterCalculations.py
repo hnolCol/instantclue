@@ -674,7 +674,7 @@ class PlotterBrain(object):
             data = plotData["x"]
             hoverData[n] = {"x" : data}
             plotData["height"] = [np.mean(x) for x in data]
-            plotData["width"] = xWidth
+            plotData["width"] = xWidth * (self.sourceData.parent.config.getParam("barplot.width.scale"))
             plotData["color"] = faceColors[n]
             if "CI" in self.barplotError:
                 plotData["yerr"] = [CI(a.values) for a in data]
@@ -1038,7 +1038,7 @@ class PlotterBrain(object):
             plotData["widths"] = xWidth
             plotData["dataset"] = [x.values for x in data]
             
-            plotData["showmedians"] = self.sourceData.parent.config.getParam("violin.show.means")
+            plotData["showmeans"] = self.sourceData.parent.config.getParam("violin.show.means")
             plotData["positions"] = violinPositions[n]
             plotData["showextrema"] = self.sourceData.parent.config.getParam("violin.show.extrema")
             plotData["points"] = self.sourceData.parent.config.getParam("violin.points")

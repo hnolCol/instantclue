@@ -2783,8 +2783,8 @@ class DataCollection(object):
 			if ignoreIndex and corrParams["axis"] == 1:
 				df.columns = np.arange(df.columns.size)
 				otherDf.columns = np.arange(otherDf.columns.size)
-			print(df, otherDf)
-			print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
+			#print(df, otherDf)
+			#print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
 			return {}
 		else:
 			return errorMessage
