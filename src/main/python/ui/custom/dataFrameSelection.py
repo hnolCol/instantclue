@@ -341,7 +341,7 @@ class CollapsableDataTreeView(QWidget):
                 self.sessionIsBeeingLoaded = True
             #print(sessionIsBeeingLoaded)
             self.combo.clear() 
-            self.combo.addItems(list(self.dfs.values()))
+            self.combo.addItems(["{} ({} x {})".format(fileName,*self.mC.data.getDataFrameShape(dataID)[0]) for dataID, fileName in self.dfs.items()])
             
             if specificIndex is not None and isinstance(specificIndex,int) and specificIndex < len(self.dfs):
                 self.combo.setCurrentIndex(specificIndex)

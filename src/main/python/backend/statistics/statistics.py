@@ -1,5 +1,6 @@
 import itertools
 from tokenize import group
+from unittest import result
 from pandas.core.accessor import delegate_names
 from pandas.core.reshape.melt import melt
 from pingouin.correlation import corr
@@ -1217,18 +1218,32 @@ class StatisticCenter(object):
 
         dataFrame = self.getData(dataID, columnNamesForGroupings[0]).dropna(thresh=3)
 
+
+
+        if len(groupings) == 1:
+            #one way anova
+            groupingName = groupings[0]
+            groupingForANOVA = grouping.getGrouping(groupingName)
+            results = pd.DataFrame(index=dataFrame.index)
+            testGroupData = [dataFrame[columnNames].values for columnNames in groupingForANOVA.values()]
+            F,p = f_oneway(*testGroupData,axis=1)
+            results["F({})".format(groupingName)] = F
+            results["p-1WANOVA({})".format(groupingName)] = p
+
+            return self.sourceData.joinDataFrame(dataID,results)
+
         dataFrame["priorMeltIndex"] = dataFrame.index.values
         meltedDataFrame = dataFrame.melt(value_vars = columnNamesForGroupings[0], id_vars = "priorMeltIndex")
         
         columnNameMatchesByGrouping = grouping.getGroupingsByColumnNames(columnNamesForGroupings[0])
-        r = None
+        
         for groupName in groupings:
             #map groups to column names 
             mapDict = dict([(k,v) for k,v in zip(columnNamesForGroupings[0],columnNameMatchesByGrouping[groupName].values)])
             meltedDataFrame[groupName] = meltedDataFrame["variable"].map(mapDict)
         meltedDataFrame[groupings] = meltedDataFrame[groupings].astype(str)
         groupedDF = meltedDataFrame.groupby("priorMeltIndex")
-        t1 = time.time()
+      
         with Pool(NProcesses) as p:
             rPool = p.starmap(p_anova,[(indexDf,"value",groupings.tolist(),idx) for idx,indexDf in groupedDF])
            # print(rPool)
@@ -1337,22 +1352,28 @@ class StatisticCenter(object):
                 elif test in ["t-test","Welch-test"]:
 
                     t, p = ttest_ind(X,Y,axis=1,nan_policy="omit",equal_var = test == "t-test")
-                    boolIdx, p_adj , _ , _ = multipletests(p,0.05,method="fdr_bh")
-                    if logPValues:
-                        pValueColumn = "-log10-p-value:({})".format(resultColumnNames[n])
-                        results[pValueColumn] = np.log10(p) * (-1)
-                        results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
-                    else:
-                        results["p-value:({})".format(resultColumnNames[n])] = p 
                     
+                    if logPValues:
+                        pValueColumnLog = "-log10-p-value:({})".format(resultColumnNames[n])
+                        results[pValueColumnLog] = np.log10(p) * (-1)
+                        results[pValueColumnLog] = results[pValueColumnLog].replace(1.0,np.nan)
+                    #add non log transformed p values
+                    pValueColumn = "p-value:({})".format(resultColumnNames[n])
+                    results[pValueColumn] = p 
+
                     results["T-stat:({})".format(resultColumnNames[n])] = t
                     results["t-test diff:({})".format(resultColumnNames[n])] = np.nanmean(Y,axis=1) - np.nanmean(X,axis=1) 
-                    results["adj. p-value (fdr_bh)({})".format(resultColumnNames[n])] = p_adj
-                    results["Significant ({})".format(resultColumnNames[n])] = pd.Series(boolIdx).map({True:"+",False:"-"})
-                    q, samStat = self.performPermutationFDREstimation(X,Y,data[columnNames1.values.tolist()+columnNames2.values.tolist()].values)
-                    print(q)
-                    results["q-value:({})".format(resultColumnNames[n])] = q
-                    results["sam-stat:({})".format(resultColumnNames[n])] = samStat
+                    filteredPValues = results[pValueColumn].dropna()
+                    boolIdx, p_adj , _ , _ = multipletests(filteredPValues.values.flatten(),alpha=0.05,method="fdr_bh")
+                    
+                    
+                    padjusted = pd.Series(p_adj,index=filteredPValues.index,name = "adj. p-value (fdr_bh) {}".format(resultColumnNames[n]))
+                    sigBool = pd.Series(boolIdx, index = filteredPValues.index, name= "Significant {}".format(resultColumnNames[n])).map({True:"+",False:"-"})
+                    results = results.join([padjusted,sigBool])
+                    #q, samStat = self.performPermutationFDREstimation(X,Y,data[columnNames1.values.tolist()+columnNames2.values.tolist()].values)
+                   # print(q)
+                    #results["q-value:({})".format(resultColumnNames[n])] = q
+                    #results["sam-stat:({})".format(resultColumnNames[n])] = samStat
 
         return self.sourceData.joinDataFrame(dataID,results)
 

@@ -35,7 +35,7 @@ class ICCompareGroups(QDialog):
             self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
             self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
-        self.logPValuesCB = QCheckBox("-logp10 p-value")
+        self.logPValuesCB = QCheckBox("-log10 p-value")
         self.logPValuesCB.setTristate(False)
         self.logPValuesCB.setCheckState(True)
         self.logPValuesCB.setChecked(True)

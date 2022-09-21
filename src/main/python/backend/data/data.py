@@ -236,6 +236,7 @@ class DataCollection(object):
 		self.dataFrameId = 0
 		self.dfs = OrderedDict()
 		self.tooltipData = OrderedDict()
+		self.dfShapes = OrderedDict()
 		self.dfsDataTypesAndColumnNames = OrderedDict() 
 		self.fileNameByID = OrderedDict() 
 		self.excelFileIO = OrderedDict()
@@ -243,6 +244,8 @@ class DataCollection(object):
 		self.replaceObjectNan = '-'
 		self.clippings = dict()
 		self.droppedRows = dict() 
+
+
 		self.categoricalFilter = CategoricalFilter(self)
 		self.numericFilter = NumericFilter(self)
 		self.statCenter = StatisticCenter(self)
@@ -310,7 +313,7 @@ class DataCollection(object):
 	def addGroupIndexColumn(self,dataID,columnNames,*args,**kwargs):
 		""
 		if dataID in self.dfs:
-			dfShape, rowIdx = self.getDataFrameShape(dataID)
+			#dfShape, rowIdx = self.getDataFrameShape(dataID)
 			columnNames = columnNames.values.tolist()
 			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
 			dataGroupby = data.groupby(columnNames,sort=False).cumcount()
@@ -860,9 +863,12 @@ class DataCollection(object):
 					
 					quantiles = dfWithSpecificDataType.quantile(q=[0,0.25,0.5,0.75,1])
 					nanSum = dfWithSpecificDataType.isna().sum()
+					fracs = nanSum / dfWithSpecificDataType.index.size
 					#print(quantiles)
 					for columnHeader in dfWithSpecificDataType.columns:
-						self.tooltipData[dataID][columnHeader] = "Min : {}\n25% Quantile : {}\nMedian : {}\n75% Quantile : {}\nMax : {}\n#-nans : {}".format(*[getReadableNumber(x) for x in quantiles[columnHeader].values.tolist()],nanSum[columnHeader])
+						nans = nanSum[columnHeader]
+						frac = round(fracs[columnHeader]*100,1)
+						self.tooltipData[dataID][columnHeader] = "Min : {}\n25% Quantile : {}\nMedian : {}\n75% Quantile : {}\nMax : {}\n#-nans : {} ({}%)".format(*[getReadableNumber(x) for x in quantiles[columnHeader].values.tolist()],nans,frac)
 				else:
 					dfWithSpecificDataType = self.dfs[dataID].select_dtypes(exclude=['float64','int64'])
 					
@@ -1448,7 +1454,8 @@ class DataCollection(object):
 					#convert to pandas series and ensure str data type
 					for fS,rS in zip(findStrings,replaceStrings):
 						#replace happens after each other
-						self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns[0]].astype(str).str.replace(fS, rS,regex=False,case=True)
+						for specColumn in specificColumns:
+							self.dfs[dataID][specColumn] = self.dfs[dataID][specColumn].astype(str).str.replace(fS, rS,regex=False,case=True)
 				else:
 					self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns].replace(findValues, replaceValues)
 				return getMessageProps("Column renamed.","Column evaluated and renamed.")
