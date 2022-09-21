@@ -290,10 +290,11 @@ def loess_fit(x, y, span=0.75):
         ymax = np.array(ci.upper)
 
     else:
-        yfit = loess(y,x,frac=span)
+        yfit = loess(y,x,frac=span)[:,-1]
         ymin = np.nan
         ymax = np.nan
-    return yfit[:,-1], ymin, ymax
+
+    return yfit, ymin, ymax
 
 class StatisticCenter(object):
 
@@ -1228,7 +1229,7 @@ class StatisticCenter(object):
             testGroupData = [dataFrame[columnNames].values for columnNames in groupingForANOVA.values()]
             F,p = f_oneway(*testGroupData,axis=1)
             results["F({})".format(groupingName)] = F
-            results["p-1WANOVA({})".format(groupingName)] = p
+            results["p-unc-1WANOVA({})".format(groupingName)] = p
 
             return self.sourceData.joinDataFrame(dataID,results)
 
