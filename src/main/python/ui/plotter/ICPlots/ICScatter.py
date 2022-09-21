@@ -76,7 +76,7 @@ class ICScatterPlot(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Share graph", self.shareGraph)
+        #menus["main"].addAction("Share graph", self.shareGraph)
         if self.preventQuickSelectCapture:
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:
@@ -145,7 +145,6 @@ class ICScatterPlot(ICChart):
             
         self.data = data
         self.initAxes(data["axisPositions"])
-        print("INIIIT")
         self.initScatterPlots()
 
         if "axisLabels" in self.data:

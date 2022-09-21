@@ -240,18 +240,31 @@ class MainFigureRegistry(object):
     def default_label_settings(self):
         '''
         '''
+        print(hasattr(self.parent,"mC"))
+        if hasattr(self,"parent") and hasattr(self.parent,"mC"):
+            fontSize = self.parent.mC.config.getParam("main.figure.label.size")
+           
+        else:
+            fontSize = 12
+
+       
         self.subplotLabelStyle = {'xy':(0.0,1),'xytext':(-12,12),
                         'xycoords':('axes fraction'),'textcoords':'offset points',
-                        'size':12, 'family':'Arial','ha':'left',
+                        'size':fontSize, 'family':'Arial','ha':'left',
                         'weight':'bold','color':'black','va':'bottom',
                         'rotation':'0'}
+
+    def getLabelStyle(self):
+        ""
+        self.default_label_settings()
+        return self.subplotLabelStyle
 
     def __getstate__(self):
         '''
         We need to remove certain params before pickle
         '''
-        for figureId, axisDict in self.mainFigureTemplates.items():
-            for axisID, params in axisDict.items():
+        for _, axisDict in self.mainFigureTemplates.items():
+            for _, params in axisDict.items():
                 if 'ax' in params: # if user saves session twice this will be gone already
                     del params['ax']
         state = self.__dict__.copy()
@@ -463,7 +476,7 @@ class MainFigure(QDialog):
         else:
             text = label
 
-        axesLabel = ax.annotate(text,**self.mainFigureCollection.subplotLabelStyle)
+        axesLabel = ax.annotate(text,**self.mainFigureCollection.getLabelStyle())
         self.axisLabels[axisID] = axesLabel
 	
     def checkForAssociationsAndRemove(self,axisID):

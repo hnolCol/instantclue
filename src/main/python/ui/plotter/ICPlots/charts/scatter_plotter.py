@@ -213,6 +213,7 @@ class scatterPlot(object):
 		if not self.adjustLimits:
 			return
 		
+		##ugly code restyle
 		
 		if self.multiScatter:
 			xMin = np.nanmin(self.data[self.numericColumns[0::2]].values)
@@ -223,8 +224,10 @@ class scatterPlot(object):
 			nonNaNData = self.data[self.numericColumns].dropna()
 			xMin, yMin = nonNaNData[self.numericColumns].min()
 			xMax, yMax = nonNaNData[self.numericColumns].max()
-		xAdd = np.sqrt(xMin**2 + xMax**2) * 0.05
-		yAdd = np.sqrt(yMin**2 + yMax**2) * 0.05
+		
+		
+		xAdd = np.sqrt(xMax**2 - xMin**2) * 0.05
+		yAdd = np.sqrt(yMax**2 - yMin**2) * 0.05
 		if all(not np.isnan(x) for x in [xMin,xMax,yMin,yMax,yAdd,xAdd]):
 			self.ax.set_xlim(xMin-xAdd,xMax+xAdd)
 			self.ax.set_ylim(yMin-yAdd,yMax+yAdd)
@@ -287,13 +290,13 @@ class scatterPlot(object):
 		else:
 			self.mainCollecion.set_visible(visible)
 
-	def getScatterInvisibility(self,visible = False):
+	def getScatterInvisibility(self):
 		""
 		if isinstance(self.mainCollecion, dict):
 			for scatterCollection in self.mainCollecion.values():
 				return scatterCollection.get_visible()
 		else:
-			return self.mainCollecion.set_visible(visible)
+			return self.mainCollecion.get_visible()
 
 	def toggleVisibility(self):
 		""

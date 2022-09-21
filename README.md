@@ -50,7 +50,7 @@ or
 py -m venv env #windows
 .\env\Scripts\activate
 ```
-Then use the requirements.txt file to install required packages and finally start InstantClue. Please be aware that the package [combat](https://github.com/epigenelabs/pyComBat/tree/master/combat) is not in the requirements table because it has very specific versioning requirements of pandas and numpy. Therefore we recommend to install combat first and then install the remaining packages. 
+Then use the requirements.txt file to install required packages and finally start InstantClue. Please be aware that the package [combat](https://github.com/epigenelabs/pyComBat/tree/master/combat) is not in the requirements table because it has very specific versioning requirements of pandas and numpy. Therefore we recommend to install combat first and then install the remaining packages and ingore the warning about the numpy/pandas version mismatch (so far it works in the tests). Please note that using Pyinstaller requires some optimization. If you want to create your own executable please contact us for custimized hooks.  
 
 ```
 pip install -r requirements.txt #install packages

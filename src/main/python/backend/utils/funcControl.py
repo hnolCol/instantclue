@@ -2,7 +2,7 @@
 
 
 
-updateTreeView = {"obj":"self","fn":"updateDataInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":["columnNamesByType"],"optionalKwargs":["dataID"]}
+updateTreeView = {"obj":"self","fn":"updateDataInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":["columnNamesByType"],"optionalKwargs":["dataID","tooltipData"]}
 sendMessageProps = {"obj":"self","fn":"sendMessageRequest","requiredKwargs":["messageProps"]}
 updateGrouping = {"obj":"self","fn":"updateGroupingInTreeView","objKey":"data","objName":"mainFrames","requiredKwargs":[]}
 refreshColumnView = [
@@ -39,6 +39,15 @@ funcPropControl = {
                             [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
                             sendMessageProps]
         }, 
+    "data::randomSelection":
+        {
+            "threadRequest":{"obj":"data","fn":"randomSelection","requiredKwargs":["dataID","N"]},
+            "completedRequest": 
+                            [updateTreeView,
+                            sendMessageProps]
+        }, 
+
+        
     "data::addDataFrame":
         {
             "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
@@ -659,6 +668,15 @@ funcPropControl = {
                 sendMessageProps]
                     
         },
+
+    "normalize::toSpecificGroup":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeToGroup","requiredKwargs":["dataID","groupingName","toGroups","withinGroupingName"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },
     "transformer::transformData":
         {
             "threadRequest":{"obj":"transformer","fn":"transformData","requiredKwargs":["dataID","columnNames","transformKey"]},
@@ -728,6 +746,12 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView          
         },
+    "stats::fitTwoThreeCompModel": 
+        {
+            "threadRequest":{"obj":"statCenter","fn":"fitPulseSILACCompartmentModel","requiredKwargs":["dataID", "timeGroupingName"]},
+            "completedRequest":
+                    refreshColumnView          
+        }, 
     "stats::runCombat": 
         {
             "threadRequest":{"obj":"statCenter","fn":"runBatchCorrection","requiredKwargs":["dataID", "groupingName","grouping"]},

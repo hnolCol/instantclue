@@ -64,7 +64,7 @@ class ICWelcomeScreen(QWidget):
         try:
             response = requests.get(GITHUB_URL, timeout=2)
         except (requests.ConnectionError, requests.Timeout) as exception:
-            self.versionLabel.setText("v. {} .. error - connection to GitHub failed.".format(self.version))
+            self.versionLabel.setText("{} .. error - connection to GitHub failed.".format(self.version))
             self.versionCheckedDone = True
             return
         if response.status_code == 200:

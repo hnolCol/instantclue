@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from matplotlib.pyplot import get, text
+from pynndescent import NNDescent, PyNNDescentTransformer
 
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
@@ -44,12 +45,12 @@ import multiprocessing
 import importlib
 
 
-
+os.environ["OUTDATED_IGNORE"] = "1"
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.1"
+__VERSION__ = "v0.11.2"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -110,7 +111,7 @@ menuBarItems = [
     # },
     {
         "subM":"About",
-        "name":"v. {}".format(__VERSION__),
+        "name":"{}".format(__VERSION__),
         "fn": lambda : pd.DataFrame([__VERSION__]).to_clipboard(index=False,header=False)
     },
     {

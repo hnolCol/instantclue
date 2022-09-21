@@ -2,6 +2,7 @@
 
 
 
+from typing import OrderedDict
 from numpy.lib.function_base import diff
 import pandas as pd 
 import numpy as np 
@@ -146,7 +147,7 @@ class Normalizer(object):
             #             axis=0, 
             #             with_centering = self.sourceData.parent.config.getParam("quantile.norm.centering"),
             #             with_scaling = self.sourceData.parent.config.getParam("quantile.norm.scaling"))
-            print(scaledGroupValues)
+            #print(scaledGroupValues)
             normColumnNames = ["groupColQuantile:{}".format(colName) for colName in groupColumns]
             transformedValues[normColumnNames] = np.subtract(scaledGroupValues,distToGroupMedian)
 
@@ -172,6 +173,38 @@ class Normalizer(object):
 
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
+
+    def normalizeToGroup(self,dataID,groupingName,toGroups,withinGroupingName = None):
+        ""
+        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        withinGrouping  = self.sourceData.parent.grouping.getGrouping(withinGroupingName)
+        groupNamesByColumnName = self.sourceData.parent.grouping.getGroupNameByColumn(groupingName)
+        data = self.sourceData.dfs[dataID]
+        r = OrderedDict()
+        for specGroup in toGroups:
+            if specGroup in grouping:
+                specGroupColumnNames = grouping[specGroup]
+               
+                for group, groupColumnNames in grouping.items():
+                    if group != specGroup:
+                       
+                        if withinGrouping is not None:
+                            for withinGroup, withGroupColumnNames in withinGrouping.items():
+                                withinGroupColumnNamesSubset = pd.Series(np.intersect1d(groupColumnNames.values,withGroupColumnNames.values))
+                                withinGroupColumnNamesSpecGroup = pd.Series(np.intersect1d(specGroupColumnNames.values,withGroupColumnNames.values))
+                               
+                                columnName = "{} - {} ({})".format(group,specGroup,withinGroup)
+                                r[columnName] = data[withinGroupColumnNamesSubset].mean(axis=1) - data[withinGroupColumnNamesSpecGroup].mean(axis=1)
+                        else:
+                            columnName = "{} - {}".format(group,specGroup)
+                            r[columnName] = data[groupColumnNames].mean(axis=1) - data[specGroupColumnNames].mean(axis=1)
+
+                        
+        df = pd.DataFrame(r, index= data.index)
+        
+        return self.sourceData.joinDataFrame(dataID,df)
+            
 
     def fitLowess(self,y,x,**kwargs):
         "Should not be here - move function"

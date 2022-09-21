@@ -1,0 +1,5 @@
+checkedValues	checkedColors	userDefinedColors
+Ryr2	#abcdde	
+Hk2	#2a76a9	
+Cacna2d1	#b2d990	
+Dpysl2	#3b9735	

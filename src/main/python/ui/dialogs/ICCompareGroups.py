@@ -35,7 +35,7 @@ class ICCompareGroups(QDialog):
             self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
             self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
-        self.logPValuesCB = QCheckBox("-logp10 p-value")
+        self.logPValuesCB = QCheckBox("-log10 p-value")
         self.logPValuesCB.setTristate(False)
         self.logPValuesCB.setCheckState(True)
         self.logPValuesCB.setChecked(True)
@@ -84,6 +84,7 @@ class ICCompareGroups(QDialog):
     def groupingChanged(self,newComboIndex):
         ""
         grouping = self.mC.grouping.getGroupings()[newComboIndex]
+        
         groupNames = self.mC.grouping.getGroupNames(grouping)
         self.referenceGroupCombo.clear()
         self.referenceGroupCombo.addItems(["None"] + groupNames)
@@ -95,7 +96,7 @@ class ICCompareGroups(QDialog):
 
         referenceGroup = None
         if hasattr(self,"referenceGroupCombo"):
-            if self.referenceGroupCombo.currentIndex() == 0:
+            if self.referenceGroupCombo.currentIndex() != 0:
                 referenceGroup = self.referenceGroupCombo.currentText()
         if self.test == "2W-ANOVA":
             groupName1 =  self.groupCombo.currentText()
@@ -104,13 +105,13 @@ class ICCompareGroups(QDialog):
                                                  {"name": groupName2, "values": self.mC.grouping.getGrouping(groupName2)}],
                         "withinGroupings"    :   []}
         else:
-            grouping = self.mC.grouping.getCurrentGrouping()
+            groupingName = self.groupCombo.currentText()
 
         funcProps = {"key":"stats::compareGroups",
                       "kwargs":
                       {
                       "dataID":self.mC.getDataID(),
-                      "grouping":grouping,
+                      "grouping":groupingName,
                       "test":self.test,
                       "referenceGroup": referenceGroup,
                       "logPValues" : self.logPValuesCB.isChecked()

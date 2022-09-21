@@ -15,6 +15,8 @@ class ICBoxplot(ICChart):
         ""
         menus["main"].addAction("Show summary data", self.displaySummaryData)
 
+    
+
     def displaySummaryData(self,*args,**kwargs):
         ""
         if "groupedPlotData" in self.data:
@@ -120,9 +122,26 @@ class ICBoxplot(ICChart):
                         if intID not in self.groupColor:
                             self.groupColor[intID] = fc
 
+    def highlightGroupByColor(self,colorGroup,highlightCategory):
+        """
+        highlightCategory = None -> reset
+        """
+       
+        nanColor = self.getParam("nanColor")
+        for color, _ , intID in colorGroup.values:
+            if intID in self.colorGroupArtists:
+                artists = self.colorGroupArtists[intID]
+                if intID != highlightCategory and highlightCategory is not None:
+                    #overwrite color with nana color (default = grey)
+                    color = nanColor
+                for artist in artists:
+                    artist.set_facecolor(color)
+        self.updateFigure.emit() 
+
 
     def updateGroupColors(self,colorGroup,changedCategory=None):
         ""
+        
         for color, _ , intID in colorGroup.values:
             if intID in self.colorGroupArtists:
                 if self.groupColor[intID] != color:

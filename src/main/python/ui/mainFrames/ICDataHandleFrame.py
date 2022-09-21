@@ -343,14 +343,16 @@ class DataHandleFrame(QFrame):
         else:
             dataIDs = [self.getDataID()]
             selectedItems = [self.mC.data.fileNameByID[dataIDs[0]]]
+
         data = [self.mC.getDataByDataID(dataID,useClipping=True) for dataID in dataIDs]
         softwareParams = [("Software","Instant Clue"),
 					("Version",self.mC.version),
                     ("Computer Name",socket.gethostname()),
-                    ("Date",datetime.datetime.now().strftime("%Y%m%d %H:%M:%S"))
+                    ("Date",datetime.datetime.now().strftime("%Y%m%d %H:%M:%S")),
+                    ("FileNames",", ".join(selectedItems))
                     ]
 
-        fileName = self.mC.askForExcelFileName()
+        fileName = self.mC.askForExcelFileName(defaultName = "{}.xlsx".format(selectedItems[0]) if len(selectedItems) == 1 else "MultiExcelExport.xlsx")
         if fileName != "":
             fkey = "data::exportDataToExcel"
             kwargs = {
@@ -426,12 +428,12 @@ class DataHandleFrame(QFrame):
         ""
         self.dlg.updateModelDataByBool(boolIndicator,resetData)
 
-    def updateDataInTreeView(self,columnNamesByType, dataID = None):
+    def updateDataInTreeView(self,columnNamesByType, tooltipData = {}, dataID = None):
         "Updating data in treeview (Numeric Floats, Integers, Categories)"
         if dataID is not None:
             if not self.dataTreeView.getDataID() == dataID:
                 return
-        self.dataTreeView.updateDataInTreeView(columnNamesByType)
+        self.dataTreeView.updateDataInTreeView(columnNamesByType, tooltipData)
         self.updateGroupingInTreeView()
     
     def updateGroupingInTreeView(self):

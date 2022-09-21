@@ -1,3 +1,4 @@
+from sys import intern
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -103,8 +104,8 @@ class ICColorSizeTableBase(QWidget):
         ""
         if hasattr(self,"table"):
             self.table.mouseOverItem = None
-
-
+        if hasattr(self,"highlightColorGroup"):
+            self.highlightColorGroup(reset=True)
 
     def saveModelDataToExcel(self):
         "Allows export to excel file."
@@ -127,6 +128,7 @@ class ICColorTable(ICColorSizeTableBase):
         self.colorValueLimit = None
         self.selectionChanged.connect(self.updateColorInGraph)
         self.clorMapChanged.connect(self.updateColorsByColorMap)
+        self.currentHighLight = None
         self.__controls()
         self.__layout()
         
@@ -197,6 +199,23 @@ class ICColorTable(ICColorSizeTableBase):
                 colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
                 self.model.updateColors(colorList)
     
+    def highlightColorGroup(self, reset = False):
+        ""
+        exists, graph =  self.mC.getGraph()
+        if exists and hasattr(graph,"highlightGroupByColor"):
+            colorGroupData = self.table.model().getLabels()
+            if reset:
+                graph.setHoverObjectsInvisible()
+                graph.highlightGroupByColor(colorGroupData,None)
+                self.currentHighLight = None 
+            else:
+                internalID = self.table.model().getCurrentInternalID()
+                if internalID != self.currentHighLight:
+                    graph.setHoverObjectsInvisible()
+                    graph.highlightGroupByColor(colorGroupData,internalID)
+                    self.currentHighLight = internalID
+               
+
     def updateColorInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -245,7 +264,8 @@ class ICColorTable(ICColorSizeTableBase):
             graph.setLegendInvisible()
             graph.setNaNColor()
             self.model.completeDataChanged()
-       
+    
+    
 
 class ColorTableModel(QAbstractTableModel):
     
@@ -644,6 +664,10 @@ class ColorTable(QTableView):
             self.mouseOverItem = None
         else:
             self.mouseOverItem = rowAtEvent
+            
+            #self.parent().highlightColorGroup()
+            
+
         self.model().rowDataChanged(rowAtEvent)
  
     def resizeColumns(self):

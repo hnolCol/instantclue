@@ -142,6 +142,25 @@ class ICViolinplot(ICChart):
         except Exception as e:
             print(e)
 
+
+
+    def highlightGroupByColor(self,colorGroup,highlightCategory):
+        """
+        highlightCategory = None -> reset
+        """
+        nanColor = self.getParam("nanColor")
+        for color, _ , intID in colorGroup.values:
+            if intID in self.colorGroupArtists:
+                artists = self.colorGroupArtists[intID]
+                if intID != highlightCategory and highlightCategory is not None:
+                    for artist in artists:
+                        artist.set_facecolor(nanColor)
+                else:
+                    for artist in artists:
+                        artist.set_facecolor(color)
+        self.updateFigure.emit() 
+
+
     def updateGroupColors(self,colorGroup,changedCategory=None):
         ""
         

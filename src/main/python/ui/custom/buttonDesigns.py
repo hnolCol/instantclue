@@ -8,12 +8,20 @@ import numpy as np
 import seaborn as sns
 import random
 from matplotlib.colors import ListedColormap
+from numpy.random import default_rng
 
 
 #colorCmap = sns.choose_colorbrewer_palette("Blues",as_cmap=True)
 flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
 colorCmap = ListedColormap(sns.color_palette("Blues").as_hex())
 twColorCmap = ListedColormap(sns.color_palette("RdYlBu").as_hex())
+
+def _width_functions(width_func):
+    # Dictionary of functions for computing the width of the boxes
+    width_functions = {'linear': lambda h, i, k: (i + 1.) / k,
+                        'exponential': lambda h, i, k: 2**(-k + i - 1),
+                        'area': lambda h, i, k: (1 - 2**(-k + i - 2)) / h}
+    return width_functions[width_func]
 
 class CollapsButton(QPushButton):
     def __init__(self,
@@ -1905,6 +1913,7 @@ class PlotTypeButton(PushHoverButton):
         self.plotType = plotType
         self.funcKeyDict = {"scatter"       :   self.drawScatterPoints,
                             "boxplot"       :   self.drawBoxes,
+                            "boxenplot"     :   self.drawBoxen,
                             "hclust"        :   self.drawHeatmap,
                             "countplot"     :   self.drawCountPlot,
                             "barplot"       :   self.drawBars,
@@ -2280,6 +2289,48 @@ class PlotTypeButton(PushHoverButton):
                 barWidth,
                 h
             ))
+
+    def drawBoxen(self,qp,height,width,rectX,rectY,nBoxes=4):
+        ""
+        defaultColors = ["white","#397546",INSTANT_CLUE_BLUE,"#A0D4CB"]
+        boxWidth = width * 1/(nBoxes+1)
+        margin = boxWidth / (nBoxes+1)
+        rng = default_rng()
+        
+        ms = rng.integers(low=20,high=55,size = 4) / 100 #medians between 20 and 55 % of the total height
+       
+        for i in range(nBoxes):
+           
+            vals = rng.normal(loc=ms[i],scale=.2,size=200)
+            startX = rectX + (1+i) * margin + i * boxWidth
+            
+            k = 4
+            upper = [100 * (1 - 0.5 ** (i + 1)) for i in range(k, 0, -1)]
+            lower = [100 * (0.5 ** (i + 1)) for i in range(k, 0, -1)]
+
+            # Stitch the box ends together
+            percentile_ends = [(i, j) for i, j in zip(lower, upper)]
+            box_ends = [np.percentile(vals, q) for q in percentile_ends]
+             # Scale the width of the boxes so the biggest starts at 1
+
+            calcWidth = _width_functions("linear")
+            w_area = np.array([calcWidth(b[1] - b[0], i, k)
+                               for i, b in enumerate(box_ends)])
+            w_area = w_area / np.max(w_area)
+
+           
+            for boxPosition,w_area in zip(box_ends,w_area):
+                boxSpecWidth =  w_area * boxWidth
+                qp.setBrush(QBrush(QColor(defaultColors[i])))
+                qp.drawRect(
+                        QRectF(
+                                startX + boxWidth/2- boxSpecWidth/2,
+                                rectY + boxPosition[0] * height,
+                                boxSpecWidth,
+                                boxPosition[1] * height - boxPosition[0] * height
+                                )
+                    )
+
 
     def drawBoxes(self,qp, height, width, rectX, rectY, nBoxes = 4):
         ""

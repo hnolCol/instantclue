@@ -53,6 +53,11 @@ def getNumberFromTimeString(timeString):
     elif " " in timeString and np.char.isnumeric(timeString.split(" ")[0]):
         t = float(timeString.split(" ")[0])
     
+    if np.isnan(t):
+        try:
+            t = float(timeString)
+        except:
+            pass
     return t 
 
 def getMessageProps(title,message):
@@ -94,27 +99,26 @@ def buildReplaceDict(uniqueValues,splitSearchString):
     return replaceDict	
 
 def getReadableNumber(number):
-     """Returns number as string in a meaningful and readable way to omit to many digits"""
-     
-     orgNumber = number
-     number = abs(number)
-     if number == 0:
-     	new_number = 0.0
-     elif number < 0.001:
-     		new_number = '{:.2E}'.format(number)
-     elif number < 0.1:
-     		new_number = round(number,4)
-     elif number < 1:
-     		new_number = round(number,3)
-     elif number < 10:
-     		new_number = round(number,2)
-     elif number < 200:
-     		new_number = float(Decimal(str(number)).quantize(Decimal('.01')))
-     elif number < 10000:
-     		new_number = round(number,0)
-     else:
-     		new_number = '{:.2E}'.format(number)
-     if orgNumber >= 0:
-     	return new_number
-     else:
-     	return new_number * (-1)
+    """Returns number as string in a meaningful and readable way to omit to many digits"""
+    orgNumber = number
+    number = abs(number)
+    if number == 0:
+        new_number = 0.0
+    elif number < 0.001:
+        new_number = '{:.2E}'.format(number)
+    elif number < 0.1:
+        new_number = round(number,4)
+    elif number < 1:
+        new_number = round(number,3)
+    elif number < 10:
+        new_number = round(number,2)
+    elif number < 200:
+        new_number = float(Decimal(str(number)).quantize(Decimal('.01')))
+    elif number < 10000:
+        new_number = round(number,0)
+    else:
+        new_number = '{:.2E}'.format(number)
+    if orgNumber >= 0:
+        return new_number
+    else:
+        return new_number * (-1)

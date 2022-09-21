@@ -49,6 +49,18 @@ class ICGrouping(object):
         if groupingName in self.groupColorMap:
             return self.groupColorMap[groupingName]
 
+    def getDataForLegend(self,groupingNames,columnNames):
+        ""
+        legendDetails = OrderedDict()
+        for groupingName in groupingNames:
+            if groupingName in self.groups:
+                groupColors = self.getGroupColors(groupingName)
+                legendData = OrderedDict([(group,groupColors[group]) for group,groupItems in self.groups[groupingName].items() if any(x in columnNames for x in groupItems)])
+                legendDetails[groupingName] = legendData
+
+        return legendDetails
+
+
     def getTheroeticalColorsForGroupedItems(self,groupedItems,colorMap=None):
         ""
         cmapMapper,_ = self.getCmapMapper(groupedItems,colorMap)
@@ -281,12 +293,16 @@ class ICGrouping(object):
         else:
             return getMessageProps("Error","No Grouping found.")
 
-    def getGroupPairs(self,referenceGroup = None):
+    def getGroupPairs(self,groupingName=None,referenceGroup = None):
         ""
-        grouping = self.getCurrentGrouping()
-        groupNames = self.getCurrentGroupNames()
+        if groupingName is None:
+            groupingName = self.currentGrouping
+        grouping = self.getGrouping(groupingName)
+        groupNames = self.getGroupNames(groupingName)
+        #groupNames = self.getCurrentGroupNames()
+        
         if referenceGroup is not None and referenceGroup in grouping:
-
+            #print("yea",grouping)
             return [(referenceGroup,groupName) for groupName in groupNames if groupName != referenceGroup]
         
         else:
@@ -388,12 +404,12 @@ class ICGrouping(object):
         jsonOut["Software"] = "Instant Clue"
         jsonOut["Version"] = self.sourceData.parent.version
         jsonOut["Computer"] = computerName
-        jsonOut["grouping"] = OrderedDict()
+        jsonOut["groupings"] = OrderedDict()
         jsonOut["groupingCmap"] = dict()
         jsonOut["groupingNames"] = groupingNames.tolist()
         for groupingName in groupingNames:
             if groupingName in self.groups:
-                jsonOut["grouping"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])
+                jsonOut["groupings"][groupingName] = dict([(k,v.values.tolist()) for k,v in self.groups[groupingName].items()])
                 jsonOut["groupingCmap"][groupingName] = self.getColorMap(groupingName)
        
         with open(filePath, 'w', encoding='utf-8') as f:
@@ -407,7 +423,7 @@ class ICGrouping(object):
         try:
             with open(filePath, 'r', encoding='utf-8') as f:
                 jsonLoaded = json.load(f)
-                for groupingName, groups in jsonLoaded["grouping"].items():
+                for groupingName, groups in jsonLoaded["groupings"].items():
                     groupedItems = dict([(k,pd.Series(v)) for k,v in groups.items()])
                     if groupingName in jsonLoaded["groupingCmap"]:
                         cmapName = jsonLoaded["groupingCmap"][groupingName]

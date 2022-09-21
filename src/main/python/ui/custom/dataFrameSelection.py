@@ -313,13 +313,13 @@ class CollapsableDataTreeView(QWidget):
         for treeView in self.dataHeaders.values():
             treeView.hideShowShortCuts()
 
-    def updateDataInTreeView(self,columnNamesByType):
+    def updateDataInTreeView(self,columnNamesByType, tooltipData = {}):
         """Add data to the data treeview"""
         if isinstance(columnNamesByType,dict):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
-                        self.dataHeaders[headerName].addData(values) 
+                        self.dataHeaders[headerName].addData(values, tooltipData) 
                         self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
                         if values.size == 0:
                             self.frames.setInactiveByTitle(headerName)
@@ -341,7 +341,7 @@ class CollapsableDataTreeView(QWidget):
                 self.sessionIsBeeingLoaded = True
             #print(sessionIsBeeingLoaded)
             self.combo.clear() 
-            self.combo.addItems(list(self.dfs.values()))
+            self.combo.addItems(["{} ({} x {})".format(fileName,*self.mC.data.getDataFrameShape(dataID)[0]) for dataID, fileName in self.dfs.items()])
             
             if specificIndex is not None and isinstance(specificIndex,int) and specificIndex < len(self.dfs):
                 self.combo.setCurrentIndex(specificIndex)

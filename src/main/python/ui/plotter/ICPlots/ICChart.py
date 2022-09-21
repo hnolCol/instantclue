@@ -1,3 +1,4 @@
+from cgi import test
 from PyQt5.QtCore import QObject, pyqtSignal, QPoint
 from PyQt5.QtGui import QCursor
 
@@ -250,7 +251,7 @@ class ICChart(QObject):
 			if event.inaxes is not None and event.button in [2,3]:#mac windows
 				self.menuClickedInAxis = event.inaxes
 				self.createAndShowMenu()
-			elif event.inaxes in list(self.axisDict.values()) and event.button == 1 and self.statTestEnabled and self.isBoxplotViolinBar():
+			elif event.inaxes in list(self.axisDict.values()) and event.button == 1 and self.statTestEnabled and self.isChartCompatibleWithInteractiveStats():
 				axisID = self.getAxisID(event.inaxes)	
 				
 				#data are provided differently for boxplot, violin and barplot due to the matplotlib functions			
@@ -258,8 +259,12 @@ class ICChart(QObject):
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["positions"],event.xdata)
 					xdata = self.data["plotData"][axisID]["positions"][nearestIdx]
 					data = self.data["plotData"][axisID]["x"][nearestIdx]
-					
-				elif self.isBarplot():
+				elif self.isBoxenplot() and "hoverData" in self.data:
+					nearestIdx = find_nearest_index(self.data["positions"][axisID],event.xdata)
+					xdata = self.data["positions"][axisID][nearestIdx]
+					data = self.data["hoverData"][axisID]["x"][nearestIdx]
+
+				elif self.isBarplot() and "hoverData" in self.data:
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["x"],event.xdata)
 					xdata = self.data["plotData"][axisID]["x"][nearestIdx]
 					data = self.data["hoverData"][axisID]["x"][nearestIdx]
@@ -267,6 +272,7 @@ class ICChart(QObject):
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["positions"],event.xdata)
 					xdata = self.data["plotData"][axisID]["positions"][nearestIdx]
 					data = self.data["hoverData"][axisID]["x"][nearestIdx]
+
 				groupName = self.data["groupNames"][axisID][nearestIdx]
 				self.saveStatData(axisID,event.ydata, xdata, data, nearestIdx, groupName)
 	
@@ -308,6 +314,8 @@ class ICChart(QObject):
 	def saveStatData(self,axisID,ydata,xdata, data,dataIdx, groupName):
 		"Saves data for statistical tests"
 
+		testType = self.getTestType() 
+		 
 		if len(self.statData) == 0:
 			self.statData["axisID"] = axisID
 			self.statData["data"] = [data]
@@ -315,7 +323,19 @@ class ICChart(QObject):
 			self.statData["y"] = [ydata]
 			self.statData["x"] = [xdata]
 			self.statData["groupName"] = [groupName]
-			self.drawStatIndicator(self.axisDict[axisID], xdata,ydata)
+			
+			if self.isOneSampleTest(testType):
+				stat, p, testType = self.performStatTest()
+				if p is not None:
+					testType, internalID = self.saveStatResults(stat,p,testType)
+					self.drawOneSamplepValue(self.axisDict[axisID],p,internalID,axisID) #draw test 
+				
+				self.setDataInStatisticTable(self.statCollection,title = "Test : {}".format(testType))
+				self.updateFigure.emit()
+				self.statData.clear()
+				return
+			else:
+				self.drawStatIndicator(self.axisDict[axisID], xdata,ydata)
 		
 		elif "axisID" in self.statData and self.statData["axisID"] != axisID:
 			self.statData.clear() 
@@ -381,7 +401,7 @@ class ICChart(QObject):
 		dataToAppend = {
 						"Test":testType,
 						"Group1":self.statData["groupName"][0], 
-						"Group2": self.statData["groupName"][1],
+						"Group2": "None" if self.isOneSampleTest(testType) else self.statData["groupName"][1],
 						"p-value":pValue,
 						"test-statistic":statValue,
 						"internalID":internalID,
@@ -390,11 +410,22 @@ class ICChart(QObject):
 		self.statCollection = self.statCollection.append(dataToAppend, ignore_index = True)
 		return testType, internalID
 
+	def getTestType(self):
+		""
+		return self.mC.mainFrames["data"].analysisSelection.getDragTask().values[0]
+
+	def isOneSampleTest(self,testType):
+		return testType in ["One-sample t-test","Wilcoxon signed-rank test"]
+
 	def performStatTest(self):
 		""
 		try:
-			testType = self.mC.mainFrames["data"].analysisSelection.getDragTask().values[0]
-			r = self.mC.statCenter.performPairwiseTest(self.statData["data"], kind = testType)
+			testType = self.getTestType()
+			if self.isOneSampleTest(testType):
+				r = self.mC.statCenter.performOneSampleTest(self.statData["data"],kind = testType)
+				
+			else:
+				r = self.mC.statCenter.performPairwiseTest(self.statData["data"], kind = testType)
 			if isinstance(r,str):
 				w = WarningMessage(infoText=r)
 				w.exec_()
@@ -405,6 +436,32 @@ class ICChart(QObject):
 			#self.saveStatData()
 		except Exception as e:
 			print(e)
+
+	def drawOneSamplepValue(self,ax,p,internalID,axisID):
+		"Darws p value of one-sample t-test"
+		if not hasattr(self,"statArtists"):
+			self.statArtists = OrderedDict() 
+
+		y = self.statData["y"][0]
+		x = self.statData["x"][0]
+		
+		tProps = self.getStdTextProps()
+		tProps["x"] = x
+		tProps["y"] = y
+		tProps["text"] = "{:.4f}".format(p) if p > 0.001 else "{:.2e}".format(p) #p value formatting
+		tProps["ha"] = "center"
+		tProps["va"] = "bottom"
+		tProps["rotation"] = 90
+		tProps["visible"] = True
+		
+		t = Text(**tProps)
+		ax.add_artist(t)
+
+		self.statArtists[internalID] = {
+											"text" : t,
+											"axisID" : axisID,
+											"textProps" : tProps
+											}
 
 	def drawStats(self, ax, p , internalID, axisID):
 		""
@@ -537,18 +594,7 @@ class ICChart(QObject):
 		# 		action.triggered.connect(lambda chk, projectParams = project: self.sendToWebApp(projectParams))
 		# else:
 		# 	menus["To WebApp"].addAction("Login")
-		
-
-	def sendToWebApp(self, projectParams):
-		""
-		
-		self.mC.sendTextEntryToWebApp(projectParams["ID"],"# Start","## Q: I would like to answer the question of how mitoch. are regulated.")
-		# d = self.data.copy() 
-
-		
-		# URL = "http://127.0.0.1:5000/api/v1/projects"
-		# r = requests.post(URL,json=projectParams)
-		# print(r) 
+	
 
 	def addMenuActions(self, menus):
 		""
@@ -577,7 +623,8 @@ class ICChart(QObject):
 
 
 	def shareGraph(self):
-		""
+		"Not available yet"
+	
 		shareDialog = ICShareGraph(mainController=self.mC)
 		shareDialog.exec_()
 
@@ -686,6 +733,54 @@ class ICChart(QObject):
 			"name":"Line({})".format(lineID) if name is None else name,
 			"ax":ax,
 			"lkwargs":lKwargs}
+
+	def addGroupingLegendToGraph(self, groupData, ax, title =  "",update=True, export = False, legendKwargs = {}):
+		""
+		try:
+			if len(groupData) > 200:
+				w = WarningMessage(title="To many items for grouping legend.",
+								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
+				w.exec_()	
+				return			
+			
+			legendItems = []
+			maxItems = np.max([len(groupItems) for  groupItems in groupData.values()])
+			for groupingName, groupItems in groupData.items():
+				legendItems.append(Patch(fill=False,edgecolor='none', linewidth=0, label=groupingName))
+				for n, (groupName, groupColor) in enumerate(groupItems.items()):
+
+					legendItems.append(Patch(
+							facecolor=groupColor,
+							edgecolor="black",
+							label = groupName))
+				if maxItems-(n+1) != 0:
+					for n in range(maxItems-(n+1)):
+						legendItems.append(Patch(fill=False,edgecolor='none', linewidth=0, label=""))
+
+			if not export and hasattr(self,"colorLegend"):
+				self.groupingLegend.remove() 
+			
+			legend = ax.legend(handles=legendItems, 
+								title = title, 
+								title_fontsize = self.getParam("legend.title.mainfigure.fontsize") if export else self.getParam("legend.title.fontsize"), 
+								fontsize = self.getParam("legend.mainfigure.fontsize") if export else self.getParam("legend.fontsize"),
+								labelspacing = 0.2,#self.getParam("legend.label.spacing"),
+								borderpad  = 0.2,#self.getParam("legend.label.borderpad"),
+								**legendKwargs)
+			if not export:
+				self.groupingLegend = legend
+				self.checkLegend(ax,attrName="sizeLegend")
+				self.checkLegend(ax,attrName="markerLegend")
+				self.checkLegend(ax,attrName="quickSelectLegend")
+				self.lastAddedLegend = legend
+				self.groupingLegendKwargs = {"colorData":groupData,"title":title,"update":False,"export":True,"legendKwargs":legendKwargs}
+				
+			if update:
+				self.updateFigure.emit()
+			return legend
+		except Exception as e:
+			print(e)
+
 
 	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
 		""
@@ -961,14 +1056,15 @@ class ICChart(QObject):
 	def addSwarm(self,dataID,numericColumns,categoricalColumns, onlyForID = None, targetAx = None):
 		"Add Swarm Scatter"
 		try:
-			if not self.isBoxplotViolinBar():
-				w = WarningMessage(infoText = "Swarms can only be added to box, bar and violinplots.")
+			if not (self.isBoxplotViolinBar() or self.isBoxenplot()):
+				w = WarningMessage(infoText = "Swarms can only be added to box, boxen, bar and violinplots.")
 				w.exec_()
 				return
 			
 			
 			if hasattr(self,"swarmData") and onlyForID is not None and hasattr(self,"swarmScatterKwargs"):
 				for n, scatter in self.swarmScatter.items():
+					print("SCA",scatter.getScatterInvisibility())
 					if not scatter.getScatterInvisibility():
 						#if visibility is Flase -> dont plot anything
 						return
@@ -986,6 +1082,7 @@ class ICChart(QObject):
 							interactive = False,
 							adjustLimits = False
 							)
+				#print("reached")
 			elif hasattr(self,"swarmData"):
 				#if swarm data are present -> just toggle visibility of swarm scatters#
 				#setting swarm invisisble
@@ -1279,7 +1376,7 @@ class ICChart(QObject):
 			return self.mC.mainFrames["data"].liveGraph.hasData()
 		else:
 			return False
-			
+
 	def isQuickSelectActive(self):
 		""
 		if hasattr(self.mC,"mainFrames"):
@@ -1503,10 +1600,18 @@ class ICChart(QObject):
 	def isBoxplotViolinBar(self):
 		""
 		return self.plotType in ["boxplot","violinplot","barplot"]
+
+	def isChartCompatibleWithInteractiveStats(self):
+		""
+		return self.plotType in ["boxplot","violinplot","barplot","boxenplot"]
 	
 	def isBoxplot(self):
 		""
 		return self.plotType == "boxplot"
+	
+	def isBoxenplot(self):
+		""
+		return self.plotType == "boxenplot"
 
 	def isBarplot(self):
 		""

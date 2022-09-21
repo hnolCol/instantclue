@@ -246,4 +246,4 @@ class AskQuestionMessage(MessageBase):
             self.close() 
         else:
             self.setState(newState)
-            self.close()
+            self.accept()

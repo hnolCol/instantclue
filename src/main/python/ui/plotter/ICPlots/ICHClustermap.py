@@ -1,6 +1,3 @@
- 
-from asyncio import FastChildWatcher
-from turtle import color
 
 from matplotlib.collections import LineCollection
 from .ICChart import ICChart
@@ -52,12 +49,27 @@ class ICClustermap(ICChart):
             menus["Color Map (Cluster)"].addAction(cMap,self.updateColorMapOfClusterMesh)
             if self.plotType == "hclust":
                 menus["Color Map (Color column)"].addAction(cMap,self.updateColorMapOfColorColumns)
-        
+        if self.groupingExists():
+            menus["main"].addAction("Add Grouping Legend", self.addGroupingLegend)
         menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
         if self.plotType == "hclust":
             menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
             menus["main"].addAction("Share graph", self.shareGraph)
             
+    def groupingExists(self):
+        return "axColumnGrouping" in self.axisDict
+
+    def addGroupingLegend(self):
+        ""
+       # print(self.data)
+        if self.groupingExists():
+            groupingNames = self.data["tickLabels"]["axColumnGrouping"]["tickLabels"]
+            columnNames = self.data["columnNames"]
+        
+        ax = self.axisDict["axColumnDendro"] if "axColumnDendro" in self.axisDict else self.axisDict["axColumnGrouping"]
+        legendData = self.mC.grouping.getDataForLegend(groupingNames,columnNames)
+        self.addGroupingLegendToGraph(legendData,ax, legendKwargs={"loc":"lower left", "bbox_to_anchor":(0.00, 1.02), "ncol":len(legendData)})
+
     def addTooltip(self, tooltipColumnNames,dataID):
         ""
         self.annotationColumns = tooltipColumnNames.values.tolist()
@@ -73,6 +85,12 @@ class ICClustermap(ICChart):
             return self.toolTipsActive
         else:
             return False
+
+    def disconnectAnnotations(self):
+        ""
+        if hasattr(self,"labelData"):
+            del self.labelData
+        
 
     def removeTooltip(self):
         ""
@@ -132,7 +150,7 @@ class ICClustermap(ICChart):
         else:
             colorMeshLineKwargs = {}
 
-        print(colorMeshLimits)
+        
         if colorMeshLimits is not None:
             if isinstance(colorMeshLimits,dict) and "vmin" in colorMeshLimits and "vmax" in colorMeshLimits and len(colorMeshLimits) == 2:
                 valueLimitKwargs = colorMeshLimits.copy()
@@ -145,9 +163,7 @@ class ICClustermap(ICChart):
         else:
             valueLimitKwargs = {}
             
-        print(valueLimitKwargs)
-        print(data)
-
+       
         colorMesh = ax.pcolormesh(data, 
 					  cmap = cmap,
                       norm = norm,
@@ -466,7 +482,6 @@ class ICClustermap(ICChart):
 
     def getColorData(self):
         ""
-        print(self.colorData)
         if hasattr(self,"colorData"):
             return self.colorData
 

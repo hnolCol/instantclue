@@ -16,7 +16,7 @@ class FindReplaceDialog(QDialog):
 
         self.mC = mainController
         self.dataID = self.mC.getDataID()
-        self.selectedDataType = "Numeric Floats"
+        self.selectedDataType = "Categories"
         self.selectedColumn = ""
         self.selectedColumnIndex = None
 
@@ -40,7 +40,7 @@ class FindReplaceDialog(QDialog):
 
         self.dataTypeCombo = createCombobox(self,items=["Categories","Integers","Numeric Floats"])
         self.dataTypeCombo.setToolTip("Select data type. If you select 'Current Column Selection' only columns from this type will be considered.\nThe input is transformed to the selected data type. If it fails, nan will be entered or the selected categorical value for missing values (default:'-')")
-        self.dataTypeCombo.currentTextChanged.connect(self.onDatTypeChange)
+        self.dataTypeCombo.currentTextChanged.connect(self.onDataTypeChange)
         self.dataTypeCombo.setEnabled(False)
 
         self.columnCombo = createCombobox(self,items = ["Current Column Selection"] + self.mC.data.getPlainColumnNames(self.dataID).values.tolist())
@@ -108,7 +108,7 @@ class FindReplaceDialog(QDialog):
         if e.key() == Qt.Key_Escape:
             self.reject()
 
-    def onDatTypeChange(self, currentText):
+    def onDataTypeChange(self, currentText):
         ""
         self.selectedDataType = currentText
 

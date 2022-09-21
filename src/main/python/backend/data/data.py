@@ -63,7 +63,7 @@ from threadpoolctl import threadpool_limits
 
 from scipy.stats import pearsonr
 
-from ..utils.stringOperations import getMessageProps, mergeListToString, findCommonStart, getRandomString
+from ..utils.stringOperations import getMessageProps, getReadableNumber, mergeListToString, findCommonStart, getRandomString
 from ..filter.categoricalFilter import CategoricalFilter
 from ..filter.numericalFilter import NumericFilter
 from ..color.colorManager import ColorManager
@@ -235,6 +235,8 @@ class DataCollection(object):
 		self.df_columns = []
 		self.dataFrameId = 0
 		self.dfs = OrderedDict()
+		self.tooltipData = OrderedDict()
+		self.dfShapes = OrderedDict()
 		self.dfsDataTypesAndColumnNames = OrderedDict() 
 		self.fileNameByID = OrderedDict() 
 		self.excelFileIO = OrderedDict()
@@ -242,6 +244,8 @@ class DataCollection(object):
 		self.replaceObjectNan = '-'
 		self.clippings = dict()
 		self.droppedRows = dict() 
+
+
 		self.categoricalFilter = CategoricalFilter(self)
 		self.numericFilter = NumericFilter(self)
 		self.statCenter = StatisticCenter(self)
@@ -269,6 +273,7 @@ class DataCollection(object):
 
 			funcProps = getMessageProps("Column added","Column {} was added to data.".format(columnName))
 			funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			funcProps["tooltipData"] = self.getTooltipdata(dataID)
 
 			return funcProps
 		else:
@@ -286,11 +291,12 @@ class DataCollection(object):
 			self.dfs[dataID].loc[:,columnName] = columnData
 		else:
 			self.dfs[dataID].loc[rowIndex,columnName] = columnData
+
 		self.extractDataTypeOfColumns(dataID)
 		
 		funcProps = getMessageProps("Column added","Column {} was added to data.".format(columnName))
 		funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
-
+		funcProps["tooltipData"] = self.getTooltipdata(dataID)
 		return funcProps
 
 	def addIndexColumn(self,dataID,*args,**kwargs):
@@ -307,7 +313,7 @@ class DataCollection(object):
 	def addGroupIndexColumn(self,dataID,columnNames,*args,**kwargs):
 		""
 		if dataID in self.dfs:
-			dfShape, rowIdx = self.getDataFrameShape(dataID)
+			#dfShape, rowIdx = self.getDataFrameShape(dataID)
 			columnNames = columnNames.values.tolist()
 			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
 			dataGroupby = data.groupby(columnNames,sort=False).cumcount()
@@ -392,7 +398,7 @@ class DataCollection(object):
 					params = pd.read_excel(excelFile,sheet_name="Software Info", index_col="Parameters")
 					numberOfGroupings = int(float(params.loc["Groupings"]))
 					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],skiprows=numberOfGroupings).dropna(axis=1,how="all")
-					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					funcProps = self.addDataFrame(df,fileName=dataFrameName, cleanObjectColumns=True)
 					#groupings
 					
 					try:
@@ -424,7 +430,7 @@ class DataCollection(object):
 				else:
 					props = self.checkLoadProps(props)
 					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],**props)
-					funcProps = self.addDataFrame(df,fileName=dataFrameName)
+					funcProps = self.addDataFrame(df,fileName=dataFrameName,cleanObjectColumns=True)
 					
 		# if deleteExcelFiles:
 		# 	for v in excelFiles.values():
@@ -448,9 +454,10 @@ class DataCollection(object):
 			dataID  = self.get_next_available_id()
 		dataFrame = self.checkForInternallyUsedColumnNames(dataFrame)
 		self.dfs[dataID] = dataFrame
+		self.tooltipData[dataID] = dict()
 		self.extractDataTypeOfColumns(dataID)
 		self.saveFileName(dataID,fileName)
-
+		
 		rows,columns = self.dfs[dataID].shape
 
 		#clean up nan in object columns
@@ -579,7 +586,8 @@ class DataCollection(object):
 			"thousands":config.getParam("load.file.float.thousands"),
 			"decimal": config.getParam("load.file.float.decimal"),
 			"skiprows": config.getParam("load.file.skiprows"),
-			"na_values":config.getParam("load.file.na.values")}
+			"na_values":config.getParam("load.file.na.values"),
+			"index_col":False}
 		return self.checkLoadProps(props)
 
 	def checkLoadProps(self,loadFileProps):
@@ -717,7 +725,13 @@ class DataCollection(object):
 			collectResults[newColumnName] = XYCalc
 
 		return self.joinDataFrame(dataID,collectResults)
-	
+
+
+	def randomSelection(self, dataID, N,*args,**kwargs):
+		""
+		sampleIdx = self.getDataByDataID(dataID).sample(n=N).index
+		return self.addAnnotationColumnByIndex(dataID,sampleIdx,"RandomSelection(N={})".format(N))
+
 	def sortColumns(self,dataID,sortedColumnDict):
 		""
 		sortedColumns = []
@@ -758,6 +772,7 @@ class DataCollection(object):
 		if len(self.dfs) > 0:
 			dataID = list(self.dfs.keys())[0]
 			taskCompleteKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			
 			taskCompleteKwargs["dfs"] = self.fileNameByID
 			return taskCompleteKwargs
 		else:
@@ -845,11 +860,24 @@ class DataCollection(object):
 			try:
 				if dataType != 'object':
 					dfWithSpecificDataType = self.dfs[dataID].select_dtypes(include=[dataType])
+					
+					quantiles = dfWithSpecificDataType.quantile(q=[0,0.25,0.5,0.75,1])
+					nanSum = dfWithSpecificDataType.isna().sum()
+					fracs = nanSum / dfWithSpecificDataType.index.size
+					#print(quantiles)
+					for columnHeader in dfWithSpecificDataType.columns:
+						nans = nanSum[columnHeader]
+						frac = round(fracs[columnHeader]*100,1)
+						self.tooltipData[dataID][columnHeader] = "Min : {}\n25% Quantile : {}\nMedian : {}\n75% Quantile : {}\nMax : {}\n#-nans : {} ({}%)".format(*[getReadableNumber(x) for x in quantiles[columnHeader].values.tolist()],nans,frac)
 				else:
 					dfWithSpecificDataType = self.dfs[dataID].select_dtypes(exclude=['float64','int64'])
+					
+					for columnHeader in dfWithSpecificDataType.columns:
+						self.tooltipData[dataID][columnHeader] = "#unique values = {}".format(dfWithSpecificDataType[columnHeader].unique().size)
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
+			
 			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders)
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
@@ -905,19 +933,19 @@ class DataCollection(object):
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))
 
 	def explodeDataByColumn(self,dataID,columnNames,splitString=None):
-			"Splits rows by splitString into lists and then applies explode on that particular column"
-			if dataID in self.dfs:
-				columnName = columnNames.values[0]
-				data = self.dfs[dataID].copy()
-				if splitString is None:
-					splitString = self.parent.config.getParam("explode.split.string")
-				data[columnName] = data[columnName].str.split(splitString,expand=False)
-				explodedData = data.explode(columnName, ignore_index=True)
-				fileName = self.getFileNameByID(dataID)
-				return self.addDataFrame(explodedData, fileName="explode({})::{}".format(fileName,columnName))
+		"Splits rows by splitString into lists and then applies explode on that particular column"
+		if dataID in self.dfs:
+			columnName = columnNames.values[0]
+			data = self.dfs[dataID].copy()
+			if splitString is None:
+				splitString = self.parent.config.getParam("explode.split.string")
+			data[columnName] = data[columnName].str.split(splitString,expand=False)
+			explodedData = data.explode(columnName, ignore_index=True)
+			fileName = self.getFileNameByID(dataID)
+			return self.addDataFrame(explodedData, fileName="explode({})::{}".format(fileName,columnName))
 
-			else:
-				return errorMessage
+		else:
+			return errorMessage
 
 	def fillNaInObjectColumns(self,dataID,columnLabelList, naFill = None):
 		'''
@@ -968,6 +996,10 @@ class DataCollection(object):
 			groupByObject = self.dfs[dataID].groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 
+	def getTooltipdata(self,dataID):
+		""
+		return self.tooltipData[dataID] if dataID in self.tooltipData else {}
+
 	def getColumnNamesByDataID(self,dataID):
 		"Returns Dict of Column Names per DataFrame and Column Type (float,int,string)"
 		
@@ -975,7 +1007,8 @@ class DataCollection(object):
 			return {"messageProps":
 					{"title":"Data Frame Updated",
 					"message":"Data Frame Selection updated."},
-					"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID]}
+					"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
+					"tooltipData" : self.getTooltipdata(dataID)}
 					
 		else:
 			return errorMessage
@@ -1104,6 +1137,7 @@ class DataCollection(object):
 			self.extractDataTypeOfColumns(dataID)
 			funcProps = getMessageProps("Column renamed.","Column evaluated and renamed.")
 			funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			funcProps["tooltipData"] = self.getTooltipdata(dataID)
 			funcProps["columnNameMapper"] = columnNameMapper
 			return funcProps
 		return getMessageProps("Error..","DataID not found.")
@@ -1364,6 +1398,7 @@ class DataCollection(object):
 				self.dfs[dataID][columnNames] = data 
 				funcProps = getMessageProps("Done ..","Data have been updated.")
 				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+				funcProps["tooltipData"] = self.getTooltipdata(dataID)
 				funcProps["dataID"] = dataID
 				return funcProps
 		else:
@@ -1392,6 +1427,7 @@ class DataCollection(object):
 				self.extractDataTypeOfColumns(dataID)
 				funcProps = getMessageProps("Column names replaced.","Column evaluated and replaced.")
 				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+				funcProps["tooltipData"] = self.getTooltipdata(dataID)
 				funcProps["dataID"] = dataID
 				funcProps["columnNameMapper"] = dict([(oldColumnName,newColumnNames[n]) for n,oldColumnName in enumerate(savedColumns) if oldColumnName != newColumnNames[n]])
 				return funcProps
@@ -1418,7 +1454,8 @@ class DataCollection(object):
 					#convert to pandas series and ensure str data type
 					for fS,rS in zip(findStrings,replaceStrings):
 						#replace happens after each other
-						self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns[0]].astype(str).str.replace(fS, rS,regex=False,case=True)
+						for specColumn in specificColumns:
+							self.dfs[dataID][specColumn] = self.dfs[dataID][specColumn].astype(str).str.replace(fS, rS,regex=False,case=True)
 				else:
 					self.dfs[dataID][specificColumns] = self.dfs[dataID][specificColumns].replace(findValues, replaceValues)
 				return getMessageProps("Column renamed.","Column evaluated and renamed.")
@@ -1543,6 +1580,7 @@ class DataCollection(object):
 			self.extractDataTypeOfColumns(dataID)
 			funcProps = getMessageProps("Data Type changed.","Columns evaluated and data type changed.")
 			funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			funcProps["tooltipData"] = self.getTooltipdata(dataID)
 			return funcProps
 		else:
 			return errorMessage
@@ -1847,6 +1885,7 @@ class DataCollection(object):
 				funcProps = getMessageProps("Columns removed.","Column evaluated and removed.")
 				funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 				funcProps["columnNames"] = removedColumns
+				funcProps["tooltipData"] = self.getTooltipdata(dataID)
 				return funcProps
 		else:
 			return errorMessage
@@ -2150,6 +2189,7 @@ class DataCollection(object):
 
 			completeKwargs = getMessageProps("Done..","Groups summarized. Columns added.")
 			completeKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			completeKwargs["tooltipData"] = self.getTooltipdata(dataID)
 			return completeKwargs
 		else:
 			return errorMessage
@@ -2483,7 +2523,6 @@ class DataCollection(object):
 		'''
 		Returns an orderedDictionary with all added data.
 		'''
-		
 		self.save_current_data()
 		return self.dfs 
 	
@@ -2744,8 +2783,8 @@ class DataCollection(object):
 			if ignoreIndex and corrParams["axis"] == 1:
 				df.columns = np.arange(df.columns.size)
 				otherDf.columns = np.arange(otherDf.columns.size)
-			print(df, otherDf)
-			print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
+			#print(df, otherDf)
+			#print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
 			return {}
 		else:
 			return errorMessage
@@ -3190,6 +3229,7 @@ class DataCollection(object):
 
 			completeKwargs = getMessageProps("Done..","Column(s) was/were split on split string: {}".format(splitString))
 			completeKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+			completeKwargs["tooltipData"] = self.getTooltipdata(dataID)
 			return completeKwargs
 		else:
 			return errorMessage
