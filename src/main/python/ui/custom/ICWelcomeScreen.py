@@ -85,7 +85,7 @@ class ICWelcomeScreen(QWidget):
             except:
                 self.versionCheckedDone = True
         else:
-            self.versionLabel.setText("v. {} .. error while connection to GitHub.".format(self.version))
+            self.versionLabel.setText("{} .. error while connection to GitHub.".format(self.version))
             self.versionCheckedDone = True
 
     def changeAppearance(self,event=None):

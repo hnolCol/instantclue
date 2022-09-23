@@ -538,11 +538,11 @@ class DataCollection(object):
 		return errorMessage
 
 	def getDataFrameShape(self,dataID):
-		""
+		"Returns the shape of the data frame, taking clipping into account."
 		if dataID in self.dfs:
 			if dataID in self.clippings:
 				rowIdx = self.clippings[dataID]
-				self.dfs.loc[rowIdx,:].shape, rowIdx
+				return self.dfs[dataID].loc[rowIdx,:].shape, rowIdx
 			else:
 				return self.dfs[dataID].shape, self.dfs[dataID].index
 		else:
