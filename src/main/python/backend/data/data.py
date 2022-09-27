@@ -38,7 +38,6 @@ activity is performed like:
 """
 
 from ast import Or
-from math import isnan
 from multiprocessing import Pool
 from numba.core.decorators import njit
 from numba.np.ufunc import parallel
@@ -556,8 +555,7 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			requiredColumns = columnNames.append(groupbyColumn,ignore_index=True)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
-			aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric)
-			aggregatedData = aggregatedData.reset_index()
+			aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric).reset_index()
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
@@ -2542,7 +2540,9 @@ class DataCollection(object):
 			self.fileNameByID[dataID] = fileName	
 			completeKwargs = getMessageProps("Renamed.","Data frame renamed.")
 			completeKwargs["dfs"] = self.fileNameByID
+			completeKwargs["remainLastSelection"] = True
 			return completeKwargs
+		return getMessageProps("Error..","DataID did not match any of the loaded data.")
 	
 	def getFileNameByID(self,dataID):
 		""

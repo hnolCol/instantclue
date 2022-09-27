@@ -86,7 +86,13 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     verticalLines = {}
     data = sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
     data = data.dropna(subset=numericColumns,how="all")
-   
+
+    scaleXAxis = sourceData.parent.config.getParam("scale.numeric.x.axis")
+    splitString = sourceData.parent.config.getParam("split.string.x.category")
+    splitIndex = sourceData.parent.config.getParam("split.string.index")
+    giveBoxesNanColor = sourceData.parent.config.getParam("nanColor.for.boxes.and.bars")
+    nanColorHex = sourceData.parent.config.getParam("nanColor")
+
     if nCatCols == 0:
         
         groupedPlotData = data.describe()
@@ -227,7 +233,10 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickValues = np.arange(nNumCols) + widthBox
         tickPositions = {0:tickValues}
         boxPositions = tickPositions.copy()
-        colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
+        if giveBoxesNanColor:
+            colors = dict([(numericColumn,nanColorHex) for numericColumn in numericColumns])
+        else:
+            colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
         
         colorGroups["color"] = colors.values()
         colorGroups["group"] = colors.keys() 
@@ -263,13 +272,23 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         groupNames = []
         widthBox= 1/(nColorCats)
         singleNumericValue = len(numericColumns) == 1
+        if scaleXAxis:
+            try:
+                numericTickPos = np.array([float(x.split(splitString)[splitIndex]) for x in colorCategories])
+            except:
+                scaleXAxis = False
+            
         
         for m, numericColumn in enumerate(numericColumns):
             numData = data.dropna(subset=[numericColumn])
             axisGroupBy = numData.groupby(categoricalColumns[0],sort=False)
-            startPos = m if m == 0 else m + (widthBox/3 * m)
-            endPos = startPos + widthBox * (nColorCats-1)
-            positions = np.linspace(startPos,endPos,num=nColorCats)
+            if scaleXAxis:
+                positions = numericTickPos + (m * widthBox)
+                endPos = positions[-1]
+            else:
+                startPos = m if m == 0 else m + (widthBox/3 * m)
+                endPos = startPos + widthBox * (nColorCats-1)
+                positions = np.linspace(startPos,endPos,num=nColorCats)
            
             if singleNumericValue:
                 tickPositions.extend(positions)

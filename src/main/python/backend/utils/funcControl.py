@@ -36,7 +36,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"setFileNameByID","requiredKwargs":["dataID","fileName"]},
             "completedRequest": 
-                            [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"]},
+                            [{"obj":"self","fn":"updateDataFrames","objKey":"data","objName":"mainFrames","requiredKwargs":["dfs"],"optionalKwargs":["remainLastSelection"]},
                             sendMessageProps]
         }, 
     "data::randomSelection":

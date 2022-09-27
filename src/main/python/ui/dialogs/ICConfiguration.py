@@ -31,7 +31,7 @@ class ConfigDialog(QDialog):
         """Init widgets"""
        
         self.titleLabel = createTitleLabel("Settings")
-        self.infoLabel = createLabel("Changed parameters are automatically saved.")
+        self.infoLabel = createLabel("Changed parameters are automatically saved. After changing the parameter, just close the dialog.")
         self.propHolder = PropertyChooser(mainController=self.mC,parent=self)
 
         self.helpButton = HelpButton(buttonSize=(30,30), tooltipStr="Opens the specific GitHub Wiki Page for selected Settings (requires Internet connection).")

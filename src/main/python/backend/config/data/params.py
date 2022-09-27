@@ -753,7 +753,15 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Boxenplot",
     "description"   :   "Enable/disable rendering of the mean in a Boxenplot."
     }, 
-
+    {
+    "name"          :   "boxenplot.width.scale",
+    "value"         :   1.0,
+    "dtype"         :   float,
+    "range"         :   [0.001,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Boxenplot",
+    "description"   :   "Scales the width of the box of each boxenplot. Setting this value below 1 will add some space between categorically separated boxes.",
+    },
     {
     "name"          :   "boxplot.showfliers",
     "value"         :   True,
@@ -768,9 +776,27 @@ DEFAULT_PARAMETER = [
     "value"         :   True,
     "dtype"         :   bool,
     "range"         :   [True,False],
-    "parent"        :   "matplotlib",
+    "parent"        :   "intern",
     "parentType"    :   "Boxplot",
     "description"   :   "Splits data based on values in the receiver box 'Categories'.\nIf disabled. the whole dataset will be plotted against the category setups, without splitting before.",
+    },
+    {
+    "name"          :   "nanColor.for.boxes.and.bars",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Color",
+    "description"   :   "If enabled, fill box clors of boxplots or barplots will be in nanColor (see Color Setting) if no categorical column is added.",
+    },
+    {
+    "name"          :   "boxplot.width.scale",
+    "value"         :   1.0,
+    "dtype"         :   float,
+    "range"         :   [0.001,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Boxplot",
+    "description"   :   "Scales the width of the box of each boxplot. Setting this value below 1 will add some space between categorically separated boxes.",
     },
     {
     "name"          :   "boxplot.flierprops.markeredgewidth",

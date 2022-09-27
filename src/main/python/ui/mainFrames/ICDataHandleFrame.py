@@ -441,10 +441,14 @@ class DataHandleFrame(QFrame):
         
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 
-    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None,sessionIsBeeingLoaded=False):
+    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None,sessionIsBeeingLoaded=False, remainLastSelection = False):
         ""
         if isinstance(dfs,dict):
-            self.dataTreeView.updateDfs(dfs,selectLastDf,specificIndex=dataComboboxIndex,sessionIsBeeingLoaded = sessionIsBeeingLoaded)
+            
+            self.dataTreeView.updateDfs(dfs,selectLastDf,
+                    specificIndex=dataComboboxIndex,
+                    sessionIsBeeingLoaded = sessionIsBeeingLoaded, 
+                    remainLastSelection=remainLastSelection)
 
     def updateDataInQuickSelect(self,data):
         ""

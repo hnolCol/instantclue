@@ -790,7 +790,7 @@ class ICClustermap(ICChart):
                         )
         
         self.numOfColorColumns = colorValues.shape[1]
-        self.setDataInColorTable(colorGroupData, title = title)
+        self.setDataInColorTable(colorGroupData, title = title, isEditable=self.data["isEditable"] if "isEditable" in self.data else False)
         self.updateXlimForLabelColor(colorValues.shape, colorColumnNames)
         self.updateQuickSelectItemsCoords()
         self.onClusterYLimChange()

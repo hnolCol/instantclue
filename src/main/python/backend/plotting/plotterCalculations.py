@@ -1113,7 +1113,7 @@ class PlotterBrain(object):
         positionData = OrderedDict() 
         outlierData = OrderedDict()
         widthFn = self.sourceData.parent.config.getParam("boxen.width.calculation")
-
+        xWidth = xWidth * self.sourceData.parent.config.getParam("boxenplot.width.scale")
         for n,plotData in plotCalcData.items():
             data = plotData["x"]
             hoverData[n] = {"x" : data}
@@ -1160,9 +1160,11 @@ class PlotterBrain(object):
                     vals = boxData.values.flatten()
                     boxEnds, k = _lv_box_ends(vals)
                     width = _width_functions(widthFn)
+                    
                     # Scale the width of the boxes so the biggest starts at 1
                     w_area = np.array([width(height(b), i, k)
                                     for i, b in enumerate(boxEnds)])
+
                     w_area = w_area / np.max(w_area)
                     
                     
@@ -1184,7 +1186,7 @@ class PlotterBrain(object):
                          
                     boxes = [vertRectProps(x, b[0], i, k, b[1],xWidth)
                         for i, b in enumerate(zip(boxEnds, w_area))]
-                    
+                    print(boxes)
                     y = np.median(boxData)
                     
                     medianLineProps = {
@@ -1278,7 +1280,7 @@ class PlotterBrain(object):
         
         filteredData = OrderedDict()
         for n,plotData in plotCalcData.items():
-            plotData["widths"] = xWidth
+            plotData["widths"] = xWidth * self.sourceData.parent.config.getParam("boxplot.width.scale")
             plotData["patch_artist"] = True
             plotData["positions"] = boxPositions[n] 
             plotData["capprops"] = {"linewidth":rcParams["boxplot.whiskerprops.linewidth"]} 

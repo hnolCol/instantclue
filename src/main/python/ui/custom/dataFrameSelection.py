@@ -4,7 +4,7 @@ from PyQt5.QtCore import *
 
 #internal imports
 from .ICCollapsableFrames import CollapsableFrames
-from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, LabelLikeButton, ICStandardButton
+from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, ICStandardButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDFindReplace import FindReplaceDialog
 from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
@@ -332,7 +332,7 @@ class CollapsableDataTreeView(QWidget):
             treeView.setDataID(self.dataID)
 
     def updateDfs(self, dfs = None, selectLastDf = True, remainLastSelection = False, specificIndex = None, sessionIsBeeingLoaded = False):
-        ""
+        "Updates the data frame selection."
         if dfs is not None:
             self.dfs = dfs
             if remainLastSelection:
@@ -351,7 +351,7 @@ class CollapsableDataTreeView(QWidget):
                 self.combo.setCurrentIndex(len(dfs)-1)
     
     def getDfIndex(self):
-        
+        "Returns the index of the data frame that is selected."
         return self.combo.currentIndex()
 
     def updateColumnState(self,columnNames, newState = False):
@@ -360,18 +360,17 @@ class CollapsableDataTreeView(QWidget):
             treeView.setColumnState(columnNames,newState)
   
     def sendToThread(self, funcProps, addSelectionOfAllDataTypes = False, addDataID = False):
-        ""
+        "Sends a certain request to background thread."
         if hasattr(self,"sendToThreadFn"):
             if self.sendToThreadFn is not None:
                 if addSelectionOfAllDataTypes:
                     funcProps = self.addSelectionOfAllDataTypes(funcProps)
                 if addDataID and "kwargs" in funcProps:
                     funcProps["kwargs"]["dataID"] = self.dataID
-                self.sendToThreadFn(funcProps)
-              
+                self.sendToThreadFn(funcProps)    
 
     def openMergeDialog(self,e=None):
-        ""
+        "Open a merge dialog."
         dlg = ICDMergeDataFrames(mainController = self.mC)
         dlg.exec_()
 
@@ -406,7 +405,7 @@ class CollapsableDataTreeView(QWidget):
 
 
     def showMenu(self,e=None):
-        ""
+        "Creates the context menu."
         try:
             #remove focus on button
             sender = self.sender()
@@ -469,14 +468,10 @@ class CollapsableDataTreeView(QWidget):
             action = menus["Proteomics Toolkit"].addAction("Create Sample List")
             action.triggered.connect(self.createSampleList)
 
-
             # action = menus["Proteomics Toolkit"].addAction("Protein/Peptide View")
             # action.triggered.connect(self.openProteinPeptideView)
-
-
             if False:#self.mC.data.hasTwoDataSets():
                 action = menus["Multi block analysis .."].addAction("SGGCA",self.openSGCCADialog)
-                
             
             senderGeom = self.sender().geometry()
             bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
@@ -495,20 +490,19 @@ class CollapsableDataTreeView(QWidget):
             fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,"Json files (*.json)")
             if fname:
                 funcKey["kwargs"]["filePath"] = fname
-                self.mC.sendRequestToThread(funcKey)
+                self.mC.sendRequestToThread(funcKey,*args,**kwargs)
             #self.exportGroupingToJson()
 
     def importGrouping(self,*args,**kwargs):
-        ""
-
+        "Reads a grouping."
         funcKey = {"key":"groupings:loadGroupingFromJson","kwargs":{}}
         fname,_ = QFileDialog.getOpenFileName(self,'Load json grouping',self.mC.config.getParam("WorkingDirectory"),"Json files (*.json)")   #getSaveFileName(self, 'Save file', baseFilePath,)
         if fname:
             funcKey["kwargs"]["filePath"] = fname
-            self.mC.sendRequestToThread(funcKey)
+            self.mC.sendRequestToThread(funcKey,*args,**kwargs)
     
     def deleteGrouping(self,groupingName,*args,**kwargs):
-        ""
+        "Remove a grouping."
         key = "grouping::deleteGrouping"
         kwargs = {"groupingName":groupingName}
         self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})
@@ -525,15 +519,14 @@ class CollapsableDataTreeView(QWidget):
             key = "grouping::renameGrouping"
             kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
             self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})      
-    
 
     def createSampleList(self,e=None):
-        ""
+        "This is a proteomic-xcalibur functionality."
         dlg = ICSampleListCreater(mainController=self.mC)
         dlg.exec_()
 
     def updateGrouping(self, groupingName):
-        ""
+        "Updates Grouping"
         self.mC.grouping.setCurrentGrouping(groupingName = groupingName)
         groupedItems = self.mC.grouping.getGroupItems(groupingName)
         treeView = self.mC.getTreeView("Numeric Floats")
