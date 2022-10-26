@@ -293,7 +293,7 @@ class MarkerTableModel(QAbstractTableModel):
 
     def resetView(self):
         ""
-        self._labels = pd.Series()
+        self._labels = pd.Series(dtype="object")
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 

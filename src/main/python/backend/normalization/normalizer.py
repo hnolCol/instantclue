@@ -125,7 +125,7 @@ class Normalizer(object):
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
     def normalizeGroupQuantile(self,dataID,**kwargs):
-        ""
+        "Normalize Group Quantiles (e.g. adjusting within groups)"
         if not self.sourceData.parent.grouping.groupingExists():
             return getMessageProps("No Grouping","No Grouping set.")
         groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
@@ -143,11 +143,6 @@ class Normalizer(object):
             scaledGroupValues = X[groupColumns].values / groupIQR
             distToGroupMedian = columnMedians.values - groupMedian
             
-                        # scaledGroupValues = robust_scale(X[groupColumns].values,
-            #             axis=0, 
-            #             with_centering = self.sourceData.parent.config.getParam("quantile.norm.centering"),
-            #             with_scaling = self.sourceData.parent.config.getParam("quantile.norm.scaling"))
-            #print(scaledGroupValues)
             normColumnNames = ["groupColQuantile:{}".format(colName) for colName in groupColumns]
             transformedValues[normColumnNames] = np.subtract(scaledGroupValues,distToGroupMedian)
 

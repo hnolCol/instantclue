@@ -6,7 +6,8 @@ __pycache__/
 *.DS_Store
 
 pyinstaller-hooks
-
+env-3.9/
+env-310/
 build/
 dist/
 src/main/python/temp/

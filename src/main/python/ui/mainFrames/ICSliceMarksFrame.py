@@ -425,7 +425,7 @@ class SliceMarksFrame(QWidget):
         dataID = self.mC.mainFrames["data"].getDataID()
         exists, graph = self.checkGraph()
         if exists:
-            if plotType not in ["scatter","hclust","swarmplot"]:
+            if plotType not in ["scatter","hclust","swarmplot","x-ys-plot"]:
                 w = WarningMessage(infoText="Tooltips can not be assigned to this plot type.",iconDir = self.mC.mainPath)
                 w.exec_()
             else:

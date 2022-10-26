@@ -1,11 +1,15 @@
 
 
+
 from .ICChart import ICChart
 from ...dialogs.ICAUCCalculation import ICDAUCDialog
 from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.collections import LineCollection
 import numpy as np
+import pandas as pd 
+
+from backend.utils.stringOperations import getRandomString
 
 class ICXYPlot(ICChart):
     ""
@@ -21,13 +25,28 @@ class ICXYPlot(ICChart):
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
         ""
+        
+        hoverGroups = dict() 
         if onlyForID is None and targetAx is None:
             for n,ax in self.axisDict.items():
-                for l in self.data["lines"][n]:
+                hoverGroups[ax] = {'colors': {}, 'artists' : {}, 'texts' : {}}
+                for m,l in enumerate(self.data["lines"][n]):
+                    artistID = getRandomString()
+                    internalID = self.data["lineKwargs"][n][m]["ID"]
+
                     if isinstance(l,Line2D):
                         ax.add_line(l)
                     elif isinstance(l,LineCollection):
                         ax.add_collection(l)
+
+                    #extract tooltip information
+                    boolIdx = self.data['dataColorGroups']["internalID"] == internalID
+                    groupLabel = self.data['dataColorGroups'].loc[boolIdx,"group"].values[0]
+                    
+                    hoverGroups[ax]["artists"][artistID] = l
+                    hoverGroups[ax]["colors"][artistID] = l.get_color()
+                    hoverGroups[ax]["texts"][artistID] = groupLabel
+                    
                 if n in self.data["markerLines"]:
                     for mLine in self.data["markerLines"][n]:
                         if mLine is not None:
@@ -46,7 +65,7 @@ class ICXYPlot(ICChart):
                     if "xdata" in markerKwrags["props"] and "ydata" in markerKwrags["props"]:
                         
                         targetAx.add_line(Line2D(**markerKwrags["props"]))
-
+        return hoverGroups 
 
     def onDataLoad(self, data):
         ""
@@ -54,7 +73,7 @@ class ICXYPlot(ICChart):
             self.data = data
             self.initAxes(data["axisPositions"])
             self.setAxisLabels(self.axisDict,self.data["axisLabels"])
-            self.initXYPlot()
+            hoverGroups = self.initXYPlot()
             for n,ax in self.axisDict.items():
                 if n in self.data["axisLimits"]:
                     self.setAxisLimits(ax,
@@ -63,12 +82,13 @@ class ICXYPlot(ICChart):
 
             if self.interactive:
                 for ax in self.axisDict.values():
-                        self.addHoverScatter(ax) 
+                    self.addHoverScatter(ax) 
+
                 self.addQuickSelectHoverScatter()
 
             #self.addTitles()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-            
+            self.setHoverItemGroups(hoverGroups)
             self.checkForQuickSelectDataAndUpdateFigure()
            
         except Exception as e:

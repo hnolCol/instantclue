@@ -1,8 +1,10 @@
  
+from matplotlib.colors import to_hex
 from .ICChart import ICChart
 from collections import OrderedDict
 import numpy as np 
 import pandas as pd
+from backend.utils.stringOperations import getRandomString
 class ICBoxplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
@@ -15,8 +17,6 @@ class ICBoxplot(ICChart):
         ""
         menus["main"].addAction("Show summary data", self.displaySummaryData)
 
-    
-
     def displaySummaryData(self,*args,**kwargs):
         ""
         if "groupedPlotData" in self.data:
@@ -27,11 +27,13 @@ class ICBoxplot(ICChart):
         
     def initBoxplots(self,onlyForID = None, targetAx = None):
         ""
+        
         for n, boxplotProps in self.data["plotData"].items():
             if n in self.axisDict and onlyForID is None:
+                ax = self.axisDict[n]
                 
                 if len(boxplotProps["x"]) == 1 and boxplotProps["x"][0].size == 1:
-                    self.axisDict[n].plot(boxplotProps["positions"],boxplotProps["x"][0],
+                    ax.plot(boxplotProps["positions"],boxplotProps["x"][0],
                         marker = self.getParam("boxplot.flierprops.marker"),
                         markeredgewidth = self.getParam("boxplot.flierprops.markeredgewidth"),
                         markeredgecolor = self.getParam("boxplot.flierprops.markeredgecolor"),
@@ -39,12 +41,18 @@ class ICBoxplot(ICChart):
                         color="black")
 
                 else:
-                    self.boxplotItems[n] = self.axisDict[n].boxplot(**boxplotProps)
+                    self.boxplotItems[n] = ax.boxplot(**boxplotProps)
+              
+             
+                        
+                        
                 
             elif n == onlyForID and targetAx is not None:
                 self.targetBoxplotItems = dict()
                 self.targetBoxplotItems[n] = targetAx.boxplot(**boxplotProps)
-           
+        
+       
+
     def onDataLoad(self, data):
         ""
         try:
@@ -66,12 +74,14 @@ class ICBoxplot(ICChart):
 
             self.addVerticalLines()
                 
-            self.savePatches()
+            hoverGroups = self.savePatches()
             if self.interactive:
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
                 #adda qucik select hover
+                self.setHoverItemGroups(hoverGroups)
                 self.addQuickSelectHoverScatter()
+
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
 
             self.checkForQuickSelectDataAndUpdateFigure()
@@ -98,11 +108,15 @@ class ICBoxplot(ICChart):
         colorGroupData = self.data["dataColorGroups"]
         self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
         self.groupColor = dict() 
-        self.setFacecolors(colorGroupData)
+        return self.setFacecolors(colorGroupData)
 
 
     def setFacecolors(self, colorGroupData = None, onlyForID = None):
         ""
+        hoverGroups = dict() 
+        
+        
+        
         if onlyForID is not None and hasattr(self,"targetBoxplotItems"):
             for n, boxprops in self.targetBoxplotItems.items():
                 plottedBoxProps = self.boxplotItems[onlyForID] #get boxes from plotted items
@@ -110,17 +124,28 @@ class ICBoxplot(ICChart):
                     artist.set_facecolor(plottedArtist.get_facecolor())
         else:
             for n, boxprops in self.boxplotItems.items():
+                ax = self.axisDict[n]
+                hoverGroups[ax] = {'colors': {}, 'artists' : {}, 'texts' : {}}
                 for artist, fc in zip(boxprops["boxes"],self.data["facecolors"][n]):
-                    
+                    artistID = getRandomString()
                     artist.set_facecolor(fc)
 
                     if colorGroupData is not None and hasattr(self,"groupColor"):
                         idx = colorGroupData.index[colorGroupData["color"] == fc]
-                       
                         intID = colorGroupData.loc[idx,"internalID"].iloc[0]
                         self.colorGroupArtists[intID].append(artist)
                         if intID not in self.groupColor:
                             self.groupColor[intID] = fc
+
+                        boolIdx = self.data["dataColorGroups"]["internalID"] == intID
+                        groupLabel = self.data["dataColorGroups"].loc[boolIdx,"group"].values[0]
+                        print(intID)
+                        print(self.data["dataColorGroups"])
+                        print(groupLabel)
+                        hoverGroups[ax]["artists"][artistID] = artist
+                        hoverGroups[ax]["colors"][artistID] = fc
+                        hoverGroups[ax]["texts"][artistID] = groupLabel
+        return hoverGroups
 
     def highlightGroupByColor(self,colorGroup,highlightCategory):
         """
@@ -193,6 +218,9 @@ class ICBoxplot(ICChart):
         if hasattr(self.p.f.canvas,"copy_from_bbox"):
             for ax in self.axisDict.values():
                 self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
+        if hasattr(self,"tooltips") and len(self.tooltips) > 0:
+            for tooltip in self.tooltips.values():
+                tooltip.update_background(redraw=False)
 
     def setHoverData(self,dataIndex):
         ""

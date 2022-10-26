@@ -274,6 +274,7 @@ class ICChart(QObject):
 					data = self.data["hoverData"][axisID]["x"][nearestIdx]
 
 				groupName = self.data["groupNames"][axisID][nearestIdx]
+
 				self.saveStatData(axisID,event.ydata, xdata, data, nearestIdx, groupName)
 	
 	
@@ -388,6 +389,7 @@ class ICChart(QObject):
 		group1, group2 = self.statData["groupName"]
 		statGroupByGroups = self.statCollection.groupby(["Group1","Group2"]).groups
 		if (group1,group2) in statGroupByGroups or (group2,group1) in statGroupByGroups:
+			
 			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2), iconDir = self.mC.mainPath)
 			w.exec_()
 			return False
@@ -1041,7 +1043,7 @@ class ICChart(QObject):
 				ax = self.axisDict[n]
 				self.addLine(ax,lineKwargs["xdata"],lineKwargs["ydata"],None)
 		
-	def addTooltip(self):
+	def addTooltips(self):
 		""
 		for ax in self.axisDict.values():
 			if ax in self.hoverGroupItems:
@@ -1230,8 +1232,6 @@ class ICChart(QObject):
 	
 	def removeAnnotationsFromGraph(self):
 		""
-		
-		
 	
 	def determinePosition(self,x,y):
 		'''
@@ -1771,6 +1771,16 @@ class ICChart(QObject):
 		if hasattr(self,"hoverScatter") and isinstance(self.hoverScatter,dict):
 			for scatter in self.hoverScatter.values():
 				scatter.set_visible(False)
+		if hasattr(self,"tooltips") and len(self.tooltips) > 0:
+			for tooltip in self.tooltips.values():
+				tooltip.setInvisible()
+
+	def setOtherTooltipsInivsible(self,mouseOverAx):
+		""
+		for ax, tooltip in self.tooltips.items():
+			if mouseOverAx != ax:
+				tooltip.setInvisible(update=False)
+
 
 	def setQuickSelectScatterInvisible(self):
 		""
@@ -1995,7 +2005,7 @@ class ICChartToolTip(object):
 		'''
 		artistProp - dict. 
 			Must have keys : 'artists','colors','texts'. 
-			Value must be dicts in form of {key1 : color1, key2 : color2}
+			Values must be dicts in form of {key1 : color1, key2 : color2}
 		'''
 
 		self.plotter = plotter
@@ -2019,8 +2029,8 @@ class ICChartToolTip(object):
 		backgroundUpdate = False
 		for artistID, artist in self.artistProps["artists"].items():
 			currentColor = self.getColor(artist)
-			#print(currentColor)
 			targetColor = to_rgba(self.artistProps["colors"][artistID])
+			#order is important here!
 			if self.currentArtist is None and currentColor != targetColor:
 				self.changeColor(artist,targetColor)
 				backgroundUpdate = True
@@ -2034,9 +2044,6 @@ class ICChartToolTip(object):
 				backgroundUpdate = True
 		if backgroundUpdate:
 			self.update_background()
-	
-	
-
 			
 	def buildTooltip(self):
 		'''
@@ -2051,19 +2058,17 @@ class ICChartToolTip(object):
 		elif hasattr(artist,'set_color'):
 					artist.set_color(color)			
 
-	
-
 	def evaluateEvent(self,event):
 		'''
 		'''
-		
 		artistContEvent = [artistID for artistID, artist in self.artistProps['artists'].items() if artist.contains(event)[0]]
 		if len(artistContEvent) == 0:
 			#mouse is not over any artist
-			self.setInvisible(update=False)
+			self.setInvisible(update=True)
 			self.currentArtist = None
 			#update colors to default colors
 			self.adjustColor()
+
 			return
 
 		else:
@@ -2131,6 +2136,7 @@ class ICChartToolTip(object):
 			if hasattr(self,'background'):
 				self.setInvisible()
 			self.plotter.redraw()
+			
 		self.background =  self.plotter.f.canvas.copy_from_bbox(self.ax.bbox)
 		
 	def updateAxis(self):
@@ -2143,9 +2149,11 @@ class ICChartToolTip(object):
 			
 	def extractAxisProps(self):
 		'''
+		Extract axis properties (xlim, ylim) to scale tooltip.
 		'''
+		if not hasattr(self,"axProps"):
+			self.axProps = dict()
 	
-		self.axProps = dict()
 		self.axProps['xlim'] = self.ax.get_xlim()
 		self.axProps['ylim'] = self.ax.get_ylim()
 		self.axProps['xDiff'] = self.axProps['xlim'][1] - self.axProps['xlim'][0]
@@ -2156,17 +2164,19 @@ class ICChartToolTip(object):
 		'''
 		Check how to align the tooltip.
 		'''
-			
+
 		if self.update:
 			self.extractTextDim()
-			
+		# precaution, when axis is rescaled
+		self.extractAxisProps()
+
 		xMin,xMax = self.axProps['xlim']
 		yMin,_ = self.axProps['ylim']
 		
 		width  = self.width
 		height = self.height
 		
-		diff = (xMin-xMax)*0.05	
+		diff = (xMin-xMax)*0.01
 		
 		if x + width > xMax - 0.1*xMax and x > sum(self.axProps['xlim'])/2:
 			 self.textProps['ha'] = 'right'

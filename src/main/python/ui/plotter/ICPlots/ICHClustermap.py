@@ -639,13 +639,14 @@ class ICClustermap(ICChart):
         if self.movingMaxDLine and event.inaxes != self.axisDict["axRowDendro"]:
             self.setRowClusterLineData(self.data["rowMaxD"],self.axisDict["axRowDendro"])
             self.movingMaxDLine = False
+
         #check if mouse left main axis
         if hasattr(self,"ax") and self.tooltipActive and event.inaxes != self.ax:
                 if self.tooltip.get_visible():
                     self.tooltip.set_visible(False)
                     self.drawTooltip(self.clusterMapBackground)
-                    return
-        elif "axRowDendro" in self.axisDict and event.inaxes == self.axisDict["axRowDendro"]:
+                    
+        if "axRowDendro" in self.axisDict and event.inaxes == self.axisDict["axRowDendro"]:
             if event.button is None and self.movingMaxDLine:
                 newMaxD = self.rowClusterLine.get_xdata()[0]
                 self.data["rowMaxD"] = newMaxD
@@ -659,7 +660,6 @@ class ICClustermap(ICChart):
         elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
             yDataEvent = int(event.ydata)
             xDataEvent = int(event.xdata)
-            
             r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
             yName = self.data["plotData"].index[yDataEvent]
             xName = self.data["plotData"].columns[xDataEvent]

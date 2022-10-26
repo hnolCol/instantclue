@@ -240,7 +240,7 @@ class MainFigureRegistry(object):
     def default_label_settings(self):
         '''
         '''
-        print(hasattr(self.parent,"mC"))
+        
         if hasattr(self,"parent") and hasattr(self.parent,"mC"):
             fontSize = self.parent.mC.config.getParam("main.figure.label.size")
            
@@ -252,7 +252,7 @@ class MainFigureRegistry(object):
                         'xycoords':('axes fraction'),'textcoords':'offset points',
                         'size':fontSize, 'family':'Arial','ha':'left',
                         'weight':'bold','color':'black','va':'bottom',
-                        'rotation':'0'}
+                        'rotation':0}
 
     def getLabelStyle(self):
         ""

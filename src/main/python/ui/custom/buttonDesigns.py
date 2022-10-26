@@ -117,7 +117,7 @@ class CollapsButton(QPushButton):
         rect = QRect(eventRect)   
        
         centerPoint = rect.center()
-        centerPoint.setX(centerPoint.x() + rect.width() / 2 - 10)    
+        centerPoint.setX(int(centerPoint.x() + rect.width() / 2 - 10))    
     
         pen = QPen(QColor("black"))
         pen.setWidthF(self.strokeWidth)
@@ -294,12 +294,13 @@ class PushHoverButton(QPushButton):
         rect, h, w, x0, y0 = self.getRectProps(event)
 
         adjRect = rect
-        adjRect.adjust(0.5,0.5,-0.5,-0.5)
+       # adjRect.adjust(1,1,-1,-1)#.adjust(0.5,0.5,-0.5,-0.5)
         #painter.drawRoundedRect(adjRect,4,4)
         if self.drawFrame:
             painter.drawRect(adjRect)
        
         if self.text is not None:
+            
             painter.drawText(2,12,self.text)
 
         #return rect
@@ -349,7 +350,8 @@ class PushHoverButton(QPushButton):
 
     def getMainLabelRect(self,x0,y0,w,h):
         ""
-        return QRect(x0-w/2,y0+h/5,w,h/4)
+        
+        return QRectF(QPointF(x0-w/2,y0+h/3),QPointF(w,h/1.5))
 
     def dragEnterEvent(self,event):
         "Check if drag items is of correct datatype"
@@ -683,8 +685,8 @@ class BigPlusButton(PushHoverButton):
         
    
         lineWidth = h/4
-        painter.drawLine(x0-lineWidth,y0,x0+lineWidth,y0)
-        painter.drawLine(x0,y0-lineWidth,x0,y0+lineWidth)
+        painter.drawLine(QPointF(x0-lineWidth,y0),QPointF(x0+lineWidth,y0))
+        painter.drawLine(QPointF(x0,y0-lineWidth),QPointF(x0,y0+lineWidth))
 
 
 class SubsetDataButton(PushHoverButton):
@@ -1089,10 +1091,10 @@ class MarkerButton(PushHoverButton):
             if n == 0:
                 painter.drawEllipse(QPointF(x1,y1),rCircle ,rCircle )
             elif n == 1:
-                painter.drawLine(x1-+h/7,y1,x1+h/7,y1)
-                painter.drawLine(x1,y1-h/7,x1,y1+h/7)
+                painter.drawLine(QPointF(x1-+h/7,y1),QPointF(x1+h/7,y1))
+                painter.drawLine(QPointF(x1,y1-h/7),QPointF(x1,y1+h/7))
             elif n == 2:
-                polyPoints = QPolygon([QPoint(x1,y1),QPoint(x1+h/9,y1-h/9*2),QPoint(x1+h/9*2,y1)])
+                polyPoints = QPolygon([QPoint(int(x1),int(y1)),QPoint(int(x1+h/9),int(y1-h/9*2)),QPoint(int(x1+h/9*2),int(y1))])
                 painter.drawPolygon(polyPoints)
         # draw main label
         painter.setFont(self.getMainFont())
@@ -1338,7 +1340,7 @@ class ResetButton(PushHoverButton):
 
         super().paintEvent(e)
         rect = e.rect()
-        rect.adjust(0.5,0.5,-0.5,-0.5)
+        rect.adjust(1,1,-1,-1)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing,True)
         centerPoint = rect.center()
@@ -2079,7 +2081,7 @@ class PlotTypeButton(PushHoverButton):
             rect = QRectF(xValues[n],y0,distBars,rectX+height-y0)
             qp.drawRect(rect)
         qp.setFont(self.getStandardFont())
-        qp.drawText(width,height/3,"n")
+        qp.drawText(QPointF(width,height/3),"n")
 
     def drawForestplot(self,qp, height, width, rectX, rectY, nForests = 3):
         ""
@@ -2131,15 +2133,15 @@ class PlotTypeButton(PushHoverButton):
             
             violinWidth = (width - margin) / nViolins
             for n in range(normCount.size):
-                poly.append(QPointF(xValues[m] - normCount[n] * violinWidth / 2, normHeight * n + margin))
+                poly.append(QPoint(int(xValues[m] - normCount[n] * violinWidth / 2), int(normHeight * n + margin)))
 
             for n in reversed(range(normCount.size)):
-                poly.append(QPointF(xValues[m] + normCount[n] * violinWidth / 2, normHeight * n + margin))
+                poly.append(QPoint(int(xValues[m] + normCount[n] * violinWidth / 2), int(normHeight * n + margin)))
             
             qp.drawPolygon(poly)
             brush = QBrush(QColor("white"))
             qp.setBrush(brush)
-            qp.drawEllipse(QPoint(xValues[m],normHeight * circleY + margin),2,2)
+            qp.drawEllipse(QPointF(xValues[m],normHeight * circleY + margin),2,2)
         
 
 
@@ -2171,7 +2173,7 @@ class PlotTypeButton(PushHoverButton):
         ""
         self.drawSwarm(qp, height, width, rectX, rectY, 3, True)
         qp.setFont(self.getStandardFont())
-        qp.drawText(width,height/3,"+")
+        qp.drawText(QPointF(width,height/3),"+")
 
 
     def drawWordcloud(self, qp, height, width, rectX, rectY):
@@ -2181,11 +2183,11 @@ class PlotTypeButton(PushHoverButton):
         
         c1 = random.choice(defaultColors)
         qp.setPen(QColor(c1))
-        qp.drawText(width/4.5,height/2,"Word")
+        qp.drawText(QPointF(width/4.5,height/2),"Word")
         
         c2 = random.choice(defaultColors)
         qp.setPen(QColor(c2))
-        qp.drawText(width/2.5,height/1.1,"Cloud")
+        qp.drawText(QPointF(width/2.5,height/1.1),"Cloud")
 
 
     def drawHistogram(self,qp, height, width, rectX, rectY, nBars = 10):
@@ -2535,7 +2537,7 @@ class SettingsButton(PlotTypeButton):
             x1  = w - w/9
 
             y0 = y1 = 0 + h * hFrac
-            painter.drawLine(x0,y0,x1,y1)
+            painter.drawLine(QPointF(x0,y0),QPointF(x1,y1))
             #draw lines 
             if self.mouseOver and np.random.randint(0,4) < 2:
                 painter.setBrush(QBrush(QColor(INSTANT_CLUE_BLUE)))

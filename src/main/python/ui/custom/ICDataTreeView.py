@@ -601,6 +601,16 @@ menuBarItems = [
                     "otherKwargs": {"metric":"nunique"}}
     },
     {
+        "subM":"Group by and Aggregate ..",
+        "name":"join categories",
+        "dataType": "Categories",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"text-merge"}}
+    },
+    {
         "subM":"Value Transformation",
         "name":"Combat (Batch correction)",
         "funcKey": "runCombat",
@@ -1837,13 +1847,14 @@ class DataTreeModel(QAbstractTableModel):
                     return "Add column to Graph"
             elif columnIndex == 0:
                 dataIndex = self.getDataIndex(index.row())
-                tooltipText = self._labels.loc[dataIndex]
-                #print(self._labels)
-                #print(self.tooltipData)
-                if tooltipText in self.tooltipData:
-                    return self.tooltipData[tooltipText]
-                else:
-                    return ""
+                if dataIndex is not None and dataIndex in self._labels.index:
+                    tooltipText = self._labels.loc[dataIndex]
+                    #print(self._labels)
+                    #print(self.tooltipData)
+                    if tooltipText in self.tooltipData:
+                        return self.tooltipData[tooltipText]
+                    else:
+                        return ""
             else:
                 return ""
 

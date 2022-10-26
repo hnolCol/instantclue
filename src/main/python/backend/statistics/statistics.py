@@ -929,7 +929,7 @@ class StatisticCenter(object):
         groupedByData = data.groupby(by=categoricalColumn)
         minGroupSize = self.sourceData.parent.config.getParam("categorical.enrichment.min.group.size")
         adjPvalueCutoff = self.sourceData.parent.config.getParam("categorical.enrichment.adj.pvalue.cutoff")
-        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+       # NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         adjPvalueMethod = self.sourceData.parent.config.getParam("categorical.enrichment.multipletest.method")
         
         results = pd.DataFrame(columns=["p-value(Fisher)",
@@ -950,27 +950,25 @@ class StatisticCenter(object):
         for testColumn in testColumns.values.flatten():
             #print(testColumn)
             #get unique categories for non nan groups (e.g. by default -)
-            splitData = data.loc[data[testColumn] != self.sourceData.replaceObjectNan,testColumn].astype("str").str.split(splitString).values
-            uniqueCategories = list(set(chain.from_iterable(splitData)))
+            splitData = data.loc[data[testColumn] != self.sourceData.replaceObjectNan,testColumn].astype("str").str.split(splitString)
+           # uniqueCategories = list(set(chain.from_iterable(splitData.values)))
             
 
-            regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
+          #  regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
             #most beneift from using Parallel for this job. Others were not faster (fisher test etc, using "normal" protomics data (e.g. 4-10K rows))
             X = data[testColumn]
-
-            A = np.array(list(regExByCategory.items()))
-            As = np.array_split(A,NProcesses,axis=0)
-
-            with Pool(NProcesses) as p:
-                r = p.starmap(_matchMultipleRegExToPandasSeries,[(X, A[:,1], A[:,0]) for A in As])
-                poolResult =list(chain.from_iterable(r))
-               
-            boolIdxByCategory = dict(poolResult)
-      
+            #pd.Series().str.split()
             #t1 = time.time()
-            # print("joblib started")
-            # boolIdxByCategory = dict(Parallel(n_jobs=8,backend="multiprocessing")(delayed(_matchRegExToPandasSeries)(data[testColumn], regExp,uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()))
-            # print(time.time()-t1)
+            idxByCategory = {} 
+           # splitByString = X.str.split(splitString)
+            for idx in splitData.index:
+                x = splitData.loc[idx]
+                for xi in x:
+                    if xi not in idxByCategory:
+                        idxByCategory[xi] = []
+                    idxByCategory[xi].append(idx)
+                    
+            #split along the different groups.
             for groupName, groupData in groupedByData:
                 if groupName == self.sourceData.replaceObjectNan:
                     continue
@@ -978,29 +976,21 @@ class StatisticCenter(object):
                 overallDataSize = data.index.size
                 r = []
 
-                for category,boolIdx in boolIdxByCategory.items():
-                   # print(category,boolIdx)
-                   # print(groupData)
-                   
+                for category,boolIdx in idxByCategory.items():
                     
-                    categoryInGroup = np.sum(data[boolIdx.values].index.isin(groupData.index))
+                    categoryInGroup = np.sum(data.loc[boolIdx].index.isin(groupData.index))
                     if categoryInGroup <= minGroupSize:
                         continue
                     categoryNotInGroup = groupSize-categoryInGroup
 
-                    categoryInCompleteData = np.sum(boolIdx)
+                    categoryInCompleteData = len(boolIdx)
                     categoryNotInCompleteData = overallDataSize - categoryInCompleteData
                     
-                    #table = np.array([[categoryInGroup,categoryNotInGroup],[categoryInCompleteData , categoryNotInCompleteData]])
-                    table = np.array([[categoryInGroup,categoryInCompleteData],[groupSize , overallDataSize]])
-                    
+                    table = np.array([[categoryInGroup,categoryInCompleteData-categoryInGroup],[categoryNotInGroup, overallDataSize-(categoryInCompleteData-categoryInGroup)-groupSize]])# np.array([[categoryInGroup,categoryInCompleteData],[groupSize , overallDataSize]])
+                    #fisher_exact()
                     oddsratio, pvalue = fisher_exact(table,alternative=alternative)
                     chi2,chiPValue,_,_ = chi2_contingency(table)
                    
-                    # print(category)
-                    # print(np.sum(boolIdx))
-
-                    # print(table)
                     r.append({"p-value(Fisher)":pvalue,
                                 "p-value(Chi2)":chiPValue,
                                 "oddsratio":oddsratio,

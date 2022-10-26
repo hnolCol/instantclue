@@ -26,9 +26,9 @@ class ColorLabel(QWidget):
 
         adjRect = rect
         if self.mouseOver:
-            adjRect.adjust(0.5,0.5,-0.5,-0.5)
+            adjRect.adjust(1,1,-1,-1)
         else:
-            adjRect.adjust(1.5,1.5,-1.5,-1.5)
+            adjRect.adjust(2,2,-2,-2)
         #painter.drawRoundedRect(adjRect,4,4)
         brush = QBrush(QColor(self.backgroundColor))
         painter.setBrush(brush)
@@ -135,7 +135,7 @@ class ColorChooserDialog(QDialog):
         self.alphaSlider.setMinimum(0)
         self.alphaSlider.setMaximum(100)
         self.alphaSlider.setSingleStep(5)
-        self.alphaSlider.setValue(self.selectedAlpha * 100)
+        self.alphaSlider.setValue(int(self.selectedAlpha * 100))
         self.alphaSlider.setTickPosition(QSlider.TicksBelow)
         self.alphaSlider.setTickInterval(10)
         self.alphaSlider.valueChanged.connect(self.sliderMoved)   
@@ -157,7 +157,7 @@ class ColorChooserDialog(QDialog):
         else:
            
             if self.alphaLineEdit.text() not in ["","0."]:
-                alpha = float(self.alphaLineEdit.text()) * 100 
+                alpha = int(float(self.alphaLineEdit.text()) * 100)
                 self.alphaSlider.setValue(alpha)
             #otherwise set it back to black
             

@@ -555,7 +555,10 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			requiredColumns = columnNames.append(groupbyColumn,ignore_index=True)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
-			aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric).reset_index()
+			if metric == "text-merge":
+				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
+			else:
+				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric).reset_index()
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
@@ -695,9 +698,11 @@ class DataCollection(object):
 		try:
 			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
-			return getMessageProps("Error ..","There was an error loading the file from clipboard." + e)
+			return getMessageProps("Error ..","There was an error loading the file from clipboard." + str(e))
+
 		localTime = time.localtime()
 		current_time = time.strftime("%H_%M_%S", localTime)
+
 		return self.addDataFrame(data, fileName = "pastedData({})".format(current_time),cleanObjectColumns = True)
 
 	def rowWiseCalculations(self,dataID,calculationProps,operation = "subtract"):
@@ -714,6 +719,7 @@ class DataCollection(object):
 				calcProp["metric"] = ""
 			elif calcProp["metric"] in funcKeyMatch:
 				Y = funcKeyMatch[calcProp["metric"]](data[calcProp["columns"]].values,axis=1)
+			
 			#perform calculation
 			XYCalc = operationKeys[operation](X,Y)
 			if isinstance(calcProp["columns"],str):

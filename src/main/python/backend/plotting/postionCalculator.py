@@ -90,8 +90,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     scaleXAxis = sourceData.parent.config.getParam("scale.numeric.x.axis")
     splitString = sourceData.parent.config.getParam("split.string.x.category")
     splitIndex = sourceData.parent.config.getParam("split.string.index")
-    giveBoxesNanColor = sourceData.parent.config.getParam("nanColor.for.boxes.and.bars")
-    nanColorHex = sourceData.parent.config.getParam("nanColor")
+
 
     if nCatCols == 0:
         
@@ -215,7 +214,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         boxPositions[n].append(tickBoxPos)
                         tickPositions[n].append(tickBoxPos)
                         faceColors[n].append(fc)
-                        groupNames[n].append(colorKey)
+                        groupNames[n].append("{}-{}".format(numericColumn,colorKey))
 
             plotData[n] = {"x":filteredData}
 
@@ -233,10 +232,10 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         tickValues = np.arange(nNumCols) + widthBox
         tickPositions = {0:tickValues}
         boxPositions = tickPositions.copy()
-        if giveBoxesNanColor:
-            colors = dict([(numericColumn,nanColorHex) for numericColumn in numericColumns])
-        else:
-            colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
+        # if giveBoxesNanColor:
+        #     colors = dict([(numericColumn,nanColorHex) for numericColumn in numericColumns])
+        # else:
+        colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
         
         colorGroups["color"] = colors.values()
         colorGroups["group"] = colors.keys() 

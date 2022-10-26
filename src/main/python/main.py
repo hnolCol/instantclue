@@ -32,6 +32,7 @@ from backend.saver.ICSessionHandler import ICSessionHandler
 from backend.webapp.ICAppValidator import ICAppValidator
 from backend.plotting.plotterCalculations import PlotterBrain
 
+import setuptools
 
 import sys, os
 import numpy as np
