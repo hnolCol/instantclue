@@ -2711,12 +2711,14 @@ class DataTreeViewTable(QTableView):
             dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
             if dlg.exec_():
                 testColumns = dlg.getSelection()
+                labelColumns = ["Gene names"]
                 fkey = "stats::runFisherEnrichment"
-                columnNames = [categoricalColumn] + testColumns.values.flatten().tolist() 
+                columnNames = [categoricalColumn] + labelColumns + testColumns.values.flatten().tolist() 
                 kwargs = {
                             "categoricalColumn":categoricalColumn,
                             "alternative":selDiag.savedSelection["alternative"],
                             "testColumns":testColumns,
+                            "labelColumns":labelColumns,
                             "splitString":selDiag.savedSelection["splitString"],
                             "data" : self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"].copy()
                         }

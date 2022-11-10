@@ -117,13 +117,14 @@ def fitTwoCompartmentModelToEachRow(Y,x,batchID = "None"):
     
     return (batchID,pd.DataFrame().from_dict(kwsCollect))
 
-def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize):
+def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns):
     "Moving the U test to a process - bus10 error when using on thread-seems not thread-safe"
     r = []
     for categoricalColumn, boolIdxCatSpec in boolIdxByCategory.items():
-        for uniqueCat, boolIdx in boolIdxCatSpec.items():
-            N = np.sum(boolIdx)
+        for uniqueCat, idxList in boolIdxCatSpec.items():
+            N = len(idxList)
             if N >= minGroupSize: #check the group size
+                boolIdx = data.index.isin(idxList)
                 X = data.loc[boolIdx,numericColumn].dropna().copy().values.flatten()
                 Y = data.loc[~boolIdx,numericColumn].dropna().copy().values.flatten()
                 if X.size == 0 or Y.size == 0:
@@ -142,6 +143,7 @@ def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSi
                 except:
                     p, U = 1, 0
                 
+                labelString = "_".join(["-".join(x) for x in data.loc[boolIdx,labelColumns].values])
                 
                 r.append({"numericColumn":numericColumn,
                             "category":uniqueCat,
@@ -154,7 +156,8 @@ def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSi
                             "median":uniqueCatMedian,
                             "categorySize":N,
                             "stdev":stdev,
-                            "difference":groupDifference}
+                            "difference":groupDifference,
+                            "labels" : labelString}
                             )
     return (numericColumn,r) 
 
@@ -915,7 +918,7 @@ class StatisticCenter(object):
           
 
 
-    def runCategoricalFisherEnrichment(self,data,categoricalColumn, testColumns, splitString = ";", alternative = "two-sided"):
+    def runCategoricalFisherEnrichment(self,data,categoricalColumn, testColumns, labelColumns, splitString = ";", alternative = "two-sided"):
         ""
         # import time
         # print(dataID)
@@ -945,7 +948,8 @@ class StatisticCenter(object):
                                         "n_negative(group)",
                                         "n_negative(total)",
                                         "groupSize",
-                                        "totalSize"])
+                                        "totalSize",
+                                        "labels"])
 
         for testColumn in testColumns.values.flatten():
             #print(testColumn)
@@ -960,7 +964,7 @@ class StatisticCenter(object):
             #pd.Series().str.split()
             #t1 = time.time()
             idxByCategory = {} 
-           # splitByString = X.str.split(splitString)
+            #get index of data frame by split categories
             for idx in splitData.index:
                 x = splitData.loc[idx]
                 for xi in x:
@@ -990,7 +994,8 @@ class StatisticCenter(object):
                     #fisher_exact()
                     oddsratio, pvalue = fisher_exact(table,alternative=alternative)
                     chi2,chiPValue,_,_ = chi2_contingency(table)
-                   
+                    labelString = "_".join(["-".join(x) for x in data.loc[boolIdx][labelColumns].values])
+
                     r.append({"p-value(Fisher)":pvalue,
                                 "p-value(Chi2)":chiPValue,
                                 "oddsratio":oddsratio,
@@ -1002,7 +1007,8 @@ class StatisticCenter(object):
                                 "n_negative(group)":categoryNotInGroup,
                                 "n_negative(total)":categoryNotInCompleteData,
                                 "groupSize":groupSize,
-                                "totalSize":overallDataSize})
+                                "totalSize":overallDataSize,
+                                "labels":labelString})
                 
                 if len(r) > 0:
                     r = pd.DataFrame(r)
@@ -1039,9 +1045,9 @@ class StatisticCenter(object):
         
         return self.sourceData.addDataFrame(XCorrected,fileName = "combat({})".format(fileName))
 
-    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, splitString = ";" , alternative="two-sided"):
+    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, labelColumns = ["Gene names"] ,splitString = ";" , alternative="two-sided"):
         ""
-        combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist()
+        combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist() + labelColumns
         data = self.getData(dataID,combinedColumnnames)
         data = data.dropna(subset=columnNames,how="all")
         minGroupSize = self.sourceData.parent.config.getParam("1D.enrichment.min.category.group.size")
@@ -1049,22 +1055,31 @@ class StatisticCenter(object):
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         boolIdxByCategory = dict()
         for categoricalColumn in categoricalColumns:
-            
-            splitData = data[categoricalColumn].astype("str").str.split(splitString).values
+
+            splitData = data.loc[data[categoricalColumn] != self.sourceData.replaceObjectNan,categoricalColumn].astype("str").str.split(splitString)
+            #splitData = data[categoricalColumn].astype("str").str.split(splitString).values
             uniqueCategories = list(set(chain.from_iterable(splitData)))
             regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
             #boolIdxByCategory = dict([(uniqueCategory,data[categoricalColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
             X = data[categoricalColumn]
-            
-            with Pool(NProcesses) as p:
-                poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
-                boolIdxByCategory[categoricalColumn] = dict(poolResult)
+            idxByCategory = {} 
+            #get index of data frame by split categories
+            for idx in splitData.index:
+                x = splitData.loc[idx]
+                for xi in x:
+                    if xi not in idxByCategory:
+                        idxByCategory[xi] = []
+                    idxByCategory[xi].append(idx)
+            boolIdxByCategory[categoricalColumn] = idxByCategory
+            # with Pool(NProcesses) as p:
+            #     poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
+            #     boolIdxByCategory[categoricalColumn] = dict(poolResult)
             
         #print("done")
-        resultDF  = pd.DataFrame(columns=["numericColumn","categoricalColumn","category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value"])
+        resultDF  = pd.DataFrame(columns=["numericColumn","categoricalColumn","category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value","labels"])
         r = []
         with Pool(1) as p:
-            rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize) for numericColumn in columnNames.values])
+            rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns) for numericColumn in columnNames.values])
             r = [x for r in rs for x in  r[1]]
             
 

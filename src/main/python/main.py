@@ -1,9 +1,11 @@
 
+import matplotlib
+matplotlib.use('Qt5Agg')
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from matplotlib.pyplot import get, text
+
 from pynndescent import NNDescent, PyNNDescentTransformer
 
 from ui.notifications.messageWindow import Notification
@@ -31,8 +33,6 @@ from backend.config.config import Config
 from backend.saver.ICSessionHandler import ICSessionHandler
 from backend.webapp.ICAppValidator import ICAppValidator
 from backend.plotting.plotterCalculations import PlotterBrain
-
-import setuptools
 
 import sys, os
 import numpy as np

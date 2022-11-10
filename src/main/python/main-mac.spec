@@ -49,12 +49,12 @@ coll = COLLECT(exe,
                name='InstantClue-mac')
 app = BUNDLE(coll,
              name='InstantClue.app',
-             icon=None,
              version='0.11.0',
              bundle_identifier='instantclue.de',
              info_plist={
                 'NSHighResolutionCapable': 'True',
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False,
+                'LSBackgroundOnly' : False
                 }
             )
