@@ -51,13 +51,12 @@ os.environ["OUTDATED_IGNORE"] = "1"
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.3-dev-20220927"
+__VERSION__ = "v0.11.3-dev-20221110"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
 standardFontSize = 12 
-
 
 
 for fileName in getTxtFilesFromDir(exampleDir):

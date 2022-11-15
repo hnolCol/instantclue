@@ -90,18 +90,19 @@ class ICBoxplot(ICChart):
             print(e)
         
 
-    def reorderBoxplotItemsForHover(self):
-        ""
-        try:
-            hoverGroupItems = {}
-            for n, boxprops in self.boxplotItems.items():
-                artists = dict([(m,box) for m,box in enumerate(boxprops["boxes"])])
-                colors = dict([(m,box.get_facecolor()) for m,box in enumerate(boxprops["boxes"])])
-                texts = dict([(m,self.data["tooltipsTexts"][n][m]) for m,box in enumerate(boxprops["boxes"])])
-                hoverGroupItems[self.axisDict[n]] = {"artists":artists,"texts":texts,"colors":colors}# [[box,*boxprops["whiskers"][n*2:n*2+2],*boxprops["caps"][n*2:n*2+2]] for n,box in enumerate(boxprops["boxes"])]
-        except Exception as e:
-            print(e)
-        return hoverGroupItems
+    # def reorderBoxplotItemsForHover(self):
+    #     ""
+    #     if "tooltipTexts" not in self.data: return {}
+    #     try:
+    #         hoverGroupItems = {}
+    #         for n, boxprops in self.boxplotItems.items():
+    #             artists = dict([(m,box) for m,box in enumerate(boxprops["boxes"])])
+    #             colors = dict([(m,box.get_facecolor()) for m,box in enumerate(boxprops["boxes"])])
+    #             texts = dict([(m,self.data["tooltipsTexts"][n][m]) for m,box in enumerate(boxprops["boxes"])])
+    #             hoverGroupItems[self.axisDict[n]] = {"artists":artists,"texts":texts,"colors":colors}# [[box,*boxprops["whiskers"][n*2:n*2+2],*boxprops["caps"][n*2:n*2+2]] for n,box in enumerate(boxprops["boxes"])]
+    #     except Exception as e:
+    #         print(e)
+    #     return hoverGroupItems
 
     def savePatches(self):
         ""
@@ -114,9 +115,6 @@ class ICBoxplot(ICChart):
     def setFacecolors(self, colorGroupData = None, onlyForID = None):
         ""
         hoverGroups = dict() 
-        
-        
-        
         if onlyForID is not None and hasattr(self,"targetBoxplotItems"):
             for n, boxprops in self.targetBoxplotItems.items():
                 plottedBoxProps = self.boxplotItems[onlyForID] #get boxes from plotted items
@@ -124,9 +122,10 @@ class ICBoxplot(ICChart):
                     artist.set_facecolor(plottedArtist.get_facecolor())
         else:
             for n, boxprops in self.boxplotItems.items():
+               
                 ax = self.axisDict[n]
                 hoverGroups[ax] = {'colors': {}, 'artists' : {}, 'texts' : {}}
-                for artist, fc in zip(boxprops["boxes"],self.data["facecolors"][n]):
+                for nbox, (artist, fc) in enumerate(zip(boxprops["boxes"],self.data["facecolors"][n])):
                     artistID = getRandomString()
                     artist.set_facecolor(fc)
 
@@ -138,13 +137,11 @@ class ICBoxplot(ICChart):
                             self.groupColor[intID] = fc
 
                         boolIdx = self.data["dataColorGroups"]["internalID"] == intID
-                        groupLabel = self.data["dataColorGroups"].loc[boolIdx,"group"].values[0]
-                        print(intID)
-                        print(self.data["dataColorGroups"])
-                        print(groupLabel)
+                        #groupLabel = self.data["dataColorGroups"].loc[boolIdx,"group"].values[0]
+                        
                         hoverGroups[ax]["artists"][artistID] = artist
                         hoverGroups[ax]["colors"][artistID] = fc
-                        hoverGroups[ax]["texts"][artistID] = groupLabel
+                        hoverGroups[ax]["texts"][artistID] = self.data["groupNames"][n][nbox].replace("::","\n")
         return hoverGroups
 
     def highlightGroupByColor(self,colorGroup,highlightCategory):

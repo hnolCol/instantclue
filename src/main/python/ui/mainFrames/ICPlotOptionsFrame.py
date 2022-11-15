@@ -324,8 +324,8 @@ class PlotOptionFrame(QWidget):
             if update:
                 self.updatePlotTypeInFigure(alreadyChecked=True)
         else:
-            w = WarningMessage(infoText = errorMsg)
-            w.exec_() 
+            self.mC.sendToWarningDialog(infoText=errorMsg)
+            
         
     def checkType(self, plotType = None, setDefaultIsInvalid = True):
         ""
@@ -402,22 +402,7 @@ class PlotOptionFrame(QWidget):
         if exists and graph.isHclust():
 
             if not graph.showLabels():
-
-                w = WarningMessage(
-                        infoText = "No Labels found. Please Drag and drop a label column on the label button first.",
-                        iconDir = self.mC.mainPath)
-                w.exec_() 
-
-    # def setDodge(self,event=None):
-    #     ""
-    #     plt = self.mC.mainFrames["middle"].plotter
-    #     currentValue = plt.getDodge()
-    #     if self.sender().text() == "True":
-    #         self.sender().setText("False")
-    #     else:
-    #         self.sender().setText("True")
-    #     plt.setDodge(not currentValue)
-    
+                self.mC.sendToWarningDialog(infoText = "No Labels found. Please Drag and drop a label column on the label button first.")
 
     def showCorrResults(self,event=None):
         ""
@@ -431,8 +416,9 @@ class PlotOptionFrame(QWidget):
                 dlg.exec_()
 
             else:
-                warn = WarningMessage(title="Error",infoText="No data found. Perform clustering first.")
-                warn.exec_()
+                
+                self.mC.sendToWarningDialog(infoText="No data found. Perform clustering first.")
+                
 
     def toggleAnnotations(self,e=None):
         ""
@@ -455,8 +441,7 @@ class PlotOptionFrame(QWidget):
     def exportHClustToExcel(self,event=None):
         ""
         if self.mC.getPlotType() != "hclust":
-            w = WarningMessage(infoText="No hierarchical clustering / heatmap detected.")
-            w.exec_()
+            self.mC.sendToWarningDialog(infoText="No hierarchical clustering / heatmap detected.")
             return
 
         fileName = self.getFileSaveFileName()

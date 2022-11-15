@@ -47,6 +47,7 @@ coll = COLLECT(exe,
                upx=True,
                upx_exclude=[],
                name='InstantClue-mac')
+               
 app = BUNDLE(coll,
              name='InstantClue.app',
              version='0.11.0',
