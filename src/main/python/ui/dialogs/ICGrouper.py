@@ -349,7 +349,7 @@ class ICGrouper(QDialog):
             self.groupItems[groupID]["itemFrame"] = itemFrame
             self.groupItems[groupID]["itemHolder"] = itemHolder
             self.groupItems[groupID]["main"] = groupFrame
-            self.groupItems[groupID]["items"] = pd.Series()
+            self.groupItems[groupID]["items"] = pd.Series(dtype="object")
             self.groupItems[groupID]["edit"] = groupEdit
             self.groupItems[groupID]["label"] = groupLabel
             self.groupItems[groupID]["name"] = groupID
@@ -469,8 +469,8 @@ class ICGrouper(QDialog):
         #find items that are not already in group
         idxToAdd = labels.index.difference(items.index)
         if idxToAdd.size > 0:
-
-            addedItems = items.append(labels.loc[idxToAdd],ignore_index = False)
+            addedItems = pd.concat([items,labels.loc[idxToAdd]],ignore_index=True)
+            #addedItems = items.append(labels.loc[idxToAdd],ignore_index = False)
             self.groupItems[groupID]["items"] = addedItems
             self.model.layoutAboutToBeChanged.emit()
             self.model.hideLabels(labels)

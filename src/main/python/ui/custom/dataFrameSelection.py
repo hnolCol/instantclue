@@ -428,8 +428,13 @@ class CollapsableDataTreeView(QWidget):
 
 
             if self.mC.data.hasData():
+
+                # ugly menu - need to be changed 
                 action = menus["Data frames .. "].addAction("Rename")
                 action.triggered.connect(self.openRenameDialog)
+                ## remove clipping
+                action = menus["Data frames .. "].addAction("Reset clipping")
+                action.triggered.connect(self.resetClipping)
                 #add data frame menu
                 action = menus["Data frames .. "].addAction("Merge")
                 action.triggered.connect(self.openMergeDialog)
@@ -519,6 +524,14 @@ class CollapsableDataTreeView(QWidget):
             key = "grouping::renameGrouping"
             kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
             self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})      
+
+
+    def resetClipping(self,*args,**kwargs):
+        ""
+        self.mC.mainFrames["data"].qS.resetView(resetClipping=False) #clipping will be done here, might be due to dataID diff
+        key = "data::resetClipping"
+        kwargs = {"dataID":self.mC.getDataID()}
+        self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})
 
     def createSampleList(self,e=None):
         "This is a proteomic-xcalibur functionality."

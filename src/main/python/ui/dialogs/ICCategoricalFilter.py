@@ -257,6 +257,7 @@ class CategoricalFilter(FilterBase):
     def applyFilter(self,event=None):
         ""
         checkedData = self.table.model().getCheckedData()
+        print(checkedData)
         #check if any data were selected
         selectedCategories = checkedData.values[:,0].tolist()
         if checkedData.empty:
@@ -268,12 +269,14 @@ class CategoricalFilter(FilterBase):
             
             funcProps = {"key":"filter::applyLiveFilter","kwargs":{
                                             "searchString":selectedCategories}}
+            print(funcProps)
             self.mC.sendRequest(funcProps)
 
         elif self.CBFilterOptions["Subset Selection"].checkState():
             funcProps = {"key":"filter::subsetData","kwargs":{"searchString":selectedCategories,
                                                               "dataID":self.mC.mainFrames["data"].getDataID(),
                                                               "columnName":self.categoricalColumns.values[0]}}
+            
             self.mC.sendRequestToThread(funcProps)
         #update column names
         self.close()

@@ -221,13 +221,6 @@ def distKDEData(kdeData):
     boolIdx = np.isnan(kdeData)
     kdeData[boolIdx] = 1e-6
 
-    # t1 = time.time()
-    # np.random.uniform(low=kdeData*(-0.75),high=kdeData*0.75,size=kdeData.size)
-    # print(time.time()-t1,"s")
-
-    # t1 = time.time()
-    # np.array([0 if np.isnan(x) else np.random.uniform(-x * 0.75 , x * 0.75) for x in kdeData])
-    # print(time.time()-t1,"l")
 
     return  np.random.uniform(low=kdeData*(-0.75),high=kdeData*0.75,size=kdeData.size)
    
@@ -1345,6 +1338,7 @@ class PlotterBrain(object):
             for n in axisPositions.keys():
                 columnMeans = rawData[numericColumns].mean().values
                 errorValues = [CI(rawData[columnName].dropna()) for columnName in numericColumns]
+                errorValues = [e if not np.isnan(e) else 0 for e in errorValues]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
                 if np.isnan(maxErrorValue):
@@ -1735,15 +1729,18 @@ class PlotterBrain(object):
         es = []
         maxValue = np.nanmax(groupby.max()[numericColumns].values)
         minValue = np.nanmin(groupby.min()[numericColumns].values)
-
         for groupName, data in groupby:
             meanErrorData[groupName] = {}
             for numColumn in numericColumns:
                 X = data[numColumn].dropna()
                 if not X.empty:
                     errorValue = CI(X.values)
+                    m = np.nanmean(X.values)
+                    if np.isnan(errorValue): #no confidence interval can be caluclated.
+                        errorValue = 0
+                    
                     es.append(errorValue)
-                    meanErrorData[groupName][numColumn] = {"value":np.mean(X.values),
+                    meanErrorData[groupName][numColumn] = {"value":m,
                                                            "error":errorValue}
                 else:
                     meanErrorData[groupName][numColumn] = {"value":np.nan,
@@ -2105,16 +2102,11 @@ class PlotterBrain(object):
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
         
         elif squareRectangles:
-            # print(heightMain)
-            # print(numberOfRows)
-            # print(widthInPixel)
-            # print(maxPixelHeightHeatmap)
-            # print("w",pixelFigureWidth)
-            # print("h",pixelFigureHeight, pixelFigureHeight * heightMain)
+           
             pixelRelativeHeight = (widthInPixel/len(numericColumns) * numberOfRows) / (pixelFigureHeight)
             if pixelRelativeHeight < heightMain:
                 heightMain = pixelRelativeHeight
-            #print(heightMain)
+         
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
             
         y0 = 1 - heightMain - 0.22 #bit of margin
@@ -2908,21 +2900,20 @@ class PlotterBrain(object):
 
     def getNearestNeighborConnections(self,dataID,numericColumnPairs,numberNearestNeighbors=3):
         ""
-        # print(numericColumnPairs)
-        # print(np.array(numericColumnPairs))
+       
         columnNames = pd.Series(np.array(numericColumnPairs).flatten()).unique()
-        # print(columnNames)
+       
         rawData = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
-        # print(rawData)
+        
         lineCollections = {}
         for n,columnPair in enumerate(numericColumnPairs):
             X = rawData[list(columnPair)].dropna().values
-           # print(X)
+          
             euclideanDistanceMatrix = squareform(pdist(X, 'euclidean'))
 
             # select the kNN for each datapoint
             neighbors = np.sort(np.argsort(euclideanDistanceMatrix, axis=1)[:, 0:numberNearestNeighbors])
-           # print(neighbors)
+          
             N = neighbors.shape[0]
             coordinates = np.zeros((N, numberNearestNeighbors, 2, 2))
             for i in np.arange(N):
@@ -3245,9 +3236,10 @@ class PlotterBrain(object):
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
+
                         kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
-                        kdeData = kdeData + tickPositions[0][n]
+                        kdeData = kdeData + positions[n]
                         #save data
                         data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
 
@@ -3265,9 +3257,9 @@ class PlotterBrain(object):
             numericColumnPairs = {0:tuple(columnNames)}
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
-            axisLabels = dict([(n,{"x":"Numeric Column(s)","y":"Value"}) for n in range(1)])
-            tickLabels = dict([(n,numericColumns) for n in range(1)])
-            #tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(1)])
+            axisLabels = dict([(0,{"x":"Numeric Column(s)","y":"Value"})])
+            tickLabels = dict([(0,numericColumns)])
+            tickPositions = dict([(0,np.arange(len(numericColumns)))])
             colorCategoricalColumn = "Numeric Columns"
 
         elif numCatColumns == 1:

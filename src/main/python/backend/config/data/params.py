@@ -242,6 +242,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "Font size of annotations."
     },
     {
+    "name"          :   "tooltipFontSize",
+    "value"         :   5,
+    "dtype"         :   int,
+    "range"         :   [1,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Annotation",
+    "description"   :   "Font size of tooltip in XY plots and boxplots."
+    },
+    {
     "name"          :   "annotationFontFamily",
     "value"         :   "monospace",
     "dtype"         :   str,

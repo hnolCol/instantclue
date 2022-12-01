@@ -8,6 +8,8 @@ from itertools import chain
 #internal imports
 from .utils import buildRegex
 from ..utils.stringOperations import mergeListToString, getMessageProps, buildReplaceDict, combineStrings
+import warnings
+warnings.filterwarnings("ignore", 'This pattern has match groups')
 
 class CategoricalFilter(object):
 
@@ -45,7 +47,7 @@ class CategoricalFilter(object):
 
     def annotateCategory(self,dataID,columnName,searchString, splitString = None, inputIsRegEx=False):
         ""
-
+        
         boolIndicator = self.searchCategory(dataID,columnName,searchString,splitString,inputIsRegEx)
         
         #if searching the category gave an error, error message is a dict
@@ -57,12 +59,11 @@ class CategoricalFilter(object):
             annotationColumnName = "{}:{}".format(columnStr,columnName)
             #replace bool with string
             annotationColumn = boolIndicator.map(self.replaceDict)
-            
         return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
 
-    def buildRegex(self, stringList, withSeparator = True, splitString = None):
+    def buildRegex(self, stringList, withSeparator = True, splitString = None, matchingGroupOnly = False):
         ""
-        return buildRegex(stringList, withSeparator, splitString)
+        return buildRegex(stringList, withSeparator, splitString, matchingGroupOnly)
 
     def columnsContainString(self,dataID, columnNames, regExp, caseSensitive):
         "Reutrns bool per row if string is is found in any column"
@@ -86,7 +87,7 @@ class CategoricalFilter(object):
         if splitString is None:
             splitString = self.splitString
         if len(columnName) == 0:
-            return getMessageProps("Error..","There was an internal error. Please use the context menu.")
+            return getMessageProps("Error..","There was an internal error. Please try again using the context menu.")
         if dataID in self.sourceData.dfs:
             if isinstance(columnName,str):
                 columnName = [columnName]
@@ -107,8 +108,8 @@ class CategoricalFilter(object):
         splitSearchString = [row for row in csv.reader([searchString], 
                                         delimiter=',', quotechar='\"')][0]
         # create reg expresion
-        regExp = buildRegex(splitSearchString,withSeparator,splitString)
-
+        
+        regExp = self.buildRegex(splitSearchString,withSeparator,splitString,matchingGroupOnly=True)
         return regExp, splitSearchString
     
     def getSplitString(self):
@@ -142,7 +143,7 @@ class CategoricalFilter(object):
 
             #create regeluar expression
             if not inputIsRegEx:
-                regExp = buildRegex(searchString,withSeparator=True,splitString=splitString)
+                regExp = self.buildRegex(searchString,withSeparator=True,splitString=splitString,matchingGroupOnly=True)
             else:
                 regExp = searchString
             boolIndicator = self.columnsContainString(dataID, [columnName], regExp, caseSensitive = True)
@@ -211,6 +212,7 @@ class CategoricalFilter(object):
                 replaceDict = self.replaceDict.copy()
                 replaceDict[True] = splitSearchString[0]
                 for columnName in columnNames:
+                 
                     columnBoolIndicator = self.sourceData.dfs[dataID][columnName].str.contains(regExp, case = caseSensitive)
                     collectResults[columnName] = columnBoolIndicator
                 boolIndicator = collectResults.sum(axis=1) >= 1
@@ -226,6 +228,7 @@ class CategoricalFilter(object):
         #replace " in column name
         annotationColumnName = annotationColumnName.replace('"','')
         #add column to source data and return output
+       
         return self.sourceData.addColumnData(dataID,annotationColumnName,annotationColumn)
 
     def setSplitString(self,splitString):
@@ -278,7 +281,6 @@ class CategoricalFilter(object):
 
         else:
             self.liveSearchData = searchData
-            #print(self.liveSearchData)
             self.filterProps = {"type":filterType,"dataID":dataID,"columnNames":columnNames,"splitString":splitString}
             self.savedLastString = ''
             return filterType
@@ -321,7 +323,6 @@ class CategoricalFilter(object):
                 dataToSearch = self.liveSearchData
                 resetDataInView = True
 
-            #print(dataToSearch)
       
             if inputIsRegEx:
                 regExp = re.escape(searchString)
@@ -352,7 +353,7 @@ class CategoricalFilter(object):
     def applyLiveFilter(self, searchString = None, caseSensitive = True, annotateSearchString = False, inputIsRegEx = False, firstMatch = True, operator = "and"):
         ""
         try:
-            
+   
             if hasattr(self,"filterProps") and self.filterProps["type"] in ["category","string","multiColumnCategory"]:
                 
                 if searchString is None:
@@ -367,7 +368,6 @@ class CategoricalFilter(object):
                             operator = operator)
 
                 elif self.filterProps["type"] == "category":
-                    
                     requestResponse = self.annotateCategory(
                             searchString = searchString,
                             dataID = self.filterProps["dataID"],
@@ -498,7 +498,7 @@ class CategoricalFilter(object):
             if len(groupedData) == 1:
                 return getMessageProps("Error..","There was only one unique value. No splitting performed.")
             if groupedData is None:
-                return getMessageProps("Error..","Could not split data set.")
+                return getMessageProps("Error..","Could not split data set. Unknown error.")
             #get file name
             fileName = self.sourceData.getFileNameByID(dataID)
             # join column names
@@ -508,18 +508,18 @@ class CategoricalFilter(object):
             fileNameAndData = [('{}({}): {}'.format(groupName,columnNamesJoined,fileName),dataFrame) for groupName, dataFrame in groupedData if not (ignoreNaNGroups and groupName == self.sourceData.replaceObjectNan)]
             nAddedDfs = self.sourceData.addDataFrames(fileNameAndData,copyTypesFromDataID = dataID)
                 
-            messageProps = getMessageProps("Split Data Frame","Data frame {} was split on column(s): {} ".format(fileName,columnNamesJoined)+
+            funcReturnProps = getMessageProps("Split Data Frame","Data frame {} was split on column(s): {} ".format(fileName,columnNamesJoined)+
                                            "In total {} dataframes added.".format(nAddedDfs))
             #add dataframe names
-            messageProps["dfs"] = self.sourceData.fileNameByID
+            funcReturnProps["dfs"] = self.sourceData.fileNameByID
             #do not select last df after update
-            messageProps["selectLastDf"] = False
+            funcReturnProps["selectLastDf"] = False
 
         else:
 
-            messageProps = getMessageProps("Not found","DataID was not found.")
+            funcReturnProps = getMessageProps("Not found","DataID was not found.")
 
-        return messageProps
+        return funcReturnProps
 
 
 

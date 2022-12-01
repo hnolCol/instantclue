@@ -56,7 +56,6 @@ class ICBarplot(ICChart):
         self.groupColor = dict() 
         
         for n, barprops in self.barplotItems.items():
-            # print(barprops["patches"])
             for artist, color in zip(barprops.patches,self.data["facecolors"][n]):
                 idx = colorGroupData.index[colorGroupData["color"] == color]
                 intID = colorGroupData.loc[idx,"internalID"].iloc[0]
@@ -110,7 +109,6 @@ class ICBarplot(ICChart):
         if hasattr(self,"backgrounds"):
             for n, ax in self.axisDict.items():
                 if n in self.data["hoverData"] and ax in self.backgrounds:
-                    #print(self.data["plotData"][n])
                     data = self.data["hoverData"][n]["x"]
                     coords = np.array([(self.data["plotData"][n]["x"][m], X.loc[dataIdx]) for dataIdx in dataIndex for m,X in enumerate(data) if dataIdx in X.index.values ])
                     if coords.size > 0:
@@ -157,7 +155,7 @@ class ICBarplot(ICChart):
         data = self.data
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)
         self.setAxisLabels({axisID:targetAx},data["axisLabels"],onlyForID=axisID)
-        self.initBarplots(targetAx=targetAx)
+        self.initBarplots(onlyForID=axisID,targetAx=targetAx)
         self.addVerticalLines(axisID,targetAx)
         self.addSwarm("", [], [], onlyForID=axisID,targetAx=targetAx)
 

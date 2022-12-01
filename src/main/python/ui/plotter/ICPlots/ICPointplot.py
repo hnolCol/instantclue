@@ -38,9 +38,11 @@ class ICPointplot(ICChart):
     def onDataLoad(self, data):
         ""
         try:
+           
             self.data = data
             self.initAxes(data["axisPositions"])
             self.initPointplots()
+          
             for n,ax in self.axisDict.items():
                 if n in self.data["axisLimits"]:
                     self.setAxisLimits(ax,
@@ -61,7 +63,9 @@ class ICPointplot(ICChart):
                 self.addHoverBinding()
             self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
-            print(e)
+            print("==")
+            print(self.data)
+            print(str(e))
     
     def getInternalIDByColor(self, color):
         ""

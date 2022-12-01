@@ -1632,7 +1632,7 @@ class DataTreeView(QWidget):
 class DataTreeModel(QAbstractTableModel):
     
 
-    def __init__(self, labels = pd.Series(), parent=None):
+    def __init__(self, labels = pd.Series(dtype="object"), parent=None):
         super(DataTreeModel, self).__init__(parent)
         self.initData(labels)
         
@@ -1918,7 +1918,7 @@ class DataTreeModel(QAbstractTableModel):
 
     def resetView(self):
         ""
-        self._labels = pd.Series()
+        self._labels = pd.Series(dtype="object")
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 

@@ -481,12 +481,15 @@ class InstantClue(QMainWindow):
         return fileName
     
     def askForItemSelection(self, items ,title = "Categorical column selection.",**kwargs):
-        ""
+        "Opens a Dialog to the user and asks for some item select."
         dataFrame = pd.DataFrame(items)
         if not dataFrame.empty:
             dlg = ICDSelectItems(data = dataFrame, title = title, **kwargs)
             if dlg.exec_():
-                selectedItems = pd.Series(dlg.getSelection().values.flatten())
+               
+           
+                selectedItems = dlg.getSelection()
+               
                 if selectedItems.size > 0: #check
                     return selectedItems
 

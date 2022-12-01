@@ -95,16 +95,15 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
     if nCatCols == 0:
         
         groupedPlotData = data.describe()
-        # print(groupedPlotData)
-        # print(groupedPlotData.loc[["25%","75%"],:].diff())
+
         if data.index.size > 1:
-            IQR = pd.Series(groupedPlotData.loc[["25%","75%"],:].diff().dropna(how="all").values.flatten(), index=groupedPlotData.columns, name="IQR")
-            groupedPlotData = groupedPlotData.append(IQR)
+            #calculate IQR and attach.
+            IQR = pd.DataFrame(groupedPlotData.loc[["25%","75%"],:].diff().dropna(how="all").values.flatten().reshape(1,groupedPlotData.columns.size), index=["IQR"], columns=groupedPlotData.columns)
+            groupedPlotData = pd.concat([groupedPlotData,IQR],axis=0)# groupedPlotData.append(IQR)
 
     elif splitByCategories:
         try:
             groupedPlotData = data.groupby(by=categoricalColumns,sort=False).describe()
-
             columnNamesForIQR = [colName for colName in groupedPlotData.columns if "75%" in colName or "25%" in colName]
             if len(columnNamesForIQR) > 0:
                 IQR = groupedPlotData[columnNamesForIQR].diff(axis=1)
@@ -209,7 +208,8 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                         dataColumnName = "{}:{}:{}".format(numericColumn,categoricalColumn,uniqueValue)
                         uniqueValueDescribed.name = dataColumnName 
                         #append IQR
-                        uniqueValueDescribed = uniqueValueDescribed.append(pd.Series(uniqueValueDescribed["75%"]-uniqueValueDescribed["25%"],index=["IQR"], name=dataColumnName ))
+                        IQRData = pd.Series(uniqueValueDescribed["75%"]-uniqueValueDescribed["25%"],index=["IQR"], name=dataColumnName)
+                        uniqueValueDescribed = pd.concat([uniqueValueDescribed,IQRData])
                         groupedPlotData.append(uniqueValueDescribed)
                         boxPositions[n].append(tickBoxPos)
                         tickPositions[n].append(tickBoxPos)
@@ -229,17 +229,15 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
 
         axisPostions = getAxisPosition(n = 1, maxCol=maxColumns)# dict([(n,[1,1,n+1]) for n in range(1)])
         widthBox = 0.75
-        tickValues = np.arange(nNumCols) + widthBox
+        tickValues = np.arange(nNumCols) #+ widthBox
         tickPositions = {0:tickValues}
         boxPositions = tickPositions.copy()
-        # if giveBoxesNanColor:
-        #     colors = dict([(numericColumn,nanColorHex) for numericColumn in numericColumns])
-        # else:
+        
         colors,_ = sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
         
         colorGroups["color"] = colors.values()
         colorGroups["group"] = colors.keys() 
-        colorGroups["internalID"] = [getRandomString() for n in colors.values()]
+        colorGroups["internalID"] = [getRandomString() for _ in colors.values()]
 
         faceColors = {0: list(colors.values())}
         tickLabels = {0:numericColumns}
@@ -408,7 +406,6 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         NNumCol = len(numericColumns)
 
         axisPostions = getAxisPosition(n = axisCategories.size *  NNumCol, maxCol = axisCategories.size)
-        #print(axisPostions)
         #get color cats
         colorCategories = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
         tickCats = sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])

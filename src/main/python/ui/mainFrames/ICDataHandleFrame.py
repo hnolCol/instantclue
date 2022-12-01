@@ -337,9 +337,12 @@ class DataHandleFrame(QFrame):
             #print("multiple files.")
             selectedItemsIdx = self.mC.askForItemSelection(items = pd.Series(self.mC.data.getFileNames())).index.values.tolist()
             if selectedItemsIdx is None: return 
+            print("this is bullshit?")
+            print(selectedItemsIdx)
             dataIDs = self.mC.data.getDataIDbyFileNameIndex(idx=selectedItemsIdx)
+            print(dataIDs)
             selectedItems = [self.mC.data.getFileNames()[n] for n in selectedItemsIdx]
-           
+            print(selectedItems)
         else:
             dataIDs = [self.getDataID()]
             selectedItems = [self.mC.data.fileNameByID[dataIDs[0]]]

@@ -1045,10 +1045,18 @@ class ICChart(QObject):
 		
 	def addTooltips(self):
 		""
+		
 		for ax in self.axisDict.values():
 			if ax in self.hoverGroupItems:
 				self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
 	
+	def adjustColorsInTooltip(self,intID,color):
+		""
+		for ax in self.axisDict.values():
+			if ax in self.hoverGroupItems:
+				
+				self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
+
 	def addYLimChangeEvent(self,ax,callbackFn):
 		""
 		self.onYLimChange = \
@@ -1066,7 +1074,6 @@ class ICChart(QObject):
 			
 			if hasattr(self,"swarmData") and onlyForID is not None and hasattr(self,"swarmScatterKwargs"):
 				for n, scatter in self.swarmScatter.items():
-					print("SCA",scatter.getScatterInvisibility())
 					if not scatter.getScatterInvisibility():
 						#if visibility is Flase -> dont plot anything
 						return
@@ -1084,7 +1091,6 @@ class ICChart(QObject):
 							interactive = False,
 							adjustLimits = False
 							)
-				#print("reached")
 			elif hasattr(self,"swarmData"):
 				#if swarm data are present -> just toggle visibility of swarm scatters#
 				#setting swarm invisisble
@@ -1166,7 +1172,6 @@ class ICChart(QObject):
 	def getDataForWebApp(self):
 		""
 		
-
 
 	def alignLimitsOfAllAxes(self, updateFigure = True):
 		""
@@ -1434,7 +1439,6 @@ class ICChart(QObject):
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
 
 		except Exception as e:
-			print("an errror in mirroring")
 			print(e)
 
 	def mirrorExtraLines(self,sourceAx,targetAx):
@@ -1884,7 +1888,6 @@ class ICChart(QObject):
 			if self.isQuickSelectModeUnique():
 
 				scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
-				print(scatterSizes)
 
 			elif ax in self.quickSelectScatterDataIdx and "idx" in self.quickSelectScatterDataIdx[ax]: #mode == "raw"
 
@@ -1915,7 +1918,7 @@ class ICChart(QObject):
 		
 		return scatterSizes, scatterColors, self.quickSelectScatterDataIdx[ax]["idx"]
 
-		# print(intIDs)
+		
 		# for intID, colorValue, sizeValue in quickSelectGroup[["internalID","color","size"]].values:
 		# #for intID, indics in self.quickSelectCategoryIndexMatch.items():
 		# 	indics = self.quickSelectCategoryIndexMatch[intID]
@@ -2051,12 +2054,23 @@ class ICChartToolTip(object):
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
 
+
 	def changeColor(self,artist,color):
 		"Set color of artis"
 		if hasattr(artist,'set_facecolor'):
 				artist.set_facecolor(color)
 		elif hasattr(artist,'set_color'):
 					artist.set_color(color)			
+
+
+	def adjustArtistPropsByInternalID(self,intID,color):
+		"Updates color, if user changes color"
+		if not "internalID" in self.artistProps: return
+		if intID in self.artistProps["internalID"]:
+			artistsIDs = self.artistProps["internalID"][intID]
+			for artistID in artistsIDs: # iterate over all artists that are affected
+				if artistID in self.artistProps["colors"]:
+					self.artistProps["colors"][artistID] = color	
 
 	def evaluateEvent(self,event):
 		'''
@@ -2219,11 +2233,19 @@ class ICChartToolTip(object):
 		Define text properties
 		'''
 		self.textProps = {'x':0,'y':0,
-						 'fontname':'Verdana',
+						 'fontname':'Arial',
 						 'linespacing': 1.5,
 						 'visible':False,
+						 "fontproperties": self.getStdFontProps(),
 						 'zorder':1e9}
-		
+
+	def getStdFontProps(self):
+		"Returns standard font props"
+		return FontProperties(
+					family=self.getParam("annotationFontFamily"),
+					size = self.getParam("tooltipFontSize"))
+
 	def isAnnotationInAllPlotsEnabled(self):
-		""
+		"Overhead fn"
 		return False
+

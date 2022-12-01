@@ -96,12 +96,19 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"aggregateNRows","requiredKwargs":["dataID","columnNames","metric"]},
             "completedRequest": addDataAndRefresh
         },
-   
+    # "data::dataSelectionChanged":
+    #     {
+    #         "threadRequest":{"obj":"data","fn":"getColumnNamesByDataID","requiredKwargs":["dataID"]},
+    #         "completedRequest":[
+    #             {"obj":"self","fn":"resetReceiverBoxes","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["checkForExistance"]},
+    #             updateTreeView,
+    #             sendMessageProps]     
+    #     },
     "data::getColumnNamesByDataID":
         {
             "threadRequest":{"obj":"data","fn":"getColumnNamesByDataID","requiredKwargs":["dataID"]},
             "completedRequest":[
-                {"obj":"self","fn":"resetReceiverBoxes","objKey":"middle","objName":"mainFrames","requiredKwargs":[]},
+                {"obj":"self","fn":"resetReceiverBoxes","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["dataID"]},
                 updateTreeView,
                 sendMessageProps]     
         },

@@ -824,6 +824,7 @@ class StatisticCenter(object):
             mask = np.isnan(Y)
             Y = Y[~mask]
             xValues = xValues[~mask]
+
             r = linregress(x = xValues, y=Y)
             lRegress = r._asdict()
             if addDataAUC:
@@ -914,7 +915,7 @@ class StatisticCenter(object):
 
         except Exception as e:
             print(e)
-            return getMessageProps("Error..","Time group could not be interpreted.")
+            return getMessageProps("Error..",f"The following error occured:. {e}")
           
 
 

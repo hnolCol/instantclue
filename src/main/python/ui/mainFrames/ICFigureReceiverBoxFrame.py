@@ -272,8 +272,19 @@ class MatplotlibFigure(QWidget):
         for receiverBox in self.getReceiverBoxes():
             receiverBox.updateItems()
 
-    def resetReceiverBoxes(self):
+    def resetReceiverBoxes(self, dataID = None):
         "Reset receiver boxes"
+        if not self.areReceiverBoxesEmpty() and dataID is not None:
+            # this happens when the df is changed - e.g. the graph will be re-generated
+            # if the columns are in data.
+            itemsInBoxes = self.getReceiverBoxItems().values()
+            itemsInBoxesFlatten = pd.Series([i for item in itemsInBoxes for i in item])
+            
+            allColumnsPresent = self.mC.data.areAllColumnsInData(dataID,itemsInBoxesFlatten)
+            if allColumnsPresent:
+                self.recieverBoxItemsChanged()
+                return 
+        
         for receiverBox in self.getReceiverBoxes():
             receiverBox.clearDroppedItems(reportStateToTreeView=False,emitReceiverBoxChangeSignal=False)
         self.recieverBoxItemsChanged()
@@ -308,7 +319,7 @@ class MatplotlibFigure(QWidget):
         else:
             return False
 
-    def areReceiverBoxesEmpty(self):
+    def areReceiverBoxesEmpty(self) -> bool:
         ""
         return len(self.receiverBoxes["Categories"].items) == 0 \
             and len(self.receiverBoxes["Numeric Floats"].items) == 0

@@ -9,7 +9,7 @@ from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
 from ..custom.utils import  ICSCrollArea
 #external imports
-import pandas as pds
+import pandas as pd
 import numpy as np 
 from collections import OrderedDict 
 import webbrowser

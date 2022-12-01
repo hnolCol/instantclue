@@ -544,8 +544,9 @@ class SelectablePandaModel(PandaModel):
 
     def getCheckedData(self):
         "Returns checked values"
-        boolInd = self.checkedLabels == 1
-        return self.__df.loc[boolInd,:]
+
+        
+        return self.__df.loc[self.checkedLabels.values,:]
 
     def setCheckState(self,tableIndex):
         "Sets check state by table index."
@@ -586,7 +587,7 @@ class SelectablePandaModel(PandaModel):
     def setCheckedSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedLabels = pd.Series()
+            self.checkedLabels = pd.Series(dtype=bool)
         else:
             self.checkedLabels = pd.Series(np.zeros(shape=self.__df.index.size), index=self.__df.index)
             self.checkedLabels = self.checkedLabels.astype(bool)

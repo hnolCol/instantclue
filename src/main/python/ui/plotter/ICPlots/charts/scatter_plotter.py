@@ -586,23 +586,34 @@ class scatterPlot(object):
 			self.updateScatterCollection()
 			
 	def updateScatterCollection(self):
-		
-		if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
-			for markerName, markerData in self.data.groupby("marker"):
-				if markerName in self.mainCollecion:
-					maskIndex = markerData.index.intersection(self.maskIndex)
-					self.mainCollecion[markerName].set_offsets(markerData.loc[maskIndex,self.numericColumns].values)
-					if "color" in markerData.columns:
-						self.mainCollecion[markerName].set_facecolor(markerData.loc[maskIndex,"color"].values)
-					if "size" in markerData.columns:
-						self.mainCollecion[markerName].set_sizes(markerData.loc[maskIndex,"size"].values)
+	
+		if isinstance(self.mainCollecion,dict):
+			if "marker" in self.data.columns:
+				for markerName, markerData in self.data.groupby("marker"):
+					if markerName in self.mainCollecion:
+						maskIndex = markerData.index.intersection(self.maskIndex)
+
+						self.mainCollecion[markerName].set_offsets(markerData.loc[maskIndex,self.numericColumns].values)
+						if "color" in markerData.columns:
+							self.mainCollecion[markerName].set_facecolor(markerData.loc[maskIndex,"color"].values)
+						if "size" in markerData.columns:
+							self.mainCollecion[markerName].set_sizes(markerData.loc[maskIndex,"size"].values)
+			else:
+				maskIndex = self.data.index.intersection(self.maskIndex)
+				for scatterPathCollection in self.mainCollecion.values():
+					if "color" in self.data.columns:
+						scatterPathCollection.set_facecolor(self.data.loc[maskIndex,"color"].values)
+					
+					if "size" in self.data.columns:
+						scatterPathCollection.set_sizes(self.data.loc[maskIndex,"size"].values)
+					
 		else:
 			self.mainCollecion.set_offsets(self.data.loc[self.maskIndex,self.numericColumns].values)
 			if "color" in self.data.columns:
 				self.mainCollecion.set_facecolor(self.data.loc[self.maskIndex,'color'].values)
 			if "size" in self.data.columns:
 				self.mainCollecion.set_sizes(self.data.loc[self.maskIndex,'size'].values)
-
+		
 
 	def updateScatterPropSection(self,idx, value, propName = "color"):
 		"""
@@ -620,11 +631,19 @@ class scatterPlot(object):
 
 	def updateDataWithProps(self):
 		""
+		
+		if isinstance(self.mainCollecion,dict):
+			firstKey = list(self.mainCollecion.keys())[0]
+			scatterPathCollection = self.mainCollecion[firstKey]
+		else:
+			scatterPathCollection = self.mainCollecion
+		
 		if "color" not in self.data.columns:
-			self.data.loc[:,"color"] = pd.Series([self.mainCollecion.get_facecolors()[0]] * self.data.index.size, index=self.data.index)
+			self.data.loc[:,"color"] = pd.Series([scatterPathCollection.get_facecolors()[0]] * self.data.index.size, index=self.data.index)
 		if "size" not in self.data.columns:
-			self.data.loc[:,"size"] = pd.Series([self.mainCollecion.get_sizes()[0]] * self.data.index.size, index=self.data.index)
-	
+			self.data.loc[:,"size"] = pd.Series([scatterPathCollection.get_sizes()[0]] * self.data.index.size, index=self.data.index)
+		
+
 	def updateColorData(self,colorData,setColorToCollection = True):
 		""
 		if isinstance(colorData,str):
@@ -664,8 +683,22 @@ class scatterPlot(object):
 
 		## we need to replot this, otherwise the layer/order cannot be changed. 
 		self.removeMainCollection()
-		if "marker" in self.data.columns:
-			self._plotMarkerSpecScatter()
+		if isinstance(self.mainCollecion,dict):
+			if "marker" in self.data.columns:
+				self._plotMarkerSpecScatter()
+			else:
+
+				numericColumnPairs = list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))
+				defaultKwargs = self.scatterKwargs.copy()
+			
+				for xName, yName in numericColumnPairs:
+					kwargs = defaultKwargs.copy()
+					# if len(self.multiScatterKwargs) != 0 and (xName,yName) in self.multiScatterKwargs:
+					# 	for k,v in self.multiScatterKwargs[(xName,yName)].items():
+					# 		kwargs[k] = v 
+					kwargs["s"] = self.data['size'].values
+					kwargs["color"] = self.data['color'].values
+					self.mainCollecion[(xName,yName)] = self.ax.scatter(self.data[xName], self.data[yName], **kwargs) #save collection
 
 		else:
 			defaultKwargs = self.scatterKwargs.copy()
@@ -699,7 +732,7 @@ class scatterPlot(object):
 	def removeMainCollection(self):
 		""
 		if isinstance(self.mainCollecion,dict):
-			for pathCollection in list(self.mainCollecion.values()):
+			for pathCollection in self.mainCollecion.values():
 				pathCollection.remove() 
 			self.mainCollecion.clear() 
 		else:

@@ -658,13 +658,15 @@ class ICClustermap(ICChart):
                 self.movingMaxDLine = True
         #handle corrmatrix tooltip (auto on)
         elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
-            yDataEvent = int(event.ydata)
-            xDataEvent = int(event.xdata)
-            r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
-            yName = self.data["plotData"].index[yDataEvent]
-            xName = self.data["plotData"].columns[xDataEvent]
-            self.updateTooltipPosition(event,"{}↓\n{}→\ncoeff = {}".format(xName,yName,round(r,2)))
-            self.drawTooltip(self.clusterMapBackground)
+            if event.ydata is not None and event.xdata is not None:
+                yDataEvent = int(event.ydata)
+                xDataEvent = int(event.xdata)
+                if xDataEvent < self.data["plotData"].index.size and yDataEvent < self.data["plotData"].columns.size:
+                    r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
+                    yName = self.data["plotData"].index[yDataEvent]
+                    xName = self.data["plotData"].columns[xDataEvent]
+                    self.updateTooltipPosition(event,"{}↓\n{}→\ncoeff = {}".format(xName,yName,round(r,2)))
+                    self.drawTooltip(self.clusterMapBackground)
         #on hover qick select/ Live graph only works for hierarchical clustering not on corrmatrix (columns are summarized)
         elif (self.isQuickSelectActive() or self.isLiveGraphActive() or self.tooltipActive) and self.mC.getPlotType() != "corrmatrix":
             idxData = None

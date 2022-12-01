@@ -181,7 +181,7 @@ class ResortTableWidget(QTableView):
 
 class ResortTableModel(QAbstractTableModel):
     
-    def __init__(self, parent=None, inputLabels = pd.Series(), title = "Data"):
+    def __init__(self, parent=None, inputLabels = pd.Series(dtype="object"), title = "Data"):
         super(ResortTableModel, self).__init__(parent)
         self.initData(inputLabels)
         self.title = title
@@ -193,7 +193,7 @@ class ResortTableModel(QAbstractTableModel):
         ""
         #reference to input
         self._inputLabels = inputLabels.astype("object")
-        self.hiddenLabels = pd.Series() 
+        self.hiddenLabels = pd.Series(dtype="object") 
         self._labels = self._inputLabels.copy()
         self._dragLabels = self._inputLabels.copy()
 
@@ -293,7 +293,9 @@ class ResortTableModel(QAbstractTableModel):
     def hideLabels(self, labelsToHide):
         ""
         diffLabels = labelsToHide.loc[labelsToHide.index.difference(self.hiddenLabels.index)]
-        self.hiddenLabels = self.hiddenLabels.append(diffLabels,ignore_index=False)
+
+        self.hiddenLabels = pd.concat([self.hiddenLabels.copy(),diffLabels], ignore_index=True)
+
         self._labels = self._inputLabels.loc[~self._inputLabels.index.isin(self.hiddenLabels.index)]
         self._dragLabels = self._labels.copy() 
 

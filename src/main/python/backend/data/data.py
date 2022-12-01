@@ -85,6 +85,7 @@ import time
 import re 
 import os 
 
+FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer","None"]
 
 def fasta_iter(fasta_name):
     """
@@ -148,28 +149,6 @@ def pearsonByRowsTwoArray(X,Y,NProcesses = 8):
 	return A
 	
 	
-	# print(time.time()-t1,"multi")
-
-	# t1 = time.time()
-	# idx = 0
-	# nRows = X.shape[0] * Y.shape[0]
-	# A = np.empty(shape=(nRows,2), dtype=np.float64)
-	# for n in range(X.shape[0]):
-	# 	for m in range(Y.shape[0]):
-	# 		y = Y[m,:]
-	# 		nonNaNIdx = [idx for idx in range(Y.shape[1]) if not np.isnan(X[n,idx]) and not np.isnan(Y[m,idx])]
-	# 		x = X[n,nonNaNIdx]
-	# 		y = Y[m,nonNaNIdx]
-	# 		if x.size > 2 and y.size > 2:
-	# 			r,p = pearsonr(x,y)
-			
-	# 			A[idx,:] = [r,p]
-				
-	# 		else:
-	# 			A[idx,:] = [np.nan,np.nan]
-	# 		idx+=1
-	# print(time.time()-t1,"no - multi")
-	# return A 
 
 # def pearsonByRowsTwoArrayN(X,Y):
 # 	r = 0
@@ -283,16 +262,13 @@ class DataCollection(object):
 		'''
 		Adds a new column to the data
 		'''
-		
 		if evaluateName:
 			columnName = self.evaluateColumnName(columnName,dataID,**kwargs)
 		if rowIndex is None:
 			self.dfs[dataID].loc[:,columnName] = columnData
 		else:
 			self.dfs[dataID].loc[rowIndex,columnName] = columnData
-
 		self.extractDataTypeOfColumns(dataID)
-		
 		funcProps = getMessageProps("Column added","Column {} was added to data.".format(columnName))
 		funcProps["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 		funcProps["tooltipData"] = self.getTooltipdata(dataID)
@@ -358,7 +334,12 @@ class DataCollection(object):
 				return rKwargs
 			elif isinstance(df,pd.DataFrame):
 				return self.addDataFrame(df,fileName=fileName, cleanObjectColumns = True)
-	
+	def areAllColumnsInData(self,dataID,columnNames):
+		""
+		if dataID in self.dfs:
+			return columnNames.isin(self.dfs[dataID].columns.values).all()
+		return False
+
 	def readExcelFile(self,pathToFiles):
 		""
 		if hasattr(self,"excelFileIO"):
@@ -465,8 +446,10 @@ class DataCollection(object):
 			self.fillNaInObjectColumns(dataID,objectColumnList)
 
 		return {"messageProps":
-				{"title":"Data Frame Loaded {}".format(fileName),
-				"message":"{} loaded and added.\nShape (rows x columns) is {} x {}".format(dataID,rows,columns)},
+				{
+					"title":"Data Frame Loaded {}".format(fileName),
+					"message":"{} loaded and added.\nShape (rows x columns) is {} x {}".format(dataID,rows,columns)
+				},
 				"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
 				"dfs":self.fileNameByID
 			}
@@ -478,13 +461,17 @@ class DataCollection(object):
 				dataID  = self.get_next_available_id()
 				self.dfs[dataID] = dataFrame
 				self.saveFileName(dataID,fileName)
-				self.dfsDataTypesAndColumnNames[dataID] = self.dfsDataTypesAndColumnNames[copyTypesFromDataID].copy()
+				#takes longer, but otherwise there is no tooltip.
+				self.extractDataTypeOfColumns(dataID)
+				# this is faster; 
+				#self.dfsDataTypesAndColumnNames[dataID] = self.dfsDataTypesAndColumnNames[copyTypesFromDataID].copy()
+				
 			return len(fileNameAndDataFrame)
 		return 0 
 	
 	def checkForInternallyUsedColumnNames(self,dataFrame):
 		""
-		FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer","None"]
+		
 		columnNamesToChange = [colName for colName in dataFrame.columns if colName in FORBIDDEN_COLUMN_NAMES]
 		columnNamesNoChangeRequired = [colName for colName in dataFrame.columns if colName not in FORBIDDEN_COLUMN_NAMES]
 		if len(columnNamesToChange) == 0:
@@ -862,13 +849,15 @@ class DataCollection(object):
 		dataTypeColumnRelationship = dict() 
 		for dataType in ['float64','int64','object']:
 			try:
+				if dataID not in self.tooltipData:
+							self.tooltipData[dataID] = OrderedDict()
 				if dataType != 'object':
 					dfWithSpecificDataType = self.dfs[dataID].select_dtypes(include=[dataType])
 					
 					quantiles = dfWithSpecificDataType.quantile(q=[0,0.25,0.5,0.75,1])
 					nanSum = dfWithSpecificDataType.isna().sum()
 					fracs = nanSum / dfWithSpecificDataType.index.size
-					#print(quantiles)
+
 					for columnHeader in dfWithSpecificDataType.columns:
 						nans = nanSum[columnHeader]
 						frac = round(fracs[columnHeader]*100,1)
@@ -912,8 +901,7 @@ class DataCollection(object):
 							colorDataArray = None,
 							colorColumnNames = []):
 		""
-		# print(colorDataArray)
-		# print("H?")
+
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
 		clusterColumns = clusteredData.columns.values.tolist() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]
@@ -1009,8 +997,9 @@ class DataCollection(object):
 		
 		if dataID in self.dfsDataTypesAndColumnNames:
 			return {"messageProps":
-					{"title":"Data Frame Updated",
-					"message":"Data Frame Selection updated."},
+						{"title":"Data Frame Updated",
+						"message":"Data Frame Selection updated."},
+					"dataID" : dataID,
 					"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
 					"tooltipData" : self.getTooltipdata(dataID)}
 					
@@ -1169,11 +1158,12 @@ class DataCollection(object):
 
 				self.setClipping(dataID,rowIdxBool)
 				funcProps = getMessageProps("Masking done.",
-										    "Mask established. Update graph to see changes.")
+										    "Mask established. Please update graph to see changes.")
 				funcProps["maskIndex"] = rowIdxBool
 				return funcProps
 		
 		return getMessageProps("Error..","There was an error when clipping mask was established.")
+
 
 		
 	def evaluateColumnNameOfDf(self, df, dataID):
@@ -1300,7 +1290,7 @@ class DataCollection(object):
 		"Plain return"
 		if isinstance(columnNames,str):
 			columnNames = [columnNames]
-		#print(dataFrame,dataID,columnName)
+
 		if dataID in self.dfs:
 			columnsToJoin = [colName for colName in columnNames if colName not in dataFrame and colName in self.dfs[dataID].columns]
 			columnData = self.dfs[dataID][columnsToJoin]
@@ -1927,7 +1917,6 @@ class DataCollection(object):
 		
 		self.df = self.dfs[id] = dfnoNaN
 		self.update_columns_of_current_data()
-		#print(time.time()-t1)
 		
 		return idxNaN_txt
 				
@@ -2170,9 +2159,9 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			try:
 				smartRrep = ICSmartReplace(grouping=grouping,**kwargs)
-				X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
-				X = smartRrep.fitTransform(X)
-				#print(X)
+				data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+				X = smartRrep.fitTransform(data)
+			
 				self.dfs[dataID].loc[X.index,X.columns] = X
 				return getMessageProps("Done ..","Replacement done.")
 
@@ -2761,7 +2750,7 @@ class DataCollection(object):
 				groupingNames = self.parent.grouping.getGroupings()
 				for groupingName in groupingNames:
 					mapper = self.parent.grouping.getGroupNameByColumn(groupingName)
-					meltedDataFrame.loc[:,groupingName] = meltedDataFrame[variableName].map(mapper)
+					meltedDataFrame.loc[:,groupingName] = meltedDataFrame[variableName].map(mapper).fillna(self.replaceObjectNan)
 
 				
 

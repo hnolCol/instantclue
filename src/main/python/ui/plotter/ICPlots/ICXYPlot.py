@@ -29,10 +29,10 @@ class ICXYPlot(ICChart):
         hoverGroups = dict() 
         if onlyForID is None and targetAx is None:
             for n,ax in self.axisDict.items():
-                hoverGroups[ax] = {'colors': {}, 'artists' : {}, 'texts' : {}}
+                hoverGroups[ax] = {'colors': {}, 'artists' : {}, 'texts' : {}, "internalID" : {}}
                 for m,l in enumerate(self.data["lines"][n]):
                     artistID = getRandomString()
-                    internalID = self.data["lineKwargs"][n][m]["ID"]
+                    intID = self.data["lineKwargs"][n][m]["ID"]
 
                     if isinstance(l,Line2D):
                         ax.add_line(l)
@@ -40,12 +40,16 @@ class ICXYPlot(ICChart):
                         ax.add_collection(l)
 
                     #extract tooltip information
-                    boolIdx = self.data['dataColorGroups']["internalID"] == internalID
+                    boolIdx = self.data['dataColorGroups']["internalID"] == intID
                     groupLabel = self.data['dataColorGroups'].loc[boolIdx,"group"].values[0]
                     
                     hoverGroups[ax]["artists"][artistID] = l
                     hoverGroups[ax]["colors"][artistID] = l.get_color()
                     hoverGroups[ax]["texts"][artistID] = groupLabel
+
+                    if intID not in hoverGroups[ax]["internalID"]:
+                            hoverGroups[ax]["internalID"][intID] = []
+                    hoverGroups[ax]["internalID"][intID].append(artistID)
                     
                 if n in self.data["markerLines"]:
                     for mLine in self.data["markerLines"][n]:
@@ -150,7 +154,6 @@ class ICXYPlot(ICChart):
         else:
             return 
 
-
         if "linesByInternalID" in self.data:
             for changedCategory in changedCategories:
                 l = self.data["linesByInternalID"][changedCategory]
@@ -172,7 +175,8 @@ class ICXYPlot(ICChart):
                     for kwg in markerKwargs:
                         if kwg["ID"] == changedCategory:
                             kwg["props"]["markerfacecolor"] = changedColor
-                
+                self.adjustColorsInTooltip(changedCategory,changedColor)
+
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
         self.updateFigure.emit()
