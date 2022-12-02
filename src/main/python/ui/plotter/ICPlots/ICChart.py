@@ -2010,7 +2010,7 @@ class ICChartToolTip(object):
 			Must have keys : 'artists','colors','texts'. 
 			Values must be dicts in form of {key1 : color1, key2 : color2}
 		'''
-
+		
 		self.plotter = plotter
 		self.r = self.plotter.f.canvas.get_renderer()
 		self.ax = ax
@@ -2236,14 +2236,14 @@ class ICChartToolTip(object):
 						 'fontname':'Arial',
 						 'linespacing': 1.5,
 						 'visible':False,
-						 "fontproperties": self.getStdFontProps(),
+						 #"fontproperties": self.getStdFontProps(),
 						 'zorder':1e9}
 
 	def getStdFontProps(self):
 		"Returns standard font props"
 		return FontProperties(
-					family=self.getParam("annotationFontFamily"),
-					size = self.getParam("tooltipFontSize"))
+					family=self.plotter.mC.config.getParam("annotationFontFamily"),
+					size = self.plotter.mC.config("tooltipFontSize"))
 
 	def isAnnotationInAllPlotsEnabled(self):
 		"Overhead fn"

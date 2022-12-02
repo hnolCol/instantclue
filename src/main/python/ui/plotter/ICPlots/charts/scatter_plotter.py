@@ -642,7 +642,6 @@ class scatterPlot(object):
 			self.data.loc[:,"color"] = pd.Series([scatterPathCollection.get_facecolors()[0]] * self.data.index.size, index=self.data.index)
 		if "size" not in self.data.columns:
 			self.data.loc[:,"size"] = pd.Series([scatterPathCollection.get_sizes()[0]] * self.data.index.size, index=self.data.index)
-		
 
 	def updateColorData(self,colorData,setColorToCollection = True):
 		""
@@ -650,13 +649,26 @@ class scatterPlot(object):
 			
 			self.data.loc[self.data.index,"color"] = colorData
 			if setColorToCollection:
-				if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
-					for markerName, markerData in self.data.groupby("marker"):
-						if markerName in self.mainCollecion:
-							self.mainCollecion[markerName].set_facecolor(markerData["color"].values)
-				
-				else:
-					self.mainCollecion.set_facecolor(self.data["color"].values)
+				self.addColorToCollection()
+
+	def addColorToCollection(self):
+		""
+		if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
+			for markerName, markerData in self.data.groupby("marker"):
+				if markerName in self.mainCollecion:
+					self.mainCollecion[markerName].set_facecolor(markerData["color"].values)
+		elif isinstance(self.mainCollecion,dict):
+			for scatterPathCollection in self.mainCollecion.values():
+				scatterPathCollection.set_facecolor(self.data.loc[:,"color"].values)
+		else:
+			self.mainCollecion.set_facecolor(self.data["color"].values)
+
+	def updateColorDataByIndex(self,idx,colorValue):
+		""
+		idxIntersection = self.data.index.intersection(idx)
+		if idxIntersection.size > 0:
+			self.data.loc[idxIntersection,"color"] = colorValue
+			self.addColorToCollection()
 
 	def setNaNColorToCollection(self):
 		""
@@ -670,6 +682,10 @@ class scatterPlot(object):
 					for markerName, markerData in self.data.groupby("marker"):
 						if markerName in self.mainCollecion:
 							self.mainCollecion[markerName].set_sizes(markerData["size"].values)
+
+			elif isinstance(self.mainCollecion,dict):
+					for scatterPathCollection in self.mainCollecion.values():
+						scatterPathCollection.set_facecolor(self.data.loc[:,"size"].values)
 			else:
 				self.mainCollecion.set_sizes(self.data["size"].values)
 

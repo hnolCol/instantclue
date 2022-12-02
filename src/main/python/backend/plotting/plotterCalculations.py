@@ -1179,7 +1179,7 @@ class PlotterBrain(object):
                          
                     boxes = [vertRectProps(x, b[0], i, k, b[1],xWidth)
                         for i, b in enumerate(zip(boxEnds, w_area))]
-                    print(boxes)
+                    
                     y = np.median(boxData)
                     
                     medianLineProps = {

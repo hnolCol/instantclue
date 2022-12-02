@@ -135,6 +135,14 @@ class ICSwarmplot(ICChart):
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.updateBackground(redraw=redraw)                
 
+
+    def changedCategoryIsInternalID(self, changedCategory ):
+        ""
+        if "interalIDColumnPairs" in self.data:
+            internalIDFound = [(n,columnPairMatches) for n,columnPairMatches in self.data["interalIDColumnPairs"].items() if changedCategory in columnPairMatches]
+            return len(internalIDFound) > 0
+        return False
+
     def updateGroupColors(self,colorGroup, changedCategory = None):
         "changed category == internal id!"
         if self.colorCategoryIndexMatch is not None:
@@ -143,24 +151,33 @@ class ICSwarmplot(ICChart):
                 idx = self.colorCategoryIndexMatch[changedCategory]
                 dataBool = colorGroup["internalID"] == changedCategory 
                 color = colorGroup.loc[dataBool,"color"].values[0]
-    
-                for n, columnPairMatches in self.data["interalIDColumnPairs"].items():
-                    if changedCategory in columnPairMatches:
-                        columnPairs = columnPairMatches[changedCategory]
-                        for columnPair in columnPairs:
-                            self.scatterPlots[n].setColorForMultiScatter(columnPair,idx,color)
-
-            elif changedCategory is None and "internalID" in colorGroup.columns:
-                
-                for changedCategory, color in colorGroup[["internalID","color"]].values:
-                    idx = self.colorCategoryIndexMatch[changedCategory]
-                   
-    
+                #is the internalID part of the initial coloring (special to swarm plots?)
+                if self.changedCategoryIsInternalID(changedCategory):
+                    #why iterating through? check
                     for n, columnPairMatches in self.data["interalIDColumnPairs"].items():
                         if changedCategory in columnPairMatches:
                             columnPairs = columnPairMatches[changedCategory]
                             for columnPair in columnPairs:
                                 self.scatterPlots[n].setColorForMultiScatter(columnPair,idx,color)
+                else: #indicates that it is not about the original colors, but rather a category
+                    for scatterplot in self.scatterPlots.values():
+                        scatterplot.updateColorDataByIndex(idx,color)
+
+            elif changedCategory is None and "internalID" in colorGroup.columns:
+                
+                    for internalID, color in colorGroup[["internalID","color"]].values:
+                        idx = self.colorCategoryIndexMatch[internalID]
+                        
+                        if self.changedCategoryIsInternalID(changedCategory):
+                            for n, columnPairMatches in self.data["interalIDColumnPairs"].items():
+                                if internalID in columnPairMatches:
+                                    columnPairs = columnPairMatches[internalID]
+                                    for columnPair in columnPairs:
+                                        self.scatterPlots[n].setColorForMultiScatter(columnPair,idx,color)
+
+                        else: ##all changed
+                            for scatterplot in self.scatterPlots.values():
+                                    scatterplot.updateColorDataByIndex(idx,color)
 
 
         if hasattr(self,"colorLegend"):
