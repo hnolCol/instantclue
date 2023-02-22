@@ -2142,13 +2142,7 @@ class PlotterBrain(object):
         else:
             y0 = 1 - heightMain - topMargin
         x0 = leftMargin
-        #widthPer pixelWidth / len(numericColumns)
-        #correctHeight = 1
-        # emperically determined to give almost equal width independent of number of columns 
-			
-        
-		
-        #clusterMapWidth = 10 * len(numericColumns)
+
         rowDendroWidth = width * 0.08 if rowOn else 0
         if columnOn:
             if rowDendroWidth > 0:
@@ -2168,7 +2162,7 @@ class PlotterBrain(object):
             addSpacingForGroupAx = 0
 				
 
-            
+        #create axis dict.
         axisDict = dict() 
 
         axisDict["axRowDendro"] = [x0,
