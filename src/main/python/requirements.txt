@@ -11,7 +11,7 @@ fonttools==4.37.3
 future==0.18.3
 hdbscan==0.8.28
 idna==3.4
-joblib==1.1.0
+joblib==1.2.0
 kiwisolver==1.4.4
 lazy_loader==0.1rc2
 littleutils==0.2.2
