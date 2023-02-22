@@ -70,7 +70,7 @@ class CategoricalFilter(object):
         collectResults = pd.DataFrame()
         #check each column if str is in row
         for columnName in columnNames:
-            columnBoolIndicator = self.sourceData.dfs[dataID][columnName].str.contains(regExp, case = caseSensitive)
+            columnBoolIndicator = self.sourceData.dfs[dataID][columnName].astype("str").str.contains(regExp, case = caseSensitive)
             collectResults[columnName] = columnBoolIndicator
         # get bool where in at leas 1 column the string was found
         boolIndicator = collectResults.sum(axis=1) >= 1
@@ -79,7 +79,7 @@ class CategoricalFilter(object):
 
     def getGroupIndicator(self,dataID,columnName, regExp, flag=0):
         ""
-        return self.sourceData.dfs[dataID][columnName].str.findall(regExp, flags = flag).astype(str)	
+        return self.sourceData.dfs[dataID][columnName].astype("str").str.findall(regExp, flags = flag).astype(str)	
 
     def getUniqueCategories(self, dataID, columnName, splitString = None):
         ""
@@ -194,7 +194,7 @@ class CategoricalFilter(object):
                     
                     for columnName in columnNames:
                         #extract combinations of searches
-                        groupIndicator  = self.sourceData.dfs[dataID][columnName].str.extract(regExp, flags = flag)
+                        groupIndicator  = self.sourceData.dfs[dataID][columnName].astype("str").str.extract(regExp, flags = flag)
                         annotationColumn = groupIndicator.fillna('').astype(str).sum(axis=1)
                         collectResults[columnName] = annotationColumn
 
@@ -213,7 +213,7 @@ class CategoricalFilter(object):
                 replaceDict[True] = splitSearchString[0]
                 for columnName in columnNames:
                  
-                    columnBoolIndicator = self.sourceData.dfs[dataID][columnName].str.contains(regExp, case = caseSensitive)
+                    columnBoolIndicator = self.sourceData.dfs[dataID][columnName].astype("str").str.contains(regExp, case = caseSensitive)
                     collectResults[columnName] = columnBoolIndicator
                 boolIndicator = collectResults.sum(axis=1) >= 1
                 annotationColumn = boolIndicator.map(replaceDict)	
@@ -334,7 +334,7 @@ class CategoricalFilter(object):
             for columnName in dataToSearch.columns:
                
                 collectDf.loc[:,columnName] = \
-					dataToSearch.loc[:,columnName].str.contains(regExp,
+					dataToSearch.loc[:,columnName].astype("str").str.contains(regExp,
 													  case = caseSensitive,
                                                       regex = True)
                     

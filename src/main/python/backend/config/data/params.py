@@ -84,8 +84,6 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Statistics (one sample tests)",
     "description"   :   "If True, apply continuity correction by adjusting the Wilcoxon rank statistic by 0.5 towards the mean value when computing the z-statistic if a normal approximation is used."
     },
-
-    
     {
     "name"          :   "label.font.size",
     "value"         :   12,
@@ -1089,7 +1087,58 @@ DEFAULT_PARAMETER = [
     "range"         :   [True,False],
     "parent"        :   "plotterBrain",
     "parentType"    :   "Scatter",
-    "description"   :   "If enabled, plots data of each numeric columna against its sorted index.",
+    "description"   :   "If enabled, plots data of each numeric column against its sorted index.",
+    },
+    {
+    "name"          :   "scatter.volcano.significance.str",
+    "value"         :   "+",
+    "dtype"         :   str,
+    "range"         :   "Any",
+    "parent"        :   "intern",
+    "parentType"    :   "Scatter",
+    "description"   :   "The string that indicates significance in respective columns. Please not that InstantClue uses the '+' as a default for numeric and categorical filters. Hence changing this is not recommended.",
+    },
+    {
+    "name"          :   "scatter.volcano.color.sig.up",
+    "value"         :   "#B31C19",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Scatter",
+    "description"   :   "Marker facecolor for significant upregulated features (Volcano mode). If a color column is selected, this color will be used to create a colormap starting from white for the significant up-regulated features.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
+    },
+    {
+    "name"          :   "scatter.volcano.color.sig.down",
+    "value"         :   "#69838f",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Scatter",
+    "description"   :   "Marker facecolor for significant downregulated features (Volcano mode). If a color column is selected, this color will be used to create a colormap starting from white for the significant down-regulated features.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
+    },
+    {
+    "name"          :   "scatter.volcano.color.encode.non.sig",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   ["mean","sum"],
+    "parent"        :   "intern",
+    "parentType"    :   "Scatter",
+    "description"   :   "In case a color column was added in the volcano plot styling, you can disabled/enable the color encoding of non-siginficant hits. If disabled, all non-sig proteins will be shown in the nanColor (see Color properties).",
+    },
+    {
+    "name"          :   "scatter.volcano.color.non.sig",
+    "value"         :   "#424241",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Scatter",
+    "description"   :   "Marker facecolor for significant downregulated features (Volcano mode). If a color column is selected, this color will be used to color encode non-significant one.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
     },
     {
     "name"          :   "indexSort",
@@ -1907,8 +1956,6 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Barplot",
     "description"   :   "Width scale of bars, if you desire some space between bars in grouped bars, set this value below 1."
     }, 
-
-    
     {
     "name"          :   "boxbarviolin.border",
     "value"         :   0.25,
@@ -1944,6 +1991,64 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Violinplot",
     "description"   :   "Enable/disable rendering of the extremas."
+    }, 
+    {
+    "name"          :   "violin.show.quantiles",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Enable/disable the display of quantile (25 and 75) in a violin plot."
+    }, 
+    {
+    "name"          :   "violin.show.quantiles.box",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "If enabled, shows a box within the violinplot. If False - displays a thick black line."
+    }, 
+    {
+    "name"          :   "violin.show.quantiles.box.facecolor",
+    "value"         :   "#FFFFFF",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Facecolor for rectangle box.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
+    }, 
+    {
+    "name"          :   "violin.show.quantiles.box.edgecolor",
+    "value"         :   "#000000",
+    "dtype"         :   str,
+    "range"         :   "regExMatch",
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Edgecolor for rectangle box / Color for line if box is disabled.",
+    "regEx"         :   r"^#(?:[0-9a-fA-F]{6}){1,2}$",
+    "isColor"       :   True
+    }, 
+    {
+    "name"          :   "violin.show.quantiles.box.linewidth",
+    "value"         :   0.5,
+    "dtype"         :   float,
+    "range"         :   [0.01,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Linewidth of the edge for the quantile box in a violin plot."
+    }, 
+        {
+    "name"          :   "violin.show.quantiles.box.alpha",
+    "value"         :   0.8,
+    "dtype"         :   float,
+    "range"         :   [0.0,1.0],
+    "parent"        :   "intern",
+    "parentType"    :   "Violinplot",
+    "description"   :   "Opacity of the quantile box in a violin plot."
     }, 
     {
     "name"          :   "barplot.minor.spacing",
@@ -2505,7 +2610,7 @@ DEFAULT_PARAMETER = [
     },  
     {
     "name"          :   "pointplot.marker.size",
-    "value"         :   8,
+    "value"         :   12,
     "dtype"         :   float,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
@@ -2514,7 +2619,7 @@ DEFAULT_PARAMETER = [
     },  
     {
     "name"          :   "pointplot.error.line.width",
-    "value"         :   0.5,
+    "value"         :   0.75,
     "dtype"         :   float,
     "range"         :   [0.001,np.inf],
     "parent"        :   "intern",
@@ -3099,24 +3204,69 @@ DEFAULT_PARAMETER = [
     "parent"        :   "intern",
     "parentType"    :   "Groupings",
     "description"   :   "."
+    },
+    {
+    "name"          :   "fill.NaN.add.indicator.column",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Fill NaN (Imputation)",
+    "description"   :   "Adds a categorical column indicating via a '+' sign if the value has been imputed."
+    },
+    {
+    "name"          :   "fill.NaN.gaussian.downshift",
+    "value"         :   1.8,
+    "dtype"         :   float,
+    "range"         :   [0.0001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Fill NaN (Imputation)",
+    "description"   :   "Downshift of the gaussian distribution from which values for NaN are randomly drawn. 1.8 indicates a downshift by 1.8 times the standard deviation of the original distribution. This setting is also used by the 'smart replace'."
+    },
+    {
+    "name"          :   "fill.NaN.gaussian.width",
+    "value"         :   0.3,
+    "dtype"         :   float,
+    "range"         :   [0.0000001,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Fill NaN (Imputation)",
+    "description"   :   "Scaled standard deviation (scale) of the gaussian distribution from which the data for NaN replacement are drawn. 0.3 indicates that the standard deviation is 0.3*(standard deviation) from the original distribution. This setting is also used by the 'smart replace'."
+    },
+    {
+    "name"          :   "fill.NaN.smart.repl.number.NaN.for.downshift",
+    "value"         :   4,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Fill NaN (Imputation)",
+    "description"   :   "The number of NaNs that is required in the 'smart replace' process per group in order to fill NaNs by downshifted gaussian values."
+    },
+    {
+    "name"          :   "fill.NaN.smart.repl.min.number.valid.values",
+    "value"         :   4,
+    "dtype"         :   int,
+    "range"         :   [0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Fill NaN (Imputation)",
+    "description"   :   "The minimum number of non-nan(valid) values in the 'smart replace' process per group in order to fill NaNs by downshifted gaussian values."
+    },
+    {
+    "name"          :   "mitocube.api.url",
+    "value"         :   "https://app.mitocube.com",
+    "dtype"         :   str,
+    "range"         :   "any",
+    "parent"        :   "intern",
+    "parentType"    :   "MitoCube Connect",
+    "description"   :   "The url or ip adress of the  MitoCube instance. It is assume that the api is reachable under url/api/"
     }
+    # {
+    # "name"          :   "mitocube.share.token",
+    # "value"         :   "",
+    # "dtype"         :   str,
+    # "range"         :   "any",
+    # "parent"        :   "intern",
+    # "parentType"    :   "MitoCube Connect",
+    # "description"   :   "A share token that authenticates you and allows to get data from the MitoCube api."
+    # }
     ]
-    
-
-
-    
-
-
-#     encodingsCommonInPython = ['utf-8','ascii','ISO-8859-1','iso8859_15','cp037','cp1252','big5','euc_jp']
-# commonSepartor = ['tab',',','space',';','/','&','|','^','+','-']
-# decimalForFloats = ['.',','] 
-# compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
-# nanReplaceString = ['-','None', 'nan','  ']
-# thoursandsString = ['None',',','.']
-# comboBoxToGetInputFromUser = OrderedDict([('Encoding:',encodingsCommonInPython),
-# 											('Column Separator:',commonSepartor),
-# 											('Decimal Point String:',decimalForFloats),
-# 											('Thousand Separator:',thoursandsString),
-# 											('Decompression:',compressionsForSourceFile),
-# 											('Skip Rows:',[str(x) for x in range(0,20)]),
-# 											('Replace NaN in Object Columns:',nanReplaceString)])
+				

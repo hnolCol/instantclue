@@ -117,7 +117,7 @@ def fitTwoCompartmentModelToEachRow(Y,x,batchID = "None"):
     
     return (batchID,pd.DataFrame().from_dict(kwsCollect))
 
-def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns):
+def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns,alternative):
     "Moving the U test to a process - bus10 error when using on thread-seems not thread-safe"
     r = []
     for categoricalColumn, boolIdxCatSpec in boolIdxByCategory.items():
@@ -137,13 +137,15 @@ def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSi
                 if minGroupDifference > 0 and abs(groupDifference) < minGroupDifference:
                     continue
                 try:
-                    df = mwu( x = X, y = Y,)
+                    df = mwu( x = X, y = Y, alternative = alternative)
                 
                     p,U = df[["p-val","U-val"]].values[0]
-                except:
-                    p, U = 1, 0
-                
-                labelString = "_".join(["-".join(x) for x in data.loc[boolIdx,labelColumns].values])
+                except Exception as e:
+                    p, U = 1.0, 0.0
+                if len(labelColumns) > 0:
+                    labelString = "_".join(["-".join(x) for x in data.loc[boolIdx,labelColumns].values])
+                else:
+                    labelString = ""
                 
                 r.append({"numericColumn":numericColumn,
                             "category":uniqueCat,
@@ -496,36 +498,22 @@ class StatisticCenter(object):
                     mapDict[colName] = groupName + k 
             meltedData[groupName] = meltedData["variable"].map(mapDict)
 
-       # print(meltedData)
-
         collectedData = None 
         
         for idx, idxData in meltedData.groupby(rowIdentifier):
             idxData = idxData.dropna(subset=["value"])
             idxData['Subject'] = np.arange(1,idxData.index.size+1)
-           # print(idxData)
-           # anova = Anova(
-            #            idxData,
-             #           dependentVariable = "value", 
-              #          wFactors = [k["name"] for k in withinGroupings],
-               #         bFactors = [k["name"] for k in betweenGroupings])
-           # res#ults = anova.getResults().set_index("Source")
-          #  print(results)
+ 
             r = anova(data = idxData, dv = "value" ,between = [k["name"] for k in betweenGroupings], detailed=True)
             results = r.set_index("Source")
             if collectedData is None:
                 collectedData = pd.DataFrame(index=data.index, columns = ["p-value:{}".format(colName) for colName in results.index if colName != "Residual"])
-           # print(results)
+   
             for source in results.index:
                 if source != "Residual":
                     colName = "p-value:{}".format(source)
                     collectedData.loc[idx,colName] = results.loc[source,"p-unc"]
-           # print(collectedData)
 
-            
-           # intColName = " * ".join([k["name"] for k in betweenGroupings])
-            #print(intColName)
-           # collectedData.loc[idx,"p-value:interaction"] = np.float(results.loc[intColName,"p-value"])
         collectedData = collectedData.astype(float)
         return self.sourceData.joinDataFrame(dataID,collectedData)
 
@@ -707,7 +695,6 @@ class StatisticCenter(object):
                                     scale=scaleData)
                     else:
                         rowBools, featureImportance = self.featureSelection.selectFeaturesByRF(X,Y,{"n_estimators":nTrees,"min_samples_split":min_samples_split},scale=scaleData)
-                   # print(featureImportance)
                     idx = data.index[rowBools]
                     if createSubset:
                         subsetName = "FSelRF:({})".format(self.sourceData.getFileNameByID(dataID))
@@ -843,7 +830,6 @@ class StatisticCenter(object):
             ""
             def f(x,A,k):
                 return A*(1 - np.exp(-(k+corrK)*x))
-            #print(corrK)
             popt, pcov = curve_fit(f,xValues,row)
             r = {"A":popt[0],"k":popt[0]}
             return pd.Series(r)
@@ -921,29 +907,19 @@ class StatisticCenter(object):
 
     def runCategoricalFisherEnrichment(self,data,categoricalColumn, testColumns, labelColumns, splitString = ";", alternative = "two-sided"):
         ""
-        # import time
-        # print(dataID)
-        # print(testColumns)
-        # print(categoricalColumn)
-        # columnNames = [categoricalColumn] + testColumns.values.flatten().tolist() 
-        # print(columnNames)
-       # data = self.getData(dataID,columnNames).copy()
-        
-        #freeze_support()
+       
         groupedByData = data.groupby(by=categoricalColumn)
         minGroupSize = self.sourceData.parent.config.getParam("categorical.enrichment.min.group.size")
         adjPvalueCutoff = self.sourceData.parent.config.getParam("categorical.enrichment.adj.pvalue.cutoff")
-       # NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         adjPvalueMethod = self.sourceData.parent.config.getParam("categorical.enrichment.multipletest.method")
         
-        results = pd.DataFrame(columns=["p-value(Fisher)",
-                                        "p-value(Chi2)",
-                                        "{} p-value(Fisher)".format(adjPvalueMethod),
-                                        "{} p-value(Chi2)".format(adjPvalueMethod),
-                                        "oddsratio",
+        results = pd.DataFrame(columns=["categoricalColumn",
                                         "testColumn",
                                         "category",
                                         "groupName",
+                                        "oddsratio(Enrichment)",
+                                        "p-value(Fisher)",
+                                        "p-value(Chi2)",
                                         "n_positive(group)",
                                         "n_positive(total)",
                                         "n_negative(group)",
@@ -953,17 +929,9 @@ class StatisticCenter(object):
                                         "labels"])
 
         for testColumn in testColumns.values.flatten():
-            #print(testColumn)
-            #get unique categories for non nan groups (e.g. by default -)
-            splitData = data.loc[data[testColumn] != self.sourceData.replaceObjectNan,testColumn].astype("str").str.split(splitString)
-           # uniqueCategories = list(set(chain.from_iterable(splitData.values)))
             
-
-          #  regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
-            #most beneift from using Parallel for this job. Others were not faster (fisher test etc, using "normal" protomics data (e.g. 4-10K rows))
-            X = data[testColumn]
-            #pd.Series().str.split()
-            #t1 = time.time()
+            splitData = data.loc[data[testColumn] != self.sourceData.replaceObjectNan,testColumn].astype("str").str.split(splitString)
+        
             idxByCategory = {} 
             #get index of data frame by split categories
             for idx in splitData.index:
@@ -995,14 +963,18 @@ class StatisticCenter(object):
                     #fisher_exact()
                     oddsratio, pvalue = fisher_exact(table,alternative=alternative)
                     chi2,chiPValue,_,_ = chi2_contingency(table)
-                    labelString = "_".join(["-".join(x) for x in data.loc[boolIdx][labelColumns].values])
-
-                    r.append({"p-value(Fisher)":pvalue,
-                                "p-value(Chi2)":chiPValue,
-                                "oddsratio":oddsratio,
+                    if len(labelColumns) > 0:
+                        labelString = "_".join(["-".join(x) for x in data.loc[boolIdx][labelColumns].values])
+                    else:
+                        labelString = ""
+                    r.append({
+                                "categoricalColumn":categoricalColumn,
                                 "testColumn":testColumn,
                                 "category":category,
                                 "groupName":groupName,
+                                "oddsratio(Enrichment)":oddsratio,
+                                "p-value(Fisher)":pvalue,
+                                "p-value(Chi2)":chiPValue,
                                 "n_positive(group)":categoryInGroup,
                                 "n_positive(total)":categoryInCompleteData,
                                 "n_negative(group)":categoryNotInGroup,
@@ -1013,10 +985,9 @@ class StatisticCenter(object):
                 
                 if len(r) > 0:
                     r = pd.DataFrame(r)
-                    
                     boolIdxFisher, adjFisherPValue, _, _  = multipletests(r["p-value(Fisher)"].values,method=adjPvalueMethod,alpha=adjPvalueCutoff)
                     boolIdxChi, adjChi2PValue, _, _  = multipletests(r["p-value(Chi2)"].values,method=adjPvalueMethod,alpha=adjPvalueCutoff)
-                   
+                    
                     r["{} p-value(Fisher)".format(adjPvalueMethod)] = adjFisherPValue.astype(float)
                     r["{} p-value(Chi2)".format(adjPvalueMethod)] = adjChi2PValue.astype(float)
                     
@@ -1034,6 +1005,7 @@ class StatisticCenter(object):
         data = self.getData(dataID,columnNames).dropna() 
         factorizedColumns = self.sourceData.parent.grouping.getFactorizedColumns(groupingName)
         batchIdx = [factorizedColumns[colName] for colName in columnNames if colName in factorizedColumns]
+        #Not thread safe, start on process map.
         with Pool(1) as p:
                 poolResult = p.starmap(runCombat,[(data,batchIdx)])
         XCorrected = poolResult[0]
@@ -1046,22 +1018,18 @@ class StatisticCenter(object):
         
         return self.sourceData.addDataFrame(XCorrected,fileName = "combat({})".format(fileName))
 
-    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, labelColumns = ["Gene names"] ,splitString = ";" , alternative="two-sided"):
+    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, labelColumns = ["Genes"] ,splitString = ";" , alternative="two-sided"):
         ""
         combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist() + labelColumns
         data = self.getData(dataID,combinedColumnnames)
         data = data.dropna(subset=columnNames,how="all")
         minGroupSize = self.sourceData.parent.config.getParam("1D.enrichment.min.category.group.size")
         minGroupDifference = self.sourceData.parent.config.getParam("1D.enrichment.min.abs.group.difference")
-        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         boolIdxByCategory = dict()
         for categoricalColumn in categoricalColumns:
 
             splitData = data.loc[data[categoricalColumn] != self.sourceData.replaceObjectNan,categoricalColumn].astype("str").str.split(splitString)
-            #splitData = data[categoricalColumn].astype("str").str.split(splitString).values
-            uniqueCategories = list(set(chain.from_iterable(splitData)))
-            regExByCategory = dict([(uniqueCategory,buildRegex([uniqueCategory],True,splitString)) for uniqueCategory in uniqueCategories])
-            #boolIdxByCategory = dict([(uniqueCategory,data[categoricalColumn].str.contains(regExp, case = True)) for uniqueCategory, regExp in regExByCategory.items()])
+           
             X = data[categoricalColumn]
             idxByCategory = {} 
             #get index of data frame by split categories
@@ -1072,73 +1040,30 @@ class StatisticCenter(object):
                         idxByCategory[xi] = []
                     idxByCategory[xi].append(idx)
             boolIdxByCategory[categoricalColumn] = idxByCategory
-            # with Pool(NProcesses) as p:
-            #     poolResult = p.starmap(_matchRegExToPandasSeries,[(X, regExp, uniqueCategory) for uniqueCategory, regExp in regExByCategory.items()])
-            #     boolIdxByCategory[categoricalColumn] = dict(poolResult)
-            
-        #print("done")
-        resultDF  = pd.DataFrame(columns=["numericColumn","categoricalColumn","category","p-value","U-statistic","categorySize","categorySize(noNaN)","mean","median","stdev","difference","-log10 p-value","adj. p-value","labels"])
+ 
+        resultDF  = pd.DataFrame(columns=["numericColumn",
+                                            "categoricalColumn",
+                                            "category",
+                                            "p-value",
+                                            "U-statistic",
+                                            "categorySize",
+                                            "categorySize(noNaN)",
+                                            "mean",
+                                            "median",
+                                            "stdev",
+                                            "difference",
+                                            "-log10 p-value",
+                                            "adj. p-value",
+                                            "labels"])
         r = []
+        #not thread safe -> start process
         with Pool(1) as p:
-            rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns) for numericColumn in columnNames.values])
+            rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns,alternative) for numericColumn in columnNames.values])
             r = [x for r in rs for x in  r[1]]
             
-
-
-            
-            
-            # for numericColumn in columnNames.values:
-            #     for categoricalColumn, boolIdxCatSpec in boolIdxByCategory.items():
-            #         for uniqueCat, boolIdx in boolIdxCatSpec.items():
-            #             N = np.sum(boolIdx)
-            #             if N >= minGroupSize: #check the group size
-            #                 X = data.loc[boolIdx,numericColumn].dropna().copy().values.flatten()
-            #                 Y = data.loc[~boolIdx,numericColumn].dropna().copy().values.flatten()
-            #                 if X.size == 0 or Y.size == 0:
-            #                     continue
-            #                 uniqueCatMean = np.mean(X)
-            #                 uniqueCatMedian = np.median(X)
-            #                 stdev = np.std(X)
-            #                 populationMean = np.mean(Y)
-            #                 groupDifference = uniqueCatMean - populationMean
-            #                 if minGroupDifference > 0 and abs(groupDifference) < minGroupDifference:
-            #                     continue
-            #                 print("1,",X,Y)
-            #                 print(uniqueCat)
-            #                 U = 0
-            #                 p = 0.002
-            #                 df = mwu( x = X, y = Y,)
-            #                 print(df[["p-val","U-val"]].values[0])
-            #                 p,U = df[["p-val","U-val"]].values[0]
-            #                 print(p,U)
-            #                 #                 y = Y,)
-            #                 # try:
-            #                 #     U, p = mannwhitneyu(
-            #                 #                 x = X,
-            #                 #                 y = Y,
-            #                 #                 alternative=alternative
-            #                 #                 )
-            #                 # except Exception as e:
-            #                 #     print(e)
-            #                 #     continue
-            #                 print("this works?")
-                            
-            #                 r.append({"numericColumn":numericColumn,
-            #                             "category":uniqueCat,
-            #                             "categoricalColumn" : categoricalColumn,
-            #                             "p-value":p,
-            #                             "U-statistic":U,
-            #                             "n":N,
-            #                             "mean":uniqueCatMean,
-            #                             "categorySize(noNaN)":X.size,
-            #                             "median":uniqueCatMedian,
-            #                             "categorySize":N,
-            #                             "stdev":stdev,
-            #                             "difference":groupDifference}
-            #                             )
-        print("DD")
         resultDF = resultDF.append(r,ignore_index=True)
         pValues = resultDF["p-value"].values.flatten()
+
         resultDF.loc[:,"-log10 p-value"] = (-1)*np.log10(pValues)
         boolIdx, adjPValue, _, _  = multipletests(pValues,method="fdr_tsbh")
         resultDF.loc[:,"adj. p-value"] = adjPValue
@@ -1152,12 +1077,9 @@ class StatisticCenter(object):
                 resultDF,
                 fileName="1DEnrichment:({})".format(self.sourceData.getFileNameByID(dataID))) 
             
-
-
-    
     def runKMeansElbowMethod(self,dataID,columnNames,kMax = 20):
         ""
-        with threadpool_limits(limits=1, user_api='blas'):
+        with threadpool_limits(limits=1, user_api='blas'): #useless? 
             data = self.getData(dataID,columnNames).dropna()
             ks = list(range(1,kMax+1))
             SSE = [KMeans(n_clusters=k).fit(data.values).inertia_ for k in ks]

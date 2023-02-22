@@ -16,6 +16,7 @@ class ICBoxplot(ICChart):
     def addGraphSpecActions(self,menus):
         ""
         menus["main"].addAction("Show summary data", self.displaySummaryData)
+        #menus["main"].addAction("Show number of data points", self.showNumberOfDatapoints)
 
     def displaySummaryData(self,*args,**kwargs):
         ""
@@ -25,6 +26,14 @@ class ICBoxplot(ICChart):
                                     headerLabel="Boxplot data.", 
                                     tableKwargs={"forwardSelectionToGraph":False})
         
+    def showNumberOfDatapoints(self):
+        ""
+        if "groupedPlotData" in self.data:
+            groupedPlotData = self.data["groupedPlotData"]
+            print(groupedPlotData)
+
+
+
     def initBoxplots(self,onlyForID = None, targetAx = None):
         ""
         

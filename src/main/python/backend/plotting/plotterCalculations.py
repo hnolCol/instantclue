@@ -33,6 +33,7 @@ import matplotlib.cm as cm
 from matplotlib import rcParams
 
 from collections import OrderedDict
+import operator
 import seaborn as sns 
 import itertools
 import numpy as np
@@ -44,7 +45,7 @@ from sklearn.model_selection import GridSearchCV
 from numba import jit, njit, prange
 from wordcloud import WordCloud
 import io
-import time
+import re
 import pickle
 from scipy.stats import linregress
 
@@ -55,6 +56,14 @@ def spreadSwarm(kde):
     for i in prange(kde.size):
         A[i,0] = np.random.uniform(-kde[i]*0.85,kde[i]*0.85) 
     return A
+
+def extractCIFromstring(ciString):
+    ""
+    try:
+        ci = float(re.findall( r'(\d{1,3})%',ciString)[0])/100
+    except:
+        ci = 0.95
+    return ci
 
 def buildScatterPairs(axisInts,columnPairs,scatterColumnPairs):
     ""
@@ -467,6 +476,7 @@ class PlotterBrain(object):
             
 
         return {"data":{
+            "dataID" : dataID,
             "axisPositions":axisDict,
             "subplotBorders":subplotBorders,
             "rawCounts" : rawCounts,
@@ -660,8 +670,8 @@ class PlotterBrain(object):
         faceColors, \
         colorCategoricalColumn, \
         xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns,splitByCategories= splitByCats)
-            
 
+        
         filteredData = OrderedDict()
         hoverData = OrderedDict() 
         for n,plotData in plotData.items():
@@ -671,7 +681,8 @@ class PlotterBrain(object):
             plotData["width"] = xWidth * (self.sourceData.parent.config.getParam("barplot.width.scale"))
             plotData["color"] = faceColors[n]
             if "CI" in self.barplotError:
-                plotData["yerr"] = [CI(a.values) for a in data]
+                ci = extractCIFromstring(self.barplotError)
+                plotData["yerr"] = [CI(a.values,ci) for a in data]
             elif self.barplotError == "Std":
                 plotData["yerr"] = [np.std(a.values) for a in data]
             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
@@ -1337,7 +1348,8 @@ class PlotterBrain(object):
 
             for n in axisPositions.keys():
                 columnMeans = rawData[numericColumns].mean().values
-                errorValues = [CI(rawData[columnName].dropna()) for columnName in numericColumns]
+                ci = extractCIFromstring(self.barplotError)
+                errorValues = [CI(rawData[columnName].dropna(),ci) for columnName in numericColumns]
                 errorValues = [e if not np.isnan(e) else 0 for e in errorValues]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
@@ -1396,9 +1408,10 @@ class PlotterBrain(object):
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns)
             colorCategoricalColumn = categoricalColumns[0]
             hoverData[0] = rawData 
+            ci = extractCIFromstring(self.barplotError)
             for n in axisPositions.keys():
                 columnMeans = [data[numericColumns[0]].mean() for groupName, data in groupByCatColumn]
-                errorValues = [CI(data[numericColumns[0]].dropna()) for groupName, data in groupByCatColumn]
+                errorValues = [CI(data[numericColumns[0]].dropna(),ci) for groupName, data in groupByCatColumn]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
                 if np.isnan(maxErrorValue):
@@ -1729,12 +1742,13 @@ class PlotterBrain(object):
         es = []
         maxValue = np.nanmax(groupby.max()[numericColumns].values)
         minValue = np.nanmin(groupby.min()[numericColumns].values)
+        ci = extractCIFromstring(self.barplotError)
         for groupName, data in groupby:
             meanErrorData[groupName] = {}
             for numColumn in numericColumns:
                 X = data[numColumn].dropna()
                 if not X.empty:
-                    errorValue = CI(X.values)
+                    errorValue = CI(X.values,ci )
                     m = np.nanmean(X.values)
                     if np.isnan(errorValue): #no confidence interval can be caluclated.
                         errorValue = 0
@@ -3045,6 +3059,180 @@ class PlotterBrain(object):
         
         return funcProps
 
+
+
+    def getColorMapDictAndLayers(self, colorCategories, N):
+        ""
+        colors, layerMap = self.sourceData.colorManager.createColorMapDict(colorCategories, 
+                                                                        addNaNLevels=[(self.sourceData.replaceObjectNan,)*N],
+                                                                        as_hex=True)
+        return colors,layerMap
+
+    def getColorGroupsForVolcanoModeScatter(self,dataID, significantColumns, colorColumns, numericColumns, columnPairs, significantStr = "+"):
+        "Significant columns are exclusively categorical."
+
+        colorForUpReg = self.sourceData.parent.config.getParam("scatter.volcano.color.sig.up")
+        colorForDownReg = self.sourceData.parent.config.getParam("scatter.volcano.color.sig.down")
+        colorForNonSig = self.sourceData.parent.config.getParam("scatter.volcano.color.non.sig")
+        encodeNonSig = self.sourceData.parent.config.getParam("scatter.volcano.color.encode.non.sig")
+        columnNames = pd.concat([significantColumns,numericColumns, colorColumns])
+
+        sigUpString = f"{significantStr} & up"
+        sigDownString = f"{significantStr} & down"
+
+
+        rawData = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
+        boolIdcs = rawData[significantColumns] == significantStr
+        log2Columns = [columnPair[0] for columnPair in columnPairs]
+        aboveZero = rawData.loc[:,log2Columns] > 0 
+
+        #crate significant categories
+        fakeSignificantCategories = pd.DataFrame(np.full(shape=aboveZero.shape, fill_value="-", dtype=str), columns=boolIdcs.columns, index=boolIdcs.index)
+        for n in range(len(log2Columns)):
+            aboveZeroAndSignificant = np.logical_and(aboveZero.iloc[:,n].values,boolIdcs.iloc[:,n].values)
+            belowAndSignificant = np.logical_and(~aboveZero.iloc[:,n].values,boolIdcs.iloc[:,n].values)
+            fakeSignificantCategories.iloc[aboveZeroAndSignificant,n] = sigUpString
+            fakeSignificantCategories.iloc[belowAndSignificant,n] = sigDownString
+       
+        if colorColumns.size > 0:   
+            if colorColumns.size > 1:
+                colorCategories = rawData.loc[:,colorColumns].apply(tuple,axis=1).values #mege if more color columns given
+            else:
+                colorCategories = rawData.loc[:,colorColumns].values
+            colorCategories = pd.DataFrame(np.tile(colorCategories.flatten().reshape(-1,1), (1, boolIdcs.columns.size)), columns=boolIdcs.columns, index=boolIdcs.index)
+            
+
+            potentialColorAndSignificantCategories = pd.DataFrame(
+                {x: zip(fakeSignificantCategories.loc[:,x].values,colorCategories.loc[:,x].values) for x in fakeSignificantCategories.columns}, index = boolIdcs.index)
+            uniqueCategories = np.unique(potentialColorAndSignificantCategories.values.flatten())
+            categoricalGroups = dict( )
+            it = itertools.groupby(uniqueCategories.tolist(), operator.itemgetter(0))
+            
+            for k, l in it:
+                categoricalGroups[k] = list(l)
+           
+            # upCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] == sigUpString]
+            # downCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
+            # nonSigCategoris = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
+            #customPalette = False, customPaletteKwargs 
+            colorsUp, layerMapUp = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigUpString], 
+                                                            addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
+                                                            as_hex=True,
+                                                            customPalette = True,
+                                                            customPaletteKwargs = {"palette" : f"light:{colorForUpReg}_r","n_colors" : len(categoricalGroups[sigUpString])+1})
+            colorsDown, layerMapDown = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigDownString], 
+                                                            addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
+                                                            as_hex=True,
+                                                            customPalette = True,
+                                                            customPaletteKwargs = {"palette" : f"light:{colorForDownReg}_r","n_colors" : len(categoricalGroups[sigDownString])+1})
+            if encodeNonSig:
+                colorsNonSig, layerMapNonSig = self.sourceData.colorManager.createColorMapDict(categoricalGroups[self.sourceData.replaceObjectNan], 
+                                                            addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
+                                                            as_hex=True,
+                                                            customPalette = True,
+                                                            customPaletteKwargs = {"palette" : f"light:{colorForNonSig}_r","n_colors" : len(categoricalGroups[self.sourceData.replaceObjectNan])})
+            else:
+                colorsNonSig = dict(zip(categoricalGroups[self.sourceData.replaceObjectNan],[self.sourceData.colorManager.nanColor]*len(categoricalGroups[self.sourceData.replaceObjectNan])))
+                layerMapNonSig = {self.sourceData.colorManager.nanColor : -2}
+            
+            colors = {**colorsUp,**colorsDown, **colorsNonSig}
+            layerMap = {**layerMapUp, **layerMapDown, **layerMapNonSig}
+            #colors, layerMap = self.getColorMapDictAndLayers(uniqueCategories, colorColumns.index.size+1)
+        else:
+            potentialColorAndSignificantCategories = fakeSignificantCategories.copy()
+            colors = {
+                f"{significantStr} & up" : colorForUpReg,
+                f"{significantStr} & down" : colorForDownReg,
+                "-" : self.sourceData.colorManager.nanColor
+            }
+            layerMap = {
+                colorForUpReg : 2,
+                colorForDownReg : 2,
+                self.sourceData.colorManager.nanColor : -1
+
+            }
+        
+    
+        #print(potentialColorAndSignificantCategories)
+       # print(colors)
+        #colorCategories = pd.DataFrame(np.tile(colorUniqueValues.transpose(), (1, boolIdcs.columns.size)), columns=boolIdcs.columns)
+        #print(colorCategories)
+        #crate color dict.
+        # if colorColumns.size > 0:   
+        #     colorCategories = [tuple([sigCat,uniqueValue]) for uniqueValue in rawData[colorColumns[0]].unique() for sigCat in [f"{significantStr} & up",f"{significantStr} & down","-"]]
+        #     print(colorCategories)
+
+        #     colors, layerMap = self.getColorMapDictAndLayers(colorCategories, colorColumns) 
+
+        # df3 = pd.DataFrame({x: zip(df1[x], df2[x]) for x in df1.columns})
+
+        colorData = potentialColorAndSignificantCategories.applymap(lambda x: colors[x])
+        layerData = colorData.applymap(lambda x: layerMap[x])
+
+        colorGroupData = pd.DataFrame(columns=["color","group"])
+        colorGroupData["group"] = list(colors.keys())
+        colorGroupData["color"] = list(colors.values())
+        colorGroupData["internalID"] = [getRandomString() for _ in colorGroupData.index]
+
+
+        scatterProps = {}
+        categoryIndexMatch = {}
+        textKwargs = {}
+        for n,columnPair in enumerate(columnPairs):
+            scatterProps[columnPair] = pd.DataFrame(columns=["color","layer"])
+            # if n > 0 and boolIdcs.shape[1] == 1:
+            #     colorDataForColumnPair =  colorData.iloc[:,0]
+            #     layerValues = layerData.iloc[:,0]
+            # else:
+            #     colorDataForColumnPair =  colorData.iloc[:,n]
+            #     layerValues = layerData.iloc[:,0]
+            
+            #colorDataForColumnPair[aboveZeroAndSignificant] = colorForUpReg
+            scatterProps[columnPair]["color"] = colorData.iloc[:,n]
+            scatterProps[columnPair]["layer"] = layerData.iloc[:,n]
+            sumUp = np.sum(fakeSignificantCategories.iloc[:,n] == f"{significantStr} & up")
+            sumDown = np.sum(fakeSignificantCategories.iloc[:,n] == f"{significantStr} & down")
+            textKwargs[n] = [{ #here key must be n matching the axisDict keyword, not the scatterPlot columnpair
+                    "x" : 0.98, 
+                    "y": 0.98, 
+                    "s" : f"{sumUp}",
+                    "color" : colorForUpReg,
+                    "ha" : "right", 
+                    "va" : "top"},
+                {
+                    "x" : 0.02, 
+                    "y": 0.98, 
+                    "s" : f"{sumDown}",
+                    "color" : colorForDownReg,
+                    "ha" : "left", 
+                    "va" : "top"
+                    }]
+            rawColorCategories = potentialColorAndSignificantCategories.iloc[:,n]
+           # print(rawColorCategories)
+           # print(colorGroupData)
+           # print(colorGroupData["group"].iloc[0])
+            
+            categoryIndexMatch[columnPair] =  dict([(intID,rawColorCategories.index[[x == category for x in rawColorCategories.values]]) for category, intID in zip(colorGroupData["group"].values,
+                                                                                                                 colorGroupData["internalID"].values)])
+            # create index matches
+            # categoryIndexMatch[columnPair] = {
+            #         internalIDs[0] : boolIdx.index[aboveZeroAndSignificant],
+            #         internalIDs[1] : boolIdx.index[belowZeroAndSignificant],
+            #         internalIDs[2] : boolIdx.index[~np.logical_or(aboveZeroAndSignificant,belowZeroAndSignificant)]
+            # }
+
+        tableTitle = mergeListToString(colorColumns.values,"\n") if colorColumns.size > 0 else "Significance"
+
+        funcProps = getMessageProps("Done..","Color coding done ..")
+        funcProps["propsData"] = scatterProps
+        funcProps["title"] = tableTitle
+        funcProps["colorGroupData"] = colorGroupData
+        funcProps["categoryIndexMatch"] = categoryIndexMatch
+        funcProps["texts"] = textKwargs
+       # print(funcProps)
+        return funcProps 
+        
+
     def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None, userMinMax = None):
         ""
      
@@ -3062,7 +3250,7 @@ class PlotterBrain(object):
 
         #get raw data
         rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
-        if colorColumnType == "Integers":
+        if colorColumnType == "Integers": #decide how to treat integers (e.g. as continous number or as a category.)
             uniqueValues = np.unique(rawData[colorColumn].values).size
             if uniqueValues > rawData.index.size * 0.75 / colorColumn.size:
                 colorColumnType = "Numeric Floats"
@@ -3083,9 +3271,7 @@ class PlotterBrain(object):
             else:
                 colorCategories = colorGroupData["group"].values
 
-            colors, layerMap = self.sourceData.colorManager.createColorMapDict(colorCategories, 
-                                                                        addNaNLevels=[(self.sourceData.replaceObjectNan,)*colorColumn.index.size],
-                                                                        as_hex=True)
+            colors, layerMap = self.getColorMapDictAndLayers(colorCategories,colorColumn.index.size) 
             colorData = pd.DataFrame(rawColorData.map(colors).values,
                                         columns=["color"],
                                         index=rawData.index)
@@ -3141,11 +3327,11 @@ class PlotterBrain(object):
             colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
             
             colorGroupData = pd.DataFrame(columns=["color","group"])
-            groupNames = ["Max ({})".format(getReadableNumber(maxV)),
-                        "75% Quantile ({})".format(getReadableNumber(q75)),
-                        "Median ({})".format(getReadableNumber(median)),
-                        "25% Quantile ({})".format(getReadableNumber(q25)),
-                        "Min ({})".format(getReadableNumber(minV)),
+            groupNames = [f"Max ({getReadableNumber(maxV)})",
+                        f"75% Quantile ({getReadableNumber(q75)})",
+                        f"Median ({getReadableNumber(median)})",
+                        f"25% Quantile ({getReadableNumber(q25)})",
+                        f"Min ({getReadableNumber(minV)})",
                         "NaN"]
             colorGroupData["color"] = colorLimitValues
             colorGroupData["group"] = groupNames
@@ -3156,12 +3342,20 @@ class PlotterBrain(object):
         self.colorColumnType = colorColumnType
        # print({"colorGroupData":colorGroupData,"propsData":colorData,"title":tableTitle,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"color"})
         
-        return {"colorGroupData":colorGroupData,"propsData":colorData,"title":tableTitle,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"color","isEditable":colorColumnType == "Categories"}
+        return {
+            "colorGroupData":colorGroupData,
+            "propsData":colorData,
+            "title":tableTitle,
+            "categoryIndexMatch":categoryIndexMatch,
+            "categoryEncoded":"color",
+            "isEditable":colorColumnType == "Categories"}
 
 
 
     def getSwarmplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
+        numCatColumns = len(categoricalColumns)
+        numNumColumns = len(numericColumns)
         #subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
         multiScatterKwargs = {}
         colorCategoryIndexMatch = {}
@@ -3174,12 +3368,149 @@ class PlotterBrain(object):
         tickLabels = {}
 
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
-
+        splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
+        replaceObjectNan = self.sourceData.replaceObjectNan
+        if numCatColumns > 3: splitByCats = False
         colorGroupsData = pd.DataFrame() 
         sizeGroupsData = pd.DataFrame()
-        numCatColumns = len(categoricalColumns)
-        numNumColumns = len(numericColumns)
-        if numCatColumns == 0:
+
+
+
+        if numCatColumns > 0 and not splitByCats:
+            rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
+            axisPostions = getAxisPosition(n = numNumColumns, maxCol=2)
+            
+            uniqueValueIndex = {}
+            tickPositionByUniqueValue = {}
+            tickPositions = {}
+            boxPositions = {} 
+            groupNames = {}
+            plotData = pd.DataFrame(rawData, index = rawData.index) 
+
+            uniqueValuesByCatColumns = OrderedDict([(categoricalColumn,[cat for cat in rawData[categoricalColumn].unique() if cat != replaceObjectNan]) for categoricalColumn in categoricalColumns])
+            uniqueValuesForCatColumns = [uniqueValuesByCatColumns[categoricalColumn]  for categoricalColumn in categoricalColumns] 
+            uniqueValuesPerCatColumn = dict([(categoricalColumn,uniqueValuesForCatColumns[n]) for n,categoricalColumn in enumerate(categoricalColumns)])
+            uniqueCategories = ["Complete"] + ["{}:({})".format(uniqueValue,k) for k,v in uniqueValuesByCatColumns.items() for uniqueValue in v]
+            colors,_ = self.sourceData.colorManager.createColorMapDict(uniqueCategories, as_hex=True)
+            flatUniqueValues = ["Complete"] + [uniqueValue for sublist in uniqueValuesForCatColumns for uniqueValue in sublist]
+            #drop "-"
+            totalNumUniqueValues = np.array(uniqueValuesForCatColumns).flatten().size
+            
+            widthBox = 1/(totalNumUniqueValues + 1)
+            border = widthBox/10
+        
+            colorGroupsData["color"] = colors.values()
+            colorGroupsData["group"] = uniqueCategories
+            colorGroupsData["internalID"] = [getRandomString() for n in colorGroupsData["color"].values]
+            
+            colorCategoricalColumn = "\n".join(categoricalColumns)
+        
+            offset = 0 + border + widthBox/2
+            tickPositionByUniqueValue["Complete"] = offset
+
+            for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items(): 
+                uniqueValueIndex[categoricalColumn] = {}
+                offset += widthBox/2 #extra offset by categorical column
+                
+                for uniqueValue in uniqueValues:
+                    offset += widthBox
+                    idxBool = rawData[categoricalColumn] == uniqueValue
+                    uniqueValueIndex[categoricalColumn][uniqueValue] = idxBool
+                    tickPositionByUniqueValue["{}:({})".format(uniqueValue,categoricalColumn)] = offset
+                    # if not uniqueValue == uniqueValues[-1]:
+                    #     offset += widthBox/5
+            offset += border + widthBox/2
+            for n,numericColumn in enumerate(numericColumns):
+            #init lists to stare props
+                columnNames = []
+                filteredData = []
+                boxPositions[n] = []
+                tickPositions[n] = []
+               # faceColors[n] = []
+                groupNames[n] = []
+                interalIDColumnPairs[n] = dict()
+                multiScatterKwargs[n] = dict()
+                # add complete data
+                X = rawData[numericColumn].dropna()
+                filteredData.append(X)
+                boxPositions[n].append(tickPositionByUniqueValue["Complete"] )
+                tickPositions[n].append(tickPositionByUniqueValue["Complete"] )
+                xName = f"{numericColumn}:Complete"
+                #faceColors[n].append(colors["Complete"])
+                groupNames[n].append("{}:Complete".format(numericColumn))
+                #add complete data
+                kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(rawData[[numericColumn]].dropna(),bandwidth = 0.75)
+                columnPair = (xName,numericColumn)
+                columnNames.extend([xName,numericColumn])
+                multiScatterKwargs[n][columnPair] = {"color": colors["Complete"]}
+                kdeData = distKDEData(kdeData) #distribute kde data
+                kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                kdeData = kdeData + tickPositionByUniqueValue["Complete"] - widthBox/4
+                data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
+                internalID = colorGroupsData.loc[colorGroupsData["group"] == "Complete"]["internalID"].values[0]
+                if internalID not in colorCategoryIndexMatch:
+                    colorCategoryIndexMatch[internalID] = kdeIndex
+                else:
+                    #because of nan removal, we have to join indices
+                    colorCategoryIndexMatch[internalID] = colorCategoryIndexMatch[internalID].join(kdeIndex, how="outer")
+                if internalID not in interalIDColumnPairs[n]:
+                    interalIDColumnPairs[n][internalID] = [columnPair]
+                else:
+                    interalIDColumnPairs[n][internalID].append(columnPair)
+                #add data to plot.
+                plotData = plotData.join(data)
+                #iterate through unique values
+                for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items():
+                    
+                    for m,uniqueValue in enumerate(uniqueValues):
+                        xName = f"x({numericColumn}:{categoricalColumn}:{uniqueValue})"
+                        colorKey ="{}:({})".format(uniqueValue,categoricalColumn)
+                        fc = colors[colorKey]
+                        idxBool = uniqueValueIndex[categoricalColumn][uniqueValue]
+                        uniqueValueFilteredData = rawData[numericColumn].loc[idxBool].dropna() 
+                        tickBoxPos = tickPositionByUniqueValue[colorKey]
+                        
+
+                        if uniqueValueFilteredData.index.size > 0:
+
+                            kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(pd.DataFrame(uniqueValueFilteredData),bandwidth = 0.75)
+                            kdeData = scaleBetween(kdeData,(0,widthBox/2))
+                            kdeData = distKDEData(kdeData) #distribute kde data
+                            kdeData = kdeData + tickBoxPos
+                            data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
+                            filteredData.append(uniqueValueFilteredData)
+                            boxPositions[n].append(tickBoxPos)
+                            tickPositions[n].append(tickBoxPos)
+                            groupNames[n].append("{}-{}".format(numericColumn,colorKey))
+                        
+                            plotData = plotData.join(data)
+                            columnNames.extend([xName,numericColumn])
+                            columnPair = (xName,numericColumn)
+                            multiScatterKwargs[n][columnPair] = {"color": fc}
+                            #saving internal id and color matches with pandas index (to allow easy manipulation)
+                           
+                            internalID = colorGroupsData.loc[colorGroupsData["group"] == colorKey]["internalID"].values[0]
+                            if internalID not in colorCategoryIndexMatch:
+                                colorCategoryIndexMatch[internalID] = kdeIndex
+                            else:
+                                #because of nan removal, we have to join indices
+                                colorCategoryIndexMatch[internalID] = colorCategoryIndexMatch[internalID].join(kdeIndex, how="outer")
+
+                            if internalID not in interalIDColumnPairs[n]:
+                                interalIDColumnPairs[n][internalID] = [columnPair]
+                            else:
+                                interalIDColumnPairs[n][internalID].append(columnPair)
+
+                numericColumnPairs[n] = tuple(columnNames)
+                #plotData[n] = {"x":filteredData}
+            nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
+            axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
+            tickLabels = dict([(n,flatUniqueValues) for n in range(numNumColumns)])
+            axisLabels = dict([(n,{"x":"Categories","y":numericColumn}) for n,numericColumn in enumerate(numericColumns)])
+            axisLimits = dict([(n,{"xLimit" : (0,offset),"yLimit":None}) for n in range(numNumColumns)])
+            
+
+        elif numCatColumns == 0:
             #get raw data
             rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
             numericColumnPairs = []

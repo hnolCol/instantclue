@@ -253,6 +253,12 @@ class MatplotlibFigure(QWidget):
         if exists:
             graph.updateScatterProps(propsData)
             graph.updateFigure.emit()
+    
+    def addTextToGraph(self,texts):
+        ""
+        exists, graph = self.mC.getGraph()
+        if exists:
+            graph.addTexts(texts)
 
     def updateQuickSelectSelectionInGraph(self,propsData):
         ""

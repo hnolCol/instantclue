@@ -14,9 +14,10 @@ from ..dialogs.ICColorChooser import ColorChooserDialog
 from ..dialogs.ICSizeDialog import ICSizeDialog
 from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
 from ..dialogs.ICNumericFilter import NumericFilter
-from ui.custom.warnMessage import WarningMessage
+from ui.custom.warnMessage import WarningMessage,AskOptionsMessage
 from ..utils import createSubMenu, createLabel
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR
+
 import seaborn as sns
 from backend.utils.stringOperations import mergeListToString
 
@@ -175,7 +176,7 @@ class SliceMarksFrame(QWidget):
                     getDragType = self.getDragType ,
                     acceptDrops=True ,
                     tooltipStr=SLICE_MARKS_TOOLTIPSTR["filter"], 
-                    acceptedDragTypes= ["Categories" , "Numeric Floats"],
+                    acceptedDragTypes= ["Categories" , "Numeric Floats", "Integers"],
                     menuFn = self.showSettingMenu,
                     menuKeyWord = "Filter")
 
@@ -334,6 +335,7 @@ class SliceMarksFrame(QWidget):
     
     def applyFilter(self, event = None, columnNames = None, dragType = None, dataID = None, filterType = "category"):
         ""            
+        
         dataFrame = self.mC.mainFrames["data"]
         if dataID is None:
             dataID = dataFrame.getDataID()
@@ -342,8 +344,20 @@ class SliceMarksFrame(QWidget):
 
         if dragType is None:
             dragType = dataFrame.getDragType()
+
+        if dragType == "Integers": 
             
-        if dragType != "Numeric Floats":
+            w = AskOptionsMessage(
+                parent=self,
+                options = ["Numeric","Categorical"],
+                infoText = "Filtering integers can be performed by applying a numeric filter (greater than, between two numbers) or categorical filter (int == 3)", 
+                title="How to filter integer column.",
+                iconDir = self.mC.mainPath)
+            if not w.exec_(): return 
+            if w.selectedOption == "Categorical":
+                dragType = "Categories"
+            
+        if dragType == "Categories":
             
                 filterType = self.mC.data.categoricalFilter.setupLiveStringFilter(dataID,columnNames, filterType = filterType)
                 if filterType == "category":

@@ -89,6 +89,14 @@ class PlotOptionFrame(QWidget):
         
         self.configButton.clicked.connect(self.openConfig)
 
+    def _addSplitCategoryMenu(self, menu):
+        ""
+        currentParamState = self.mC.config.getParam("boxplot.split.data.on.category")
+        if currentParamState:
+            menu["main"].addAction("Disable split by category", self.handleSplitOfDataByCategory)
+        else:
+            menu["main"].addAction("Enable split by category", self.handleSplitOfDataByCategory)
+
     def updateTypeSpecMenus(self):
         ""
         self.typeMenus = {}
@@ -145,7 +153,7 @@ class PlotOptionFrame(QWidget):
         #swarmplot menu 
         menu = createSubMenu(subMenus=[])
         for paramName,actionName in [("xy.plot.show.marker",{False:"Show markers",True:"Hide markers"}),
-                                     ("xy.plot.against.index",{False:"Against index",True:"Against column"})]:
+                                     ("xy.plot.against.index",{False:"Plot vs index",True:"Plot vs column"})]:
             currentState = self.mC.config.getParam(paramName)
             action = menu["main"].addAction(actionName[currentState])
             action.triggered.connect( lambda _, paramName = paramName,actionName = actionName: self.changeXYParams(paramName,actionName) )
@@ -157,19 +165,16 @@ class PlotOptionFrame(QWidget):
 
         menu = createSubMenu(subMenus=["Outliers .. "])
         menu["Outliers .. "].addAction("Hide", self.hideOutliersInBoxplot)
-        currentParamState = self.mC.config.getParam("boxplot.split.data.on.category")
-        if currentParamState:
-            menu["main"].addAction("Disable split by category", self.handleSplitOfDataByCategory)
-        else:
-            menu["main"].addAction("Enable split by category", self.handleSplitOfDataByCategory)
+        self._addSplitCategoryMenu(menu)
         self.typeMenus["boxplot"] = menu["main"]
+        self.typeMenus["boxenplot"] = menu["main"]
 
 
         #barplot menu 
         menu = createSubMenu(subMenus=["Error bars .. "])
         for errorType in ["Std","CI (95%)", "CI (90%)", "CI (85%)","CI (75%)", "SEM-CI (68%)"]:
             menu["Error bars .. "].addAction(errorType, self.setPlotError)
-        
+        self._addSplitCategoryMenu(menu)
         self.typeMenus["barplot"] = menu["main"]
 
         #pointplot menu 
@@ -280,8 +285,8 @@ class PlotOptionFrame(QWidget):
             self.sender().mouseLostFocus()
         senderGeom = self.sender().geometry()
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
+        self.updateTypeSpecMenus()
 
- 
         if menu is not None and hasattr(menu,"exec_"):
 
             menu.exec_(bottomLeft )

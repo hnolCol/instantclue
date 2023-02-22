@@ -32,6 +32,13 @@ funcPropControl = {
                             addDataAndRefresh
         },
 
+    "data::annotateDataByIndicies":
+        {
+            "threadRequest":{"obj":"data","fn":"addAnnotationColumnByIndex","requiredKwargs":["dataID", "indices", "columnName"]},
+            "completedRequest": 
+                            [updateTreeView,
+                            sendMessageProps]
+        }, 
     "data::renameDataFrame":
         {
             "threadRequest":{"obj":"data","fn":"setFileNameByID","requiredKwargs":["dataID","fileName"]},
@@ -335,7 +342,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"fillNaNBy","requiredKwargs":["dataID","columnNames","fillBy"]},
             "completedRequest":
-                    [sendMessageProps]
+                    refreshColumnView
         },
 
     "copyDataFrameByIdToClipboard":
@@ -860,11 +867,23 @@ funcPropControl = {
                 sendMessageProps
             ]           
         },
+     "plotter:getScatterColorGroupsForVolcano": 
+        {
+            "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsForVolcanoModeScatter","requiredKwargs":["dataID","significantColumns", "numericColumns", "columnPairs","colorColumns"]},
+            "completedRequest":[
+                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"addTextToGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["texts"]},
+                {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
+                {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
+                sendMessageProps
+            ]           
+        },
     "plotter:getScatterColorGroups": 
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsDataForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
                 {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"addTextToGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["texts"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                 sendMessageProps

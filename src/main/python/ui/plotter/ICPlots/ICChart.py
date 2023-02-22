@@ -51,10 +51,12 @@ class ICChart(QObject):
 		self.colorCategoryIndexMatch = None
 		self.sizeCategoryIndexMatch = None
 		self.quickSelectCategoryIndexMatch = None
+		self.volcanoPlotStyleActivate = False 
 		self.tooltipActive = False
 		self.statTestEnabled = False
 		self.statData = dict()
 		self.quickSelectScatterDataIdx = dict()
+		self.textAnnotations = {}
 		self.requiredKwargs = []
 		self.tooltipColumnNames = []
 		
@@ -186,6 +188,22 @@ class ICChart(QObject):
 			kwargs["fontproperties"] = self.getStdFontProps()#"fontproperties"
 		ax.text(*args,**kwargs)
 
+	def addTexts(self,texts, axisTransform = True, onlyForID = None, targetAx = None):
+		""
+		for n, textKwargs in texts.items():
+			if onlyForID is not None and n != onlyForID:
+				continue
+
+			if n in self.axisDict:
+				if onlyForID is not None:
+					ax = targetAx
+				else:
+					ax = self.axisDict[n]
+				if isinstance(textKwargs,list):
+					for kws in textKwargs:
+						self.addText(ax,axisTransform, **kws)
+		if onlyForID is None:
+			self.textAnnotations = texts
 
 	def addTitles(self, fancyTitle = True, onlyForID = None, targetAx = None, *args, **kwargs):
 		""
@@ -1138,14 +1156,15 @@ class ICChart(QObject):
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
 
-	def centerXToZero(self):
+	def centerXToZero(self, update=True):
 		""
 		axes = list(self.axisDict.values())
 		xLims = np.array([ax.get_xlim() for ax in axes])
 		maxXLim = np.max(np.abs(xLims))
 		for ax in axes:
 			self.setAxisLimits(ax, xLimit=(-maxXLim,maxXLim))
-		self.updateFigure.emit() 
+		if update:
+			self.updateFigure.emit() 
 
 
 	def rawAxesLimits(self):
@@ -1387,6 +1406,11 @@ class ICChart(QObject):
 		if hasattr(self.mC,"mainFrames"):
 			return self.mC.mainFrames["data"].qS.hasData()
 		return False
+
+
+	def isVolcanoPlotStylingActive(self):
+		""
+		return self.volcanoPlotStyleActivate and self.hasScatters() and self.plotType == "scatter"
 
 	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
@@ -1872,15 +1896,24 @@ class ICChart(QObject):
 		if self.hasScatters():
 			for scatterPlot in self.scatterPlots.values():
 				scatterPlot.updateScatterPropSection(idx,value,propName)
+	
+	def updateScatterPropSectionByScatterplot(self,scatterPlot,idx,value,propName = "color"):
+		""
+		scatterPlot.updateScatterPropSection(idx,value,propName)
 
 	def updateScatterProps(self,propsData):
 		""
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
 				self.addColorLegendToGraph(self.getDataInColorTable(),title=self.getTitleOfColorTable(),update=False)
-			
-			for scatterPlot in self.scatterPlots.values():
-				scatterPlot.updateScatterProps(propsData)	
+			if isinstance(propsData,pd.DataFrame):
+				for scatterPlot in self.scatterPlots.values():
+					scatterPlot.updateScatterProps(propsData)	
+			else:
+				for columnPair, scatterPlot in self.scatterPlots.items():
+					if columnPair in propsData and isinstance(propsData[columnPair],pd.DataFrame):
+						
+						scatterPlot.updateScatterProps(propsData[columnPair])
 
 	def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
 		""

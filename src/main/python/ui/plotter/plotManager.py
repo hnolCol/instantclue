@@ -57,6 +57,11 @@ class ICPlotter(object):
             return True
 
         return False
+
+    def getGraph(self):
+        ""
+        if hasattr(self,"graph"):
+            return self.graph
         
     def clearFigure(self):
         ""

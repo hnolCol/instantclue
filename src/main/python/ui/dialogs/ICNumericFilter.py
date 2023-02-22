@@ -257,14 +257,13 @@ class NumericFilter(QDialog):
         
         self.mC = mainController
         self.dataID = self.mC.mainFrames["data"].getDataID()
-        self.numericColumns = self.mC.data.getNumericColumns(self.dataID)
+        self.numericColumns = pd.concat([self.mC.data.getNumericColumns(self.dataID), self.mC.data.getIntegerColumns(self.dataID)])
         
         self.selectedNumericColumn = selectedNumericColumn
         
         self.filterProps = OrderedDict() 
         self.CBFilterOptions = OrderedDict()
 
-        
         self.__controls()
         self.__layout()
         self.__connectEvents()
@@ -279,12 +278,10 @@ class NumericFilter(QDialog):
         self.titleLabel = createTitleLabel("Numeric Filter")
         self.filterLabel = createLabel("Filter on: ", fontSize = 12)
         self.columnNameCombo = createCombobox(self, items = self.numericColumns.values.tolist())
-
         self.operatorLabel = createLabel("Operator: ", fontSize = 12)
         self.operatorCombo = createCombobox(self,items = self.mC.numericFilter.getOperatorOptions())
         self.operatorCombo.setCurrentText(self.mC.numericFilter.getOperator())
         self.operatorCombo.currentTextChanged.connect(self.setOperator)
-
         self.scrollArea = ICSCrollArea(parent=self,getUpdatabelWidgets=self.sendUpdatabelWidgets)
         
         self.scrollFrame = QFrame(parent=self.scrollArea) 

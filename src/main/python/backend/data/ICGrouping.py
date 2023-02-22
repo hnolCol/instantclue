@@ -71,7 +71,10 @@ class ICGrouping(object):
         "Add grouping to collection"
         if groupingName in self.groups and overwrite:
             self.deleteGrouping(groupingName)
-        
+        if isinstance(groupedItems,list): #if fetched from MitoCube, or loaded from json.
+            print("this is done.")
+            groupedItems = pd.Series(groupedItems)
+
         self.groups[groupingName] = groupedItems
         self.addCmap(groupingName,groupedItems,colorMap)
 
@@ -197,8 +200,7 @@ class ICGrouping(object):
     def getColumnNamesFromGroup(self, groupingName):
         ""
         if groupingName in self.groups:
-            cNames = pd.Series()
-            cNames = cNames.append(list(self.groups[groupingName].values()))
+            cNames = pd.concat(list(self.groups[groupingName].values()),ignore_index=True)
             return cNames
         return pd.Series()
 
@@ -337,14 +339,23 @@ class ICGrouping(object):
             return dict([(groupingName,self.getGroupColors(groupingName)) for groupingName in groupingNames if groupingName in self.groups])
         else:
             return {}
+
     def getGroupColors(self, groupingName = None):
         ""
         if groupingName is None:
             groupingName = self.currentGrouping
+
         if groupingName in self.groupCmaps:
             
             mapper = self.groupCmaps[groupingName]
-            colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[groupingName].keys())])
+            try:
+                colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[groupingName].keys())])
+            except AttributeError: #missing _norm 
+                #re craete the mapper (version incompatible)
+                colorMap = self.getColorMap(groupingName)
+                self.addCmap(groupingName,self.groups[groupingName],colorMap)
+                mapper = self.groupCmaps[groupingName]
+                colors = dict([(groupName,to_hex(mapper.to_rgba(x))) for x,groupName in enumerate(self.groups[groupingName].keys())])
             return colors
 
     def getFactorizedColumns(self, groupingName = None):
@@ -392,8 +403,8 @@ class ICGrouping(object):
         "Updates items in groups based on a columnNameMapper dict (oldName,newName)"
         prevColumnNames = list(columnNameMapper.keys())
         newColumnNames = list(columnNameMapper.values())
-        for groupingName, groups in self.groups.items():
-            for groupName, items in groups.items():
+        for groups in self.groups.values():
+            for items in groups.values():
                 items.replace(to_replace = prevColumnNames,value = newColumnNames,inplace=True)
 
     def exportGroupingToJson(self,groupingNames, filePath):

@@ -121,6 +121,11 @@ menuBarItems = [
     },
     {
         "subM":"File",
+        "name":"Load dataset from MitoCube",
+        "fn": {"obj":"self","fn":"fetchDataFromMitoCube","objName":"mainFrames","objKey":"data"}      
+    },
+    {
+        "subM":"File",
         "name":"Load session",
         "fn": {"obj":"self","fn":"loadSession","objName":"mainFrames","objKey":"data"}
     },

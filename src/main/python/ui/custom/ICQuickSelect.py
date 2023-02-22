@@ -421,7 +421,7 @@ class QuickSelect(QWidget):
         else:
             self.mC.sendMessageRequest({"title":"Error ..","message":"Only supported for raw selection mode."})
 
-    def exportSelectionToClipbard(self,event=None, attachColumns = False):
+    def exportSelectionToClipboard(self,event=None, attachColumns = False):
         ""
 
         selectionData = self.model.getCompleteSelectionData(attachSizes=True)
@@ -638,7 +638,7 @@ class QuickSelect(QWidget):
 
     def resetClipping(self):
         "Resets Clipping"
-        if "dataID" in self.quickSelectProps:
+        if "dataID" in self.quickSelectProps and self.selectionMode != "annotate":
             funcProps = {"key":"data::resetClipping","kwargs":{"dataID":self.quickSelectProps["dataID"]}}
             self.sendToThreadFn(funcProps)
 
@@ -1180,7 +1180,7 @@ class QuickSelectTableView(QTableView):
     def exportSelectionClipboard(self):
         ""
         attachColumns = "all columns" in self.sender().text() 
-        self.parent().exportSelectionToClipbard(attachColumns = attachColumns)
+        self.parent().exportSelectionToClipboard(attachColumns = attachColumns)
 
     @pyqtSlot()
     def exportSelectionToData(self):

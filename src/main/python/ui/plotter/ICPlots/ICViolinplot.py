@@ -1,6 +1,7 @@
  
 from .ICChart import ICChart
 from collections import OrderedDict
+import matplotlib.patches as patches
 import numpy as np 
 import pandas as pd
 class ICViolinplot(ICChart):
@@ -37,16 +38,31 @@ class ICViolinplot(ICChart):
 
     def addQuantileLine(self, onlyForID = None, targetAx = None):
         ""
+        showQuantiles = self.getParam("violin.show.quantiles")
+        if not showQuantiles:
+            return 
+        edgeColor = self.getParam("violin.show.quantiles.box.edgecolor")
+        edgeWidth = self.getParam("violin.show.quantiles.box.linewidth")
+        faceColor = self.getParam("violin.show.quantiles.box.facecolor")
+        alpha = self.getParam("violin.show.quantiles.box.alpha")
+        showBox = self.getParam("violin.show.quantiles.box")
         for n, lProps in self.data["quantileLine"].items():
             if onlyForID is not None and targetAx is not None and n == onlyForID:
-                for x,ymin,ymax in lProps:
-                    targetAx.vlines(x,ymin,ymax,color="black",lw=2,ls = "-")
+                ax = targetAx
             elif onlyForID is not None:
                 continue
+            elif n not in self.axisDict:
+                continue
             else:
-                if n in self.axisDict:
-                    for x,ymin,ymax in lProps:
-                        self.axisDict[n].vlines(x,ymin,ymax,color="black",lw=2,ls = "-")
+                ax = self.axisDict[n]
+
+            for x,ymin,ymax in lProps:
+                if  showBox:
+                    r = patches.Rectangle(xy=(x-0.1,ymin), width=0.2, height = ymax-ymin, ec = edgeColor, linewidth=edgeWidth, facecolor=faceColor, alpha=alpha)
+                    ax.add_patch(r)
+                else:
+                    ax.vlines(x,ymin,ymax,color=edgeColor,lw=2,ls = "-")
+                        
 
     def initViolinplots(self, onlyForID = None, targetAx = None):
         ""
