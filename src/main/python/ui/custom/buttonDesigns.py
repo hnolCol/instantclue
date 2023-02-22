@@ -351,7 +351,7 @@ class PushHoverButton(QPushButton):
     def getMainLabelRect(self,x0,y0,w,h):
         ""
         
-        return QRectF(QPointF(x0-w/2,y0+h/3),QPointF(w,h/1.5))
+        return QRectF(QPointF(x0-w/2,y0+h/2),QPointF(w,h/2))
 
     def dragEnterEvent(self,event):
         "Check if drag items is of correct datatype"

@@ -2637,7 +2637,7 @@ DEFAULT_PARAMETER = [
     }, 
     {
     "name"          :   "pointplot.edgecolor.as.line",
-    "value"         :   False,
+    "value"         :   True,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
