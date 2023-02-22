@@ -2073,25 +2073,40 @@ class PlotterBrain(object):
                     displayGrouping = False,
                     distanceBetweenClusterMapAndColor = 25):
         ""
-        x0,y0 = 0.04,0.15
-        x1,y1 = 0.95,0.95
-        labelHeight = 0.15
-        width = x1-x0
-        if corrMatrix:
-            height = y1-y0-labelHeight
-        else:
-            height = y1-y0
-        
-        #multWidth = 0.4
-        pixelFigureWidth = figureSize["width"]
-        pixelFigureHeight = figureSize["height"]
         pixelPerColumn = self.sourceData.parent.config.getParam("pixel.width.per.column")
         squareRectangles = self.sourceData.parent.config.getParam("pixel.height.equals.width")
+        pixelBorderBottom = self.sourceData.parent.config.getParam("hclust.pixel.border.bottom")
+        pixelBorderTop = self.sourceData.parent.config.getParam("hclust.pixel.border.top")
+        pixelBorderLeft = self.sourceData.parent.config.getParam("hclust.pixel.border.left")
+        pixelFigureWidth = figureSize["width"]
+        pixelFigureHeight = figureSize["height"]
+        x0,y0 = 0,0
+        x1,y1 = 1,1
+        if pixelBorderBottom < pixelFigureHeight:
+            bottomLabelMargin = pixelBorderBottom / pixelFigureHeight
+        else:
+            bottomLabelMargin = 0.15
+
+        if pixelBorderBottom < pixelFigureHeight:
+            topMargin = pixelBorderTop/ pixelFigureHeight
+        else:
+            topMargin = 0.22
+
+        leftMargin = pixelBorderLeft/pixelFigureWidth
+        if leftMargin > 0.5:
+            leftMargin = 0.15
+
+        width = x1-x0-leftMargin
+        height = y1-y0-bottomLabelMargin-topMargin
+        
+        #multWidth = 0.4
+       
+        
         maxPixelForHeatmap = (width - 0.1) * pixelFigureWidth #0.1 = min margin
         maxPixelHeightHeatmap = height * pixelFigureHeight
         
         if not corrMatrix:
-            heightMain = height * 0.8 
+            heightMain = height
      
         
         if maxPixelForHeatmap < len(numericColumns) * pixelPerColumn:
@@ -2122,9 +2137,11 @@ class PlotterBrain(object):
                 heightMain = pixelRelativeHeight
          
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
-            
-        y0 = 1 - heightMain - 0.22 #bit of margin
-            
+        if not corrMatrix:
+            y0 = bottomLabelMargin
+        else:
+            y0 = 1 - heightMain - topMargin
+        x0 = leftMargin
         #widthPer pixelWidth / len(numericColumns)
         #correctHeight = 1
         # emperically determined to give almost equal width independent of number of columns 
