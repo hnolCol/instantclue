@@ -8,7 +8,7 @@ cycler==0.11.0
 Cython==0.29.32
 fastcluster==1.2.6
 fonttools==4.37.3
-future==0.18.2
+future==0.18.3
 hdbscan==0.8.28
 idna==3.4
 joblib==1.1.0
