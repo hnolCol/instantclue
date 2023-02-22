@@ -16,6 +16,8 @@ class ICCountplot(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
+        menus["main"].addAction("Show subset", self.openDataInDialog)
+        menus["main"].addAction("Annotate subset.", self.annotateSubsetInData)
         menus["main"].addAction("Show count data", self.openCountDataInDialog)
 
 
@@ -70,6 +72,27 @@ class ICCountplot(ICChart):
                         edgecolor = "black",
                         facecolor = "#f2f2f2" if n % 2 == 0 else "#c9c9c9")
             self.axisDict[1].add_patch(r)
+
+
+    def annotateSubsetInData(self):
+        "Annotate the features behind a categorical count plot in the source data."
+        if hasattr(self,"idx") and self.idx is not None and "hoverData" in self.data and "dataID" in self.data: 
+            dataIndex = self.data["hoverData"][self.idx]
+            categories = self.data["chartData"].iloc[self.idx].loc[[columnName for columnName in self.data["chartData"].columns if columnName != "counts"]]
+            dataID = self.data["dataID"]
+            columnNameProps = [f"{columName}: {categoricalValue}" for columName,categoricalValue in zip(categories.index,categories.values)]
+            funcProps = {
+                "key" : "data::annotateDataByIndicies",
+                "kwargs" : {
+                    "dataID" : dataID,
+                    "indices" : dataIndex,
+                    "columnName" : " ".join(columnNameProps),
+
+                }
+            }
+
+            self.mC.sendRequestToThread(funcProps)
+
 
     def getLineKwargs(self):
         ""
@@ -159,33 +182,49 @@ class ICCountplot(ICChart):
         if event.inaxes is None:
            # self.setHoverObjectsInvisible()
             #self.drawBackgrounds()
+            self.idx = None
             return
 
-        if self.isLiveGraphActive() or self.isQuickSelectActive():
-            ax = event.inaxes
-            
-            if ax == self.axisDict[0]:
-                itemIdx = [n for n,rect in enumerate(self.rects) if rect.contains(event)[0]]                
-            else:
-                itemIdx = [idx for idx,line in self.lineplotItems.items() if line.contains(event)[0]]
-                
-            if len(itemIdx) == 0:
-                self.setHoverObjectsInvisible()
-                self.drawBackgrounds()
-                return
-            idx = itemIdx[0]
-            self.updateHoverLineData(self.axisDict[1],idx)
-            self.updateHoverBar(self.axisDict[0],idx)
-           
-            if isinstance(event.ydata,float):
-                self.updateHoverBar(self.axisDict[2],int(event.ydata+0.5),self.rects2)
+        ax = event.inaxes
         
-            dataIndex = self.data["hoverData"][idx]
+        if ax == self.axisDict[0]:
+            itemIdx = [n for n,rect in enumerate(self.rects) if rect.contains(event)[0]]                
+        else:
+            itemIdx = [idx for idx,line in self.lineplotItems.items() if line.contains(event)[0]]
             
-            if self.isQuickSelectActive():
-                self.sendIndexToQuickSelectWidget(dataIndex)
-            if self.isLiveGraphActive():
-                self.sendIndexToLiveGraph(dataIndex)
+        if len(itemIdx) == 0:
+            self.setHoverObjectsInvisible()
+            self.drawBackgrounds()
+            self.idx = None
+            return
+        self.idx = itemIdx[0]
+        
+        self.updateHoverLineData(self.axisDict[1],self.idx )
+        self.updateHoverBar(self.axisDict[0],self.idx )
+        
+        if isinstance(event.ydata,float) and event.inaxes == self.axisDict[1]: #if hover over bottom (scatter ax) -> show hover in right bar graph.
+            self.updateHoverBar(self.axisDict[2],int(event.ydata+0.5),self.rects2)
+
+        dataIndex = self.data["hoverData"][self.idx]
+        
+        if self.isQuickSelectActive():
+            self.sendIndexToQuickSelectWidget(dataIndex)
+        if self.isLiveGraphActive():
+            self.sendIndexToLiveGraph(dataIndex)
+
+    def openDataInDialog(self):
+        ""
+        if self.idx is not None:
+            
+            dataIndex = self.data["hoverData"][self.idx]
+            dataID = self.data["dataID"]
+            columnNames = self.mC.data.getPlainColumnNames(dataID)
+            dataToShow = self.mC.data.getDataByColumnNames(dataID,columnNames,ignore_clipping=False)["fnKwargs"]["data"].loc[dataIndex,:]
+            self.mC.mainFrames["data"].openDataFrameinDialog(dataToShow,
+                                                            ignoreChanges=True, 
+                                                            headerLabel="Data in countplot", 
+                                                            )
+
 
     def openCountDataInDialog(self):
         ""
@@ -210,6 +249,7 @@ class ICCountplot(ICChart):
             rect = self.rects[idx]
             hoverRectangle = self.hoverRectangle
         else:
+            #rects is given -> can be applied to any ax.
             rect = rects[idx]   
             hoverRectangle = self.hoverRectangle2    
     # self.hoverRectangle.update_from(rect)
@@ -225,9 +265,7 @@ class ICCountplot(ICChart):
     def setHoverData(self,dataIndex, showText = False):
         ""
         idxHover = []
-       # print(dataIndex)
-       # if dataIndex in self.data["plotData"].index:
-        #find index
+
         ax = self.axisDict[1]
         if ax in self.axBackground:
             idxHover = [idx for idx,data in self.data["hoverData"].items() if any(x in data for x in dataIndex)]

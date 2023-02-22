@@ -87,6 +87,7 @@ class CollapsableFrames(QWidget):
     def addContentArea(self, frameID, contentLayout, frameOpen = True):
         ""
         height = self.frameInitHeight if frameOpen else 0
+        
         contentArea = QScrollArea(self)
         contentArea.setWidgetResizable(True)
         contentArea.setStyleSheet("""QScrollArea {background-color: white;border:None};""")

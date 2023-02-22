@@ -250,7 +250,7 @@ class LabelTableModel(QAbstractTableModel):
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
 
     def rowRangeChange(self,row1, row2):
-        ""
+        "Emit event upon row change"
         self.dataChanged.emit(self.index(row1,0),self.index(row2,self.columnCount()-1))
 
     def rowDataChanged(self, row):
@@ -259,7 +259,7 @@ class LabelTableModel(QAbstractTableModel):
 
     def resetView(self):
         ""
-        self._labels = pd.Series()
+        self._labels = pd.Series(dtype="object")
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 

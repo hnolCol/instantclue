@@ -51,10 +51,12 @@ class ICChart(QObject):
 		self.colorCategoryIndexMatch = None
 		self.sizeCategoryIndexMatch = None
 		self.quickSelectCategoryIndexMatch = None
+		self.volcanoPlotStyleActivate = False 
 		self.tooltipActive = False
 		self.statTestEnabled = False
 		self.statData = dict()
 		self.quickSelectScatterDataIdx = dict()
+		self.textAnnotations = {}
 		self.requiredKwargs = []
 		self.tooltipColumnNames = []
 		
@@ -186,6 +188,22 @@ class ICChart(QObject):
 			kwargs["fontproperties"] = self.getStdFontProps()#"fontproperties"
 		ax.text(*args,**kwargs)
 
+	def addTexts(self,texts, axisTransform = True, onlyForID = None, targetAx = None):
+		""
+		for n, textKwargs in texts.items():
+			if onlyForID is not None and n != onlyForID:
+				continue
+
+			if n in self.axisDict:
+				if onlyForID is not None:
+					ax = targetAx
+				else:
+					ax = self.axisDict[n]
+				if isinstance(textKwargs,list):
+					for kws in textKwargs:
+						self.addText(ax,axisTransform, **kws)
+		if onlyForID is None:
+			self.textAnnotations = texts
 
 	def addTitles(self, fancyTitle = True, onlyForID = None, targetAx = None, *args, **kwargs):
 		""
@@ -274,6 +292,7 @@ class ICChart(QObject):
 					data = self.data["hoverData"][axisID]["x"][nearestIdx]
 
 				groupName = self.data["groupNames"][axisID][nearestIdx]
+
 				self.saveStatData(axisID,event.ydata, xdata, data, nearestIdx, groupName)
 	
 	
@@ -388,6 +407,7 @@ class ICChart(QObject):
 		group1, group2 = self.statData["groupName"]
 		statGroupByGroups = self.statCollection.groupby(["Group1","Group2"]).groups
 		if (group1,group2) in statGroupByGroups or (group2,group1) in statGroupByGroups:
+			
 			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2), iconDir = self.mC.mainPath)
 			w.exec_()
 			return False
@@ -1041,12 +1061,20 @@ class ICChart(QObject):
 				ax = self.axisDict[n]
 				self.addLine(ax,lineKwargs["xdata"],lineKwargs["ydata"],None)
 		
-	def addTooltip(self):
+	def addTooltips(self):
 		""
+		
 		for ax in self.axisDict.values():
 			if ax in self.hoverGroupItems:
 				self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
 	
+	def adjustColorsInTooltip(self,intID,color):
+		""
+		for ax in self.axisDict.values():
+			if ax in self.hoverGroupItems:
+				
+				self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
+
 	def addYLimChangeEvent(self,ax,callbackFn):
 		""
 		self.onYLimChange = \
@@ -1064,7 +1092,6 @@ class ICChart(QObject):
 			
 			if hasattr(self,"swarmData") and onlyForID is not None and hasattr(self,"swarmScatterKwargs"):
 				for n, scatter in self.swarmScatter.items():
-					print("SCA",scatter.getScatterInvisibility())
 					if not scatter.getScatterInvisibility():
 						#if visibility is Flase -> dont plot anything
 						return
@@ -1082,7 +1109,6 @@ class ICChart(QObject):
 							interactive = False,
 							adjustLimits = False
 							)
-				#print("reached")
 			elif hasattr(self,"swarmData"):
 				#if swarm data are present -> just toggle visibility of swarm scatters#
 				#setting swarm invisisble
@@ -1130,14 +1156,15 @@ class ICChart(QObject):
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
 
-	def centerXToZero(self):
+	def centerXToZero(self, update=True):
 		""
 		axes = list(self.axisDict.values())
 		xLims = np.array([ax.get_xlim() for ax in axes])
 		maxXLim = np.max(np.abs(xLims))
 		for ax in axes:
 			self.setAxisLimits(ax, xLimit=(-maxXLim,maxXLim))
-		self.updateFigure.emit() 
+		if update:
+			self.updateFigure.emit() 
 
 
 	def rawAxesLimits(self):
@@ -1164,7 +1191,6 @@ class ICChart(QObject):
 	def getDataForWebApp(self):
 		""
 		
-
 
 	def alignLimitsOfAllAxes(self, updateFigure = True):
 		""
@@ -1230,8 +1256,6 @@ class ICChart(QObject):
 	
 	def removeAnnotationsFromGraph(self):
 		""
-		
-		
 	
 	def determinePosition(self,x,y):
 		'''
@@ -1383,6 +1407,11 @@ class ICChart(QObject):
 			return self.mC.mainFrames["data"].qS.hasData()
 		return False
 
+
+	def isVolcanoPlotStylingActive(self):
+		""
+		return self.volcanoPlotStyleActivate and self.hasScatters() and self.plotType == "scatter"
+
 	def mirrorAxis(self,targetAx, figID, sourceAx = None, exportAxisID = 0):
 		""
 		
@@ -1434,7 +1463,6 @@ class ICChart(QObject):
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
 
 		except Exception as e:
-			print("an errror in mirroring")
 			print(e)
 
 	def mirrorExtraLines(self,sourceAx,targetAx):
@@ -1771,6 +1799,16 @@ class ICChart(QObject):
 		if hasattr(self,"hoverScatter") and isinstance(self.hoverScatter,dict):
 			for scatter in self.hoverScatter.values():
 				scatter.set_visible(False)
+		if hasattr(self,"tooltips") and len(self.tooltips) > 0:
+			for tooltip in self.tooltips.values():
+				tooltip.setInvisible()
+
+	def setOtherTooltipsInivsible(self,mouseOverAx):
+		""
+		for ax, tooltip in self.tooltips.items():
+			if mouseOverAx != ax:
+				tooltip.setInvisible(update=False)
+
 
 	def setQuickSelectScatterInvisible(self):
 		""
@@ -1858,15 +1896,24 @@ class ICChart(QObject):
 		if self.hasScatters():
 			for scatterPlot in self.scatterPlots.values():
 				scatterPlot.updateScatterPropSection(idx,value,propName)
+	
+	def updateScatterPropSectionByScatterplot(self,scatterPlot,idx,value,propName = "color"):
+		""
+		scatterPlot.updateScatterPropSection(idx,value,propName)
 
 	def updateScatterProps(self,propsData):
 		""
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
 				self.addColorLegendToGraph(self.getDataInColorTable(),title=self.getTitleOfColorTable(),update=False)
-			
-			for scatterPlot in self.scatterPlots.values():
-				scatterPlot.updateScatterProps(propsData)	
+			if isinstance(propsData,pd.DataFrame):
+				for scatterPlot in self.scatterPlots.values():
+					scatterPlot.updateScatterProps(propsData)	
+			else:
+				for columnPair, scatterPlot in self.scatterPlots.items():
+					if columnPair in propsData and isinstance(propsData[columnPair],pd.DataFrame):
+						
+						scatterPlot.updateScatterProps(propsData[columnPair])
 
 	def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
 		""
@@ -1874,7 +1921,6 @@ class ICChart(QObject):
 			if self.isQuickSelectModeUnique():
 
 				scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
-				print(scatterSizes)
 
 			elif ax in self.quickSelectScatterDataIdx and "idx" in self.quickSelectScatterDataIdx[ax]: #mode == "raw"
 
@@ -1905,7 +1951,7 @@ class ICChart(QObject):
 		
 		return scatterSizes, scatterColors, self.quickSelectScatterDataIdx[ax]["idx"]
 
-		# print(intIDs)
+		
 		# for intID, colorValue, sizeValue in quickSelectGroup[["internalID","color","size"]].values:
 		# #for intID, indics in self.quickSelectCategoryIndexMatch.items():
 		# 	indics = self.quickSelectCategoryIndexMatch[intID]
@@ -1995,9 +2041,9 @@ class ICChartToolTip(object):
 		'''
 		artistProp - dict. 
 			Must have keys : 'artists','colors','texts'. 
-			Value must be dicts in form of {key1 : color1, key2 : color2}
+			Values must be dicts in form of {key1 : color1, key2 : color2}
 		'''
-
+		
 		self.plotter = plotter
 		self.r = self.plotter.f.canvas.get_renderer()
 		self.ax = ax
@@ -2019,8 +2065,8 @@ class ICChartToolTip(object):
 		backgroundUpdate = False
 		for artistID, artist in self.artistProps["artists"].items():
 			currentColor = self.getColor(artist)
-			#print(currentColor)
 			targetColor = to_rgba(self.artistProps["colors"][artistID])
+			#order is important here!
 			if self.currentArtist is None and currentColor != targetColor:
 				self.changeColor(artist,targetColor)
 				backgroundUpdate = True
@@ -2034,15 +2080,13 @@ class ICChartToolTip(object):
 				backgroundUpdate = True
 		if backgroundUpdate:
 			self.update_background()
-	
-	
-
 			
 	def buildTooltip(self):
 		'''
 		'''
 		self.tooltip = self.ax.text(s ='', bbox=self.bboxProps,**self.textProps)
 		self.textProps['text'] = ''
+
 
 	def changeColor(self,artist,color):
 		"Set color of artis"
@@ -2051,19 +2095,27 @@ class ICChartToolTip(object):
 		elif hasattr(artist,'set_color'):
 					artist.set_color(color)			
 
-	
+
+	def adjustArtistPropsByInternalID(self,intID,color):
+		"Updates color, if user changes color"
+		if not "internalID" in self.artistProps: return
+		if intID in self.artistProps["internalID"]:
+			artistsIDs = self.artistProps["internalID"][intID]
+			for artistID in artistsIDs: # iterate over all artists that are affected
+				if artistID in self.artistProps["colors"]:
+					self.artistProps["colors"][artistID] = color	
 
 	def evaluateEvent(self,event):
 		'''
 		'''
-		
 		artistContEvent = [artistID for artistID, artist in self.artistProps['artists'].items() if artist.contains(event)[0]]
 		if len(artistContEvent) == 0:
 			#mouse is not over any artist
-			self.setInvisible(update=False)
+			self.setInvisible(update=True)
 			self.currentArtist = None
 			#update colors to default colors
 			self.adjustColor()
+
 			return
 
 		else:
@@ -2131,6 +2183,7 @@ class ICChartToolTip(object):
 			if hasattr(self,'background'):
 				self.setInvisible()
 			self.plotter.redraw()
+			
 		self.background =  self.plotter.f.canvas.copy_from_bbox(self.ax.bbox)
 		
 	def updateAxis(self):
@@ -2143,9 +2196,11 @@ class ICChartToolTip(object):
 			
 	def extractAxisProps(self):
 		'''
+		Extract axis properties (xlim, ylim) to scale tooltip.
 		'''
+		if not hasattr(self,"axProps"):
+			self.axProps = dict()
 	
-		self.axProps = dict()
 		self.axProps['xlim'] = self.ax.get_xlim()
 		self.axProps['ylim'] = self.ax.get_ylim()
 		self.axProps['xDiff'] = self.axProps['xlim'][1] - self.axProps['xlim'][0]
@@ -2156,17 +2211,19 @@ class ICChartToolTip(object):
 		'''
 		Check how to align the tooltip.
 		'''
-			
+
 		if self.update:
 			self.extractTextDim()
-			
+		# precaution, when axis is rescaled
+		self.extractAxisProps()
+
 		xMin,xMax = self.axProps['xlim']
 		yMin,_ = self.axProps['ylim']
 		
 		width  = self.width
 		height = self.height
 		
-		diff = (xMin-xMax)*0.05	
+		diff = (xMin-xMax)*0.01
 		
 		if x + width > xMax - 0.1*xMax and x > sum(self.axProps['xlim'])/2:
 			 self.textProps['ha'] = 'right'
@@ -2209,11 +2266,19 @@ class ICChartToolTip(object):
 		Define text properties
 		'''
 		self.textProps = {'x':0,'y':0,
-						 'fontname':'Verdana',
+						 'fontname':'Arial',
 						 'linespacing': 1.5,
 						 'visible':False,
+						 #"fontproperties": self.getStdFontProps(),
 						 'zorder':1e9}
-		
+
+	def getStdFontProps(self):
+		"Returns standard font props"
+		return FontProperties(
+					family=self.plotter.mC.config.getParam("annotationFontFamily"),
+					size = self.plotter.mC.config("tooltipFontSize"))
+
 	def isAnnotationInAllPlotsEnabled(self):
-		""
+		"Overhead fn"
 		return False
+

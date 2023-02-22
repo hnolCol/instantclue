@@ -137,9 +137,9 @@ class QToggle(QPushButton):
 
        # painter.drawRoundedRect(QRect(-width, -radius, 2*width, 2*radius), radius, radius)
         painter.setBrush(QBrush(bg_color))
-        painter.drawEllipse(QRect(-width, -radius/2, radius, radius))
+        painter.drawEllipse(QRectF(-width, -radius/2, radius, radius))
         
-        sw_rect = QRect(-radius, -radius, width + radius, 2*radius)
+        sw_rect = QRectF(-radius, -radius, width + radius, 2*radius)
       
         painter.setFont(getStandardFont())
         painter.drawText(sw_rect, Qt.AlignVCenter, label)

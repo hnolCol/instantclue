@@ -30,8 +30,6 @@ class SlideLineEdit(QWidget):
         self.minValue = minValue if minValue != -np.inf else initValue - (initValue - maxValue) * 2 
         self.precision = precision 
 
-        self.justSetNewValue = False 
-
         self.minSliderValue, self.maxSliderValue = self.calculateRange()
 
         self.__controls()
@@ -69,6 +67,7 @@ class SlideLineEdit(QWidget):
     def __connectEvents(self):
         ""
         self.slider.valueChanged.connect(self.onValueChangeBySlider)
+        self.lineEdit.textChanged.connect(self.onValueChangeInLineEdit)
         
     
     def calculateRange(self):
@@ -80,7 +79,7 @@ class SlideLineEdit(QWidget):
     def calculateValueFromSlider(self, newValue):
         ""
 
-        return self.valueRange[int(newValue)]#((newValue - self.minSliderValue) / (self.maxSliderValue - self.minSliderValue)) * (self.maxValue - self.minValue) + self.minValue
+        return self.valueRange[int(float(newValue))]#((newValue - self.minSliderValue) / (self.maxSliderValue - self.minSliderValue)) * (self.maxValue - self.minValue) + self.minValue
 
     def transformValueForSlider(self,value):
         ""
@@ -89,13 +88,18 @@ class SlideLineEdit(QWidget):
     def getValue(self):
         ""
         return self.value
+
+    def onValueChangeInLineEdit(self, newValue):
+        ""
+
+        self.value = float(newValue)
+        
     
     def onValueChangeBySlider(self, newValue):
         ""
-        if not self.justSetNewValue:
-            self.value = self.calculateValueFromSlider(newValue)
-            self.lineEdit.setText(str(self.value))
-        self.justSetNewValue = False
+
+        self.value = self.calculateValueFromSlider(newValue)
+        self.lineEdit.setText(str(self.value))
 
 
 
@@ -175,6 +179,8 @@ class ICSizeDialog(QDialog):
         for n,w in enumerate(self.lineEditSliders):
             value = w.getValue()
             paramName = widgetParamMatches[n]["paramName"]
+            print(paramName)
+            print(self.mC.config.getParam(paramName))
             self.mC.config.setParam(paramName,value)
     
         self.mC.sendMessageRequest(getMessageProps("Done..","Sizes changed and saved."))

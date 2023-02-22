@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from ..dialogs.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
+from ..dialogs.ICFetchDataFromMitoCube import ICFetchDataFromMitoCube
 from ..custom.ICCollapsableFrames import CollapsableFrames
 from ..custom.buttonDesigns import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
@@ -223,6 +224,11 @@ class DataHandleFrame(QFrame):
         funcProps = {"key":"data:copyDataToClipboard","kwargs":{"dataID":self.mC.getDataID()}} 
         self.mC.sendRequestToThread(funcProps)
 
+    def fetchDataFromMitoCube(self):
+        ""
+        dlg = ICFetchDataFromMitoCube(mainController=self.mC)
+        dlg.exec()
+
     def getSelectedColumns(self,dataType="all"):
         "Get Selected columns"
         return self.dataTreeView.getSelectedColumns(dataType)
@@ -333,13 +339,14 @@ class DataHandleFrame(QFrame):
     def exportMultipleDataFramesToExcel(self,exportDataFormat):
         ""
         if len(self.mC.data.dfs) > 1 and exportDataFormat == "xlsx-multiple":
-            #select dataframes 
-            #print("multiple files.")
+    
             selectedItemsIdx = self.mC.askForItemSelection(items = pd.Series(self.mC.data.getFileNames())).index.values.tolist()
             if selectedItemsIdx is None: return 
+    
             dataIDs = self.mC.data.getDataIDbyFileNameIndex(idx=selectedItemsIdx)
+        
             selectedItems = [self.mC.data.getFileNames()[n] for n in selectedItemsIdx]
-           
+        
         else:
             dataIDs = [self.getDataID()]
             selectedItems = [self.mC.data.fileNameByID[dataIDs[0]]]
@@ -441,10 +448,14 @@ class DataHandleFrame(QFrame):
         
         self.dataTreeView.dataHeaders["Numeric Floats"].setCurrentGrouping()
 
-    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None,sessionIsBeeingLoaded=False):
+    def updateDataFrames(self,dfs,selectLastDf=True,dataComboboxIndex=None,sessionIsBeeingLoaded=False, remainLastSelection = False):
         ""
         if isinstance(dfs,dict):
-            self.dataTreeView.updateDfs(dfs,selectLastDf,specificIndex=dataComboboxIndex,sessionIsBeeingLoaded = sessionIsBeeingLoaded)
+            
+            self.dataTreeView.updateDfs(dfs,selectLastDf,
+                    specificIndex=dataComboboxIndex,
+                    sessionIsBeeingLoaded = sessionIsBeeingLoaded, 
+                    remainLastSelection=remainLastSelection)
 
     def updateDataInQuickSelect(self,data):
         ""

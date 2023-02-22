@@ -274,6 +274,7 @@ class CategoricalFilter(FilterBase):
             funcProps = {"key":"filter::subsetData","kwargs":{"searchString":selectedCategories,
                                                               "dataID":self.mC.mainFrames["data"].getDataID(),
                                                               "columnName":self.categoricalColumns.values[0]}}
+            
             self.mC.sendRequestToThread(funcProps)
         #update column names
         self.close()

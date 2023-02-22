@@ -16,8 +16,8 @@ class ICTextSelectWidget(QWidget):
                 parent = None, 
                 descriptionText = "Specific Column",
                 toolTipText = "",
-                targetColumns = pd.Series(),
-                selectableItems = pd.Series(),
+                targetColumns = pd.Series(dtype="object"),
+                selectableItems = pd.Series(dtype="object"),
                 reportBackSelection = None,  *args, **kwargs):
         super(ICTextSelectWidget, self).__init__(parent)
 

@@ -4,6 +4,9 @@ import numpy as np
 from operator import itemgetter
 from matplotlib.font_manager import FontProperties
 import time
+from numba import jit
+
+
 arrow_args = dict(arrowstyle="-", color = "0.5", connectionstyle = "arc3")#"angle3,angleA=90,angleB=0")
 
 def xLim_and_yLim_delta(ax):
@@ -14,15 +17,21 @@ def xLim_and_yLim_delta(ax):
         delta_y = ymax-ymin
         return delta_x,delta_y
 
-def distance(co1, co2):
-        return np.sqrt(pow(abs(co1[0] - co2[0]), 2) + pow(abs(co1[1] - co2[1]), 2))
+# def distance(co1, co2):
+#         return np.sqrt(pow(abs(co1[0] - co2[0]), 2) + pow(abs(co1[1] - co2[1]), 2))
 
-def closest_coord_idx(list_, coord):
-            if coord is not None:
+def closest_coord_idx(X, coord):
+    if coord is not None:
+        
+        N = X.shape[0]
+        A = np.empty(shape=(N,2))
+        A[:,1] = np.arange(N)
+        A[:,0] = np.linalg.norm(X - coord, axis=1)
+        #sort array
+        A = A[A[:, 0].argsort(),:]
+        return A
 
-            	dist_list = [distance(co,coord) for co in list_]
-            	idx = min(enumerate(dist_list),key=itemgetter(1))
-            	return idx
+    return np.array()
 
 def find_nearest(array,value):
     ""
@@ -138,20 +147,21 @@ class ICScatterAnnotations(object):
 
         selectedData = self.data.loc[idx,:] 
         maxAnnotationLength = self.parent.getParam("annotate.max.length")
+        ax = self.ax
         #key = clickedData.name
         for key in selectedData.index:
             #annotations are saved by row idx
             selectedLabels = self.parent.getAnnotatedLabels(self.ax)
             if selectedLabels is not None and key in selectedLabels: ## easy way to check if that row is already annotated
                 continue
-            xyDataLabel = tuple(selectedData.loc[key,self.numericColumns].values)
+            xyDataLabel, xyText, ha = self.getXY(ax, key)
+            #xyDataLabel = tuple(selectedData.loc[key,self.numericColumns].values)
             textLabel = "\n".join([str(x) if len(str(x)) <= maxAnnotationLength else "{}..".format(str(x)[:maxAnnotationLength]) for x in selectedData.loc[key,self.textAnnotationColumns].values.flatten()])
             
-            ax = self.ax
-            xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
-            xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
+            #xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
+           # xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
             textProps = dict(xy=xyDataLabel, text=textLabel, xytext = xyText)
-            annotObject = ax.annotate(**textProps, ha='left', **self.getAnnotationProps())
+            annotObject = ax.annotate(**textProps, ha=ha, **self.getAnnotationProps())
             self.parent.saveAnnotations(self.ax,key,annotObject,textProps)
            
     
@@ -168,10 +178,11 @@ class ICScatterAnnotations(object):
             textLabel = str(textData.iloc[0])
             
             key = rowIndex
-            xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
-            xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
-            xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
-            annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha='left', **self.getAnnotationProps())
+            xyDataLabel, xyText, ha = self.getXY(ax, rowIndex)
+            #xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
+            #xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
+            #xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
+            annotObject = ax.annotate(s=textLabel,xy=xyDataLabel,xytext= xyText, ha=ha, **self.getAnnotationProps())
         
             self.selectionLabels[key] = dict(xy=xyDataLabel, s=textLabel, xytext = xyText)
             self.madeAnnotations[key] = annotObject	
@@ -191,6 +202,20 @@ class ICScatterAnnotations(object):
                 "fontproperties":FontProperties(family=self.parent.getParam("annotationFontFamily"),
                                                 size = self.parent.getParam("annotationFontSize") * fontSizeScale)}
         return annotationParams
+
+    def getXY(self, ax, rowIndex):
+        ""
+        ha = "left"
+        volcanoMode = self.p.getGraph().isVolcanoPlotStylingActive()
+       
+        xLimDelta,yLimDelta = xLim_and_yLim_delta(ax)
+        xyDataLabel = tuple(self.data[self.numericColumns].loc[rowIndex])
+        if xyDataLabel[0] < 0:# and volcanoMode:
+            xLimDelta *= -1
+            ha = "right"
+        
+        xyText = (xyDataLabel[0]+ xLimDelta*0.02, xyDataLabel[1]+ yLimDelta*0.02)
+        return xyDataLabel, xyText, ha
 
     def replotAllAnnotations(self, ax):
         '''
@@ -281,12 +306,21 @@ class ICScatterAnnotations(object):
         
         
         keys, xyPositions = zip(*annotationsKeysAndPositions)
-        idxClosest = closest_coord_idx(xyPositions,xyEvent)[0]
-        keyClosest = keys[idxClosest]
-        annotationClostest = self.parent.getAnnotationTextObjs(self.ax)[keyClosest]
-        self.eventOverAnnotation = annotationClostest.contains(event)[0]
+        distancesSorted = closest_coord_idx(np.array(xyPositions),xyEvent)
+        if distancesSorted.size == 0: return None, None, None, None, None 
+        for n,idxClosest in enumerate(distancesSorted[:,1]):
+            idxClosest = int(idxClosest) #make sure it is int 
+            #check if cloest is actually over mouse event 
+            keyClosest = keys[idxClosest]
+            #get annotation which is saved in the parent (e..g chart)
+            annotationClostest = self.parent.getAnnotationTextObjs(self.ax)[keyClosest]
+            self.eventOverAnnotation = annotationClostest.contains(event)[0]
+            if not self.eventOverAnnotation: continue 
+            if self.eventOverAnnotation: break 
+            if n > 3: break #check maximum of 4 annotations, #event over annotation remains False 
+        ha = annotationClostest.get_ha()
+        return annotationClostest,xyPositions,idxClosest,keyClosest, ha
         
-        return annotationClostest,xyPositions,idxClosest,keyClosest
             
     def moveAnnotations(self,event):
         '''
@@ -300,9 +334,9 @@ class ICScatterAnnotations(object):
         
         xyEvent =  (event.xdata,event.ydata)
         
-        annotationClostest,xyPositions,idxClosest,keyClosest = \
+        annotationClostest,xyPositions,idxClosest,keyClosest, horizontalAlignment = \
         self.findClosestAnnotation(xyEvent,event)	
-                    
+        if idxClosest is None: return   
         
         if self.eventOverAnnotation and event.inaxes == self.ax:
             ax = self.ax
@@ -312,10 +346,11 @@ class ICScatterAnnotations(object):
             xyPositionOfLabelToMove = xyPositions[idxClosest] 
             background = self.p.f.canvas.copy_from_bbox(ax.bbox)
             widthRect, heightRect = self.getRectangleSizeOfText(ax,annotationClostest.get_text(),inv)
-            recetangleToMimicMove = patches.Rectangle(xyPositionOfLabelToMove,width=widthRect,height=heightRect,
+            if True:#horizontalAlignment == "left":
+                recetangleToMimicMove = patches.Rectangle(xyPositionOfLabelToMove,width=widthRect,height=heightRect,
                                                     fill=False, linewidth=0.6, edgecolor="darkgrey",
                                                     animated = True,linestyle = 'dashed', clip_on = False)
-            
+           
             ax.add_patch(recetangleToMimicMove)
             
             self.rectangleMoveEvent = self.p.f.canvas.mpl_connect('motion_notify_event', 
@@ -334,7 +369,8 @@ class ICScatterAnnotations(object):
                                         k = keyClosest: self.disconnectLabelAndUpdateAnnotation(event,
                                                                                     rect,
                                                                                     a,
-                                                                                    k))
+                                                                                    k,
+                                                                                    horizontalAlignment))
         
     def moveRectangle(self,event,rectangle,background,inv, ax):
         '''
@@ -344,10 +380,11 @@ class ICScatterAnnotations(object):
         x,y= list(inv.transform((x_s,y_s)))
         self.p.f.canvas.restore_region(background)
         rectangle.set_xy((x,y))  
+        
         ax.draw_artist(rectangle)
         self.p.f.canvas.blit(ax.bbox)    
             
-    def disconnectLabelAndUpdateAnnotation(self,event,rectangle,annotation,keyClosest):
+    def disconnectLabelAndUpdateAnnotation(self,event,rectangle,annotation,keyClosest, horizontalAlignment):
         '''
         Mouse release event. disconnects event handles and updates the annotation dict to
         keep track for export
@@ -364,8 +401,12 @@ class ICScatterAnnotations(object):
             del self.releaseLabelEvent
         
         xyRectangle = rectangle.get_xy()
-        annotation.set_position(xyRectangle)
-        
+        if horizontalAlignment == "left":
+            annotation.set_position(xyRectangle)
+        else:
+            #take account the different horizontal alignment
+            x,y = xyRectangle[0] + rectangle.get_width(), xyRectangle[1]
+            annotation.set_position((x,y))
         rectangle.remove()
         self.eventOverAnnotation = False
         self.parent.updateFigure.emit()

@@ -8,7 +8,7 @@ a = Analysis(['main.py'],
              pathex=['/Users/hnolte/Documents/GitHub/instantclue/src/main/python'],
              binaries=[],
              datas=[],
-             hiddenimports=['pynndescent','pkg_resources','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
+             hiddenimports=['setuptools','pynndescent','pkg_resources','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils',
              				'scipy._lib.messagestream','numpy.random.common',
                                    'numpy.random.bounded_integers','numpy.random.entropy','scipy.special.cython_special',
@@ -47,14 +47,15 @@ coll = COLLECT(exe,
                upx=True,
                upx_exclude=[],
                name='InstantClue-mac')
+               
 app = BUNDLE(coll,
              name='InstantClue.app',
-             icon=None,
              version='0.11.0',
              bundle_identifier='instantclue.de',
              info_plist={
                 'NSHighResolutionCapable': 'True',
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False,
+                'LSBackgroundOnly' : False
                 }
             )

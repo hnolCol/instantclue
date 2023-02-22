@@ -82,6 +82,7 @@ class ICDSelectItems(QDialog):
 
     def getSelection(self):
         ""
+       
         return self.model.getCheckedData()
     
     def manageSelection(self,newSate):

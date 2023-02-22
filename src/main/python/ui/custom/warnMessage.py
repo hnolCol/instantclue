@@ -208,6 +208,47 @@ class AskForFile(MessageBase):
             self.fileLineEdit.setText(filePath)
 
 
+
+class AskOptionsMessage(MessageBase):
+
+    def __init__(self,options = [],parent=None,*args,**kwargs):
+        ""
+        super(AskOptionsMessage,self).__init__(parent,*args,**kwargs)
+        
+        self.options = options
+        self.selectedOption = None
+        self.__controls()
+        self.__layout()  
+
+    def __controls(self):
+        "Create the buttons."
+        self.optionButtons = []
+        for opt in self.options + ["Cancel"]: #bad since the option cancel is not available then.
+            btn = ICStandardButton(itemName=opt)
+            btn.clicked.connect(lambda e, opt = opt: self.saveOptionAndClose(opt))
+            self.optionButtons.append(btn)
+
+    def __layout(self):
+        "Add the buttons."
+        mainFLayout = self.mainFrame.layout()
+        hbox = QHBoxLayout()
+        for btn in self.optionButtons:
+            hbox.addWidget(btn)
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
+      
+  
+    def saveOptionAndClose(self,selectedOption):
+        "Save option and close the dialog."
+        if selectedOption == "Cancel":
+            self.selectedOption = None
+            self.close() 
+        else:
+            self.selectedOption = selectedOption
+            self.accept() 
+
+
+
+
 class AskQuestionMessage(MessageBase):
 
     def __init__(self,yesCallback = None,parent=None,*args,**kwargs):

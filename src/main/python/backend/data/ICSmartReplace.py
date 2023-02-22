@@ -21,18 +21,20 @@ class ICSmartReplace(object):
         nanCount = nanBool.sum()
         
         if nanCount < self.params["nNaNForDownshift"] and arrayLength - nanCount >= self.params["minRequiredValues"]:
+            
+            # if there are not enough missing values to assume that the quantitification is lacking due to detection limit,
+            # then just replace by normal distribution without downshift. 
             mu = np.nanmean(a)
             sigma = 0.3 * np.nanstd(a)
             replaceData =  np.random.normal(loc = mu, scale = sigma, size = arrayLength )
             
         elif arrayLength == nanCount:
 
-            #for i in range(arrayLength):
+            # if all da are missing, replace by downshift gaussian
             replaceData = np.array([np.random.normal(
                                      loc = self.columnMeans.loc[columnNames[i]] - self.params["downshift"] * self.columnStds.loc[columnNames[i]], 
                                      scale = self.params["scaledWidth"] * self.columnStds.loc[columnNames[i]], 
                                      size = 1) for i in range(arrayLength)])
-               
             replaceData = replaceData.flatten()
         else:
             return a

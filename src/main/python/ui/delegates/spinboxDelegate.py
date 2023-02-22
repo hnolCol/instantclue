@@ -37,6 +37,7 @@ class SpinBoxDelegate(QStyledItemDelegate):
         "Create Spinbox Editor"
         editor = QSpinBox(parent)
         editor.setFrame(False)
+        #min and max should be define on init.
         editor.setMinimum(2)
         editor.setMaximum(1000)
         return editor
@@ -44,7 +45,7 @@ class SpinBoxDelegate(QStyledItemDelegate):
     def setEditorData(self, spinBox, index):
         "Set the init data to the spinbox"
         value = index.model().data(index, Qt.EditRole)
-        spinBox.setValue(value)
+        spinBox.setValue(int(float(value)))
 
     def setModelData(self, spinBox, model, index):
         ""

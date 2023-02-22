@@ -1,27 +1,37 @@
 import re
 
-def buildRegex(categoriesList, withSeparator = True, splitString = None):
-		'''
-		Build regular expression that will search for the selected category. Importantly it will prevent 
-		cross findings with equal substring
-		=====
-		Input:
-			List of strings (categories) - userinput
+def buildRegex(categoriesList, withSeparator = True, splitString = None, matchingGroupOnly = False):
+        '''
+        Build regular expression that will search for the selected category. Importantly it will prevent 
+        cross findings with equal substring
+        =====
+        Input:
+            List of strings (categories) - userinput
         Returns:
             Regular expression that can be used. 
-		====
+        ====
 
-		'''
-		regExp = r'' #init reg ex
-		for category in categoriesList:
-			category = re.escape(category) #escapes all special characters
-			if withSeparator and splitString is not None:
-				regExp = regExp + r'({}{})|(^{}$)|({}{}$)|'.format(category,splitString,category,splitString,category)
-			else:
-				regExp = regExp + r'({})|'.format(category)
-				
-		regExp = regExp[:-1] #strip of last |
-		return regExp
+        '''
+        regExp = r'' #init reg ex
+        for category in categoriesList:
+            category = re.escape(category) #escapes all special characters
+            if withSeparator and splitString is not None:
+                if matchingGroupOnly:
+                    regExp = regExp + r'(?:{}{})|(?:^{}$)|(?:{}{}$)|'.format(category,splitString,category,splitString,category)
+                else:
+                    regExp = regExp + r'({}{})|(^{}$)|({}{}$)|'.format(category,splitString,category,splitString,category)
+            else:
+                if matchingGroupOnly:
+                    regExp = regExp + r'(?:{})|'.format(category)
+                else:
+                    regExp = regExp + r'({})|'.format(category)
+            
+            
+                
+
+        regExp = regExp[:-1] #strip of last |
+
+        return regExp
 		
 def buildReplaceDict(uniqueValues,splitSearchString):
     '''

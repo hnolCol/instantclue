@@ -303,10 +303,10 @@ class AddDelegate(QStyledItemDelegate):
             centerPoint = option.rect.center() 
             h = option.rect.height() / 2
 
-            painter.drawLine(centerPoint.x()-h/3, centerPoint.y() - 0.5, centerPoint.x()+h/3,centerPoint.y()-0.5)
+            painter.drawLine(QPointF(centerPoint.x()-h/3, centerPoint.y() - 0.5), QPointF(centerPoint.x()+h/3,centerPoint.y()-0.5))
             try:
                 if not self.parent().model().getColumnStateByTableIndex(index):
-                    painter.drawLine(centerPoint.x(), centerPoint.y()-h/3, centerPoint.x(),centerPoint.y()+h/3)
+                    painter.drawLine(QPointF(centerPoint.x(), centerPoint.y()-h/3), QPointF(centerPoint.x(),centerPoint.y()+h/3))
             except Exception as e:
                 print(e)
         

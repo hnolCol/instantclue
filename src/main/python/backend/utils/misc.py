@@ -6,7 +6,7 @@ def getTxtFilesFromDir(pathToDir):
     ""
     if os.path.exists(pathToDir):
         filesInDir = os.listdir(pathToDir)
-        txtFiles = [file for file in filesInDir if file.endswith(".txt") and not file.startswith("._")]
+        txtFiles = sorted([file for file in filesInDir if file.endswith(".txt") and not file.startswith("._")])
         return txtFiles
     return []
 

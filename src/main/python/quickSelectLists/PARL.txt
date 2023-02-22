@@ -1,0 +1,6 @@
+checkedValues	checkedColors	userDefinedColors
+TIMM17B	#abcdde	
+NDUFS2	#2a76a9	
+PGAM5	#b2d990	
+PINK1	#3b9735	
+PARL	#f4a1a0	

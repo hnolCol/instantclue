@@ -639,13 +639,14 @@ class ICClustermap(ICChart):
         if self.movingMaxDLine and event.inaxes != self.axisDict["axRowDendro"]:
             self.setRowClusterLineData(self.data["rowMaxD"],self.axisDict["axRowDendro"])
             self.movingMaxDLine = False
+
         #check if mouse left main axis
         if hasattr(self,"ax") and self.tooltipActive and event.inaxes != self.ax:
                 if self.tooltip.get_visible():
                     self.tooltip.set_visible(False)
                     self.drawTooltip(self.clusterMapBackground)
-                    return
-        elif "axRowDendro" in self.axisDict and event.inaxes == self.axisDict["axRowDendro"]:
+                    
+        if "axRowDendro" in self.axisDict and event.inaxes == self.axisDict["axRowDendro"]:
             if event.button is None and self.movingMaxDLine:
                 newMaxD = self.rowClusterLine.get_xdata()[0]
                 self.data["rowMaxD"] = newMaxD
@@ -657,14 +658,15 @@ class ICClustermap(ICChart):
                 self.movingMaxDLine = True
         #handle corrmatrix tooltip (auto on)
         elif self.tooltipActive and self.mC.getPlotType() == "corrmatrix":
-            yDataEvent = int(event.ydata)
-            xDataEvent = int(event.xdata)
-            
-            r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
-            yName = self.data["plotData"].index[yDataEvent]
-            xName = self.data["plotData"].columns[xDataEvent]
-            self.updateTooltipPosition(event,"{}↓\n{}→\ncoeff = {}".format(xName,yName,round(r,2)))
-            self.drawTooltip(self.clusterMapBackground)
+            if event.ydata is not None and event.xdata is not None:
+                yDataEvent = int(event.ydata)
+                xDataEvent = int(event.xdata)
+                if xDataEvent < self.data["plotData"].index.size and yDataEvent < self.data["plotData"].columns.size:
+                    r = self.data["plotData"].iloc[xDataEvent,yDataEvent]
+                    yName = self.data["plotData"].index[yDataEvent]
+                    xName = self.data["plotData"].columns[xDataEvent]
+                    self.updateTooltipPosition(event,"{}↓\n{}→\ncoeff = {}".format(xName,yName,round(r,2)))
+                    self.drawTooltip(self.clusterMapBackground)
         #on hover qick select/ Live graph only works for hierarchical clustering not on corrmatrix (columns are summarized)
         elif (self.isQuickSelectActive() or self.isLiveGraphActive() or self.tooltipActive) and self.mC.getPlotType() != "corrmatrix":
             idxData = None
@@ -790,7 +792,7 @@ class ICClustermap(ICChart):
                         )
         
         self.numOfColorColumns = colorValues.shape[1]
-        self.setDataInColorTable(colorGroupData, title = title)
+        self.setDataInColorTable(colorGroupData, title = title, isEditable=self.data["isEditable"] if "isEditable" in self.data else False)
         self.updateXlimForLabelColor(colorValues.shape, colorColumnNames)
         self.updateQuickSelectItemsCoords()
         self.onClusterYLimChange()

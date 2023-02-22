@@ -74,7 +74,7 @@ dataTypeSubMenu = {
         ("(Prote-)omics-toolkit", ["pulse-SILAC"])
         ],
     "Integers" : [
-        ("main",["Column operation ..","Sorting","Export Data"]),
+        ("main",["Column operation ..","Sorting","Filter","Export Data"]),
         ("Column operation ..", ["Change data type to .."])
         ],
     "Categories" : [
@@ -424,10 +424,16 @@ menuBarItems = [
         "dataType": ["Integers","Categories"]
     },
     {
+        "subM":"Filtr",
+        "name":"Numeric/Categorical Filtering",
+        "funcKey": "applyFilter",
+        "dataType": ["Integers"]
+    },
+    {
         "subM":"Filter",
         "name":"Numeric Filtering",
         "funcKey": "applyFilter",
-        "dataType": "Numeric Floats"
+        "dataType": ["Numeric Floats"]
     },
     {
         "subM":"Filter",
@@ -437,7 +443,7 @@ menuBarItems = [
     },
     {
         "subM":"Filter",
-        "name":"Random Selection",
+        "name":"Random Row Selection",
         "funcKey": "applyNumericFilterForSelection",
         "funcKey": "getUserInput",
         "dataType" : "All",
@@ -601,6 +607,16 @@ menuBarItems = [
                     "otherKwargs": {"metric":"nunique"}}
     },
     {
+        "subM":"Group by and Aggregate ..",
+        "name":"join categories",
+        "dataType": "Categories",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndAggregate",
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "addColumns" : True,
+                    "otherKwargs": {"metric":"text-merge"}}
+    },
+    {
         "subM":"Value Transformation",
         "name":"Combat (Batch correction)",
         "funcKey": "runCombat",
@@ -753,6 +769,13 @@ menuBarItems = [
     # },
     {
         "subM":"Normalization (column)",
+        "name":"Cumulative Sum",
+        "funcKey": "normalizer::normalizeData",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "cumSum","axis": 0}
+    },
+    {
+        "subM":"Normalization (column)",
         "name":"Standardize (Z-Score)",
         "funcKey": "normalizer::normalizeData",
         "dataType": "Numeric Floats",
@@ -772,7 +795,14 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "Quantile (25 - 75)","axis": 0}
     },
-        {
+    {
+        "subM":"Normalization (column)",
+        "name":"Divide by max",
+        "funcKey": "normalizer::normalizeData",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "DivideByMax","axis": 0}
+    },
+    {
         "subM":"Normalization (column)",
         "name":"Divide by column sum",
         "funcKey": "normalizer::normalizeData",
@@ -1345,8 +1375,9 @@ menuBarItems = [
     {
         "subM":"Replace NaN by ..",
         "name":"Gaussian distribution",
-        "funcKey": "featureSelection",
+        "funcKey": "data::fillNa",
         "dataType": "Numeric Floats",
+        "fnKwargs": {"fillBy":"Gaussian distribution"}
     },
     {
         "subM":"Replace NaN by ..",
@@ -1622,7 +1653,7 @@ class DataTreeView(QWidget):
 class DataTreeModel(QAbstractTableModel):
     
 
-    def __init__(self, labels = pd.Series(), parent=None):
+    def __init__(self, labels = pd.Series(dtype="object"), parent=None):
         super(DataTreeModel, self).__init__(parent)
         self.initData(labels)
         
@@ -1837,13 +1868,14 @@ class DataTreeModel(QAbstractTableModel):
                     return "Add column to Graph"
             elif columnIndex == 0:
                 dataIndex = self.getDataIndex(index.row())
-                tooltipText = self._labels.loc[dataIndex]
-                #print(self._labels)
-                #print(self.tooltipData)
-                if tooltipText in self.tooltipData:
-                    return self.tooltipData[tooltipText]
-                else:
-                    return ""
+                if dataIndex is not None and dataIndex in self._labels.index:
+                    tooltipText = self._labels.loc[dataIndex]
+                    #print(self._labels)
+                    #print(self.tooltipData)
+                    if tooltipText in self.tooltipData:
+                        return self.tooltipData[tooltipText]
+                    else:
+                        return ""
             else:
                 return ""
 
@@ -1907,7 +1939,7 @@ class DataTreeModel(QAbstractTableModel):
 
     def resetView(self):
         ""
-        self._labels = pd.Series()
+        self._labels = pd.Series(dtype="object")
         self._inputLabels = self._labels.copy()
         self.completeDataChanged()
 
@@ -2109,7 +2141,7 @@ class DataTreeViewTable(QTableView):
                 kwargs["columnNames"] = self.getSelectedData([tableIndex])
         else:
             kwargs["columnNames"] = self.getSelectedData()
-        
+
         self.mC.mainFrames["sliceMarks"].applyFilter(dragType = self.tableID, **kwargs)
         
     def applyNumericFilterForSelection(self,*args,**kwargs):
@@ -2601,9 +2633,20 @@ class DataTreeViewTable(QTableView):
         categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
         dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns), title = "Categorical Columns used in 1D Enrichment.")
         if dlg.exec_():
+            
             selectedCategoricalColumns = dlg.getSelection().values.flatten()
+            labelColumns = [columnName for columnName in categoricalColumns if columnName not in selectedCategoricalColumns]
+            selectedLabelColumns = []
+            if len(labelColumns) > 0:
+                selectedLabelColumnsByUser = self.mC.askForItemSelection(
+                        items =  labelColumns, 
+                        title="Select columns that should be used to annotate categorical groups.")
+                if selectedLabelColumnsByUser is not None:
+                    selectedLabelColumns = selectedLabelColumnsByUser.values.flatten().tolist()
+
             funcProps = {"key":"stats::oneDEnrichment"}
             funcKwargs = {"columnNames":selectedColumns,
+                      "labelColumns" : selectedLabelColumns,
                       "alternative":self.mC.config.getParam("1D.enrichment.alternative"),
                       "splitString":self.mC.config.getParam("1D.enrichment.split.string"),
                       "categoricalColumns":selectedCategoricalColumns,
@@ -2690,24 +2733,46 @@ class DataTreeViewTable(QTableView):
 
     def fisherCategoricalEnrichmentTest(self,*args,**kwargs):
         ""
-        categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
+        dataID = self.mC.getDataID()
+        categoricalColumns = self.mC.data.getCategoricalColumns(dataID)
+        
         selectedColumn = self.getSelectedData()
-        selDiag = SelectionDialog(["categoricalColumn","alternative","splitString"],{"categoricalColumn":categoricalColumns,"alternative":["two-sided","greater","less"],"splitString":[";",">","<","_",",","."]},{"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided","splitString":";"},title="Fisher Exact Settings.")
+        
+        selDiag = SelectionDialog(
+                ["categoricalColumn","alternative","splitString"],
+                {"categoricalColumn":categoricalColumns,
+                "alternative":["two-sided","greater","less"],
+                "splitString":[";",">","<","_",",","."]},
+                {"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided","splitString":";"},
+                title="Fisher Exact Settings.")
   
         if selDiag.exec_():
+            #select test settings (side, splitSTring, etc)
             categoricalColumn = selDiag.savedSelection["categoricalColumn"]
-      
             dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
+            
             if dlg.exec_():
+
                 testColumns = dlg.getSelection()
+                labelColumns = [columnName for columnName in categoricalColumns if columnName not in testColumns]
+                selectedLabelColumns = []
+
+                if len(labelColumns) > 0:
+                    selectedLabelColumnsByUser = self.mC.askForItemSelection(
+                            items =  labelColumns, 
+                            title="Select columns that should be used to annotate categorical groups.")
+                    if selectedLabelColumnsByUser is not None:
+                        selectedLabelColumns = selectedLabelColumnsByUser.values.flatten().tolist()
+        
                 fkey = "stats::runFisherEnrichment"
-                columnNames = [categoricalColumn] + testColumns.values.flatten().tolist() 
+                columnNames = [categoricalColumn] + selectedLabelColumns + testColumns.values.flatten().tolist() 
                 kwargs = {
                             "categoricalColumn":categoricalColumn,
                             "alternative":selDiag.savedSelection["alternative"],
                             "testColumns":testColumns,
+                            "labelColumns":selectedLabelColumns,
                             "splitString":selDiag.savedSelection["splitString"],
-                            "data" : self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"].copy()
+                            "data" : self.mC.data.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"].copy()
                         }
                 funcProps = {"key":fkey,"kwargs":kwargs}
                 self.mC.sendRequestToThread(funcProps)

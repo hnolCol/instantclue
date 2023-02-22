@@ -86,7 +86,7 @@ class ICClusterplot(ICChart):
                 for n,ax in self.axisDict.items():
                     if n in data["axisLimits"]:
                         self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
-            
+            self.alignLimitsOfAllAxes(updateFigure=False)
             if "axisLabels" in data:
                 self.setAxisLabels(self.axisDict,data["axisLabels"], onlyLastRowForX=True, onlyFirstColumnForY=True)
          

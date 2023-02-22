@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.quickSelectDialog import QuickSelectDialog
-from ..utils import createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont, legendLocations
+from ..utils import createTitleLabel, createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont, legendLocations
 import os
 import pandas as pd
 import numpy as np
@@ -33,6 +33,7 @@ class QuickSelect(QWidget):
     def __controls(self):
 
         self.__setupTable()
+        self.label = createTitleLabel("Drag & Drop a single column!", fontSize=14)
         self.searchLineEdit = QLineEdit(self)
         self.searchLineEdit.setPlaceholderText("Search ...")
         self.searchLineEdit.textChanged.connect(self.model.search)
@@ -97,6 +98,7 @@ class QuickSelect(QWidget):
         ""
         self.setLayout(QVBoxLayout())
         hLayout = QHBoxLayout()
+       
         hLayout.addWidget(self.searchLineEdit)
         hLayout.addWidget(self.annotateButton)
         hLayout.addWidget(self.maskButton )
@@ -111,6 +113,7 @@ class QuickSelect(QWidget):
         hLayout.setSpacing(1)
         self.layout().addLayout(hLayout)
         self.layout().addWidget(self.table)
+        self.layout().addWidget(self.label)
         self.layout().setSpacing(1)
         self.layout().setContentsMargins(1,1,1,1)
     
@@ -418,7 +421,7 @@ class QuickSelect(QWidget):
         else:
             self.mC.sendMessageRequest({"title":"Error ..","message":"Only supported for raw selection mode."})
 
-    def exportSelectionToClipbard(self,event=None, attachColumns = False):
+    def exportSelectionToClipboard(self,event=None, attachColumns = False):
         ""
 
         selectionData = self.model.getCompleteSelectionData(attachSizes=True)
@@ -569,8 +572,8 @@ class QuickSelect(QWidget):
                 return
         
         selectionData["checkedValues"] = pd.Series(data)
-        selectionData["checkedColors"] = pd.Series()
-        selectionData["userDefinedColors"] = pd.Series() 
+        selectionData["checkedColors"] = pd.Series(dtype=str) 
+        selectionData["userDefinedColors"] = pd.Series(dtype=str) 
         
         self.model.readFavoriteSelection(selectionData)
 
@@ -593,10 +596,10 @@ class QuickSelect(QWidget):
         except Exception as e:
             print(e)
 
-    def resetView(self,event=None, updatePlot = True):
+    def resetView(self,event=None, updatePlot = True, resetClipping = True):
         ""
         self.model.resetView()
-        if "dataID" in self.quickSelectProps and updatePlot:
+        if "dataID" in self.quickSelectProps and updatePlot and resetClipping:
             self.resetClipping()
         #reset size and color tables
         
@@ -635,7 +638,7 @@ class QuickSelect(QWidget):
 
     def resetClipping(self):
         "Resets Clipping"
-        if "dataID" in self.quickSelectProps:
+        if "dataID" in self.quickSelectProps and self.selectionMode != "annotate":
             funcProps = {"key":"data::resetClipping","kwargs":{"dataID":self.quickSelectProps["dataID"]}}
             self.sendToThreadFn(funcProps)
 
@@ -692,7 +695,7 @@ class FavoriteSelectionCollection(object):
 
 class QuickSelectModel(QAbstractTableModel):
     
-    def __init__(self, labels = pd.Series(), parent=None):
+    def __init__(self, labels = pd.Series(dtype=str), parent=None):
         super(QuickSelectModel, self).__init__(parent)
         self.initData(labels)
 
@@ -718,7 +721,7 @@ class QuickSelectModel(QAbstractTableModel):
     def setCheckedSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedLabels = pd.Series()
+            self.checkedLabels = pd.Series(dtype=bool)
         else:
             self.checkedLabels = pd.Series(np.zeros(shape=self.rowCount()), index=self._inputLabels.index)
             self.checkedLabels = self.checkedLabels.astype(bool)
@@ -726,8 +729,8 @@ class QuickSelectModel(QAbstractTableModel):
     def initColorSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedColors = pd.Series()
-            self.userDefinedColors = pd.Series() 
+            self.checkedColors = pd.Series(dtype=str)
+            self.userDefinedColors = pd.Series(dtype=str) 
         else:
             self.checkedColors = pd.Series(
                         [self.parent().mC.config.getParam("nanColor")] * self.rowCount(),
@@ -743,7 +746,7 @@ class QuickSelectModel(QAbstractTableModel):
     def setSizeSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedSizes = pd.Series()
+            self.checkedSizes = pd.Series(dtype=int)
         else:
             self.checkedSizes = pd.Series(
                                 np.full(
@@ -1070,7 +1073,7 @@ class QuickSelectModel(QAbstractTableModel):
 
     def resetView(self):
         ""
-        self._labels = pd.Series()
+        self._labels = pd.Series(dtype=str)
         self._inputLabels = self._labels.copy()
         self.initColorSeries()
         self.setCheckedSeries() 
@@ -1177,7 +1180,7 @@ class QuickSelectTableView(QTableView):
     def exportSelectionClipboard(self):
         ""
         attachColumns = "all columns" in self.sender().text() 
-        self.parent().exportSelectionToClipbard(attachColumns = attachColumns)
+        self.parent().exportSelectionToClipboard(attachColumns = attachColumns)
 
     @pyqtSlot()
     def exportSelectionToData(self):

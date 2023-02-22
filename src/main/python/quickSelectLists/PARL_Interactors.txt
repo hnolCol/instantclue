@@ -1,0 +1,8 @@
+checkedValues	checkedColors	userDefinedColors
+HAX1	#abcdde	
+CAT	#2a76a9	
+NDUFA9	#b2d990	
+TIMM50	#3b9735	
+YME1L1	#f4a1a0	
+DIABLO	#d4292b	
+STOML2	#f2be7a	

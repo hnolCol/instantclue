@@ -1,9 +1,11 @@
 
+import matplotlib
+matplotlib.use('Qt5Agg')
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from matplotlib.pyplot import get, text
+
 from pynndescent import NNDescent, PyNNDescentTransformer
 
 from ui.notifications.messageWindow import Notification
@@ -32,7 +34,6 @@ from backend.saver.ICSessionHandler import ICSessionHandler
 from backend.webapp.ICAppValidator import ICAppValidator
 from backend.plotting.plotterCalculations import PlotterBrain
 
-
 import sys, os
 import numpy as np
 import pandas as pd
@@ -56,7 +57,6 @@ filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
 standardFontSize = 12 
-
 
 
 for fileName in getTxtFilesFromDir(exampleDir):
@@ -118,6 +118,11 @@ menuBarItems = [
         "subM":"File",
         "name":"Load file(s)",
         "fn": {"obj":"self","fn":"askForFile","objName":"mainFrames","objKey":"data"}
+    },
+    {
+        "subM":"File",
+        "name":"Load dataset from MitoCube",
+        "fn": {"obj":"self","fn":"fetchDataFromMitoCube","objName":"mainFrames","objKey":"data"}      
     },
     {
         "subM":"File",
@@ -481,12 +486,15 @@ class InstantClue(QMainWindow):
         return fileName
     
     def askForItemSelection(self, items ,title = "Categorical column selection.",**kwargs):
-        ""
+        "Opens a Dialog to the user and asks for some item select."
         dataFrame = pd.DataFrame(items)
         if not dataFrame.empty:
             dlg = ICDSelectItems(data = dataFrame, title = title, **kwargs)
             if dlg.exec_():
-                selectedItems = pd.Series(dlg.getSelection().values.flatten())
+               
+           
+                selectedItems = dlg.getSelection()
+               
                 if selectedItems.size > 0: #check
                     return selectedItems
 

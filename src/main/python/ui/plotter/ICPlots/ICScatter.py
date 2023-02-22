@@ -4,6 +4,7 @@ from matplotlib.pyplot import axis, scatter
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
+from ...dialogs.ICVolcanoStyling import ICVolcanoPlotStyling
 import pandas as pd
 import numpy as np
 
@@ -77,6 +78,7 @@ class ICScatterPlot(ICChart):
     def addGraphSpecActions(self,menus):
         ""
         #menus["main"].addAction("Share graph", self.shareGraph)
+        menus["main"].addAction("Enable volcano plot style",self.enableVolcanoPlotStyling)
         if self.preventQuickSelectCapture:
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:
@@ -98,6 +100,35 @@ class ICScatterPlot(ICChart):
         except Exception as e:
             print(e)
     
+    def enableVolcanoPlotStyling(self):
+        ""
+        
+        dataID = self.data["dataID"]
+        
+        setattr(self,"volcanoPlotStyleActivate",True)
+        
+        columnPairs = list(self.scatterPlots.keys())
+        numericColumns = pd.Series(np.array(columnPairs).flatten())
+        categoricalColumns = self.mC.data.getCategoricalColumns(dataID )
+        dlg = ICVolcanoPlotStyling(self.mC,dataID, numericColumns,categoricalColumns)
+        if dlg.exec_(): #returns true if accept() ran 
+            significantColumns = dlg.getSignificantColumns()
+            colorColumns = dlg.getColorColumns()
+            self.centerXToZero(update=False) #should be moved into the response from the backend.
+            
+            funcProps = {
+                "key" : "plotter:getScatterColorGroupsForVolcano",
+                "kwargs" : {
+                    "dataID" : dataID,
+                    "significantColumns" : significantColumns,
+                    "numericColumns" : numericColumns,
+                    "colorColumns" : colorColumns,
+                    "columnPairs" : columnPairs
+                }
+            }
+            self.mC.sendRequestToThread(funcProps)
+
+
     
         
     def initScatterPlots(self, onlyForID = None, targetAx = None, scaleFactor = None):
@@ -247,15 +278,23 @@ class ICScatterPlot(ICChart):
                     propsData = propsData.append(df)
                 self.updateScatterProps(propsData)
             else:
-                if changedCategory in self.colorCategoryIndexMatch:
+                
+                if self.isVolcanoPlotStylingActive():
+                    for columnPairs, scatterPlot in self.scatterPlots.items():
+                        if columnPairs in self.colorCategoryIndexMatch and changedCategory in self.colorCategoryIndexMatch[columnPairs]:
+                            idx = self.colorCategoryIndexMatch[columnPairs][changedCategory]
+                            dataBool = colorGroup["internalID"] == changedCategory 
+                            color = colorGroup.loc[dataBool,"color"].values[0]
+                            self.updateScatterPropSectionByScatterplot(scatterPlot,idx,color,"color")
+                elif changedCategory in self.colorCategoryIndexMatch:
                     try:
                         idx = self.colorCategoryIndexMatch[changedCategory]
                         dataBool = colorGroup["internalID"] == changedCategory 
                         color = colorGroup.loc[dataBool,"color"].values[0]
-                        
                         self.updateScatterPropSection(idx,color,"color")
                     except Exception as e:
                         print(e)
+                
             if hasattr(self,"colorLegend"):
                 self.addColorLegendToGraph(colorGroup,update=False, title = self.getTitleOfColorTable())
                 
@@ -349,7 +388,9 @@ class ICScatterPlot(ICChart):
 
         self.initScatterPlots(axisID,targetAx,*args,**kwargs)
         sourceAx = self.axisDict[axisID]
-        self.mirrorAnnotations(sourceAx,targetAx,*args,**kwargs) #bad! ,testing
+        self.mirrorAnnotations(sourceAx,targetAx,*args,**kwargs) 
+        if len(self.textAnnotations) > 0:
+            self.addTexts(self.textAnnotations,True,axisID,targetAx)
         self.setAxisLabels({axisID:targetAx},self.data["axisLabels"],onlyForID=axisID)
 
     def setLabelInAllPlots(self):

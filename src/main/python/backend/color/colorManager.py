@@ -170,7 +170,7 @@ class ColorManager(object):
 
             return None, None, None
 
-    def createColorMapDict(self,uniqueCategories, nanString = None, addNaNLevels = [], as_hex = False):
+    def createColorMapDict(self,uniqueCategories, nanString = None, addNaNLevels = [], as_hex = False, customPalette = False, customPaletteKwargs = {}):
         ""
 
         if nanString is None:
@@ -180,11 +180,15 @@ class ColorManager(object):
             numbUniqueCategories = len(uniqueCategories)
         else:
             numbUniqueCategories = uniqueCategories.size
-        if as_hex:
-            colors = sns.color_palette(self.colorMap, numbUniqueCategories, desat=self.desat).as_hex()
-        else:
+        if customPalette:
+            if "desat" not in customPaletteKwargs:
+                customPaletteKwargs["desat"] = self.desat
+            colors = sns.color_palette(**customPaletteKwargs)
             #craete rgb color palette
+        else:
             colors = sns.color_palette(self.colorMap, numbUniqueCategories, desat=self.desat)
+        if as_hex:
+            colors = colors.as_hex()
         #create map dict
         colorMapDict = OrderedDict(zip(uniqueCategories ,colors))
         #replace nan with the nan color

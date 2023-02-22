@@ -20,8 +20,10 @@ funcKeys = {
         "loesColNorm" : "globalLoessCorrection",
         "globalMedian" : "globalMedian",
         "normalizeMedianBySubset" : "normalizeMedianBySubset",
-        "DivideByColSum" : "divideByColumnSum"
-         }
+        "DivideByColSum" : "divideByColumnSum",
+        "cumSum" : "cumulativeSum",
+        "DivideByMax" : "divideByMaxValueInColumn"
+                 }
 
 
 class Normalizer(object):
@@ -77,12 +79,21 @@ class Normalizer(object):
                             )
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
-
-    def divideByColumnSum(self,dataID,columnNames,axis=0):
+    def cumulativeSum(self,dataID,columnNames,axis=0):
         ""
-        transformedColumnNames = ["DivSum:{}".format(col) for col in columnNames.values]
+        transformedColumnNames = ["CumulativeSum:{}".format(col) for col in columnNames.values] + ["RelCumulativeSum:{}".format(col) for col in columnNames.values] + ["CumulativeSumRank:{}".format(col) for col in columnNames.values]
         X = self.sourceData.dfs[dataID][columnNames].values
-        transformedX = X/np.nansum(X,axis=0,keepdims=True)
+        df = self.sourceData.dfs[dataID][columnNames]
+        df["idx"] = df.index #add index to be used for pivoting back the data.
+        #first melt to apply groupby functions
+        melted = pd.melt(df,value_vars=columnNames,id_vars=["idx"]).sort_values(by="value",ascending=False)
+        grouped = melted.groupby(by=["variable"])
+        melted["cumsum"] = grouped["value"].transform(lambda x: x.cumsum())
+        melted["rel_cumsum"] = melted["cumsum"] / melted.groupby(by=["variable"])["cumsum"].transform(lambda x: x.max())
+        melted["rank"] = grouped["value"].transform(lambda x: x.rank(method="min",ascending=False))
+
+        transformedX = melted.pivot(index="idx",columns=["variable"],values=["cumsum","rel_cumsum","rank"]).values
+
         transformedValues = pd.DataFrame(
                             transformedX,
                             index= self.sourceData.dfs[dataID].index,
@@ -90,6 +101,29 @@ class Normalizer(object):
                             )
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
+    def divideByColumnSum(self,dataID,columnNames,axis=0):
+        ""
+        transformedColumnNames = ["DivSum:{}".format(col) for col in columnNames.values]
+        X = self.sourceData.dfs[dataID][columnNames].values
+        transformedX = X/np.nanmax(X,axis=axis,keepdims=True)
+        transformedValues = pd.DataFrame(
+                            transformedX,
+                            index= self.sourceData.dfs[dataID].index,
+                            columns = transformedColumnNames
+                            )
+        return self._addToSourceData(dataID,columnNames,transformedValues)
+    
+    def divideByMaxValueInColumn(self,dataID,columnNames,axis=0):
+        ""
+        transformedColumnNames = ["DivMax:{}".format(col) for col in columnNames.values]
+        X = self.sourceData.dfs[dataID][columnNames].values
+        transformedX = X/np.nansum(X,axis=axis,keepdims=True)
+        transformedValues = pd.DataFrame(
+                            transformedX,
+                            index= self.sourceData.dfs[dataID].index,
+                            columns = transformedColumnNames
+                            )
+        return self._addToSourceData(dataID,columnNames,transformedValues)
     def minMaxNorm(self,dataID,columnNames,axis=1):
         ""
         transformedColumnNames = ["0-1({}):{}".format("row" if axis else "column",col) for col in columnNames.values]
@@ -125,7 +159,7 @@ class Normalizer(object):
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
     def normalizeGroupQuantile(self,dataID,**kwargs):
-        ""
+        "Normalize Group Quantiles (e.g. adjusting within groups)"
         if not self.sourceData.parent.grouping.groupingExists():
             return getMessageProps("No Grouping","No Grouping set.")
         groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
@@ -143,11 +177,6 @@ class Normalizer(object):
             scaledGroupValues = X[groupColumns].values / groupIQR
             distToGroupMedian = columnMedians.values - groupMedian
             
-                        # scaledGroupValues = robust_scale(X[groupColumns].values,
-            #             axis=0, 
-            #             with_centering = self.sourceData.parent.config.getParam("quantile.norm.centering"),
-            #             with_scaling = self.sourceData.parent.config.getParam("quantile.norm.scaling"))
-            #print(scaledGroupValues)
             normColumnNames = ["groupColQuantile:{}".format(colName) for colName in groupColumns]
             transformedValues[normColumnNames] = np.subtract(scaledGroupValues,distToGroupMedian)
 
