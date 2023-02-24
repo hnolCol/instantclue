@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from backend.config.data.params import WIKI_LINKGS
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
@@ -61,9 +61,9 @@ class ConfigDialog(QDialog):
         gridBox.addWidget(self.titleLabel,0,0)
         gridBox.addWidget(self.infoLabel,1,0)
         #gridBox.setRowStretch(1,1)
-        gridBox.addWidget(self.helpButton,0,1,2,1,Qt.AlignTop)
-        gridBox.addWidget(self.saveButton,0,2,2,1,Qt.AlignTop)
-        gridBox.addWidget(self.loadButton,0,3,2,1,Qt.AlignTop)
+        gridBox.addWidget(self.helpButton,0,1,2,1,Qt.AlignmentFlag.AlignTop)
+        gridBox.addWidget(self.saveButton,0,2,2,1,Qt.AlignmentFlag.AlignTop)
+        gridBox.addWidget(self.loadButton,0,3,2,1,Qt.AlignmentFlag.AlignTop)
         gridBox.setColumnStretch(2,0)
         gridBox.setColumnStretch(3,0)
         gridBox.setContentsMargins(2,2,2,2)
@@ -83,11 +83,11 @@ class ConfigDialog(QDialog):
     def _setupScrollarea(self):
         ""
         self.itemFrame = QScrollArea()
-        self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.itemFrame.setWidgetResizable(True)
-        self.itemFrame.setFrameShape(QFrame.NoFrame)
+        self.itemFrame.setFrameShape(QFrame.Shape.NoFrame)
         self.itemFrame.setMinimumHeight(400)
-        self.itemFrame.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        self.itemFrame.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Expanding)
         self.itemFrame.setWidget(self.propHolder)
         
     def closeEvent(self,event=None):

@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
 from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
@@ -62,11 +62,11 @@ class QuickSelect(QWidget):
     def __connectEvents(self):
     
         self.sortDescendingButton.clicked.connect(lambda e : self.model.sort(how="descending"))
-        self.sortDescendingButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sortDescendingButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sortDescendingButton.customContextMenuRequested.connect(lambda e: self.openSortMenu(sortHow="descending"))
 
         self.sortAscendingButton.clicked.connect(self.model.sort)
-        self.sortAscendingButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.sortAscendingButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sortAscendingButton.customContextMenuRequested.connect(self.openSortMenu)
         self.resetButton.clicked.connect(self.resetView)
         self.checkedLabels.clicked.connect(self.showCheckedLabels)
@@ -80,15 +80,15 @@ class QuickSelect(QWidget):
     def __setupTable(self):
         
         self.table = QuickSelectTableView(self)
-        self.table.setFocusPolicy(Qt.NoFocus)
-        self.table.setSelectionMode(QAbstractItemView.NoSelection)
+        self.table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.model = QuickSelectModel(parent=self)
         self.table.setModel(self.model)
         
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.Fixed)
-        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.Fixed)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.table.resizeColumns()
         
         self.table.setItemDelegateForColumn(1,DelegateColor(self.table))
@@ -139,9 +139,9 @@ class QuickSelect(QWidget):
         dfg = QuickSelectDialog(mainController=self.mC)
 
         try: 
-            eventPoint = self.mapToGlobal(event.pos())
-            dfg.setGeometry(eventPoint.x()-50,eventPoint.y(),100,100)
-            if dfg.exec_():
+            eventPoint = self.mapToGlobal(event.position())
+            dfg.setGeometry(QRect(int(eventPoint.x()-50),int(eventPoint.y()),100,100))
+            if dfg.exec():
                 props = dfg.getProps()
                 columnNames = self.mC.mainFrames["data"].getDragColumns()
                 props["columnName"] = columnNames.iloc[0]
@@ -301,7 +301,7 @@ class QuickSelect(QWidget):
 
         senderGeom = self.sender().geometry()
         topLeft = self.mapToGlobal(senderGeom.bottomLeft())
-        menu.exec_(topLeft) 
+        menu.exec(topLeft) 
         self.sender().mouseLostFocus()
 
     def openColorMenu(self,event=None):
@@ -319,7 +319,7 @@ class QuickSelect(QWidget):
                         action.triggered.connect(self.colorLabelsByCategoricalColumn)
                     senderGeom = self.sender().geometry()
                     topLeft = self.mapToGlobal(senderGeom.bottomLeft())
-                    menus["main"].exec_(topLeft) 
+                    menus["main"].exec(topLeft) 
                     
                 except Exception as e:
                     print(e)
@@ -530,7 +530,7 @@ class QuickSelect(QWidget):
                 #set sender status 
                 self.sender().mouseOver = False
                 #cast menu
-                action = loadMenu.exec_(topLeft)
+                action = loadMenu.exec(topLeft)
                 #if action not None(e.g. item was not closed)
                 if action is not None:
                     selectionName = action.text()
@@ -934,37 +934,37 @@ class QuickSelectModel(QAbstractTableModel):
         
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
 
             return True
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.DisplayRole and index.column() == 0: 
+        elif role == Qt.ItemDataRole.DisplayRole and index.column() == 0: 
             return str(self._labels.iloc[index.row()])
-        elif role == Qt.CheckStateRole:
+        elif role == Qt.ItemDataRole.CheckStateRole:
             if index.column() != 0:
                 return QVariant()
             if self.getCheckStateByTableIndex(index):
-                return Qt.Checked
+                return Qt.CheckState.Checked
             else:
-                return Qt.Unchecked
-        elif role == Qt.TextAlignmentRole:
+                return Qt.CheckState.Unchecked
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
             
-            return Qt.AlignVCenter
+            return Qt.AlignmentFlag.AlignVCenter
 
-        elif self.parent().table.mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().table.mouseOverItem:
+        elif self.parent().table.mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().table.mouseOverItem:
             
             return QColor(HOVER_COLOR)
 
-        elif role == Qt.FontRole and index.column() == 0:
+        elif role == Qt.ItemDataRole.FontRole and index.column() == 0:
 
             font = self.getFont()
             if self.getCheckStateByTableIndex(index):
@@ -984,7 +984,7 @@ class QuickSelectModel(QAbstractTableModel):
 
     def flags(self, index):
 
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable 
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable 
 
 
     def setNewData(self,labels):
@@ -1092,10 +1092,10 @@ class QuickSelectTableView(QTableView):
         self.setAcceptDrops(True)
         self.rightClick = False
 
-        self.setArrowUpAction = QAction("Set arrow up", self, shortcut=Qt.Key_Up, triggered=self.setArrowUp)
+        self.setArrowUpAction = QAction("Set arrow up", self, shortcut=Qt.Key.Key_Up, triggered=self.setArrowUp)
         self.addAction(self.setArrowUpAction)
 
-        self.setArrowDownAction = QAction("Set arrow up", self, shortcut=Qt.Key_Down, triggered=self.setArrowDown)
+        self.setArrowDownAction = QAction("Set arrow up", self, shortcut=Qt.Key.Key_Down, triggered=self.setArrowDown)
         self.addAction(self.setArrowDownAction)
 
     def setArrowDown(self):
@@ -1110,7 +1110,7 @@ class QuickSelectTableView(QTableView):
             index = self.model().index(self.mouseOverItem,0)
             dataIndex = self.model().getDataIndex(self.mouseOverItem)
             
-            self.model().setData(index,self.mouseOverItem,Qt.UserRole)
+            self.model().setData(index,self.mouseOverItem,Qt.ItemDataRole.UserRole)
             self.parent().highlightDataInPlotter(dataIndex)
 
     def setArrowUp(self):
@@ -1124,7 +1124,7 @@ class QuickSelectTableView(QTableView):
 
             index = self.model().index(self.mouseOverItem,0)
             dataIndex = self.model().getDataIndex(self.mouseOverItem)
-            self.model().setData(index,self.mouseOverItem,Qt.UserRole)
+            self.model().setData(index,self.mouseOverItem,Qt.ItemDataRole.UserRole)
             
             self.parent().highlightDataInPlotter(dataIndex)
 
@@ -1148,7 +1148,7 @@ class QuickSelectTableView(QTableView):
 
     def mousePressEvent(self,e):
         ""
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
@@ -1253,7 +1253,7 @@ class QuickSelectTableView(QTableView):
                 menus["main"].addAction("Annotate selection in scatter plot", self.annotateSelection)
                 
                 menus["main"].addAction("Uncheck all", self.uncheckSelection)
-                menus["main"].exec_(self.mapToGlobal(e.pos()))
+                menus["main"].exec(self.mapToGlobal(e.pos()))
                     
             except Exception as e:
                 print(e)
@@ -1266,7 +1266,7 @@ class QuickSelectTableView(QTableView):
 
             if tableIndex.column() == 0:
 
-                self.model().setData(tableIndex,None,Qt.CheckStateRole)
+                self.model().setData(tableIndex,None,Qt.ItemDataRole.CheckStateRole)
 
             elif self.model().getCheckStateByTableIndex(tableIndex) and tableIndex.column() == 1:
                 color = QColorDialog.getColor()
@@ -1297,7 +1297,7 @@ class QuickSelectTableView(QTableView):
         self.mouseOverItem = rowAtEvent
         index = self.model().index(self.mouseOverItem,0)
         dataIndex = self.model().getDataIndex(rowAtEvent)
-        self.model().setData(index,self.mouseOverItem,Qt.UserRole)
+        self.model().setData(index,self.mouseOverItem,Qt.ItemDataRole.UserRole)
         self.parent().highlightDataInPlotter(dataIndex)
 
     def mouseEventToIndex(self,event):

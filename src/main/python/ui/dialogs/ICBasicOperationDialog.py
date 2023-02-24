@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..custom.ICTextSelectWidget import ICTextSelectWidget
 from ..utils import createTitleLabel, createLabel, createCombobox
@@ -65,8 +65,8 @@ class BasicOperationDialog(QDialog):
         self.modelData["Selected Metric/Column"] = ["" for _ in range(self.selectedColumns.size)]
         self.model = PandaModel(parent= self.table, df = self.modelData)
         self.table.setModel(self.model)
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
 
         self.okButton = ICStandardButton(itemName="Apply")
         self.cancelButton = ICStandardButton(itemName = "Cancel")
@@ -84,7 +84,7 @@ class BasicOperationDialog(QDialog):
         hbox = QHBoxLayout()
         for selectWidet in self.selectableTypes.values():
             hbox.addWidget(selectWidet)
-        hbox.setAlignment(Qt.AlignLeft)
+        hbox.setAlignment(Qt.AlignmentFlag.AlignLeft)
         hbox.setSpacing(3)
         hbox.addStretch(1)
 

@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 
 
@@ -1513,7 +1513,7 @@ class DataTreeView(QWidget):
                                     tableID= self.tableID, 
                                     mainController=self.mC,
                                     sendToThread= self.sendToThread)
-        self.table.setFocusPolicy(Qt.ClickFocus)
+        self.table.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.model = DataTreeModel(parent=self.table)
         self.table.setItemDelegateForColumn(0,ItemDelegate(self.table))
         self.table.setItemDelegateForColumn(1,AddDelegate(self.table,highLightColumn=1))
@@ -1524,12 +1524,12 @@ class DataTreeView(QWidget):
         self.table.setModel(self.model)
         
 
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(3,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(4,QHeaderView.Fixed)
-        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeMode.Fixed)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.table.resizeColumns()
         
     def __layout(self):
@@ -1591,7 +1591,7 @@ class DataTreeView(QWidget):
     def customSortLabels(self):
         ""
         resortLabels = ResortableTable(self.table.model()._labels)
-        if resortLabels.exec_():
+        if resortLabels.exec():
             sortedLabels = resortLabels.savedData
             self.addData(sortedLabels)
 
@@ -1814,15 +1814,15 @@ class DataTreeModel(QAbstractTableModel):
         ""
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
             if index.column() != 0:
                 return False
             newValue = str(value)
@@ -1834,7 +1834,7 @@ class DataTreeModel(QAbstractTableModel):
                 self.dataChanged.emit(index,index)
             return True
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
 
         if not index.isValid(): 
@@ -1842,14 +1842,14 @@ class DataTreeModel(QAbstractTableModel):
 
         columnIndex = index.column()
 
-        if role == Qt.DisplayRole and columnIndex == 0: 
+        if role == Qt.ItemDataRole.DisplayRole and columnIndex == 0: 
             rowIndex = index.row() 
             if rowIndex >= 0 and rowIndex < self._labels.index.size:
                 return str(self._labels.iloc[index.row()])
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
             font = getStandardFont()
             return font
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             if columnIndex == 3:
                 groupName = self.getGroupNameByTableIndex(index)
                 if groupName:
@@ -1881,9 +1881,9 @@ class DataTreeModel(QAbstractTableModel):
 
     def flags(self, index):
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled | Qt.MoveAction | Qt.ItemIsEditable
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsDragEnabled  | Qt.ItemFlag.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled
+            return Qt.ItemFlag.ItemIsEnabled
 
     def setNewData(self,labels):
         ""
@@ -1960,8 +1960,8 @@ class DataTreeViewTable(QTableView):
         self.focusColumn = None
         self.mC = mainController
         self.setDragEnabled(True)
-        self.setDragDropMode(QAbstractItemView.DragOnly)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         
         self.rowHeight = rowHeight
         self.sendToThread = sendToThread
@@ -2029,19 +2029,19 @@ class DataTreeViewTable(QTableView):
         #get key modifiers
         keyMod = QApplication.keyboardModifiers()
         #is shift key pressed?
-        shiftPressed = keyMod == Qt.ShiftModifier
+        shiftPressed = keyMod == Qt.KeyboardModifier.ShiftModifier
         #check if cmd(mac) or ctrl(windows) is clicked
-        ctrlPressed = keyMod == Qt.ControlModifier
+        ctrlPressed = keyMod == Qt.KeyboardModifier.ControlModifier
         #cast menu if right click
         
         if self.rightClick and not self.rightClickMove and tableColumn == 0:
             if hasattr(self,"menu"):
-                self.menu.exec_(self.mapToGlobal(e.pos()))
+                self.menu.exec(self.mapToGlobal(e.pos()))
         
         elif tableColumn == 0 and not self.rightClick:
             if not shiftPressed and not ctrlPressed:
                 self.selectionModel().clear() 
-                self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
+                self.selectionModel().select(tableIndex,QItemSelectionModel.SelectionFlag.Select)
                 #update data (e.g remove selction grey area)
                 self.model().completeDataChanged()
             else:
@@ -2066,7 +2066,7 @@ class DataTreeViewTable(QTableView):
 
     def keyPressEvent(self,e):
         ""
-        if e.key() in [Qt.Key_Delete, Qt.Key_Backspace]:
+        if e.key() in [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]:
 
             #delete selected rows
             self.model().layoutAboutToBeChanged.emit()
@@ -2078,11 +2078,11 @@ class DataTreeViewTable(QTableView):
             deletedColumns = self.model().getSelectedData(selectedRows)
             self.dropColumnsInDataFrame(deletedColumns)
 
-        elif e.key() == Qt.Key_Escape:
+        elif e.key() == Qt.Key.Key_Escape:
             #clear selection
             self.selectionModel().clear()
 
-        elif e.key() == Qt.Key_Tab:
+        elif e.key() == Qt.Key.Key_Tab:
 
             if self.focusColumn is not None and self.focusRow is not None:
                 self.focusColumn += 1
@@ -2090,7 +2090,7 @@ class DataTreeViewTable(QTableView):
                     self.focusColumn = 0
                 self.model().rowDataChanged(self.focusRow)
 
-        elif e.key() in [Qt.Key_Enter, Qt.Key_Return]:
+        elif e.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
             if self.focusRow is None or self.focusColumn is None:
                 super().keyPressEvent(e)
                 return 
@@ -2115,13 +2115,13 @@ class DataTreeViewTable(QTableView):
         else:
             if self.focusColumn is not None and self.focusRow is not None:
                 currentFocusRow = int(self.focusRow)
-                if e.key() == Qt.Key_Down:
+                if e.key() == Qt.Key.Key_Down:
                         
                         if self.focusRow < self.model().rowCount() - 1:
                             self.focusRow += 1
                         self.model().rowRangeChange(currentFocusRow,self.focusRow)
  
-                if e.key() == Qt.Key_Up:
+                if e.key() == Qt.Key.Key_Up:
                         
                         if self.focusRow > 0 and self.focusRow < self.model().rowCount():
                             self.focusRow -= 1
@@ -2130,7 +2130,7 @@ class DataTreeViewTable(QTableView):
     def rowWiseCalculations(self,*args,**kwargs):
         ""
         dlg = BasicOperationDialog(self.mC,dataID = self.mC.getDataID(), selectedColumns = self.getSelectedData())
-        dlg.exec_()
+        dlg.exec()
 
     def applyFilter(self,calledFromMenu = False, tableIndex = None, **kwargs):
         "Apply filtering (numeric or categorical)"
@@ -2152,7 +2152,7 @@ class DataTreeViewTable(QTableView):
             self.mC.sendToWarningDialog(infoText="Please select at least 2 column headers.")
             return 
         dlg = ICNumericFilterForSelection(self.mC,columnNames)
-        dlg.exec_()
+        dlg.exec()
         
 
 
@@ -2160,7 +2160,7 @@ class DataTreeViewTable(QTableView):
    
         if self.rightClick:
             return
-        if self.state() == QAbstractItemView.EditingState:
+        if self.state() == QAbstractItemView.State.EditingState:
             return 
         if self.focusRow is not None:
             dataRow = int(self.focusRow)
@@ -2171,10 +2171,10 @@ class DataTreeViewTable(QTableView):
     def mousePressEvent(self,e):
         ""
         tableIndex = self.mouseEventToIndex(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.startIndex = tableIndex
             self.rightClick = True
-        elif e.buttons() == Qt.LeftButton:
+        elif e.buttons() == Qt.MouseButton.LeftButton:
             if tableIndex.column() == 0:
                 self.removeSelection(e)
                 super(QTableView,self).mousePressEvent(e)
@@ -2226,24 +2226,24 @@ class DataTreeViewTable(QTableView):
     def mouseMoveEvent(self,event):
         
         #check if table is being edited, if yes - return
-        if self.state() == QAbstractItemView.EditingState:
+        if self.state() == QAbstractItemView.State.EditingState:
             return 
-        if event.buttons() == Qt.LeftButton:
+        if event.buttons() == Qt.MouseButton.LeftButton:
             
             super(QTableView,self).mouseMoveEvent(event)
 
-        elif event.buttons() == Qt.RightButton:
+        elif event.buttons() == Qt.MouseButton.RightButton:
 
             endIndex = self.mouseEventToIndex(event)
             for tableIndex in self.getIndicesForRow(endIndex.row()):
-                self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
+                self.selectionModel().select(tableIndex,QItemSelectionModel.SelectionFlag.Select)
             self.rightClickMove = True
     
         else:
             self.focusRow = self.rowAt(event.pos().y())
             index = self.model().index(self.focusRow,0)
             self.focusColumn = self.columnAt(event.pos().x())
-            self.model().setData(index,self.focusRow,Qt.UserRole)
+            self.model().setData(index,self.focusRow,Qt.ItemDataRole.UserRole)
 
     def removeSelection(self,e):
         ""
@@ -2269,7 +2269,7 @@ class DataTreeViewTable(QTableView):
         ""
 
         dlg = AskForFile(placeHolderEdit="Select fasta file.")
-        if dlg.exec_():
+        if dlg.exec():
             columnNames = self.getSelectedData()
             if columnNames.index.size == 0:
                 self.mC.sendToWarningDialog(infoText = "Select a column containing the identifiers you want to filter on.")
@@ -2299,11 +2299,11 @@ class DataTreeViewTable(QTableView):
             #print(self.mC.grouping.groupingExists())
             if not self.mC.grouping.groupingExists():
                 w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
-                w.exec_()
+                w.exec()
                 return
             else: 
                 dlg = ICCompareGroups(mainController = self.mC, test = test)
-                dlg.exec_()
+                dlg.exec()
         except Exception as e:
             print(e)
 
@@ -2311,7 +2311,7 @@ class DataTreeViewTable(QTableView):
         ""
         if not self.mC.grouping.groupingExists():
             w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
                 
         funcProps = {"key":"data::summarizeGroups",
@@ -2375,7 +2375,7 @@ class DataTreeViewTable(QTableView):
         dataID = self.mC.mainFrames["data"].getDataID()
         uniqueValues = self.mC.data.getUniqueValues(dataID,columnName)
         customSort = ResortableTable(inputLabels = uniqueValues)
-        if customSort.exec_():
+        if customSort.exec():
             sortedValues = customSort.savedData.values
             funcProps = {"key":"data::sortDataByValues",
                          "kwargs":{"columnName":columnName,
@@ -2418,7 +2418,7 @@ class DataTreeViewTable(QTableView):
                     w = ICLinearFitModel(self.mC)
                 else:
                     w = ICModelBase(self.mC)
-                w.exec_()
+                w.exec()
                # fnKwargs = {"columnNames":columnNames,"grouping":grouping}
                 #self.prepareMenuAction("data::smartReplace",fnKwargs,addColumnSelection=False)
             except Exception as e:
@@ -2485,7 +2485,7 @@ class DataTreeViewTable(QTableView):
                     selectionDefaultIndex = dict([(askUserForColumns[n],dragColumn) for \
                         n,dragColumn in enumerate(dragColumns) if n < len(askUserForColumns)]))
 
-            if sel.exec_():
+            if sel.exec():
                 fnKwargs = sel.savedSelection
                 if "otherKwargs" in kwargs:
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
@@ -2613,7 +2613,7 @@ class DataTreeViewTable(QTableView):
                                 defaults,
                                 title="Select Grouping for Exponential Fit.")
                         
-            if selDiag.exec_():
+            if selDiag.exec():
 
                 fnKwargs = selDiag.savedSelection
                 fnKwargs["dataID"] = self.mC.getDataID()
@@ -2632,7 +2632,7 @@ class DataTreeViewTable(QTableView):
         selectedColumns = self.getSelectedData()
         categoricalColumns = self.mC.data.getCategoricalColumns(self.mC.getDataID())
         dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns), title = "Categorical Columns used in 1D Enrichment.")
-        if dlg.exec_():
+        if dlg.exec():
             
             selectedCategoricalColumns = dlg.getSelection().values.flatten()
             labelColumns = [columnName for columnName in categoricalColumns if columnName not in selectedCategoricalColumns]
@@ -2669,7 +2669,7 @@ class DataTreeViewTable(QTableView):
                                 options,
                                 defaults,
                                 title="Select Grouping for N-Way ANOVA.")
-                if selDiag.exec_():
+                if selDiag.exec():
                     fnKwargs = {}
                     fnKwargs["groupings"] = np.array([x for x in selDiag.savedSelection.values()])
                     if "otherKwargs" in kwargs:
@@ -2693,7 +2693,7 @@ class DataTreeViewTable(QTableView):
                             defaults,
                             title="Select Grouping for Repeated measure one/two-way ANOVA.")
                     
-            if selDiag.exec_():
+            if selDiag.exec():
                 fnKwargs = selDiag.savedSelection
                 if fnKwargs["withinGrouping1"] == fnKwargs["withinGrouping2"]:
                     self.mC.sendToWarningDialog(infoText = "withinGroupings cannot be the same. Set withinGrouping2 to None to perform 1W ANOVA.")
@@ -2720,7 +2720,7 @@ class DataTreeViewTable(QTableView):
                             {"groupingWithin":groupingNames,"groupingBetween":groupingNames,"groupingSubject":groupingNames},
                             {"groupingWithin":currentGrouping,"groupingBetween":currentGrouping,"groupingSubject":currentGrouping},
                             title="Select Grouping for Mixed two-way ANOVA.")
-            if selDiag.exec_():
+            if selDiag.exec():
                 fnKwargs = selDiag.savedSelection
                 if "otherKwargs" in kwargs:
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
@@ -2746,12 +2746,12 @@ class DataTreeViewTable(QTableView):
                 {"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided","splitString":";"},
                 title="Fisher Exact Settings.")
   
-        if selDiag.exec_():
+        if selDiag.exec():
             #select test settings (side, splitSTring, etc)
             categoricalColumn = selDiag.savedSelection["categoricalColumn"]
             dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
             
-            if dlg.exec_():
+            if dlg.exec():
 
                 testColumns = dlg.getSelection()
                 labelColumns = [columnName for columnName in categoricalColumns if columnName not in testColumns]
@@ -2803,7 +2803,7 @@ class DataTreeViewTable(QTableView):
                     title="Within Grouping",
                     iconDir = self.mC.mainPath,
                     yesCallback = None)
-                if w.exec_():
+                if w.exec():
                     
                     withinGroupings = pd.Series([x for x in groupingNames if x != currentGrouping])
                     withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values[0]
@@ -2860,10 +2860,10 @@ class DataTreeViewTable(QTableView):
                 {"proteinGroupColumn":categoricalColumns,"modifiedPeptideColumn":categoricalColumns},
                 {"proteinGroupColumn":"","modifiedPeptideColumn":""},
                 title="Select the column that contains the modified sequence and protein group (for example uniprot)\nMust match the fasta reg ex (Settings).")
-        if selDiag.exec_():
+        if selDiag.exec():
             fnKwargs = selDiag.savedSelection
             dlg = AskForFile(placeHolderEdit="Select fasta file to match the modified sequences.")
-            if dlg.exec_():
+            if dlg.exec():
                 fnKwargs["fastaFilePath"] = dlg.state 
                 fnKwargs["dataID"] = dataID
                 funcProps = {"key":"proteomics::matchModSequenceToSites","kwargs":fnKwargs}
@@ -2881,9 +2881,9 @@ class DataTreeViewTable(QTableView):
             
             selDiag = SelectionDialog(["groupingName"],{"groupingName":groupingNames},{"groupingName":currentGrouping},title="Select Grouping for Batch correction.")
             
-            if selDiag.exec_() :
+            if selDiag.exec() :
                 # askProceed = AskQuestionMessage(infoText="Combat is not thread safe resulting in a freeze of the graphical user interface. Proceed?")
-                # askProceed.exec_()
+                # askProceed.exec()
                 # if askProceed.state:
                 fnKwargs = selDiag.savedSelection
                 if "otherKwargs" in kwargs:

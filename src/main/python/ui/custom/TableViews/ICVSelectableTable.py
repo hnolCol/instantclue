@@ -1,7 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
-
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 
 #ui utils
@@ -37,13 +36,13 @@ class PandaTable(QTableView):
         self.onHoverCallback = onHoverCallback
 
         self.mC = mainController
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.verticalHeader().setDefaultSectionSize(15)
         self.horizontalHeader().sectionClicked.connect(self.headerClicked)
-        self.horizontalHeader().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.horizontalHeader().customContextMenuRequested.connect(self.handleHeaderRightClick)
         if not hideMenu:
-            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.customContextMenuRequested.connect( self.showHeaderMenu )
         self.setItemDelegate(EditorDelegate(self))
         self.setCornerButtonEnabled(cornerButton)
@@ -68,7 +67,7 @@ class PandaTable(QTableView):
             fn = getattr(self,v["fn"])
             action.triggered.connect(fn)
 
-        menu.exec_(QCursor.pos()+QPoint(3,3))
+        menu.exec(QCursor.pos()+QPoint(3,3))
 
     def handleHeaderRightClick(self, point):
         ""
@@ -118,7 +117,7 @@ class PandaTable(QTableView):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         "Overwrite key press event to copy rows by defualt not the actual value"
-        if e.matches(QKeySequence.Copy):
+        if e.matches(QKeySequence.StandardKey.Copy):
             selectedRows = self.getSelectedRows()
             if len(selectedRows) >0:
                 self.copyRows(selectedRows=selectedRows)
@@ -129,7 +128,7 @@ class PandaTable(QTableView):
         ""
         
         dialog = AskStringMessage(q="Please provide a file name")
-        if dialog.exec_():
+        if dialog.exec():
             fileName = dialog.text
             funcKey = "data::addDataFrame"
             funcKwargs = {"dataFrame":self.model().getCurrentData(),"fileName":fileName}
@@ -163,7 +162,7 @@ class PandaTable(QTableView):
 
     def mouseMoveEvent(self,event):
         ""
-        if event.buttons() == Qt.LeftButton:         
+        if event.buttons() == Qt.MouseButton.LeftButton:         
             super(QTableView,self).mouseMoveEvent(event)
             
         else:
@@ -222,7 +221,7 @@ class EditorDelegate(QStyledItemDelegate):
        
     def setEditorData(self,editor,index):
         editor.setAutoFillBackground(True)
-        editor.setText(self.parent().model().data(index,Qt.DisplayRole))
+        editor.setText(self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
      
 
 class PandaModel(QAbstractTableModel):
@@ -248,19 +247,19 @@ class PandaModel(QAbstractTableModel):
         
         return self.df.shape[1]
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         columnIndex = index.column()
         rowIndex = index.row()
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ItemDataRole.DisplayRole:
             return str(self.df.iloc[rowIndex ,columnIndex])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
             return self.getFont()
         
-        elif role == Qt.BackgroundRole:
+        elif role == Qt.ItemDataRole.BackgroundRole:
            # print(self.df.iloc[index.row(),index.column()] == "+")
             if self.df.iloc[rowIndex,columnIndex] == "+":
                     return QBrush(QColor(INSTANT_CLUE_BLUE))
@@ -268,7 +267,7 @@ class PandaModel(QAbstractTableModel):
                 return QBrush(QColor(self.highlightBackgroundHeaderColors[columnIndex]))
             return QBrush(QColor("white"))
 
-        elif role == Qt.ForegroundRole:
+        elif role == Qt.ItemDataRole.ForegroundRole:
             if self.df.iloc[rowIndex,columnIndex] == "+":
                 return QColor("white")
             else:
@@ -276,7 +275,7 @@ class PandaModel(QAbstractTableModel):
             
     def setData(self,index,value,role):
         ""
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
         
             self.updateData(value,index)
             
@@ -302,23 +301,23 @@ class PandaModel(QAbstractTableModel):
         
     
     def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return str(self.df.columns[col])
-        elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+        elif orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
             return str(self.df.index[col])
-        elif role == Qt.BackgroundRole:
-            if orientation == Qt.Horizontal:
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            if orientation == Qt.Orientation.Horizontal:
                 if col in self.highlightBackgroundHeaderColors:
                     return QBrush(QColor(self.highlightBackgroundHeaderColors[col]))
                 return QBrush(QColor("lightgrey"))
             else:
                 return QBrush(QColor("lightgrey"))
 
-        elif role == Qt.ForegroundRole:
+        elif role == Qt.ItemDataRole.ForegroundRole:
 
             return QBrush(QColor("black"))
 
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
             font = getStandardFont()
             return font
         return None
@@ -458,7 +457,7 @@ class PandaModel(QAbstractTableModel):
 
     def completeHeaderDataChanged(self):
         ""
-        self.headerDataChanged.emit(Qt.Vertical,0,self.rowCount()-1)
+        self.headerDataChanged.emit(Qt.Orientation.Vertical,0,self.rowCount()-1)
     
     def updateDataFrame(self,df):
         ""
@@ -468,7 +467,7 @@ class PandaModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def flags(self, index):
-        return Qt.ItemIsEnabled | Qt.ItemIsEditable  | Qt.ItemIsSelectable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable  | Qt.ItemFlag.ItemIsSelectable
 
 
 
@@ -492,25 +491,25 @@ class SelectablePandaModel(PandaModel):
         self.lastClicked = None
 
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         # use default display and font role for consistedn look
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ItemDataRole.DisplayRole:
             return str(self.df.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
             return self.getFont()
         
-        elif role == Qt.CheckStateRole:
+        elif role == Qt.ItemDataRole.CheckStateRole:
             if index.column() != 0:
                 return QVariant()
             elif self.getCheckStateByTableIndex(index):
-                return Qt.Checked
+                return Qt.CheckState.Checked
             else:
-                return Qt.Unchecked
-        elif role == Qt.BackgroundRole:
+                return Qt.CheckState.Unchecked
+        elif role == Qt.ItemDataRole.BackgroundRole:
             if self.getCheckStateByTableIndex(index) or \
                 (self.parent() is not None and self.parent().highlightRow is not None and self.parent().highlightRow == index.row()):
 
@@ -521,11 +520,11 @@ class SelectablePandaModel(PandaModel):
        
     def setData(self,index,value,role):
 
-        if role != Qt.CheckStateRole:
+        if role != Qt.ItemDataRole.CheckStateRole:
             #use default setData
             return super().setData(index,role)
 
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             #this model uses first column to check complet row
             indexBottomRight = self.index(index.row(),self.columnCount())
             self.setCheckState(index)
@@ -602,9 +601,9 @@ class SelectablePandaModel(PandaModel):
 
     def flags(self,index):
         if index.column() == 0:
-            return Qt.ItemIsUserCheckable | Qt.ItemIsEnabled #|  Qt.ItemIsEnabled |  
+            return Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled #|  Qt.ItemIsEnabled |  
         else:
-            return Qt.ItemIsEnabled #| Qt.ItemIsSelectable
+            return Qt.ItemFlag.ItemIsEnabled #| Qt.ItemIsSelectable
 
     def updateDataByBool(self, boolIndicator,resetData):
         ""
@@ -629,12 +628,12 @@ class MultiColumnSelectablePandaModel(PandaModel):
         self.__df = self.df.copy()
         self.setCheckedSeries()
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         # use default display and font role for consistedn look
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ItemDataRole.DisplayRole:
             if pd.isna(self.df.iloc[index.row(),index.column()]):
                 return QVariant()
             else:
@@ -733,9 +732,9 @@ class MultiColumnSelectablePandaModel(PandaModel):
 
     def flags(self,index):
         if pd.isna(self.df.iloc[index.row(),index.column()]):
-            return Qt.ItemIsEnabled
+            return Qt.ItemFlag.ItemIsEnabled
         else:
-            return Qt.ItemIsUserCheckable | Qt.ItemIsEnabled #|  Qt.ItemIsEnabled |  
+            return Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled #|  Qt.ItemIsEnabled |  
         
 
     def updateDataByBool(self, boolIndicator,resetData):

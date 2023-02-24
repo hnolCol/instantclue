@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
@@ -34,8 +34,8 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.model = MarkerTableModel(parent=self.table)
         self.table.setModel(self.model)
 
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
         self.table.resizeColumns()
        # self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
 
@@ -224,7 +224,7 @@ class MarkerTableModel(QAbstractTableModel):
         ""
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
         if role == Qt.CheckStateRole:
@@ -246,33 +246,33 @@ class MarkerTableModel(QAbstractTableModel):
             return True
         
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         
         if not index.isValid(): 
 
             return QVariant()
             
-        elif role == Qt.DisplayRole: 
+        elif role == Qt.ItemDataRole.DisplayRole: 
             return str(self._labels.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
 
             return getStandardFont()
 
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
 
             return "Markers are from matplotlib package."
 
-        elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
+        elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(HOVER_COLOR)
             
     def flags(self, index):
         "Set Flags of Column"
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled #| Qt.ItemIsEditable
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled #| Qt.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
@@ -313,8 +313,8 @@ class MarkerTable(QTableView):
         self.horizontalHeader().setVisible(False)
 
         self.mC = mainController
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) 
         
 
         self.createMenu()
@@ -325,8 +325,8 @@ class MarkerTable(QTableView):
         self.colorChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
-        p.setColor(QPalette.HighlightedText, QColor("black"))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(HOVER_COLOR))
+        p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
         self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")

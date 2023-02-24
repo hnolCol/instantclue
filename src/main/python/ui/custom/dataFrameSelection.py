@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 #internal imports
 from .ICCollapsableFrames import CollapsableFrames
@@ -125,7 +125,7 @@ class CollapsableDataTreeView(QWidget):
         ""
         self.combo.currentIndexChanged.connect(self.dfSelectionChanged)
         self.menuButton.clicked.connect(self.showMenu)
-        self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.exportButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.exportButton.clicked.connect(self.exportData)
         self.exportButton.customContextMenuRequested.connect(self.exportMenu)
 
@@ -152,7 +152,7 @@ class CollapsableDataTreeView(QWidget):
                 if dataType in self.dataHeaders:
                     action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
 
-            menus["main"].exec_(menuPosition)
+            menus["main"].exec(menuPosition)
 
     def addSelectionOfAllDataTypes(self,funcProps):
         """
@@ -211,7 +211,7 @@ class CollapsableDataTreeView(QWidget):
 
         senderGeom = self.sender().geometry()
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
-        menu.exec_(bottomLeft) 
+        menu.exec(bottomLeft) 
 
     def getDfId(self,comboIndex):
         "Return DataID from index selection"
@@ -272,7 +272,7 @@ class CollapsableDataTreeView(QWidget):
 
                 frd = FindReplaceDialog(self.mC)
                 frd.setGeometry(bottomLeft.x(),bottomLeft.y(),200,150)
-                if frd.exec_():
+                if frd.exec():
                     funcKey = "data::replace"
                     fS = frd.findStrings 
                     rS = frd.replaceStrings
@@ -372,36 +372,36 @@ class CollapsableDataTreeView(QWidget):
     def openMergeDialog(self,e=None):
         "Open a merge dialog."
         dlg = ICDMergeDataFrames(mainController = self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateDataFrames(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openFeatureCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateFeatures(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openRenameDialog(self,e=None):
         ""
         dataID = self.mC.getDataID()
         oldName = self.mC.data.getFileNameByID(dataID)
         dlg = AskStringMessage(q="Provide new name for the data frame: {}".format(oldName))
-        if dlg.exec_():
+        if dlg.exec():
             funcProps = {"key": "data::renameDataFrame", "kwargs":{"dataID":dataID,"fileName":dlg.state}}
             self.mC.sendRequestToThread(funcProps)
 
     def openSGCCADialog(self,e=None):
         ""
         # dlg = ICMultiBlockSGCCA(mainController = self.mC)
-        # dlg.exec_()
+        # dlg.exec()
 
     def openProteinPeptideView(self,e=None):
         ""
         dlg = ICProteinProteinView(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
 
     def showMenu(self,e=None):
@@ -481,7 +481,7 @@ class CollapsableDataTreeView(QWidget):
             senderGeom = self.sender().geometry()
             bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
 
-            menus["main"].exec_(bottomLeft)
+            menus["main"].exec(bottomLeft)
         except Exception as e:
             print(e)
     
@@ -519,7 +519,7 @@ class CollapsableDataTreeView(QWidget):
     def renameGrouping(self,groupingName,*args,**kwargs):
         ""
         dlg = AskStringMessage(q="Provide new name for the grouping: {}".format(groupingName))
-        if dlg.exec_():
+        if dlg.exec():
 
             key = "grouping::renameGrouping"
             kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
@@ -536,7 +536,7 @@ class CollapsableDataTreeView(QWidget):
     def createSampleList(self,e=None):
         "This is a proteomic-xcalibur functionality."
         dlg = ICSampleListCreater(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def updateGrouping(self, groupingName):
         "Updates Grouping"

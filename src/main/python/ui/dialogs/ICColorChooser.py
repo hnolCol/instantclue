@@ -1,9 +1,8 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
-
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from backend.color.colorHelper import ColorHelper
-from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR
+from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, getCheckStateFromBool
 from ..custom.buttonDesigns import ResetButton
 
 import seaborn as sns
@@ -21,7 +20,7 @@ class ColorLabel(QWidget):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5 if not self.mouseOver else 1)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect, h, w, x0, y0 = self.getRectProps(event)
 
         adjRect = rect
@@ -76,7 +75,7 @@ class ColorChooserDialog(QDialog):
         
 
     def __windowUpdate(self):
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Popup)
         self.setWindowOpacity(0.98)
     
     def __controls(self):
@@ -99,10 +98,10 @@ class ColorChooserDialog(QDialog):
         try:
             for header, colorPalettes in self.colorHelper.getColorPalettes().items():
                 vbox = QVBoxLayout()
-                vbox.setAlignment(Qt.AlignTop)
+                vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
                 vbox.addWidget(createTitleLabel(header,fontSize=12))
                 for colorPaletteName in colorPalettes:
-                    layout = self.createColorPalette(colorPaletteName,checkboxState=self.selectedColorMap == colorPaletteName)
+                    layout = self.createColorPalette(colorPaletteName,checkboxState = getCheckStateFromBool(self.selectedColorMap == colorPaletteName))
                     vbox.addLayout(layout)
                 hbox.addLayout(vbox)
         except Exception as e:
@@ -121,7 +120,7 @@ class ColorChooserDialog(QDialog):
         validator = QDoubleValidator()
         validator.setRange(0.00,1.00,2)
         validator.setDecimals(2)
-        validator.setNotation(QDoubleValidator.StandardNotation)
+        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
         self.alphaLineEdit.setValidator(validator)
         self.alphaLineEdit.textChanged.connect(self.alphaChanged)
         #set widget size
@@ -131,12 +130,12 @@ class ColorChooserDialog(QDialog):
         gridBox.addWidget(self.alphaLineEdit,0,1)
         gridBox.setColumnStretch(2,2)
         #x.addStretch(1)
-        self.alphaSlider = QSlider(Qt.Horizontal)
+        self.alphaSlider = QSlider(Qt.Orientation.Horizontal)
         self.alphaSlider.setMinimum(0)
         self.alphaSlider.setMaximum(100)
         self.alphaSlider.setSingleStep(5)
         self.alphaSlider.setValue(int(self.selectedAlpha * 100))
-        self.alphaSlider.setTickPosition(QSlider.TicksBelow)
+        self.alphaSlider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.alphaSlider.setTickInterval(10)
         self.alphaSlider.valueChanged.connect(self.sliderMoved)   
         gridBox.addWidget(self.alphaSlider,1,0,1,2)
@@ -172,7 +171,7 @@ class ColorChooserDialog(QDialog):
 
         #self.mC.mainFrames["middle"].plotter.update_scatter_point_properties()
     
-    def createColorPalette(self, paletteName, checkboxState = False):
+    def createColorPalette(self, paletteName, checkboxState = Qt.CheckState.Unchecked):
         ""
         hbox = QHBoxLayout()
         checkBox = QCheckBox(paletteName)
@@ -193,15 +192,15 @@ class ColorChooserDialog(QDialog):
 
     def keyPressEvent(self,e):
         """Handle key press event"""
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape:
             self.close()
         
     def setColorMap(self,event=None):
         ""
         newColorMap = self.sender().text()
 
-        self.colorMapCBs[newColorMap].setCheckState(True)
-        self.colorMapCBs[self.selectedColorMap].setCheckState(False)
+        self.colorMapCBs[newColorMap].setCheckState(Qt.CheckState.Checked)
+        self.colorMapCBs[self.selectedColorMap].setCheckState(Qt.CheckState.Unchecked)
         self.selectedColorMap = newColorMap
         self.updateColorMap()
 

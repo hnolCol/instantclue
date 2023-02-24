@@ -119,7 +119,7 @@ class ICXYPlot(ICChart):
     def openAUCCalcDialog(self,e=None):
         ""
         dlg = ICDAUCDialog(self.mC,self.data["dataID"],self.data["numericColumnPairs"],self.data["hoverData"])
-        dlg.exec_()
+        dlg.exec()
 
     def updateQuickSelectItems(self,propsData=None):
         

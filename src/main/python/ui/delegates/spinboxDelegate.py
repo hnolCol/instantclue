@@ -1,7 +1,6 @@
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QStyledItemDelegate, QSpinBox
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import QStyledItemDelegate, QSpinBox
 
 from ..utils import HOVER_COLOR
 import numpy as np
@@ -17,21 +16,21 @@ class SpinBoxDelegate(QStyledItemDelegate):
         r = option.rect.height()/2.5
         maxSize = self.parent().model().maxSize
         minSize = self.parent().model().minSize
-        value = index.model().data(index, Qt.EditRole)
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
         if minSize == maxSize:
             scaledR = r 
         else:
             scaledR = ((np.sqrt(value) - minSize) / (maxSize - minSize) * (0.95 - 0.4) + 0.4) * r
         
         pen = painter.pen()
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         pen.setColor(QColor("darkgrey"))
         pen.setWidthF(0.5)
         painter.setPen(pen)    
         brush = QBrush(QColor("#efefef"))  
         painter.setBrush(brush)     
         centerPoint = option.rect.center()
-        painter.drawEllipse(centerPoint,scaledR ,scaledR )
+        painter.drawEllipse(QPointF(centerPoint),scaledR ,scaledR )
 
     def createEditor(self, parent, option, index):
         "Create Spinbox Editor"
@@ -44,14 +43,14 @@ class SpinBoxDelegate(QStyledItemDelegate):
 
     def setEditorData(self, spinBox, index):
         "Set the init data to the spinbox"
-        value = index.model().data(index, Qt.EditRole)
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
         spinBox.setValue(int(float(value)))
 
     def setModelData(self, spinBox, model, index):
         ""
         spinBox.interpretText()
         value = spinBox.value()
-        model.setData(index, value, Qt.EditRole)
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
         ""

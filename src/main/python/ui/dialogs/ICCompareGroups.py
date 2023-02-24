@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from ..custom.buttonDesigns import ICStandardButton
 from ..utils import createTitleLabel, createLabel, createLineEdit, createCombobox
 
@@ -50,13 +50,13 @@ class ICCompareGroups(QDialog):
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.headerLabel)
         groupGrid = QGridLayout()
-        groupGrid.addWidget(self.grouplabel,0,0, Qt.AlignRight)
+        groupGrid.addWidget(self.grouplabel,0,0, Qt.AlignmentFlag.AlignRight)
         groupGrid.addWidget(self.groupCombo,0,1)
         if self.test not in ["2W-ANOVA"]:
-            groupGrid.addWidget(self.refLabel,2,0, Qt.AlignRight)
+            groupGrid.addWidget(self.refLabel,2,0, Qt.AlignmentFlag.AlignRight)
             groupGrid.addWidget(self.referenceGroupCombo,2,1)
         else:
-            groupGrid.addWidget(self.grouplabel2,2,0, Qt.AlignRight)
+            groupGrid.addWidget(self.grouplabel2,2,0, Qt.AlignmentFlag.AlignRight)
             groupGrid.addWidget(self.groupCombo2,2,1)
 
         groupGrid.addWidget(self.logPValuesCB)

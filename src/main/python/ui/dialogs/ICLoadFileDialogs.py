@@ -1,7 +1,7 @@
 from csv import excel_tab
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from backend.config.data.params import encodingsCommonInPython, commonSepartor, decimalForFloats,thoursandsString, nanReplaceString
 from ..custom.buttonDesigns import ICStandardButton
 from ..utils import createLabel, createCombobox, createTitleLabel
@@ -125,14 +125,14 @@ class ExcelImporter(QDialog):
         self.model = SelectablePandaModel(parent=self.table, df = self.excelSheetsInFiles, singleSelection=False)
         self.table.setModel(self.model)
         
-       # self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
+       # self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
 
 
         self.widgetControl = {}
         for label, options in comboboxExcelFile.items():
         
             propLabel = createLabel(label)
-            propLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            propLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             propCombo = createCombobox(items=options)
             propCombo.setEditable(True)
             
@@ -293,8 +293,8 @@ class ExcelImporter(QDialog):
         ""
         self.model.updateDataFrame(excelSheets)
         self.model.completeDataChanged()
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch)
         self.update()
 
 
@@ -323,7 +323,7 @@ class PlainTextImporter(ImporterBase):
         self.widgetControl = []
         for label, options in comboBoxToGetInputFromUser.items():
             propLabel = createLabel(label)
-            propLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            propLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
             propCombo = createCombobox(items=options)
             propCombo.setEditable(True)

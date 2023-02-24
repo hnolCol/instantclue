@@ -1,8 +1,8 @@
 
 from time import time
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from ..custom.buttonDesigns import ICStandardButton
 from ..custom.warnMessage import WarningMessage
 
@@ -48,20 +48,20 @@ class ICLinearFitModel(QDialog):
         self.layout().addWidget(self.title)
         grid = QGridLayout()
 
-        grid.addWidget(self.timeGroupLabel,0,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.timeGroupLabel,0,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.timeGroupCombo,0,1)
         
-        grid.addWidget(self.compGroupLabel,1,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.compGroupLabel,1,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.compGroupCombo,1,1)
 
-        grid.addWidget(self.replicateLabel,2,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.replicateLabel,2,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.replicateCombo,2,1)
 
 
-        # grid.addWidget(self.modelLabel,5,0,1,1,Qt.AlignRight)
+        # grid.addWidget(self.modelLabel,5,0,1,1,Qt.AlignmentFlag.AlignRight)
         # grid.addWidget(self.modelCombo,5,1)
 
-        grid.addWidget(self.AUCCalcLabel,3,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.AUCCalcLabel,3,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.AUCCalcCombo,3,1)
 
         self.layout().addLayout(grid)
@@ -175,26 +175,26 @@ class ICModelBase(QDialog):
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.title)
         grid = QGridLayout()
-        grid.addWidget(self.dataTypeLabel,0,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.dataTypeLabel,0,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.dataTypeCombo,0,1)
 
-        grid.addWidget(self.normalizaionLabel,1,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.normalizaionLabel,1,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.normalizationCombo,1,1)
 
-        grid.addWidget(self.timeGroupLabel,2,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.timeGroupLabel,2,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.timeGroupCombo,2,1)
         
-        grid.addWidget(self.compGroupLabel,3,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.compGroupLabel,3,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.compGroupCombo,3,1)
 
-        grid.addWidget(self.replicateLabel,4,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.replicateLabel,4,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.replicateCombo,4,1)
 
 
-        # grid.addWidget(self.modelLabel,5,0,1,1,Qt.AlignRight)
+        # grid.addWidget(self.modelLabel,5,0,1,1,Qt.AlignmentFlag.AlignRight)
         # grid.addWidget(self.modelCombo,5,1)
 
-        grid.addWidget(self.AUCCalcLabel,6,0,1,1,Qt.AlignRight)
+        grid.addWidget(self.AUCCalcLabel,6,0,1,1,Qt.AlignmentFlag.AlignRight)
         grid.addWidget(self.AUCCalcCombo,6,1)
 
         self.layout().addLayout(grid)

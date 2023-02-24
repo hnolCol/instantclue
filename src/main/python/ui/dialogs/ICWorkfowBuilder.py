@@ -1,7 +1,7 @@
 from re import split
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 
 from ui.utils import INSTANT_CLUE_BLUE, getRandomString, createTitleLabel
@@ -222,12 +222,12 @@ class ICWorkflowBuilder(QDialog):
         steplayout = QVBoxLayout()
         steplayout.addWidget(item)
         steplayout.addWidget(sep)
-        steplayout.setAlignment(Qt.AlignVCenter)
+        steplayout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
         self.parentStepLayout.addLayout(steplayout)
 
         self.scrollFrame.setLayout(QGridLayout())
-        self.scrollFrame.layout().setAlignment(Qt.AlignTop | Qt.AlignCenter)
+        self.scrollFrame.layout().setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter)
         self.scrollFrame.layout().addLayout(self.parentStepLayout,0,0)
         self.scrollFrame.layout().setRowStretch(1,1)
        
@@ -236,7 +236,7 @@ class ICWorkflowBuilder(QDialog):
 
         #self.scrollFrame.layout().setRowStretch(200,2)
         
-       # self.scrollFrame.layout().setAlignment(Qt.AlignTop) # | Qt.AlignTop
+       # self.scrollFrame.layout().setAlignment(Qt.AlignmentFlag.AlignTop) # | Qt.AlignmentFlag.AlignTop
 
         self.scrollArea.setWidget(self.scrollFrame)
         self.scrollArea.setWidgetResizable(True)
@@ -248,7 +248,7 @@ class ICWorkflowBuilder(QDialog):
         self.setLayout(QVBoxLayout())
         hboxMain = QHBoxLayout()
         #self.groupLayout = QVBoxLayout()
-        #self.groupLayout.setAlignment(Qt.AlignTop)
+        #self.groupLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.rightFrame.setLayout(QVBoxLayout())
         self.rightFrame.layout().addWidget(self.scrollArea)
@@ -278,11 +278,11 @@ class ICWorkflowBuilder(QDialog):
         steplayout = QVBoxLayout()
         steplayout.addWidget(item)
         steplayout.addWidget(sep)
-        steplayout.setAlignment(Qt.AlignTop | Qt.AlignCenter)
+        steplayout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter)
         self.parentStepLayout.insertLayout(rowInGrid,steplayout)
         
         self.itemSets[setID] = {"item":item,"sep":sep,"rowInGrid":rowInGrid}
         #QVBoxLayout().insertLayout()
-        #self.scrollFrame.layout().addWidget(sep,rowInGrid+2,0,1,1,Qt.AlignTop | Qt.AlignCenter)
+        #self.scrollFrame.layout().addWidget(sep,rowInGrid+2,0,1,1,Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter)
         
         

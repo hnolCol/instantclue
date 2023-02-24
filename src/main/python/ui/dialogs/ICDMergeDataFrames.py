@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit, createMenu
 from ..custom.utils import LabelLikeCombo
@@ -112,9 +112,9 @@ class ICDMergeDataFrames(QDialog):
         columnsButton.clicked.connect(lambda _,paramID = "selectedColumns": self.openColumnSelection(paramID=paramID))
 
         #add widgets
-        gridBox.addWidget(dataFrameLabel,0,0,Qt.AlignLeft)
-        gridBox.addWidget(mergeColumns,0,1,Qt.AlignCenter)
-        gridBox.addWidget(columnsButton,0,2,Qt.AlignRight)
+        gridBox.addWidget(dataFrameLabel,0,0,Qt.AlignmentFlag.AlignLeft)
+        gridBox.addWidget(mergeColumns,0,1,Qt.AlignmentFlag.AlignCenter)
+        gridBox.addWidget(columnsButton,0,2,Qt.AlignmentFlag.AlignRight)
 
         #handle column stretch
         gridBox.setColumnStretch(0,2)
@@ -134,10 +134,10 @@ class ICDMergeDataFrames(QDialog):
             indicatorLabel = createLabel(text="Indicator : ",tooltipText="", fontSize = 12)
             self.indicatorCombo = LabelLikeCombo(parent = self, items = mergeParameters["indicator"], text = "True", tooltipStr="Adds an indicator for matches.", itemBorder=5)
             
-            grid.addWidget(paramTitle,0,0,1,3,Qt.AlignLeft)
-            grid.addWidget(howLabel,1,0,Qt.AlignRight)
+            grid.addWidget(paramTitle,0,0,1,3,Qt.AlignmentFlag.AlignLeft)
+            grid.addWidget(howLabel,1,0,Qt.AlignmentFlag.AlignRight)
             grid.addWidget(self.howCombo,1,1)
-            grid.addWidget(indicatorLabel,2,0,Qt.AlignRight)
+            grid.addWidget(indicatorLabel,2,0,Qt.AlignmentFlag.AlignRight)
             grid.addWidget(self.indicatorCombo,2,1)
 
         except Exception as e:

@@ -1,12 +1,12 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 #internal imports
 from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable, MultiColumnSelectablePandaModel
 from ..custom.utils import LabelLikeCombo
 from ..custom.warnMessage import WarningMessage
-from ..utils import createLabel, createLineEdit, getMessageProps, createCombobox
+from ..utils import createLabel, createLineEdit, getMessageProps, createCombobox, getCheckStateFromBool
 from ..custom.buttonDesigns import AcceptButton, RefreshButton
 from backend.utils.stringOperations import mergeListToString
 
@@ -56,17 +56,17 @@ class FilterBase(QDialog):
     
     def keyPressEvent(self,event=None):
         ""
-        if event.key() == Qt.Key_Enter:
+        if event.key() == Qt.Key.Key_Enter:
             return
-        elif event.key() == Qt.Key_Escape:
+        elif event.key() == Qt.Key.Key_Escape:
             self.close() 
-        elif event.key() == Qt.Key_Shift:
+        elif event.key() == Qt.Key.Key_Shift:
             setattr(self.table,"shiftHold",True)
             
 
     def keyReleaseEvent(self,event=None):
         ""
-        if event.key() == Qt.Key_Shift:
+        if event.key() == Qt.Key.Key_Shift:
             setattr(self.table,"shiftHold",False)
        
 
@@ -105,7 +105,7 @@ class CustomCategoricalFilter(FilterBase):
             cb = QCheckBox(filtOption, toolTip = CUSTOM_CB_TOOLTIPS[n])
             cb.setTristate(False)
             if n == 0:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
 
@@ -114,7 +114,7 @@ class CustomCategoricalFilter(FilterBase):
         self.table.setModel(self.model)
         #set columns stretch
         for nColumn in range(self.mC.categoricalFilter.liveSearchData.columns.size):
-            self.table.horizontalHeader().setSectionResizeMode(nColumn, QHeaderView.Stretch)
+            self.table.horizontalHeader().setSectionResizeMode(nColumn, QHeaderView.ResizeMode.Stretch)
 
     def __layout(self):
 
@@ -194,8 +194,8 @@ class CustomCategoricalFilter(FilterBase):
         for cb in self.CBFilterOptions.values():
             if cb != self.sender():
                 newState = not cb.checkState()
-                self.sender().setCheckState(not newState)
-                cb.setCheckState(newState)
+                self.sender().setCheckState(getCheckStateFromBool(not newState))
+                cb.setCheckState(getCheckStateFromBool(newState))
 
 class CategoricalFilter(FilterBase):
 
@@ -228,14 +228,14 @@ class CategoricalFilter(FilterBase):
             cb = QCheckBox(filtOption, toolTip = CB_TOOLTIPS[n])
             cb.setTristate(False)
             if n == 0:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
 
         self.table = PandaTable(self, cornerButton = False, hideMenu = True) 
         self.model = SelectablePandaModel(parent= self.table, df = self.mC.categoricalFilter.liveSearchData)
         self.table.setModel(self.model)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
        
     def __layout(self):
 
@@ -284,8 +284,8 @@ class CategoricalFilter(FilterBase):
         for cb in self.CBFilterOptions.values():
             if cb != self.sender():
                 newState = not cb.checkState()
-                self.sender().setCheckState(not newState)
-                cb.setCheckState(newState)
+                self.sender().setCheckState(getCheckStateFromBool(not newState))
+                cb.setCheckState(getCheckStateFromBool(newState))
                 
     def updateData(self,event=None):
         "Update data when update button is pressed"
@@ -339,7 +339,7 @@ class FindStrings(FilterBase):
         self.model = SelectablePandaModel(parent= self.table, df = self.mC.categoricalFilter.liveSearchData)
         self.table.setModel(self.model)
         for nColumn in range(self.mC.categoricalFilter.liveSearchData.columns.size):
-            self.table.horizontalHeader().setSectionResizeMode(nColumn, QHeaderView.Stretch)
+            self.table.horizontalHeader().setSectionResizeMode(nColumn, QHeaderView.ResizeMode.Stretch)
        
     def __layout(self):
 

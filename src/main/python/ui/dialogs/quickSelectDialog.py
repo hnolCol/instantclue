@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from ..utils import createTitleLabel, createLabel, createLineEdit
 from ..custom.buttonDesigns import ICStandardButton
 
@@ -19,7 +19,7 @@ class QuickSelectDialog(QDialog):
 
     def __windowUpdate(self):
 
-        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setWindowOpacity(0.85)
 
     
@@ -29,7 +29,7 @@ class QuickSelectDialog(QDialog):
         self.headerLabel = createTitleLabel("Quick Select",fontSize=12)
         self.infoLabel = createLabel("Select how you want to load the data.")
         self.rawValues = QCheckBox ("Raw values")
-        self.rawValues.setCheckState(True)
+        self.rawValues.setCheckState(Qt.CheckState.Checked)
         self.rawValues.setTristate(False)
         self.uniqueValues = QCheckBox("Unique values \nwith split string:")
         self.uniqueValues.setTristate(False)
@@ -79,9 +79,11 @@ class QuickSelectDialog(QDialog):
         ""
         #toogle checkbox state
         if self.sender() == self.rawValues:
-            self.uniqueValues.setCheckState(not self.rawValues.checkState())
+            newCheckState = not self.rawValues.checkState()
+            self.uniqueValues.setCheckState(Qt.CheckState.Checked if newCheckState else Qt.CheckState.Unchecked)
         elif self.sender() == self.uniqueValues:
-            self.rawValues.setCheckState(not self.uniqueValues.checkState())
+            newCheckState = not self.uniqueValues.checkState()
+            self.rawValues.setCheckState(Qt.CheckState.Checked if newCheckState else Qt.CheckState.Unchecked)
 
         self.props["mode"] = mode
         if mode == "unique":
@@ -93,7 +95,7 @@ class QuickSelectDialog(QDialog):
 
     def keyPressEvent(self,e):
         """Handle key press event"""
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape:
             self.reject()
         
         

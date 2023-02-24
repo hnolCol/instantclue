@@ -1,7 +1,6 @@
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit, createMenu
 from ..custom.utils import LabelLikeCombo
@@ -87,8 +86,8 @@ class ICCorrelateDataFrames(QDialog):
         columnsButton.clicked.connect(lambda _,paramID = "selectedColumns": self.openColumnSelection(paramID=paramID))
 
         #add widgets
-        gridBox.addWidget(dataFrameLabel,0,0,Qt.AlignLeft)
-        gridBox.addWidget(columnsButton,0,2,Qt.AlignRight)
+        gridBox.addWidget(dataFrameLabel,0,0,Qt.AlignmentFlag.AlignLeft)
+        gridBox.addWidget(columnsButton,0,2,Qt.AlignmentFlag.AlignRight)
 
         #handle column stretch
         gridBox.setColumnStretch(0,2)

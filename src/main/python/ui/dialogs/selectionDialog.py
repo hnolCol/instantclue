@@ -1,7 +1,6 @@
-from posixpath import split
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createLabel, createLineEdit, createTitleLabel, createCombobox
 from ..custom.buttonDesigns import ICStandardButton
@@ -40,7 +39,7 @@ class SelectionDialog(QDialog):
         for selectionName in self.selectionNames:
             self.selectionCombos[selectionName] = dict()
             label = createLabel("{} :".format(selectionName))
-            label.setAlignment(Qt.AlignRight | Qt.AlignCenter)
+            label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignCenter)
             selectionOptions = self.selectionOptions[selectionName]
             cb = createCombobox(self,selectionOptions)
             if selectionName in self.selectionDefaultIndex:
@@ -77,7 +76,7 @@ class SelectionDialog(QDialog):
         hbox.addWidget(self.closeButton)
 
         self.layout().addLayout(hbox)
-        self.layout().setAlignment(Qt.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
 
     def __connectEvents(self):
         """Connect events to functions"""

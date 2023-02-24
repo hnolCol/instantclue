@@ -1,7 +1,6 @@
-
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit, isWindows
 from .buttonDesigns import LabelLikeButton
 from ..dialogs.ICColorChooser import ColorLabel
@@ -101,14 +100,14 @@ class QHLine(QFrame):
         super(QHLine, self).__init__(parent)
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
-        self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
 
 
 class QVLine(QFrame):
     def __init__(self,parent=None):
         super(QVLine, self).__init__(parent)
-        self.setFrameShape(QFrame.VLine)
-        self.setFrameShadow(QFrame.Sunken)
+        self.setFrameShape(QFrame.Shape.VLine)
+        self.setFrameShadow(QFrame.Shape.Sunken)
 
 
 class QToggle(QPushButton):
@@ -127,11 +126,11 @@ class QToggle(QPushButton):
         center = self.rect().center()
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.translate(center)
         painter.setBrush(QColor(0,0,0))
 
-        pen = QPen(Qt.black)
+        pen = QPen(Qt.GlobalColor.black)
         pen.setWidthF(0.5)
         painter.setPen(pen)
 
@@ -142,14 +141,14 @@ class QToggle(QPushButton):
         sw_rect = QRectF(-radius, -radius, width + radius, 2*radius)
       
         painter.setFont(getStandardFont())
-        painter.drawText(sw_rect, Qt.AlignVCenter, label)
+        painter.drawText(sw_rect, Qt.AlignmentFlag.AlignVCenter, label)
 
 
 
 class PropertyChooser(QWidget):
     def __init__(self,mainController, parent=None,*args,**kwargs):
         super(PropertyChooser,self).__init__(parent=parent,*args,**kwargs)
-        self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
         self.setLayout(QGridLayout())
         self.layout().setContentsMargins(2,1,2,1)
         self.mC = mainController
@@ -212,7 +211,7 @@ class PropertyChooser(QWidget):
                 self.layout().addWidget(vInput,n,1,1,1)
             else:
                 self.layout().addWidget(vInput,n,1,1,2)
-            self.layout().addWidget(propLabel,n,0,1,1,Qt.AlignRight)
+            self.layout().addWidget(propLabel,n,0,1,1,Qt.AlignmentFlag.AlignRight)
             
             #save input label
             self.inputValues.append(vInput)

@@ -1,6 +1,6 @@
 from cgi import test
-from PyQt5.QtCore import QObject, pyqtSignal, QPoint
-from PyQt5.QtGui import QCursor
+from PyQt6.QtCore import QObject, pyqtSignal, QPoint
+from PyQt6.QtGui import QCursor
 
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
@@ -323,7 +323,7 @@ class ICChart(QObject):
 		menus["main"].addAction("Copy figure to clipboard",self.mC.mainFrames["middle"].copyFigureToClipboard)
 		pos = QCursor.pos()
 		pos += QPoint(3,3)
-		menus["main"].exec_(pos)
+		menus["main"].exec(pos)
 
 	def getToolbarState(self):
 		"Returns tooolbar state (ZOOM;PAN)"
@@ -365,7 +365,7 @@ class ICChart(QObject):
 			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			self.updateFigure.emit()
 			w = WarningMessage(infoText="Same data selected. Selection reset.",iconDir = self.mC.mainPath)
-			w.exec_()
+			w.exec()
 			return
 			
 		else:
@@ -409,7 +409,7 @@ class ICChart(QObject):
 		if (group1,group2) in statGroupByGroups or (group2,group1) in statGroupByGroups:
 			
 			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2), iconDir = self.mC.mainPath)
-			w.exec_()
+			w.exec()
 			return False
 		return True
 	
@@ -448,7 +448,7 @@ class ICChart(QObject):
 				r = self.mC.statCenter.performPairwiseTest(self.statData["data"], kind = testType)
 			if isinstance(r,str):
 				w = WarningMessage(infoText=r)
-				w.exec_()
+				w.exec()
 				return None, None, None
 			else:
 				s,p = r #s = test statistic 
@@ -646,7 +646,7 @@ class ICChart(QObject):
 		"Not available yet"
 	
 		shareDialog = ICShareGraph(mainController=self.mC)
-		shareDialog.exec_()
+		shareDialog.exec()
 
 	def removeSizeLegend(self):
 		""
@@ -760,7 +760,7 @@ class ICChart(QObject):
 			if len(groupData) > 200:
 				w = WarningMessage(title="To many items for grouping legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			
 			legendItems = []
@@ -808,7 +808,7 @@ class ICChart(QObject):
 			if colorData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if ignoreNaN:
 				idx = colorData["color"] != self.getParam("nanColor")
@@ -861,7 +861,7 @@ class ICChart(QObject):
 			if colorSizeData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if ignoreNaN:
 				idx = colorSizeData["color"] != self.getParam("nanColor")
@@ -918,7 +918,7 @@ class ICChart(QObject):
 			if markerData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if "marker" in scatterKwargs:
 				del scatterKwargs["marker"]
@@ -1013,7 +1013,7 @@ class ICChart(QObject):
 			if sizeData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.")
-				w.exec_()	
+				w.exec()	
 				return			
 			scatterKwargs = self.getScatterKwargForLegend(legendType="size")
 			legendItems = [scatter(
@@ -1086,7 +1086,7 @@ class ICChart(QObject):
 		try:
 			if not (self.isBoxplotViolinBar() or self.isBoxenplot()):
 				w = WarningMessage(infoText = "Swarms can only be added to box, boxen, bar and violinplots.")
-				w.exec_()
+				w.exec()
 				return
 			
 			

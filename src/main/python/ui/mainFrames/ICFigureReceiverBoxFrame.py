@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -86,7 +86,7 @@ class MatplotlibFigure(QWidget):
                 # groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
                 # if len(groupings) > 0:
                 #     dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = "Groupings to display in h. clustering.")
-                #     if dlg.exec_():
+                #     if dlg.exec():
                 #         selectedGrupings = dlg.getSelection().values.flatten()
                 #         if selectedGrupings.size > 0: #check
                 #             funcKey["kwargs"]["groupingName"] = selectedGrupings

@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from numpy.lib.arraysetops import isin 
 
 from ..utils import createTitleLabel, createLabel, createLineEdit
@@ -33,7 +33,7 @@ class ICDSelectItems(QDialog):
         self.model = SelectablePandaModel(parent=self.table, df = self.data, singleSelection=self.singleSelection)
         self.table.setModel(self.model)
         if self.stretch:
-            self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch) 
+            self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch) 
         if self.selectAll:
             self.selectCB = QCheckBox("Select all")
             self.selectCB.setTristate(False)
@@ -67,7 +67,7 @@ class ICDSelectItems(QDialog):
 
     def __windowUpdate(self):
         ""
-        self.setWindowFlags( Qt.WindowStaysOnTopHint)# Qt.FramelessWindowHint |
+        self.setWindowFlags( Qt.WindowType.WindowStaysOnTopHint)# Qt.FramelessWindowHint |
         
        # self.setWindowOpacity(0.95)
 

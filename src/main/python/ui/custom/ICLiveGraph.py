@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -95,7 +95,7 @@ class LiveGraph(QWidget):
         menu.addAction("Line")
         menu.addAction("Boxplot")
         self.sender().mouseOver = False
-        action = menu.exec_(topLeft)
+        action = menu.exec(topLeft)
 
         if action is not None:
             plotType = action.text() 

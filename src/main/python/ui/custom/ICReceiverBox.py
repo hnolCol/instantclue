@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from collections import OrderedDict
 
@@ -17,7 +17,7 @@ class BoxItem(PushHoverButton):
         self.itemBorder = itemBorder
         self.bgColor = bgColor
         self.fColor = fColor
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
         self.setToolTip(itemName)
         self.getWidthAndHeight()
 
@@ -25,7 +25,7 @@ class BoxItem(PushHoverButton):
         #get size
         font = self.getStandardFont()
         fontMetric = QFontMetrics(font)
-        self.width = fontMetric.width(self.itemName) + self.itemBorder
+        self.width = fontMetric.horizontalAdvance(self.itemName) + self.itemBorder
         self.height = fontMetric.height() + self.itemBorder
 
     def getRectProps(self,event):
@@ -57,7 +57,7 @@ class BoxItem(PushHoverButton):
         pen.setWidthF(0.5)
         painter.setFont(self.getStandardFont())
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         if self.mouseOver:
             brush = QBrush(QColor(HOVER_COLOR))
@@ -69,7 +69,7 @@ class BoxItem(PushHoverButton):
             painter.drawRect(rect)
 
         painter.drawText(rect,
-                         Qt.AlignCenter | Qt.AlignTop, 
+                         Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                          self.itemName)
         
     def setText(self,itemName):
@@ -84,17 +84,17 @@ class ItemHolder(QWidget):
         
         if direction == "H":
             self.setLayout(QHBoxLayout())
-            self.layout().setAlignment(Qt.AlignLeft)
+            self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
             self.itemLayout = QHBoxLayout()
-            self.itemLayout.setAlignment(Qt.AlignLeft)
+            self.itemLayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             
             
             
         else:
             self.setLayout(QVBoxLayout())
-            self.layout().setAlignment(Qt.AlignTop)
+            self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
             self.itemLayout = QVBoxLayout()
-            self.itemLayout.setAlignment(Qt.AlignTop)
+            self.itemLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
             
 
         self.layout().addLayout(self.itemLayout)
@@ -147,7 +147,7 @@ class ReceiverBox(QFrame):
 
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         p = self.palette()
         p.setColor(self.backgroundRole(),QColor("#f6f6f6"))
@@ -166,16 +166,16 @@ class ReceiverBox(QFrame):
 
         self.itemFrame = ICSCrollArea(self.getBoxItemsToUpdate,updateSrollbar="B",parent=self)
         if isWindows():
-            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         else:
-            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        self.itemFrame.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.itemFrame.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.itemFrame.setWidgetResizable(True)
         self.itemFrame.setWidget(self.itemHolder)
         #self.itemFrame.setStyleSheet("background-color:red;")s;
-        self.itemFrame.setFrameShape(QFrame.NoFrame)
-        self.itemFrame.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        self.itemFrame.setFrameShape(QFrame.Shape.NoFrame)
+        self.itemFrame.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
         self.itemFrame.setMaximumHeight(50)
         self.itemFrame.setMinimumHeight(50)
 
@@ -266,14 +266,10 @@ class ReceiverBox(QFrame):
         
         for itemName in items:
             if itemName not in self.items:
-                try:
-                    w = BoxItem(itemName)
-                    w.setContextMenuPolicy(Qt.CustomContextMenu)
-                    w.customContextMenuRequested.connect(self.deleteBoxItem)
-                except Exception as e:
-
-                    pass 
-                
+             
+                w = BoxItem(itemName)
+                w.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                w.customContextMenuRequested.connect(self.deleteBoxItem)
                 self.items[itemName] = w
                 self.itemHolder.addItem(w)
         self.handleDragLabelVisibility()
@@ -343,7 +339,7 @@ class ReceiverBox(QFrame):
         inputLabels = list(self.items.keys())
         if len(inputLabels) >= 2:
             sortDialog = ResortableTable(inputLabels = inputLabels)
-            sortDialog.exec_()
+            sortDialog.exec()
             if sortDialog.savedData is not None:
                 #user clicked save
                 resortedLabels = sortDialog.savedData.values.tolist()

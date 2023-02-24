@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from pandas.core.indexes import multi 
 
 #ui utils
@@ -234,11 +234,11 @@ class PandaTableDialog(QDialog):
             e.accept()
         else:
             quest = AskQuestionMessage(title = "Question", infoText = "Data have changed. Update data?")
-            quest.exec_()
+            quest.exec()
             if quest.state:
                 questForCopy = AskQuestionMessage(title = "Question", 
                         infoText = "Would you like to update the current data in place?\n\n(no - creates a new data frame with the changes made (sorting and filtering included))?")
-                questForCopy.exec_()
+                questForCopy.exec()
                 if questForCopy.state:
                     funcProps = dict() 
                     funcProps["key"] = "data::updateData"

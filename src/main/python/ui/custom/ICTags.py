@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createLineEdit
 
@@ -19,7 +19,7 @@ class Tag(QWidget):
         self.backgroundColor = backgroundColor
         self.resetCallBack = resetCallback
         self.tagID = tagID
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
 
         self.__control()
         self.__initStyle()
@@ -72,7 +72,7 @@ class ICSearchWithTags(QWidget):
         ""
         self.lineEdit = createLineEdit("Search..")
 
-        validator = QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")) #match any floating number
+        validator = QRegularExpressionValidator(QRegularExpression("[+-]?([0-9]*[.])?[0-9]+")) #match any floating number
         self.lineEditMin = createLineEdit("min")
         self.lineEditMax = createLineEdit("max")
         self.lineEditMin.setValidator(validator)
@@ -87,7 +87,7 @@ class ICSearchWithTags(QWidget):
         self.tagLayout = QHBoxLayout()
         self.tagLayout.setSpacing(1)
         self.tagLayout.setContentsMargins(0,0,0,0)
-        self.tagLayout.setAlignment(Qt.AlignLeft)
+        self.tagLayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.setLayout(QVBoxLayout())
         hbox = QHBoxLayout() 
         hbox.addWidget(self.lineEdit)

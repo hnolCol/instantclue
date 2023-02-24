@@ -1,5 +1,4 @@
 #
-from PyQt5.QtCore import QObject, pyqtSignal
 from matplotlib.pyplot import axis, scatter
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
@@ -111,7 +110,7 @@ class ICScatterPlot(ICChart):
         numericColumns = pd.Series(np.array(columnPairs).flatten())
         categoricalColumns = self.mC.data.getCategoricalColumns(dataID )
         dlg = ICVolcanoPlotStyling(self.mC,dataID, numericColumns,categoricalColumns)
-        if dlg.exec_(): #returns true if accept() ran 
+        if dlg.exec(): #returns true if accept() ran 
             significantColumns = dlg.getSignificantColumns()
             colorColumns = dlg.getColorColumns()
             self.centerXToZero(update=False) #should be moved into the response from the backend.

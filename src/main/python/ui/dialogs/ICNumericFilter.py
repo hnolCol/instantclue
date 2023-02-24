@@ -1,9 +1,9 @@
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from backend.transformations.transformer import summarizeMetric
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR
+from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR, getCheckStateFromBool
 from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
 from ..custom.warnMessage import WarningMessage
 from .ICDSelectItems import ICDSelectItems
@@ -32,7 +32,7 @@ filterTypes = ["Greater than","Greater Equal than","Smaller than","Smaller Equal
 def createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue):
     validator = QDoubleValidator()
     validator.setRange(minValue,maxValue,12)
-    validator.setNotation(QDoubleValidator.StandardNotation)
+    validator.setNotation(QDoubleValidator.Notation.StandardNotation)
     validator.setLocale(QLocale("en_US"))
     validator.setDecimals(20)
     #self.alphaLineEdit.setValidator(validator)
@@ -117,7 +117,7 @@ class ICNumericFilterForSelection(QDialog):
             cb = QCheckBox(filtOption, toolTip = CB_TOOLTIPS[n])
             cb.setTristate(False)
             if n == 0:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
       
@@ -125,8 +125,8 @@ class ICNumericFilterForSelection(QDialog):
         
     def __layout(self):
         ""
-        labelArgs = [1,1,Qt.AlignRight]
-        self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding)
+        labelArgs = [1,1,Qt.AlignmentFlag.AlignRight]
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,QSizePolicy.Policy.MinimumExpanding)
         
         self.setLayout(QGridLayout()) 
         
@@ -165,7 +165,7 @@ class ICNumericFilterForSelection(QDialog):
         hboxB.addWidget(self.closeButton)
         
         self.layout().addLayout(hboxB,7,3,1,1)
-        self.layout().setAlignment(Qt.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignmentFlag.AlignTop)
 
 
     def __connectEvents(self):
@@ -246,9 +246,9 @@ class ICNumericFilterForSelection(QDialog):
         ""
         for _,cb in self.CBFilterOptions.items():
             if cb != self.sender():
-                cb.setCheckState(False)
+                cb.setCheckState(getCheckStateFromBool(False))
             else:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
 
 class NumericFilter(QDialog):
 
@@ -299,7 +299,7 @@ class NumericFilter(QDialog):
             cb = QCheckBox(filtOption, toolTip = CB_TOOLTIPS[n])
             cb.setTristate(False)
             if n == 0:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
             cb.clicked.connect(self.setCBCheckStates)
             self.CBFilterOptions[filtOption] = cb
       
@@ -307,7 +307,7 @@ class NumericFilter(QDialog):
         
     def __layout(self):
         ""
-        self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,QSizePolicy.Policy.MinimumExpanding)
         
         self.setLayout(QGridLayout()) 
         self.scrollFrame.setLayout(QVBoxLayout())
@@ -333,7 +333,7 @@ class NumericFilter(QDialog):
         hboxB.addWidget(self.closeButton)
         
         self.layout().addLayout(hboxB,7,3,1,1)
-        self.layout().setAlignment(Qt.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
     def __connectEvents(self):
@@ -615,6 +615,6 @@ class NumericFilter(QDialog):
         ""
         for cbKey,cb in self.CBFilterOptions.items():
             if cb != self.sender():
-                cb.setCheckState(False)
+                cb.setCheckState(getCheckStateFromBool(False))
             else:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))

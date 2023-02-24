@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 # internal imports
 from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton, SubsetDataButton
@@ -53,7 +53,7 @@ class ThreadCircle(QWidget):
 
     def paintEvent(self, ev=None):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         c = QColor(self._colors[self._circleColor])
         painter.setBrush(c)
         pen = QPen(QColor("black"))
@@ -86,7 +86,7 @@ class ThreadWidget(QWidget):
         
         self.threadCircleLayout = QHBoxLayout()
         self.threadCircleLayout.setContentsMargins(0,0,0,0)
-        self.layout().setAlignment(Qt.AlignLeft)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
         #self.layout().setVerticalSpacing(1)
         self.layout().addWidget(self.mainText)
         self.layout().addLayout(self.threadCircleLayout)
@@ -205,7 +205,7 @@ class SliceMarksFrame(QWidget):
         self.tableScrollArea.setWidget(self.scrollWidget)
         self.tableScrollArea.setWidgetResizable(True)
         self.tableScrollArea.setContentsMargins(0,0,0,0)
-        self.tableScrollArea.setFrameShape(QFrame.NoFrame)
+        self.tableScrollArea.setFrameShape(QFrame.Shape.NoFrame)
         
 
         self.threadWidget = ThreadWidget()
@@ -223,7 +223,7 @@ class SliceMarksFrame(QWidget):
         topGrid.addWidget(self.filterButton,0,2)
         topGrid.addWidget(self.selectButton,0,0)
         topGrid.addWidget(self.subsetDataButton,0,1)
-        topGrid.setAlignment(Qt.AlignCenter)
+        topGrid.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         bottomGrid = QGridLayout()
         bottomGrid.setContentsMargins(2,2,2,2)
@@ -233,7 +233,7 @@ class SliceMarksFrame(QWidget):
         bottomGrid.addWidget(self.markerButton,0,2)
         bottomGrid.addWidget(self.labelButton,2,0)
         bottomGrid.addWidget(self.toolTipButton,2,1)
-        bottomGrid.setAlignment(Qt.AlignCenter)
+        bottomGrid.setAlignment(Qt.AlignmentFlag.AlignCenter)
        
 
         self.layout().addWidget(QLabel("Slice data"))
@@ -258,7 +258,7 @@ class SliceMarksFrame(QWidget):
        # self.scrollWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     
         #self.layout().addStretch(1)
-        self.layout().setAlignment(Qt.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
         #self.layout().addStretch(1)
         self.layout().addWidget(self.threadWidget)
         #self.layout().addWidget(self.spinner)
@@ -283,7 +283,7 @@ class SliceMarksFrame(QWidget):
         #find bottom left corner
         bottomLeft = self.findSendersBottomLeft(self.sender())
         #cast menu
-        action = menu["main"].exec_(bottomLeft)
+        action = menu["main"].exec(bottomLeft)
         if action:
             self.adjustSelectMode(mode = action.text())
 
@@ -298,7 +298,7 @@ class SliceMarksFrame(QWidget):
         ""
         bottomLeft = self.findSendersBottomLeft(sender)
         menu = self.mC.createSettingMenu(menuKeyWord)
-        menu.exec_(bottomLeft)
+        menu.exec(bottomLeft)
         
     def findSendersBottomLeft(self,sender):
         ""
@@ -316,21 +316,21 @@ class SliceMarksFrame(QWidget):
         #cast menu
         dlg = ColorChooserDialog(mainController = self.mC)
         dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),350,300)
-        dlg.exec_() 
+        dlg.exec() 
     
     def chooseSize(self,event=None):
         ""
         bottomLeft = self.findSendersBottomLeft(self.sender())
         dlg = ICSizeDialog(mainController=self.mC)
         dlg.setGeometry(bottomLeft.x(),bottomLeft.y(),250,200)
-        dlg.exec_() 
+        dlg.exec() 
 
     def checkGraph(self):
         ""
         exists, graph = self.mC.getGraph()
         if not exists:
             w = WarningMessage(infoText="Create a chart first.", iconDir = self.mC.mainPath)
-            w.exec_() 
+            w.exec() 
         return exists, graph
     
     def applyFilter(self, event = None, columnNames = None, dragType = None, dataID = None, filterType = "category"):
@@ -353,7 +353,7 @@ class SliceMarksFrame(QWidget):
                 infoText = "Filtering integers can be performed by applying a numeric filter (greater than, between two numbers) or categorical filter (int == 3)", 
                 title="How to filter integer column.",
                 iconDir = self.mC.mainPath)
-            if not w.exec_(): return 
+            if not w.exec(): return 
             if w.selectedOption == "Categorical":
                 dragType = "Categories"
             
@@ -370,7 +370,7 @@ class SliceMarksFrame(QWidget):
             
                 self.filterDlg = NumericFilter(mainController = self.mC, selectedNumericColumn = columnNames)
             
-        self.filterDlg.exec_()
+        self.filterDlg.exec()
     
     def handleColorDrop(self):
         ""
@@ -399,7 +399,7 @@ class SliceMarksFrame(QWidget):
             if exists:
                 if plotType not in ["scatter","hclust"]:
                     w = WarningMessage(infoText="Labels can not be assigned to this plot type.",iconDir = self.mC.mainPath)
-                    w.exec_()
+                    w.exec()
                 else:
                     graph.addAnnotations(columnNames,dataID)
             
@@ -441,7 +441,7 @@ class SliceMarksFrame(QWidget):
         if exists:
             if plotType not in ["scatter","hclust","swarmplot","x-ys-plot"]:
                 w = WarningMessage(infoText="Tooltips can not be assigned to this plot type.",iconDir = self.mC.mainPath)
-                w.exec_()
+                w.exec()
             else:
                 graph.addTooltip(columnNames,dataID)
 

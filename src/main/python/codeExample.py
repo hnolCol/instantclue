@@ -73,4 +73,4 @@ class MainWindow(QMainWindow):
 app = QApplication(sys.argv)
 w = MainWindow(plotData)
 w.show()
-app.exec_()
+app.exec()

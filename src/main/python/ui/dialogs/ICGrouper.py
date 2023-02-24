@@ -1,7 +1,7 @@
 from re import split
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from .ICColorChooser import ColorLabel
 from ..custom.buttonDesigns import BigPlusButton, ResetButton, ICStandardButton
@@ -134,7 +134,7 @@ class ICGrouper(QDialog):
         self.setLayout(QVBoxLayout())
         hboxMain = QHBoxLayout()
         self.groupLayout = QVBoxLayout()
-        self.groupLayout.setAlignment(Qt.AlignTop)
+        self.groupLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         hboxMain.addWidget(self.table)
 
@@ -196,13 +196,13 @@ class ICGrouper(QDialog):
             selectionEditable=["splitString"],
             previewString=selectedColumnNames.values[0]
             )
-        if selDialog.exec_():
+        if selDialog.exec():
             selectedItems = selDialog.savedSelection
             try:
                 splitIndex = int(float(selectedItems["index"]))
             except:
                 w = WarningMessage(infoText = "Index could be itnerpreted as an integer (0,1,2,3).",iconDir = self.mC.mainPath)
-                w.exec_()
+                w.exec()
                 return 
             if selectedItems["splitString"] == "space":
                 selectedItems["splitString"] = " "
@@ -273,7 +273,7 @@ class ICGrouper(QDialog):
         selIdx = self.table.getSelectedRows()
         if len(selIdx) < 2:
             w = WarningMessage(infoText = "Please select at least two columns.", iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
 
         selRow = [idx.row() for idx in selIdx]
@@ -303,7 +303,7 @@ class ICGrouper(QDialog):
                 warn = True
         if warn:
             w = WarningMessage(infoText = "Some groups not created because only a single column was found.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
     
     
     def addGroupArea(self,groupID = "2"):
@@ -318,7 +318,7 @@ class ICGrouper(QDialog):
             groupEdit.editingFinished.connect(lambda groupID = groupID : self.textEdited(groupID=groupID))
             groupLabel = BuddyLabel(groupEdit,parent=groupFrame) # Create our custom label, and assign myEdit as its buddy
             groupLabel.setText(groupID)
-            groupLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed) # Change vertical size policy so they both match and you don't get popping when switching
+            groupLabel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed) # Change vertical size policy so they both match and you don't get popping when switching
 
             # Put them under a layout together
             hLabelLayout = QHBoxLayout()
@@ -357,7 +357,7 @@ class ICGrouper(QDialog):
             self.groupItems[groupID]["widgetsToUpdate"] = [colorButton,deleteButton]
         except Exception as e:
             print(e)
-
+        
         groupFrame.layout().addLayout(hbox)
         groupFrame.layout().addWidget(itemFrame)
         self.groupLayout.addWidget(groupFrame)
@@ -432,22 +432,22 @@ class ICGrouper(QDialog):
         
         if  groupingName == "":
             w = WarningMessage(infoText = "No name for Grouping found.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
         
         elif  groupingName == "None":
             w = WarningMessage(infoText = "None is not allowed as a group name.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
 
         elif self.mC.grouping.nameExists(groupingName) and not self.editGrouping:
             w = WarningMessage(infoText = "The name of grouping exists already.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
             
         elif any(self.groupItems[groupID]["items"].size < 2 for groupID in self.groupItems.keys()):
             w = WarningMessage(infoText = "One or more groups contain only a single item. Either remove group or add items.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return
         
         groupedItems = OrderedDict([(self.groupItems[groupID]["name"],self.groupItems[groupID]["items"]) for groupID in self.groupItems.keys()])
@@ -480,7 +480,7 @@ class ICGrouper(QDialog):
             
             for l in newLabels.values:
                 bItem = BoxItem(itemName=l,tooltipStr="Right-click to remove this item from the receiver box.")
-                bItem.setContextMenuPolicy(Qt.CustomContextMenu)
+                bItem.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 bItem.customContextMenuRequested.connect(lambda _,groupID = groupID, itemName = l: self.deleteBoxTimeFromGroup(groupID=groupID,itemName=itemName))
 
                 self.groupItems[groupID]["itemHolder"].addItem(bItem)

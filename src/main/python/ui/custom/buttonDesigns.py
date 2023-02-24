@@ -1,6 +1,6 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from scipy.spatial.distance import braycurtis
 
 from ..utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
@@ -56,7 +56,7 @@ class CollapsButton(QPushButton):
         self.mouseEntered = False
         self.active = True
         self.QFont = getStandardFont()#QFont("verdana",fontSize, weight=QFont.Light) if font is None else font
-        self.QFont.setLetterSpacing(QFont.PercentageSpacing,105)
+        self.QFont.setLetterSpacing(QFont.SpacingType.PercentageSpacing,105)
         self.QFont.setWordSpacing(3)
         self.widgetHeight = widgetHeight
 
@@ -113,7 +113,7 @@ class CollapsButton(QPushButton):
        # eventRect = event.rect()
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect = QRect(eventRect)   
        
         centerPoint = rect.center()
@@ -167,7 +167,7 @@ class DataHeaderButton(CollapsButton):
                     *args,
                     **kwargs)
         
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         
     def paintEvent(self,event):
@@ -188,11 +188,11 @@ class DataHeaderButton(CollapsButton):
 
            
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect = QRectF(eventRect)  
 
         centerPoint = rect.center()
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setFont(self.QFont)
         
         if self.mouseEntered and self.hoverColor is not None:
@@ -216,7 +216,7 @@ class DataHeaderButton(CollapsButton):
 
         rect.adjust(18,0,0,0)
         painter.drawText(rect,
-                            Qt.AlignVCenter | Qt.AlignLeft, 
+                            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, 
                             self.text)
 
 
@@ -232,7 +232,7 @@ class DataHeaderButton(CollapsButton):
             pen = QPen(QColor("grey"))
         pen.setWidthF(2)
         painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         p1 = QPointF(xArrow-h/3,
                     yCenter)
 
@@ -272,14 +272,14 @@ class PushHoverButton(QPushButton):
         self.drawFrame = drawFrame
         self.setAcceptDrops(acceptDrops)
         self.acceptedDragTypes = acceptedDragTypes
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
         self.text = text
         self.menuFn = menuFn 
         self.menuKeyWord = menuKeyWord
         if tooltipStr is not None and isinstance(tooltipStr,str):
             self.setToolTip(tooltipStr)
         if self.menuFn is not None:
-            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.customContextMenuRequested.connect(lambda _, menuKw = menuKeyWord: self.menuFn(menuKw,self))
             
     def paintEvent(self,event):
@@ -288,7 +288,7 @@ class PushHoverButton(QPushButton):
         pen = QPen(QColor(self.txtColor))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         b = QBrush(QColor(HOVER_COLOR if self.mouseOver else "white"))
         painter.setBrush(b)
         rect, h, w, x0, y0 = self.getRectProps(event)
@@ -314,7 +314,7 @@ class PushHoverButton(QPushButton):
     def getMainFont(self):
         
         font = getStandardFont()
-        font.setCapitalization(QFont.SmallCaps)
+        font.setCapitalization(QFont.Capitalization.SmallCaps)
 
         return font
 
@@ -411,7 +411,7 @@ class LabelLikeButton(PushHoverButton):
     ""
     def __init__(self, text = "", fontSize = 12, itemBorder = 5, *args, **kwargs):
         super(LabelLikeButton,self).__init__(*args, **kwargs)
-        self.setSizePolicy(QSizePolicy.MinimumExpanding ,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding ,QSizePolicy.Policy.Fixed)
         #self.buttonSize = buttonSize
         self.itemBorder = itemBorder
         self.fontSize = fontSize
@@ -432,16 +432,16 @@ class LabelLikeButton(PushHoverButton):
         pen = QPen(QColor(self.txtColor if not self.mouseOver else INSTANT_CLUE_BLUE))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect.adjust(self.itemBorder,0,0,0)
         painter.drawText(rect,
-                         Qt.AlignLeft | Qt.AlignVCenter, 
+                         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, 
                          self.text)
 
     def updateSize(self):
         ""
         font = self.getStandardFont(self.fontSize)    
-        self.width = QFontMetrics(font).width(self.text) + 2 * self.itemBorder
+        self.width = QFontMetrics(font).horizontalAdvance(self.text) + 2 * self.itemBorder
         self.height = QFontMetrics(font).height() + self.itemBorder
     
     def adjustWidth(self, maximumSize = 300):
@@ -472,10 +472,10 @@ class ICStandardButton(PushHoverButton):
     def __init__(self,itemName = "", parent=None, itemBorder = 15, *args,**kwargs):
         super(ICStandardButton,self).__init__(parent=parent,*args,**kwargs)
         self.itemName = itemName
-        self.setSizePolicy(QSizePolicy.Fixed ,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed ,QSizePolicy.Policy.Fixed)
         #get size
         font = self.getStandardFont()
-        self.width = QFontMetrics(font).width(self.itemName) + int(1 * itemBorder)
+        self.width = QFontMetrics(font).horizontalAdvance(self.itemName) + int(1 * itemBorder)
         self.height = QFontMetrics(font).height() + int(0.6 * itemBorder)
 
     def sizeHint(self):
@@ -494,7 +494,7 @@ class ICStandardButton(PushHoverButton):
         #setup painter
         
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         if self.isEnabled():
             pen = QPen(QColor("black"))
         else:
@@ -515,7 +515,7 @@ class ICStandardButton(PushHoverButton):
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.drawText(rect,
-                         Qt.AlignCenter | Qt.AlignTop, 
+                         Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                          self.itemName)
 
 
@@ -548,8 +548,8 @@ class HelpButton(PushHoverButton):
         pen = QPen(QColor(self.color))
         pen.setWidthF(1)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
-        painter.drawText(rect,Qt.AlignCenter,"?")
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
+        painter.drawText(rect,Qt.AlignmentFlag.AlignCenter,"?")
        
 
     def selectColor(self, updateButton=False):
@@ -595,7 +595,7 @@ class BigArrowButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         c = QColor(WIDGET_HOVER_COLOR if self.mouseOver else INSTANT_CLUE_BLUE)
         #c.setAlphaF(0.85)
@@ -603,10 +603,10 @@ class BigArrowButton(PushHoverButton):
         painter.setBrush(b)
 
         try:
-            polygon = QPolygonF()
+            polygon = []
             for p in self.getPointsForArrow(x0,y0,h,direction=self.direction):
                 polygon.append(p)
-            painter.drawPolygon(polygon)
+            painter.drawPolygon(*polygon)
         except Exception as e:
             print(e)
 
@@ -680,7 +680,7 @@ class BigPlusButton(PushHoverButton):
         pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#397546"))
         pen.setWidthF(self.strokeWidth)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         
    
@@ -708,7 +708,7 @@ class SubsetDataButton(PushHoverButton):
             pen = QPen(QColor("black"))
             pen.setWidthF(0.5)
             painter.setPen(pen)
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
             #calculate rectangle props
             rect, h, w, x0, y0 = self.getRectProps(event)
@@ -719,11 +719,11 @@ class SubsetDataButton(PushHoverButton):
             #c.setAlphaF(0.75)
             b = QBrush(c)
             painter.setBrush(b)
-            polygon = QPolygonF()
+            polygon = []
             for p in polyPoints:
                 #append points to polygon
                 polygon.append(p)
-            painter.drawPolygon(polygon,2)
+            painter.drawPolygon(*polygon)
             
             #setup brush for white ellipse
             brush = QBrush(QColor("white"))
@@ -766,7 +766,7 @@ class ViewDataButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         #calculate rectangle props
         rect, h, w, x0, y0 = self.getRectProps(event)
@@ -840,7 +840,7 @@ class SizeButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         offset = [(0,0),(h/7,h/7),(h/4,h/4)]
         yOffset = h/10
@@ -858,7 +858,7 @@ class SizeButton(PushHoverButton):
         # draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                            Qt.AlignCenter | Qt.AlignTop, 
+                            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                             "size")
  
 
@@ -893,7 +893,7 @@ class FilterButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         
         polyPoints, ellipseRect = self.getFilterPath(x0,y0,w,h)
         
@@ -903,12 +903,12 @@ class FilterButton(PushHoverButton):
         #c.setAlphaF(0.75)
         b = QBrush(c)
         painter.setBrush(b)
-        polygon = QPolygonF()
+        polygon = []
         for p in polyPoints:
             #append points to polygon
             polygon.append(p)
         
-        painter.drawPolygon(polygon,2)
+        painter.drawPolygon(*polygon)
         
         #setup brush for white ellipse
         brush = QBrush(QColor("white"))
@@ -920,7 +920,7 @@ class FilterButton(PushHoverButton):
         # draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                            Qt.AlignCenter | Qt.AlignTop, 
+                            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                             "filter")
 
 
@@ -954,7 +954,7 @@ class SelectButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         #setup brush for circles
         c = QColor(WIDGET_HOVER_COLOR if self.mouseOver else INSTANT_CLUE_BLUE)
@@ -976,7 +976,7 @@ class SelectButton(PushHoverButton):
         # draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                            Qt.AlignCenter | Qt.AlignTop, 
+                            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                             "select")
 
     def getCirclePoints(self,x0,y0,h):
@@ -1020,7 +1020,7 @@ class ColorButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         offset = [(-h/6,h/5),(h/6,h/6),(0,h/10),(-h/7,-h/12)]
         rScale = [1,1.2,1.3,1]
@@ -1038,7 +1038,7 @@ class ColorButton(PushHoverButton):
         # draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                         Qt.AlignCenter | Qt.AlignTop, 
+                         Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                          "color")
  
 class MarkerButton(PushHoverButton):
@@ -1072,7 +1072,7 @@ class MarkerButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         offset = [(-h/6,h/5),(h/6,h/6),(-h/8,-h/7)]
         rScale = [1,1.2,1.3,1]
@@ -1099,7 +1099,7 @@ class MarkerButton(PushHoverButton):
         # draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                         Qt.AlignCenter | Qt.AlignTop, 
+                         Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                          "marker")
  
 
@@ -1132,10 +1132,10 @@ class LabelButton(PushHoverButton):
         painter = QPainter(self)
         pen = QPen(QColor("black"))
 
-        #font.setCapitalization(QFont.SmallCaps)
+        #font.setCapitalization(QFont.Capitalization.SmallCaps)
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         
         b = QBrush(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#2776BC"))
         painter.setFont(self.getStandardFont(fontSize=10))
@@ -1145,7 +1145,7 @@ class LabelButton(PushHoverButton):
         #draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                        Qt.AlignCenter | Qt.AlignTop, 
+                        Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                         "labels")
 
         painter.setBrush(b)
@@ -1174,7 +1174,7 @@ class TooltipButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.2)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         #brush for rectangle
         c = QColor("#2776BC")
@@ -1208,7 +1208,7 @@ class TooltipButton(PushHoverButton):
         #draw main label
         painter.setFont(self.getMainFont())
         painter.drawText(self.getMainLabelRect(x0,y0,w,h),
-                        Qt.AlignCenter | Qt.AlignTop, 
+                        Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop, 
                         "tooltip")
 
 # Buttons for Dialogs
@@ -1232,13 +1232,13 @@ class AcceptButton(PushHoverButton):
         #set up pen for border
         pen = QPen(QColor(INSTANT_CLUE_BLUE))
         pen.setWidthF(2.5)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         #set no brush (no filling)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         #init path
         path = QPainterPath()
         path.moveTo(x0-h/4,y0+h/12)
@@ -1276,13 +1276,13 @@ class RefreshButton(PushHoverButton):
         #set up pen for border
         pen = QPen(QColor(INSTANT_CLUE_BLUE))
         pen.setWidthF(1)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         #set no brush (no filling)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         #init circle
         d = h/2
         r = d/2
@@ -1342,11 +1342,11 @@ class ResetButton(PushHoverButton):
         rect = e.rect()
         rect.adjust(1,1,-1,-1)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = rect.center()
         pen = QPen(QColor(self.penColor if not self.mouseOver else INSTANT_CLUE_BLUE))
         pen.setWidthF(self.strokeWidth)
-        pen.setCapStyle(Qt.RoundCap)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         x0 = centerPoint.x()
         y0 = centerPoint.y()
@@ -1377,11 +1377,11 @@ class SmallColorButton(PushHoverButton):
 
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
         pen = QPen(QColor("darkgrey"))
         pen.setWidthF(0.5)
-        #pen.setCapStyle(Qt.RoundCap)
+        #pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
 
 
@@ -1412,11 +1412,11 @@ class ResortButton(PushHoverButton):
     def paintEvent(self, e):
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
         pen = QPen(QColor("black"))
         pen.setWidthF(self.strokeWidth)
-        pen.setCapStyle(Qt.RoundCap)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         brush = QBrush(QColor(INSTANT_CLUE_BLUE if not self.mouseOver else WIDGET_HOVER_COLOR))
         painter.setBrush(brush)
@@ -1424,8 +1424,8 @@ class ResortButton(PushHoverButton):
         y0 = centerPoint.y()
         h = e.rect().height()
 
-        painter.drawPolygon(self.makeArrow(QPointF(x0-h/5,y0), h , "up"))
-        painter.drawPolygon(self.makeArrow(QPointF(x0+h/5,y0), h , "down"))
+        painter.drawPolygon(*self.makeArrow(QPointF(x0-h/5,y0), h , "up"))
+        painter.drawPolygon(*self.makeArrow(QPointF(x0+h/5,y0), h , "down"))
     
 
     def deltaUp(self,h):
@@ -1438,7 +1438,7 @@ class ResortButton(PushHoverButton):
         x0 = centerPoint.x()
         y0 = centerPoint.y()
         h = height/5
-        poly = QPolygonF()
+        poly = []
         if direction == "up":
             deltaXY = self.deltaUp(h)
         else:
@@ -1465,7 +1465,7 @@ class ArrowButton(PushHoverButton):
     def paintEvent(self, e):
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
         brush = QBrush(QColor(self.brushColor))
         pen = QPen(QColor("black"))
@@ -1474,7 +1474,7 @@ class ArrowButton(PushHoverButton):
         painter.setPen(pen)
 
         poly = self.makeArrow(centerPoint, e.rect().height())
-        painter.drawPolygon(poly)
+        painter.drawPolygon(*poly)
 
     def deltaUp(self,h):
         return [(h,h),(-h,h),(0,-h)]
@@ -1486,7 +1486,7 @@ class ArrowButton(PushHoverButton):
         x0 = centerPoint.x()
         y0 = centerPoint.y()
         h = height/4
-        poly = QPolygonF() 
+        poly = [] 
         if self.direction == "up":
             deltaXY = self.deltaUp(h)
         else:
@@ -1516,7 +1516,7 @@ class CheckButton(PushHoverButton):
 
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
         pen = QPen(QColor(self.penColor))
         pen.setWidthF(self.strokeWidth)
@@ -1558,7 +1558,7 @@ class SaveButton(PushHoverButton):
 
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         #some button calc
         centerPoint = e.rect().center()
         height = w = e.rect().height()
@@ -1581,7 +1581,7 @@ class SaveButton(PushHoverButton):
         path.lineTo(x0-h,y0-h)
 
         painter.drawPath(path)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         brush = QBrush(QColor("white"))
         painter.setBrush(brush)
         heighRect = h / 1.5
@@ -1609,10 +1609,10 @@ class MaskButton(PushHoverButton):
 
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
       
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         h = w = e.rect().height()/3
         centerPoint = e.rect().center()
         x0 = centerPoint.x()
@@ -1699,13 +1699,13 @@ class AnnotateButton(PushHoverButton):
             self.createData()
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         centerPoint = e.rect().center()
       # pen = QPen(QColor(self.penColor))
       #  pen.setWidthF(self.strokeWidth)
         #brush = QBrush(QColor(INSTANT_CLUE_BLUE if self.state else "white"))
         #painter.setBrush(brush)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         h = w = e.rect().height()/4
         centerPoint = e.rect().center()
         x0 = centerPoint.x()
@@ -1758,7 +1758,7 @@ class ViewHideIcon(PushHoverButton):
     def __init__(self,parent=None):
         super(ViewHideIcon,self).__init__(parent, acceptDrops = False)
 
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
         self.setState()
         self.setToolTip("Enable/Disable Shortcut Icons")
 
@@ -1779,7 +1779,7 @@ class ViewHideIcon(PushHoverButton):
         ""
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect = e.rect()
         centerPoint = rect.center()
         h = rect.height() 
@@ -1804,7 +1804,7 @@ class ViewHideIcon(PushHoverButton):
 
         brush = QBrush(QColor("white"))
         painter.setBrush(brush)
-        painter.drawEllipse(centerPoint,innerCircleRadius,innerCircleRadius)
+        painter.drawEllipse(QPointF(centerPoint),innerCircleRadius,innerCircleRadius)
 
         if not self.state:
             
@@ -1821,7 +1821,7 @@ class FindReplaceButton(PushHoverButton):
     def __init__(self,parent=None):
         super(FindReplaceButton,self).__init__(parent)
 
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
         self.setToolTip("Find & replace values/header names")
 
     def sizeHint(self):
@@ -1833,7 +1833,7 @@ class FindReplaceButton(PushHoverButton):
         ""
         super().paintEvent(e)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         rect = e.rect()
         centerPoint = rect.center()
         h = rect.height() 
@@ -1869,7 +1869,7 @@ class FindReplaceButton(PushHoverButton):
         painter.drawEllipse(bottomLeftRect)
         #add arrows
         #set no brush (no filling)
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         #calculated constansts
         distFromCircle = IDCircle / 3
         distToCubicCorner = IDCircle / 2
@@ -1940,7 +1940,7 @@ class PlotTypeButton(PushHoverButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         #get rect
         rect = event.rect()
         try:
@@ -2129,7 +2129,7 @@ class PlotTypeButton(PushHoverButton):
             normCount = count/np.max(count) 
           
             normHeight = height / normCount.size 
-            poly = QPolygonF()
+            poly = []
             
             violinWidth = (width - margin) / nViolins
             for n in range(normCount.size):
@@ -2138,7 +2138,7 @@ class PlotTypeButton(PushHoverButton):
             for n in reversed(range(normCount.size)):
                 poly.append(QPoint(int(xValues[m] + normCount[n] * violinWidth / 2), int(normHeight * n + margin)))
             
-            qp.drawPolygon(poly)
+            qp.drawPolygon(*poly)
             brush = QBrush(QColor("white"))
             qp.setBrush(brush)
             qp.drawEllipse(QPointF(xValues[m],normHeight * circleY + margin),2,2)
@@ -2455,7 +2455,7 @@ class MultiScatterButton(PlotTypeButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         #get rect
         rect, h, w, x0, y0 = self.getRectProps(event)
         m = w/8
@@ -2472,7 +2472,7 @@ class MultiScatterButton(PlotTypeButton):
             rectHeight, rectWidth, rectX, rectY = self.drawAxis(painter, q , False, 5) #jsut add axis no drawing
             fKey = "scatter"
             self.funcKeyDict[fKey](painter,rectHeight,rectWidth, rectX, rectY,r=1)
-            painter.setBrush(Qt.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
 
 
 
@@ -2490,7 +2490,7 @@ class MainFigureButton(PlotTypeButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         #get rect
         rect, h, w, x0, y0 = self.getRectProps(event)
         m = w/8
@@ -2510,7 +2510,7 @@ class MainFigureButton(PlotTypeButton):
             randN = np.random.randint(low=0,high=nFuncKeys)
             fKey = funcKey[randN]
             self.funcKeyDict[fKey](painter,rectHeight,rectWidth, rectX, rectY)
-            painter.setBrush(Qt.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
 
     ## main Figure buttons
 
@@ -2528,7 +2528,7 @@ class SettingsButton(PlotTypeButton):
         pen = QPen(QColor("black"))
         pen.setWidthF(0.5)
         painter.setPen(pen)
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         #get rect
         rect, h, w, x0, y0 = self.getRectProps(event)
 

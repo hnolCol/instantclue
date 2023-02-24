@@ -8,6 +8,8 @@ a = Analysis(['main.py'],
              pathex=['/Users/hnolte/Documents/GitHub/instantclue/src/main/python'],
              binaries=[],
              datas=[],
+             hooksconfig={
+                "matplotlib": {"backends": "all"}},
              hiddenimports=['setuptools','pynndescent','pkg_resources','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils',
              				'scipy._lib.messagestream','numpy.random.common',

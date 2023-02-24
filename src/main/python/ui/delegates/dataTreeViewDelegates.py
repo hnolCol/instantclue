@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import HOVER_COLOR, getStandardFont
 
@@ -15,17 +15,17 @@ class DeleteDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             centerPoint = option.rect.center()
             background = QRect(option.rect)
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
 
             pen = QPen(QColor("darkgrey" if self.parent().focusColumn != self.highLightColumn else "#B84D29"))
             pen.setWidthF(2)
-            pen.setCapStyle(Qt.RoundCap)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
             x0 = centerPoint.x()
             y0 = centerPoint.y()
@@ -36,7 +36,7 @@ class DeleteDelegate(QStyledItemDelegate):
         elif self.parent().selectionModel().isSelected(self.parent().model().index(index.row(),0)):
            b = QBrush(QColor("lightgrey"))
            painter.setBrush(b)
-           painter.setPen(Qt.NoPen)
+           painter.setPen(Qt.PenStyle.NoPen)
            painter.drawRect(option.rect)
 
 
@@ -53,12 +53,12 @@ class GroupDelegate(QStyledItemDelegate):
         groupingActive = self.parent().isGroupigActive()
         indexGroupActive = self.parent().model().getGroupingStateByTableIndex(index)
 
-        painter.setRenderHint(QPainter.Antialiasing,True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         if groupingActive:
             centerPoint = option.rect.center()
             background = QRect(option.rect)
 
-            b  = QBrush(Qt.NoBrush)
+            b  = QBrush(Qt.BrushStyle.NoBrush)
             r = 5
             if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
                 b = QBrush(QColor(HOVER_COLOR)) 
@@ -67,7 +67,7 @@ class GroupDelegate(QStyledItemDelegate):
                 b =  QBrush(QColor("lightgrey"))
 
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
             
             if indexGroupActive:
@@ -77,7 +77,7 @@ class GroupDelegate(QStyledItemDelegate):
                 painter.setBrush(brush)
             else:
                 pen = QPen(QColor("darkgrey" if self.parent().focusColumn != self.highLightColumn else "#B84D29"))
-                painter.setBrush(Qt.NoBrush)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
             #set pen width
             pen.setWidthF(0.75)
             painter.setPen(pen)
@@ -89,7 +89,7 @@ class GroupDelegate(QStyledItemDelegate):
             background = QRect(option.rect)
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
 
             pen = QPen(QColor("darkgrey" if self.parent().focusColumn != self.highLightColumn else "#B84D29"))
@@ -101,7 +101,7 @@ class GroupDelegate(QStyledItemDelegate):
         elif self.parent().selectionModel().isSelected(self.parent().model().index(index.row(),0)):
            b = QBrush(QColor("lightgrey"))
            painter.setBrush(b)
-           painter.setPen(Qt.NoPen)
+           painter.setPen(Qt.PenStyle.NoPen)
            painter.drawRect(option.rect)
 
 
@@ -113,7 +113,7 @@ class MaskDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             centerPoint = option.rect.center()
             rect = option.rect
             background = QRect(option.rect)
@@ -127,7 +127,7 @@ class MaskDelegate(QStyledItemDelegate):
 
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
             
             
@@ -185,7 +185,7 @@ class MaskDelegate(QStyledItemDelegate):
         elif self.parent().selectionModel().isSelected(index):
                b = QBrush(QColor("lightgrey"))
                painter.setBrush(b)
-               painter.setPen(Qt.NoPen)
+               painter.setPen(Qt.PenStyle.NoPen)
                painter.drawRect(option.rect)
 
 
@@ -201,12 +201,12 @@ class FilterDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             centerPoint = option.rect.center()
             background = QRect(option.rect)
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)            
             rect = option.rect
             x0 = centerPoint.x()
@@ -214,7 +214,7 @@ class FilterDelegate(QStyledItemDelegate):
             h = rect.height()/4
             w = rect.width()
             path = QPainterPath()
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
 
             path.moveTo(x0-w/5, y0-h)
             path.lineTo(x0+w/5,y0-h)
@@ -241,7 +241,7 @@ class FilterDelegate(QStyledItemDelegate):
 
                b = QBrush(QColor("lightgrey"))
                painter.setBrush(b)
-               painter.setPen(Qt.NoPen)
+               painter.setPen(Qt.PenStyle.NoPen)
                painter.drawRect(option.rect)
                         
 
@@ -257,14 +257,14 @@ class ItemDelegate(QStyledItemDelegate):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
             self.addText(index,painter,rect)
 
         elif self.parent().selectionModel().isSelected(index):
             b = QBrush(QColor("lightgrey"))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
             self.addText(index,painter,rect)
         
@@ -275,12 +275,12 @@ class ItemDelegate(QStyledItemDelegate):
         ""
         painter.setPen(QPen(QColor("black")))
         rect.adjust(9,0,0,0)
-        painter.drawText(rect,   Qt.AlignVCenter | Qt.AlignLeft, self.parent().model().data(index,Qt.DisplayRole))
+        painter.drawText(rect,   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
        
     def setEditorData(self,editor,index):
         editor.setFont(getStandardFont())
         editor.setAutoFillBackground(True)
-        editor.setText(self.parent().model().data(index,Qt.DisplayRole))
+        editor.setText(self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
 
 
 
@@ -295,7 +295,7 @@ class AddDelegate(QStyledItemDelegate):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
             pen = QPen(QColor("darkgrey" if self.parent().focusColumn != self.highLightColumn else "#288C36"))
             pen.setWidthF(3)
@@ -313,7 +313,7 @@ class AddDelegate(QStyledItemDelegate):
         elif self.parent().selectionModel().isSelected(self.parent().model().index(index.row(),0)):
                b = QBrush(QColor("lightgrey"))
                painter.setBrush(b)
-               painter.setPen(Qt.NoPen)
+               painter.setPen(Qt.PenStyle.NoPen)
                painter.drawRect(option.rect)
                 
 
@@ -326,7 +326,7 @@ class CopyDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             rect = option.rect
             background = QRect(rect)
             #rect.adjust(8,0,-8,0)
@@ -350,11 +350,11 @@ class CopyDelegate(QStyledItemDelegate):
             path.lineTo(x0-h,y0+0.8*h)
             b = QBrush(QColor(HOVER_COLOR))
             painter.setBrush(b)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
             pen = QPen(QColor("black"))
             pen.setWidthF(0.2)
-            pen.setCapStyle(Qt.RoundCap)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
             b = QBrush(QColor("darkgrey" if self.parent().focusColumn != self.highLightColumn  else "#B84D29"))
             painter.setBrush(b)
@@ -363,7 +363,7 @@ class CopyDelegate(QStyledItemDelegate):
         elif self.parent().selectionModel().isSelected(self.parent().model().index(index.row(),0)):
                b = QBrush(QColor("lightgrey"))
                painter.setBrush(b)
-               painter.setPen(Qt.NoPen)
+               painter.setPen(Qt.PenStyle.NoPen)
                painter.drawRect(option.rect)            
   
 
@@ -379,9 +379,9 @@ class DelegateColor(QStyledItemDelegate):
         if self.parent().model().getCheckStateByTableIndex(index):
             painter.save()
             color = self.parent().model().getColor(index)
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             brush = QBrush(color)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(brush)
             r = QRect(option.rect)
             r.adjust(8, 8, -8, -8)
@@ -391,7 +391,7 @@ class DelegateColor(QStyledItemDelegate):
         elif self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
             
             pen = painter.pen()
-            painter.setRenderHint(QPainter.Antialiasing,True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             brush = QBrush(QColor("lightgrey"))
             pen.setColor(Qt.transparent)
             painter.setPen(pen)

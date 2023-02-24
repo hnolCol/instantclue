@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * #works for pyqt5
 import sys
 import datetime
 
@@ -36,7 +36,7 @@ class Message(QFrame):
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.messageLabel)
         self.layout().addStretch(1)
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
 
         self.startTimer()
 
@@ -65,7 +65,7 @@ class Notification(QWidget):
         super(QWidget, self).__init__(parent)
 
         self.padding = padding
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         
         #get sreenWidth
         resolution = QApplication.primaryScreen().size()

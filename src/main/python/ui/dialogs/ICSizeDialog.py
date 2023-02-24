@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from ..custom.buttonDesigns import ICStandardButton, ResetButton
 from ..utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getMessageProps
 import numpy as np 
@@ -48,7 +48,7 @@ class SlideLineEdit(QWidget):
         self.lineEdit.setValidator(QDoubleValidator(self.minValue,self.maxValue,2))
         
         #
-        self.slider = QSlider(Qt.Horizontal)
+        self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setToolTip("Slider with range from {} to {}. Precision is {}".format(self.minValue,self.maxValue, self.precision))
         self.slider.setValue(self.transformValueForSlider(self.value))
         self.slider.setSingleStep(1)
@@ -164,14 +164,14 @@ class ICSizeDialog(QDialog):
     
     def __windowUpdate(self):
         ""
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Popup)
         self.setWindowOpacity(0.98)
 
     def keyPressEvent(self,event=None):
         ""
-        if event.key() == Qt.Key_Enter:
+        if event.key() == Qt.Key.Key_Enter:
             return
-        elif event.key() == Qt.Key_Escape:
+        elif event.key() == Qt.Key.Key_Escape:
             self.close() 
 
     def accept(self):

@@ -1,5 +1,4 @@
 #
-from PyQt5.QtCore import QObject, pyqtSignal
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 

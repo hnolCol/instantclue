@@ -5,9 +5,9 @@ PlotOptioFrame
 
 
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from ..plotter.plotTypeManager import PlotTypeManager, plotTypeTooltips, gridPosition 
 from ..custom.buttonDesigns import PlotTypeButton, MainFigureButton, SettingsButton, MultiScatterButton
@@ -40,7 +40,7 @@ class PlotOptionFrame(QWidget):
         self._layout()
         self._connectEvents()
         self.updateTypeSpecMenus()
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Expanding)
         self.setMaximumWidth(100)
 
     def _controls(self):
@@ -52,11 +52,11 @@ class PlotOptionFrame(QWidget):
                 button = MultiScatterButton(parent=self,plotType=plotType,tooltipStr = plotTypeTooltips[plotType] if plotType in plotTypeTooltips else "")
             else:
                 button = PlotTypeButton(parent=self,plotType=plotType,tooltipStr = plotTypeTooltips[plotType] if plotType in plotTypeTooltips else "")
-            button.setContextMenuPolicy(Qt.CustomContextMenu)
+            button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.buttons.append(button)
                 
         self.mainFigureButton = MainFigureButton(tooltipStr="Opens a Main Figure (A4).\nCreate an axis to export plots from the main window to the main figure.")
-        self.mainFigureButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.mainFigureButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.configButton = SettingsButton(tooltipStr="Opens Settings.")
 
     def _layout(self):
@@ -75,7 +75,7 @@ class PlotOptionFrame(QWidget):
         self.layout().addWidget(self.mainFigureButton,2,0)
         self.layout().addWidget(self.configButton,3,0)
 
-        self.layout().setAlignment(Qt.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
 
     
     def _connectEvents(self):
@@ -287,13 +287,13 @@ class PlotOptionFrame(QWidget):
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
         self.updateTypeSpecMenus()
 
-        if menu is not None and hasattr(menu,"exec_"):
+        if menu is not None and hasattr(menu,"exec"):
 
-            menu.exec_(bottomLeft )
+            menu.exec(bottomLeft )
 
         elif plotType in self.typeMenus:
             
-            self.typeMenus[plotType].exec_(bottomLeft )
+            self.typeMenus[plotType].exec(bottomLeft )
 
     def getReceiverBoxItems(self):
         ""
@@ -384,7 +384,7 @@ class PlotOptionFrame(QWidget):
         if scaleString == "Custom values":
             try:
                 askLimits = ICDataInput(mainController=self.mC, title = "Cluster color map limits.",valueNames = ["min","max"], valueTypes = {"min":float,"max":float})
-                if askLimits.exec_():
+                if askLimits.exec():
                     minValue, maxValue = askLimits.providedValues["min"], askLimits.providedValues["max"]
                     self.mC.config.setParam("colorMapLimits","custom")
                     self.mC.config.setParam("colorMapLimits.min",minValue)
@@ -418,7 +418,7 @@ class PlotOptionFrame(QWidget):
                 
                 corrMatrixData = graph.getPlotData()
                 dlg = PandaTableDialog(parent=self,df = corrMatrixData, addToMainDataOption = False, ignoreChanges =  True, mainController = self.mC)
-                dlg.exec_()
+                dlg.exec()
 
             else:
                 
@@ -436,7 +436,7 @@ class PlotOptionFrame(QWidget):
         ""
         
         cdl = ConfigDialog(self.mC,specificSettingsTab = specificSettingsTab)
-        cdl.exec_()
+        cdl.exec()
 
     def getFileSaveFileName(self):
         workingDir = self.mC.config.getParam("WorkingDirectory")

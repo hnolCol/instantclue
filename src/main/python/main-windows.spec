@@ -22,6 +22,8 @@ a = Analysis(['main.py'],
              pathex=['C:\\Users\\HNolte\\Documents\\GitHub\\instantclue\\src\\main\\python'],
              binaries=[],
              datas=[],
+             hooksconfig={
+                "matplotlib": {"backends": "all"}},
              hiddenimports=['pynndescent','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils','sklearn.neighbors._partition_nodes',
              				'scipy._lib.messagestream','numpy.random.common',

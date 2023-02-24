@@ -1,7 +1,7 @@
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 import os
 
 from matplotlib.pyplot import text 
@@ -20,7 +20,7 @@ class MessageBase(QDialog):
         self.state = None
         self.textIsSelectable = textIsSelectable
         self.setMinimumWidth(360)
-        self.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred,QSizePolicy.Policy.Fixed)
 
         self.setWindowTitle("Message")
         self.__controls()
@@ -31,7 +31,7 @@ class MessageBase(QDialog):
         self.mainFrame = QFrame()
         #set up title label
         self.tLabel = createTitleLabel(self.title)
-        self.tLabel.setAlignment(Qt.AlignHCenter)
+        self.tLabel.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         #set up logo label
         self.logoLabel = QLabel() 
          #find instant clue logo
@@ -41,14 +41,14 @@ class MessageBase(QDialog):
             self.logoLabel.setPixmap(pixmap)
         else:
             self.logoLabel.setText("...")
-        self.logoLabel.setAlignment(Qt.AlignVCenter)
+        self.logoLabel.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         #setup info label
         self.infoLabel = createLabel(self.infoText)
         if self.textIsSelectable:
-            self.infoLabel.setTextInteractionFlags(Qt.TextSelectableByMouse) 
+            self.infoLabel.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse) 
         self.infoLabel.setWordWrap(True)
-        self.infoLabel.setAlignment(Qt.AlignRight  | Qt.AlignVCenter)
+        self.infoLabel.setAlignment(Qt.AlignmentFlag.AlignRight  | Qt.AlignmentFlag.AlignVCenter)
     
     def __layout(self):
         ""
@@ -109,7 +109,7 @@ class WarningMessage(MessageBase):
         hbox = QHBoxLayout()
         hbox.addWidget(self.okButton)
 
-        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignmentFlag.AlignRight)
   
 class AskStringMessage(MessageBase):
 
@@ -137,9 +137,9 @@ class AskStringMessage(MessageBase):
         hbox = QVBoxLayout()
         
         hbox.addWidget(self.lineEdit)
-        hbox.addWidget(self.okButton,Qt.AlignRight)
+        hbox.addWidget(self.okButton,Qt.AlignmentFlag.AlignRight)
         mainFLayout = self.mainFrame.layout()
-        mainFLayout.addLayout(hbox,3,1,1,2,Qt.AlignRight)
+        mainFLayout.addLayout(hbox,3,1,1,2,Qt.AlignmentFlag.AlignRight)
 
     def __connectEvents(self):
         ""
@@ -184,8 +184,8 @@ class AskForFile(MessageBase):
         hbox = QHBoxLayout()
         hbox.addWidget(self.yesButton)
         hbox.addWidget(self.noButton)
-        mainFLayout.addLayout(hboxFile,3,0,1,3,Qt.AlignLeft)
-        mainFLayout.addLayout(hbox,4,0,1,3,Qt.AlignRight)
+        mainFLayout.addLayout(hboxFile,3,0,1,3,Qt.AlignmentFlag.AlignLeft)
+        mainFLayout.addLayout(hbox,4,0,1,3,Qt.AlignmentFlag.AlignRight)
 
 
     def changeState(self,event=None):
@@ -193,7 +193,7 @@ class AskForFile(MessageBase):
         currentPath = self.fileLineEdit.text()
         if not os.path.exists(currentPath):
             w = WarningMessage(infoText = "Path does not exist. Changed after Selection?")
-            w.exec_()
+            w.exec()
         else:
             self.setState(currentPath)
             self.accept() 
@@ -234,7 +234,7 @@ class AskOptionsMessage(MessageBase):
         hbox = QHBoxLayout()
         for btn in self.optionButtons:
             hbox.addWidget(btn)
-        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignmentFlag.AlignRight)
       
   
     def saveOptionAndClose(self,selectedOption):
@@ -276,7 +276,7 @@ class AskQuestionMessage(MessageBase):
         hbox = QHBoxLayout()
         hbox.addWidget(self.yesButton)
         hbox.addWidget(self.noButton)
-        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignRight)
+        mainFLayout.addLayout(hbox,3,0,1,3,Qt.AlignmentFlag.AlignRight)
       
   
     def changeState(self,event = None, newState = True):

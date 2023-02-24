@@ -1,7 +1,8 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtWidgets import QLabel, QComboBox, QLineEdit, QMenu
 import os
+
 
 from numpy import short 
 import hashlib
@@ -26,6 +27,13 @@ standardFontFamily = "Helvetica"
 
 
 legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
+
+def getCheckStateFromBool(checked):
+    ""
+    if checked:
+        return Qt.CheckState.Checked
+    
+    return Qt.CheckState.Unchecked
 
 def getRandomString(N = 20):
     ""
@@ -58,8 +66,8 @@ def getExtraLightFont(fontSize=12,font="Helvetica"):
     if isWindows():
         fontSize -= 2
     QFontObject = getStandardFont(fontSize,font)
-    QFontObject.setLetterSpacing(QFont.AbsoluteSpacing, 3)
-    QFontObject.setWeight(QFont.ExtraLight)
+    QFontObject.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 3)
+    QFontObject.setWeight(QFont.Weight.ExtraLight)
     return QFontObject
 
 def getStandardFont(fontSize = None, font=None):

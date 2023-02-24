@@ -1,7 +1,6 @@
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * #works for pyqt5
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 import numpy as np
 from collections import OrderedDict
@@ -94,18 +93,19 @@ class CollapsableFrames(QWidget):
 
         self.animation.addAnimation(QPropertyAnimation(contentArea,b"maximumHeight"))
         self.animation.addAnimation(QPropertyAnimation(contentArea,b"minimumHeight"))
+        
         contentArea.setMaximumHeight(height)
         contentArea.setMinimumHeight(height)
         contentArea.setLayout(contentLayout)
         self.frameProps[frameID]["contentArea"] = contentArea
-        self.frameProps[frameID]["contentArea"].setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        self.frameProps[frameID]["contentArea"].setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
         self.layout().addWidget(self.frameProps[frameID]["contentArea"])
 
     def addHeaderFrame(self, frameID):
         ""
-        self.frameProps[frameID]["headerFrame"] = QFrame()
+        self.frameProps[frameID]["headerFrame"] = QFrame(parent=self)
         self.frameProps[frameID]["headerFrame"].resize(self.parentWidth,30)
-        self.frameProps[frameID]["headerFrame"].setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed)
+        self.frameProps[frameID]["headerFrame"].setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
 
         self.layout().addWidget(self.frameProps[frameID]["headerFrame"])
 
@@ -114,12 +114,12 @@ class CollapsableFrames(QWidget):
         vbox = QVBoxLayout(self.frameProps[frameID]["headerFrame"])
         vbox.setContentsMargins(0,0,0,0)
         toolButton = self.buttonDesign(
-                    parent = self,
+                    parent = self.frameProps[frameID]["headerFrame"],
                     text = title, 
                     openFrame=self.frameProps[frameID]["open"],
                     *args, **kwargs)#, openColor=self.colors[frameID])
         if self.buttonMenu is not None:
-            toolButton.setContextMenuPolicy(Qt.CustomContextMenu)
+            toolButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             toolButton.customContextMenuRequested.connect(self.openContextMenu)
 
         self.frameProps[frameID]["button"] = toolButton

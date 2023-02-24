@@ -1,7 +1,7 @@
 import time
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from ..utils import getExtraLightFont
 import requests
@@ -20,7 +20,7 @@ class ICWelcomeScreen(QWidget):
     def __init__(self,version,*args,**kwargs):
         super(ICWelcomeScreen,self).__init__(*args,**kwargs)
 
-        self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,QSizePolicy.Policy.MinimumExpanding)
         
         self.counter = 0
         self.versionCheckedDone = False
@@ -36,7 +36,7 @@ class ICWelcomeScreen(QWidget):
 
         #set label
         self.label = QLabel("instant")
-        self.label.setAlignment(Qt.AlignLeft)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.label.setFont(getExtraLightFont(fontSize=25, font="Courier New"))
 
         self.versionLabel = QLabel("v. {}".format(self.version))
