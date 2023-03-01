@@ -2,7 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from matplotlib.pyplot import title 
-from ..custom.buttonDesigns import ICStandardButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from ..custom.warnMessage import WarningMessage
 
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox

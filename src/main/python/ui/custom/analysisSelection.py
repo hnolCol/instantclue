@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from .ICCollapsableFrames import CollapsableFrames
-from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton
+from .Widgets.ICButtonDesgins import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE

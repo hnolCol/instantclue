@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 from backend.utils.stringOperations import getReadableNumber
 import pandas as pd
@@ -276,7 +276,7 @@ class StatisticTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False

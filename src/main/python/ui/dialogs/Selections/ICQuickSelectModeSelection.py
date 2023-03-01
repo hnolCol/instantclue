@@ -1,8 +1,8 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ..utils import createTitleLabel, createLabel, createLineEdit
-from ..custom.buttonDesigns import ICStandardButton
+from ...utils import createTitleLabel, createLabel, createLineEdit
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton
 
 class QuickSelectDialog(QDialog):
     def __init__(self,mainController,*args, **kwargs):

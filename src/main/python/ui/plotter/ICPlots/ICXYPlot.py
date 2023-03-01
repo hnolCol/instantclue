@@ -2,7 +2,7 @@
 
 
 from .ICChart import ICChart
-from ...dialogs.ICAUCCalculation import ICDAUCDialog
+from ...dialogs.Transformations.ICAUCCalculation import ICDAUCDialog
 from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.collections import LineCollection

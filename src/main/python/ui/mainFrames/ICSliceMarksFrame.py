@@ -3,17 +3,17 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 
 # internal imports
-from ui.custom.buttonDesigns import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton, SubsetDataButton
+from ui.custom.Widgets.ICButtonDesgins import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton, SubsetDataButton
 from ui.custom.tableviews.ICColorTable import ICColorTable 
 from ui.custom.tableviews.ICSizeTable import ICSizeTable
 from ui.custom.tableviews.ICLabelTable import ICLabelTable
 from ui.custom.tableviews.ICMarkerTable import ICMarkerTable
 from ui.custom.tableviews.ICStatisticTable import ICStatisticTable
 from ui.custom.tableviews.ICQuickSelectTable import ICQuickSelectTable
-from ..dialogs.ICColorChooser import ColorChooserDialog
-from ..dialogs.ICSizeDialog import ICSizeDialog
-from ..dialogs.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
-from ..dialogs.ICNumericFilter import NumericFilter
+from ..dialogs.Marks.ICColorChooser import ColorChooserDialog
+from ..dialogs.Marks.ICSizeDialog import ICSizeDialog
+from ..dialogs.Filter.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
+from ..dialogs.Filter.ICNumericFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage,AskOptionsMessage
 from ..utils import createSubMenu, createLabel
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR

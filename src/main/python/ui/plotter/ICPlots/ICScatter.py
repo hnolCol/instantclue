@@ -3,7 +3,7 @@ from matplotlib.pyplot import axis, scatter
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
-from ...dialogs.ICVolcanoStyling import ICVolcanoPlotStyling
+from ...dialogs.OmicsTools.ICVolcanoStyling import ICVolcanoPlotStyling
 import pandas as pd
 import numpy as np
 

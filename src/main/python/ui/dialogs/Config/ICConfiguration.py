@@ -3,9 +3,9 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from backend.config.data.params import WIKI_LINKGS
-from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
-from ..custom.utils import PropertyChooser
-from ..custom.buttonDesigns import BigArrowButton, HelpButton
+from ...utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
+from ...custom.utils import PropertyChooser
+from ...custom.Widgets.ICButtonDesgins import BigArrowButton, HelpButton
 
 import seaborn as sns
 import os

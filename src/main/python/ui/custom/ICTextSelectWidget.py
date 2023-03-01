@@ -2,11 +2,11 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..dialogs.ICDSelectItems import ICDSelectItems
+from ..dialogs.Selections.ICDSelectItems import ICDSelectItems
 
 from ..utils import createLabel, createTitleLabel, createSubMenu, createMenu
 from .utils import LabelLikeCombo, LabelLikeButton
-from .buttonDesigns import ICStandardButton, ResetButton, BigPlusButton
+from .Widgets.ICButtonDesgins import ICStandardButton, ResetButton, BigPlusButton
 
 import pandas as pd 
 

@@ -4,7 +4,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.DS_Store
-
+*.pkg
+entitlements.pdlist
+signMacApps
 pyinstaller-hooks
 env-3.9/
 env-310/
@@ -24,3 +26,4 @@ src/main/python/my_log.txt
 
 src/main/python/conf/current.ic
 src/main/python/conf/current.ic
+src/main/python/entitlements.plist

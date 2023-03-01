@@ -10,11 +10,11 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 
 from ..plotter.plotTypeManager import PlotTypeManager, plotTypeTooltips, gridPosition 
-from ..custom.buttonDesigns import PlotTypeButton, MainFigureButton, SettingsButton, MultiScatterButton
+from ..custom.Widgets.ICButtonDesgins import PlotTypeButton, MainFigureButton, SettingsButton, MultiScatterButton
 from ..custom.mainFigure import MainFigure, MainFigureRegistry
 from ..custom.warnMessage import WarningMessage
 from ..custom.tableviews.ICDataTable import PandaTableDialog
-from ..dialogs.ICConfiguration import ConfigDialog
+from ..dialogs.Config.ICConfiguration import ConfigDialog
 from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import createSubMenu
 from backend.statistics.statistics import clusteringMethodNames

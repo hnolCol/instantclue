@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 from ..utils import createTitleLabel,createLabel, createLineEdit
 from ..custom.warnMessage import WarningMessage
-from ..custom.buttonDesigns import ICStandardButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from collections import OrderedDict 
 import numpy as np 
 

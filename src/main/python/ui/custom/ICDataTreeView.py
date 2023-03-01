@@ -9,15 +9,15 @@ from PyQt6.QtWidgets import *
 from .resortableTable import ResortableTable
 from .warnMessage import WarningMessage, AskQuestionMessage, AskForFile
 
-from ..delegates.dataTreeViewDelegates import *
+from ..delegates.ICDataTreeView import *
 from ..utils import createSubMenu, createMenu, createMenus, getStandardFont
-from ..dialogs.selectionDialog import SelectionDialog
-from ..dialogs.ICGrouper import ICGrouper
-from ..dialogs.ICCompareGroups import ICCompareGroups
+from ..dialogs.Selections.ICSelectionDialog import SelectionDialog
+from ..dialogs.Groupings.ICGrouper import ICGrouper
+from ..dialogs.Groupings.ICCompareGroups import ICCompareGroups
 from ..dialogs.ICModel import ICModelBase, ICLinearFitModel
-from ..dialogs.ICBasicOperationDialog import BasicOperationDialog
-from ..dialogs.ICDSelectItems import ICDSelectItems
-from ..dialogs.ICNumericFilter import ICNumericFilterForSelection 
+from ..dialogs.Transformations.ICBasicOperationDialog import BasicOperationDialog
+from ..dialogs.Selections.ICDSelectItems import ICDSelectItems
+from ..dialogs.Filter.ICNumericFilter import ICNumericFilterForSelection 
 from .utils import dataFileExport 
 #data import 
 from backend.config.data.params import MTMethods

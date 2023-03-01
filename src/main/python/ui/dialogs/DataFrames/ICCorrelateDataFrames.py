@@ -2,11 +2,11 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..utils import createTitleLabel, createLabel, createLineEdit, createMenu
-from ..custom.utils import LabelLikeCombo
-from .ICDSelectItems import ICDSelectItems
-from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
-from ..custom.warnMessage import WarningMessage
+from ...utils import createTitleLabel, createLabel, createLineEdit, createMenu
+from ...custom.utils import LabelLikeCombo
+from ..Selections.ICDSelectItems import ICDSelectItems
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton, LabelLikeButton
+from ...custom.warnMessage import WarningMessage
 import pandas as pd 
 from collections import OrderedDict
 

@@ -11,7 +11,7 @@ from matplotlib.lines import Line2D
 from sklearn.preprocessing import scale
 
 from ..utils import WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createMenu, getMessageProps
-from .buttonDesigns import ResetButton, BigArrowButton, PushHoverButton
+from .Widgets.ICButtonDesgins import ResetButton, BigArrowButton, PushHoverButton
 
 from collections import OrderedDict
 

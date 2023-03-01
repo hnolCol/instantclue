@@ -24,14 +24,14 @@ addDataOrShow = [
  #               sendMessageProps]
 #
 funcPropControl = {
-    
-    "addDataFrame": #will be removed soon.
+    "update::checkForUpdate": #will be removed soon.
         {
-            "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
+            "threadRequest":{"obj":"updateChecker","fn":"checkForUpdates","requiredKwargs":[]},
             "completedRequest": 
-                            addDataAndRefresh
-        },
-
+                            [
+                                {"obj":"self","fn":"showMessageForNewVersion","requiredKwargs":["releaseURL"]},
+                                sendMessageProps]
+        }, 
     "data::annotateDataByIndicies":
         {
             "threadRequest":{"obj":"data","fn":"addAnnotationColumnByIndex","requiredKwargs":["dataID", "indices", "columnName"]},

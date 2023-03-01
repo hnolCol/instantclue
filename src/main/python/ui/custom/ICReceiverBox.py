@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 from collections import OrderedDict
 
-from .buttonDesigns import ResetButton, PushHoverButton, ResortButton
+from .Widgets.ICButtonDesgins import ResetButton, PushHoverButton, ResortButton
 from .resortableTable import ResortableTable
 from .utils import clearLayout, ICSCrollArea
 from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel, isWindows
@@ -77,6 +77,7 @@ class BoxItem(PushHoverButton):
         self.itemName = itemName
         self.getWidthAndHeight()
         self.setFixedSize(self.sizeHint())
+
 
 class ItemHolder(QWidget):
     def __init__(self,direction = "H",title = "Drag column headers here.", *args,**kwargs):

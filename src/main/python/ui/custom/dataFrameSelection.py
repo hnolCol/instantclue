@@ -4,14 +4,14 @@ from PyQt6.QtWidgets import *
 
 #internal imports
 from .ICCollapsableFrames import CollapsableFrames
-from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, ICStandardButton
+from .Widgets.ICButtonDesgins import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, ICStandardButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDFindReplace import FindReplaceDialog
-from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
-from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
-from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
-from ..dialogs.ICSampleList import ICSampleListCreater
-from ..dialogs.ICProteinPeptideView import ICProteinProteinView
+from ..dialogs.Transformations.ICMultiBlockSGCCA import ICMultiBlockSGCCA
+from ..dialogs.DataFrames.ICDMergeDataFrames import ICDMergeDataFrames
+from ..dialogs.DataFrames.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
+from ..dialogs.OmicsTools.ICSampleList import ICSampleListCreater
+from ..dialogs.OmicsTools.ICProteinPeptideView import ICProteinProteinView
 from .utils import dataFileExport
 from ..custom.warnMessage import AskForFile, WarningMessage, AskStringMessage
 from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu

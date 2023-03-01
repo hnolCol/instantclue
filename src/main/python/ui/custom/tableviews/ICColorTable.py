@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from ..utils import clearLayout, getStandardFont, BuddyLabel
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit
 
-from ...delegates.quickSelectDelegates import DelegateColor#, ItemDelegate #borrow delegate
+from ...delegates.ICQuickSelect import DelegateColor#, ItemDelegate #borrow delegate
 from ...dialogs.ICDataInputDialog import ICDataInput
 import pandas as pd
 import numpy as np
@@ -514,7 +514,7 @@ class ColorTable(QTableView):
         self.mC = mainController
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) 
-
+        
         
 
         self.rowHeight      =   rowHeight
@@ -592,7 +592,7 @@ class ColorTable(QTableView):
     def mousePressEvent(self,e):
         ""
         
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
@@ -667,7 +667,7 @@ class ColorTable(QTableView):
             #self.parent().highlightColorGroup()
             
 
-        self.model().rowDataChanged(rowAtEvent)
+        self.model().completeDataChanged()
  
     def resizeColumns(self):
         ""

@@ -6,7 +6,7 @@ from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 from .ICColorTable import ICColorSizeTableBase
 
-from ...delegates.quickSelectDelegates import DelegateColor #borrow delegate
+from ...delegates.ICQuickSelect import DelegateColor #borrow delegate
 
 import pandas as pd
 import numpy as np
@@ -369,7 +369,7 @@ class MarkerTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False

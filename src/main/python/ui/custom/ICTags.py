@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from ..utils import createLineEdit
 
 
-from .buttonDesigns import ResetButton
+from .Widgets.ICButtonDesgins import ResetButton
 from .ICReceiverBox import BoxItem
 from ..utils import getRandomString
 

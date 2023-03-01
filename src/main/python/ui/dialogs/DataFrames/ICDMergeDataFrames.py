@@ -2,11 +2,11 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..utils import createTitleLabel, createLabel, createLineEdit, createMenu
-from ..custom.utils import LabelLikeCombo
-from .ICDSelectItems import ICDSelectItems
-from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
-from ..custom.warnMessage import WarningMessage
+from ...utils import createTitleLabel, createLabel, createLineEdit, createMenu
+from ...custom.utils import LabelLikeCombo
+from ..Selections.ICDSelectItems import ICDSelectItems
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton, LabelLikeButton
+from ...custom.warnMessage import WarningMessage
 import pandas as pd 
 from collections import OrderedDict
 
@@ -43,7 +43,7 @@ class ICDMergeDataFrames(QDialog):
         self.__connectEvents()
 
         #set size policy of dialog
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Expanding)
         self.setFixedHeight(200)
         self.setMaximumHeight(200)
 
@@ -65,14 +65,15 @@ class ICDMergeDataFrames(QDialog):
 
         """Put widgets in layout"""
         self.setLayout(QGridLayout())
-        self.layout().addWidget(self.headerLabel)
-        self.layout().addLayout(self.parameterGrid,2,0,1,4)
-        self.layout().addLayout(self.hbox1,3,0,1,4)
-        self.layout().addLayout(self.hbox2,4,0,1,4)
-        self.layout().addWidget(self.okButton,6,0)
-        self.layout().addWidget(self.cancelButton,6,3)
-        self.layout().setColumnStretch(2,1)
-        self.layout().setRowStretch(5,1)
+        layout = self.layout()
+        layout.addWidget(self.headerLabel)
+        layout.addLayout(self.parameterGrid,2,0,1,4)
+        layout.addLayout(self.hbox1,3,0,1,4)
+        layout.addLayout(self.hbox2,4,0,1,4)
+        layout.addWidget(self.okButton,6,0)
+        layout.addWidget(self.cancelButton,6,3)
+        layout.setColumnStretch(2,1)
+        layout.setRowStretch(5,1)
         
         
        

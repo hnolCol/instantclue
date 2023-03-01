@@ -1845,6 +1845,7 @@ class PlotterBrain(object):
         #display grouping setting
         displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
         distanceBetweenClusterMapAndColor = self.sourceData.parent.config.getParam("hclust.color.axis.border.left")
+        removeRowsWithNoStd = self.sourceData.parent.config.getParam("hclust.remove.rows.with.no.std")
         colorsByColumnNames = OrderedDict()
         colorsByColumnNamesFiltered = OrderedDict()
 
@@ -1884,7 +1885,8 @@ class PlotterBrain(object):
                         nanThreshold = len(numericColumns)
                     data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna(thresh=nanThreshold)
                     #remove no deviation data (Same value)
-                    data = data.loc[data.std(axis=1) != 0,:]
+                    if removeRowsWithNoStd:
+                        data = data.loc[data.std(axis=1) != 0,:]
                     rowMetric = "nanEuclidean" 
                     if columnMetric != "None":
                         columnMetric = "nanEuclidean"
@@ -1892,11 +1894,14 @@ class PlotterBrain(object):
                     if (rowMetric != "None" and rowMethod != "None") or  (columnMetric != "None" and columnMethod != "None"):
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
                         #remove no deviation data (Same value)
-                        data = data.loc[data.std(axis=1) != 0,:]
+                        if removeRowsWithNoStd:
+                            data = data.loc[data.std(axis=1) != 0,:]
                     else:
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
                         #if no clustering applied, we can keep all values (e.g. just display)
-                        
+            
+            data = data.astype(float)
+            
         
             #nRows, nCols = data.shape
             rawIndex = data.index
@@ -1915,7 +1920,7 @@ class PlotterBrain(object):
                     distanceBetweenClusterMapAndColor = distanceBetweenClusterMapAndColor
                     )
             
-
+            #perform clustering on rows.
             if data.shape[0] > 1 and rowMetric != "None" and rowMethod != "None":
                 rowLinkage, rowMaxD = self.sourceData.statCenter.clusterData(data,rowMetric,rowMethod)
 
@@ -1929,10 +1934,10 @@ class PlotterBrain(object):
                 data = data.iloc[Z_row['leaves']]
                 
             else:
-                #print("deleting")
                 del axisDict["axRowDendro"]
                 Z_row = None
 
+            #perform clustering on columns
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
                 columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
 
@@ -1946,7 +1951,8 @@ class PlotterBrain(object):
 
             else:
                 del axisDict["axColumnDendro"]
-        
+
+            #add grouping rectangles. TO DO: Better just save the props? 
             groupingRectangles = []
             if groupingName is not None and displayGrouping and len(colorsByColumnNamesFiltered) > 0:
                 for ii, (gN, colorsByColumnNamesForGn) in enumerate(colorsByColumnNamesFiltered.items()):
@@ -1961,11 +1967,8 @@ class PlotterBrain(object):
         except Exception as e:
             print(e)
             return {}
-       
-     #   print(axisDict)
-        
+               
         groupingAxLabels = {"tickLabels":groupingName,"tickPosition":np.arange(len(groupingName))} if groupingName is not None else {}
-        #print(groupingName)
         return {"newPlot":True,
             "data":{"plotData":data,
                 "rowMaxD" : rowMaxD,
@@ -2137,10 +2140,11 @@ class PlotterBrain(object):
                 heightMain = pixelRelativeHeight
          
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
-        if not corrMatrix:
-            y0 = bottomLabelMargin
-        else:
-            y0 = 1 - heightMain - topMargin
+        # if not corrMatrix:
+        #     y0 = bottomLabelMargin
+
+        # else:
+        y0 = 1 - heightMain - topMargin
         x0 = leftMargin
 
         rowDendroWidth = width * 0.08 if rowOn else 0

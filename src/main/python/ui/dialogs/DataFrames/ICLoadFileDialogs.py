@@ -3,10 +3,10 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from backend.config.data.params import encodingsCommonInPython, commonSepartor, decimalForFloats,thoursandsString, nanReplaceString
-from ..custom.buttonDesigns import ICStandardButton
-from ..utils import createLabel, createCombobox, createTitleLabel
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton
+from ...utils import createLabel, createCombobox, createTitleLabel
 from collections import OrderedDict
-from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
+from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
 import pandas as pd 
 compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
 

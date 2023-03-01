@@ -13,18 +13,17 @@ from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
 from ui.custom.warnMessage import AskStringMessage
-from ui.dialogs.ICDSelectItems import ICDSelectItems
+from ui.dialogs.Selections.ICDSelectItems import ICDSelectItems
 from ui.dialogs.ICWorkfowBuilder import ICWorkflowBuilder
 from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl, createMenu
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
-from ui.custom.ICWelcomeScreen import ICWelcomeScreen
 from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
 from ui.dialogs.ICAppValidation import ICValidateEmail
 
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
+from backend.update.Update import UpdateChecker
 from backend.data.ICGrouping import ICGrouping
-from backend.filter.categoricalFilter import CategoricalFilter
 from backend.utils.funcControl import funcPropControl
 from backend.utils.misc import getTxtFilesFromDir
 from backend.utils.stringOperations import getRandomString
@@ -51,7 +50,7 @@ os.environ["OUTDATED_IGNORE"] = "1"
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.3"
+__VERSION__ = "v0.12.0"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -228,7 +227,7 @@ class InstantClue(QMainWindow):
         self.logger = ICLogger(self.config,__VERSION__)
         #setup web app communication
         self.webAppComm = ICAppValidator(self)
-        
+        self.updateChecker = UpdateChecker(__VERSION__)
 
         _widget = QWidget()
         _layout = QVBoxLayout(_widget)
@@ -253,6 +252,8 @@ class InstantClue(QMainWindow):
         self.acceptDrop = False
         #update parameters saved in parents (e.g data, plotter etc)
         self.config.updateAllParamsInParent()
+        #check for update
+        self.sendRequestToThread({"key":"update::checkForUpdate","kwargs":{}})
         ##### 
         #self.webAppComm.isAppIDValidated()
         #self.webAppComm.getChartData()
@@ -691,6 +692,18 @@ class InstantClue(QMainWindow):
         "Checks if there is any data loaded."
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
 
+    def showMessageForNewVersion(self,releaseURL):
+        ""
+        print(releaseURL)
+        w = AskQuestionMessage(
+            parent=self,
+            infoText = "A new version of Instant Clue is available. Download now?", 
+            title="Information",
+            iconDir = self.mainPath,
+            yesCallback = lambda : webbrowser.open(releaseURL))
+        w.exec()
+
+
     def setBufToClipboardImage(self,buf):
         ""
         QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
@@ -897,16 +910,6 @@ class MainWindowSplitter(QWidget):
     def getMainFrames(self):
         ""
         return self.mainFrames
-
-    def showMessageForNewVersion(self,releaseURL):
-        ""
-        w = AskQuestionMessage(
-            parent=self,
-            infoText = "A new version of Instant Clue is available. Download now?", 
-            title="Information",
-            iconDir = self.mC.mainPath,
-            yesCallback = lambda : webbrowser.open(releaseURL))
-        w.show()
 
     def welcomeScreenDone(self):
         "Indicate layout changes once Welcome Screen finished."

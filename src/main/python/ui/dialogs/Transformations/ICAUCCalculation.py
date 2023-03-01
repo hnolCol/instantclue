@@ -2,9 +2,9 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..utils import createCombobox, createTitleLabel, createLabel
+from ...utils import createCombobox, createTitleLabel, createLabel
 
-from ..custom.buttonDesigns import ICStandardButton
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton
 
 
 class ICDAUCDialog(QDialog):
@@ -21,7 +21,7 @@ class ICDAUCDialog(QDialog):
         self.__connectEvents()
 
         #set size policy of dialog
-        self.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Expanding)
        
 
     def __controls(self):

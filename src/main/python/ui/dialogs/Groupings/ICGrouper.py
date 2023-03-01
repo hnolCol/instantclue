@@ -1,16 +1,16 @@
-from re import split
+
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from .ICColorChooser import ColorLabel
-from ..custom.buttonDesigns import BigPlusButton, ResetButton, ICStandardButton
-from ..utils import createLabel, createTitleLabel, createLineEdit, getMessageProps, createMenu
-from ..custom.utils import clearLayout, BuddyLabel, LabelLikeCombo, ICSCrollArea
-from ..custom.resortableTable import ResortTableWidget, ResortTableModel
-from ..custom.ICReceiverBox import ItemHolder, BoxItem
-from ..custom.warnMessage import WarningMessage
-from .selectionDialog import SelectionDialog,GroupingSelectionDialog
+from ..Marks.ICColorChooser import ColorLabel
+from ...custom.Widgets.ICButtonDesgins import BigPlusButton, ResetButton, ICStandardButton
+from ...utils import createLabel, createLineEdit, getMessageProps, createMenu
+from ...custom.utils import BuddyLabel, LabelLikeCombo, ICSCrollArea
+from ...custom.resortableTable import ResortTableWidget, ResortTableModel
+from ...custom.ICReceiverBox import ItemHolder, BoxItem
+from ...custom.warnMessage import WarningMessage
+from .ICGroupingExtractionFromString import ICGroupingSelection
 from backend.color.data import colorParameterRange
 from collections import OrderedDict
 import pandas as pd
@@ -183,7 +183,7 @@ class ICGrouper(QDialog):
         selectedColumnNames = self.findSelectedColumns()
         if selectedColumnNames is None: return
 
-        selDialog = GroupingSelectionDialog(
+        selDialog = ICGroupingSelection(
             title="Select split string extraction props.",
             selectionNames = ["splitString","splitFrom","index","maxSplit","remove N from right"],
             selectionOptions={

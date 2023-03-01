@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, plot
 from collections import OrderedDict
 from ..custom.ICReceiverBox import ReceiverBox
-from ..dialogs.ICDSelectItems import ICDSelectItems
+from ..dialogs.Selections.ICDSelectItems import ICDSelectItems
 #from ..plotter.plotter import Plotter
 from ..plotter.plotManager import ICPlotter
 import numpy as np 

@@ -1440,6 +1440,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "Data with nan might be clustered using the nanEuclidean distance metric. This parameter defines the minimum number of valid values that must exist.",
     },
     {
+    "name"          :   "hclust.remove.rows.with.no.std",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enabled, rows that with a standard deviation of zero will be removed (e.g. the same value). Only applied if rowMethod or rowMetric are not None.",
+    },
+    {
     "name"          :   "rowMethod",
     "value"         :   "complete",
     "dtype"         :   str,
@@ -1671,7 +1680,7 @@ DEFAULT_PARAMETER = [
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
     "parentType"    :   "Cluster (HClust)",
-    "description"   :   "If less than given value of rows are visible in cluster. Lines will be drawn around rectangles.",
+    "description"   :   "If less than given value of rows are visible in cluster, lines will be drawn around rectangles.",
     },
     {
     "name"          :   "quad.linewidth.columnLimit",

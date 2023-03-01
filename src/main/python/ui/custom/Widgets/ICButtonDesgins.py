@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from scipy.spatial.distance import braycurtis
 
-from ..utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
+from ...utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
 import numpy as np
 import seaborn as sns
 import random

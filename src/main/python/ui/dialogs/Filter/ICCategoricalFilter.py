@@ -3,11 +3,11 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 #internal imports
-from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable, MultiColumnSelectablePandaModel
-from ..custom.utils import LabelLikeCombo
-from ..custom.warnMessage import WarningMessage
-from ..utils import createLabel, createLineEdit, getMessageProps, createCombobox, getCheckStateFromBool
-from ..custom.buttonDesigns import AcceptButton, RefreshButton
+from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable, MultiColumnSelectablePandaModel
+from ...custom.utils import LabelLikeCombo
+from ...custom.warnMessage import WarningMessage
+from ...utils import createLabel, createLineEdit, getMessageProps, createCombobox, getCheckStateFromBool
+from ...custom.Widgets.ICButtonDesgins import AcceptButton, RefreshButton
 from backend.utils.stringOperations import mergeListToString
 
 #external imports
@@ -331,7 +331,7 @@ class FindStrings(FilterBase):
             cb = QCheckBox(filtOption)
             cb.setTristate(False)
             if n == 0:
-                cb.setCheckState(True)
+                cb.setCheckState(getCheckStateFromBool(True))
             cb.setToolTip(FIND_STRING_TOOLTIPS[n])
             self.CBFilterOptions[filtOption] = cb
 

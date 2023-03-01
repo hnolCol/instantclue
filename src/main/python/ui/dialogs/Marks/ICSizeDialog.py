@@ -1,8 +1,8 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ..custom.buttonDesigns import ICStandardButton, ResetButton
-from ..utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getMessageProps
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton, ResetButton
+from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getMessageProps
 import numpy as np 
 
 

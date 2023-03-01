@@ -7,7 +7,7 @@ from pandas.core.indexes import multi
 from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
 from .ICVSelectableTable import PandaTable, PandaModel, MultiColumnSelectablePandaModel
 from ..warnMessage import AskQuestionMessage
-from ..buttonDesigns import ICStandardButton, ResetButton
+from ..Widgets.ICButtonDesgins import ICStandardButton, ResetButton
 from ..ICTags import Tag, ICSearchWithTags
 #external imports
 import pandas as pd 

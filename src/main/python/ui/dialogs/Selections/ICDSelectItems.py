@@ -3,9 +3,9 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from numpy.lib.arraysetops import isin 
 
-from ..utils import createTitleLabel, createLabel, createLineEdit
-from ..custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
-from ..custom.buttonDesigns import ResetButton, AcceptButton, CheckButton
+from ...utils import createTitleLabel, createLabel, createLineEdit
+from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
+from ...custom.Widgets.ICButtonDesgins import ResetButton, AcceptButton, CheckButton
 import pandas as pd
 
 class ICDSelectItems(QDialog):

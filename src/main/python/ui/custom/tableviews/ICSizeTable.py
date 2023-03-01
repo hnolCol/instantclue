@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase, ItemDelegate
 import pandas as pd
 import numpy as np
@@ -169,12 +169,12 @@ class SizeTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
             if not self.isEditable:
                 return False
             #get value
@@ -346,7 +346,7 @@ class SizeTable(QTableView):
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
             prevMouseOver = int(self.mouseOverItem)
             self.mouseOverItem = None
-            self.model().rowDataChanged(prevMouseOver)
+            self.model().completeDataChanged()
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
@@ -357,7 +357,7 @@ class SizeTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
@@ -415,7 +415,7 @@ class SizeTable(QTableView):
             self.mouseOverItem = None
         else:
             self.mouseOverItem = rowAtEvent
-        self.model().rowDataChanged(rowAtEvent)
+        self.model().completeDataChanged()
  
     def resizeColumns(self):
         ""

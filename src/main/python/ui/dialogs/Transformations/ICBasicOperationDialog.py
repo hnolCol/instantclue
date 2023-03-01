@@ -2,11 +2,11 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..custom.ICTextSelectWidget import ICTextSelectWidget
-from ..utils import createTitleLabel, createLabel, createCombobox
-from ..custom.tableviews.ICVSelectableTable import PandaModel, PandaTable
-from ..custom.buttonDesigns import ICStandardButton
-from ..custom.warnMessage import WarningMessage
+from ...custom.ICTextSelectWidget import ICTextSelectWidget
+from ...utils import createTitleLabel, createLabel, createCombobox
+from ...custom.tableviews.ICVSelectableTable import PandaModel, PandaTable
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton
+from ...custom.warnMessage import WarningMessage
 from backend.utils.stringOperations import mergeListToString
 
 from collections import OrderedDict

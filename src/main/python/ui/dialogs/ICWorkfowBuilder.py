@@ -10,7 +10,7 @@ from ui.utils import INSTANT_CLUE_BLUE, getRandomString, createTitleLabel
 from ..custom.resortableTable import ResortTableWidget, ResortTableModel
 import pandas as pd 
 from ..custom.ICReceiverBox import BoxItem
-from ..custom.buttonDesigns import ResetButton, PushHoverButton, ResortButton
+from ..custom.Widgets.ICButtonDesgins import ResetButton, PushHoverButton, ResortButton
 from ..custom.utils import PropertyChooser
 
 

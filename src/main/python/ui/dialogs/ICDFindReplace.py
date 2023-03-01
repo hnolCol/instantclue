@@ -2,7 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..custom.buttonDesigns import ICStandardButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from ..utils import createLabel, createLineEdit, createCombobox
 from ..custom.warnMessage import WarningMessage
 from ..custom.utils import QToggle

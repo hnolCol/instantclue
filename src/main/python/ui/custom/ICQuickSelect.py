@@ -2,9 +2,9 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..delegates.quickSelectDelegates import DelegateColor, DelegateSize
-from .buttonDesigns import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
-from ..dialogs.quickSelectDialog import QuickSelectDialog
+from ..delegates.ICQuickSelect import DelegateColor, DelegateSize
+from .Widgets.ICButtonDesgins import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
+from ..dialogs.Selections.ICQuickSelectModeSelection import QuickSelectDialog
 from ..utils import createTitleLabel, createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont, legendLocations
 import os
 import pandas as pd

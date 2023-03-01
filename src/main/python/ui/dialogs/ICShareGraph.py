@@ -2,9 +2,9 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from matplotlib.pyplot import title 
-from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton, LabelLikeButton
 from ..custom.warnMessage import AskStringMessage
-from .ICDSelectItems import ICDSelectItems
+from .Selections.ICDSelectItems import ICDSelectItems
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
 
 import requests

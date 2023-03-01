@@ -4,13 +4,13 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 
-from ..dialogs.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
-from ..dialogs.ICFetchDataFromMitoCube import ICFetchDataFromMitoCube
+from ..dialogs.DataFrames.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
+from ..dialogs.Connect.ICFetchDataFromMitoCube import ICFetchDataFromMitoCube
 from ..custom.ICCollapsableFrames import CollapsableFrames
-from ..custom.buttonDesigns import CollapsButton
+from ..custom.Widgets.ICButtonDesgins import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
-from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, ViewDataButton
+from ..custom.Widgets.ICButtonDesgins import BigArrowButton, BigPlusButton, ViewDataButton
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection

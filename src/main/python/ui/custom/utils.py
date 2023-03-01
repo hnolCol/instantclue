@@ -2,8 +2,8 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit, isWindows
-from .buttonDesigns import LabelLikeButton
-from ..dialogs.ICColorChooser import ColorLabel
+from .Widgets.ICButtonDesgins import LabelLikeButton
+from ..dialogs.Marks.ICColorChooser import ColorLabel
 import numpy as np
 
 INSTANT_CLUE_ANAYLSIS = [

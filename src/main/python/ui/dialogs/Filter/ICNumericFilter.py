@@ -3,11 +3,11 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from backend.transformations.transformer import summarizeMetric
-from ..utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR, getCheckStateFromBool
-from ..custom.buttonDesigns import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
-from ..custom.warnMessage import WarningMessage
-from .ICDSelectItems import ICDSelectItems
-from ..custom.utils import  ICSCrollArea
+from ...utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR, getCheckStateFromBool
+from ...custom.Widgets.ICButtonDesgins import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
+from ...custom.warnMessage import WarningMessage
+from ..Selections.ICDSelectItems import ICDSelectItems
+from ...custom.utils import  ICSCrollArea
 #external imports
 import pandas as pd
 import numpy as np 
@@ -165,7 +165,7 @@ class ICNumericFilterForSelection(QDialog):
         hboxB.addWidget(self.closeButton)
         
         self.layout().addLayout(hboxB,7,3,1,1)
-        self.layout().setAlignment(Qt.AlignmentFlag.AlignmentFlag.AlignTop)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
     def __connectEvents(self):

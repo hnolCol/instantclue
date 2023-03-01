@@ -1,10 +1,10 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ..custom.buttonDesigns import ICStandardButton
-from ..custom.warnMessage import WarningMessage
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton
+from ...custom.warnMessage import WarningMessage
 
-from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
+from ...utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
 import requests 
 import os 
 import pandas as pd 

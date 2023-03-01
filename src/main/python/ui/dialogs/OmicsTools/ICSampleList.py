@@ -3,10 +3,10 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from pandas.core.algorithms import isin 
 from backend.proteomics.ICSampleList import ICSampleListCreator
-from ..custom.buttonDesigns import ICStandardButton, ResetButton, LabelLikeButton
-from ..custom.resortableTable import ResortableTable
-from ..custom.utils import QToggle
-from ..utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getMessageProps, WIDGET_HOVER_COLOR
+from ...custom.Widgets.ICButtonDesgins import ICStandardButton, ResetButton, LabelLikeButton
+from ...custom.resortableTable import ResortableTable
+from ...custom.utils import QToggle
+from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getMessageProps, WIDGET_HOVER_COLOR
 import numpy as np 
 import string 
 from datetime import datetime

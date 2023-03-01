@@ -6,7 +6,7 @@ import os
 
 from matplotlib.pyplot import text 
 from ..utils import createTitleLabel, createLabel, createLineEdit
-from .buttonDesigns import ICStandardButton
+from .Widgets.ICButtonDesgins import ICStandardButton
 
 class MessageBase(QDialog):
     ""

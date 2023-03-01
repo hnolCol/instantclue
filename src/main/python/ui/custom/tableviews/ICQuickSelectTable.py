@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import *
 from ..utils import clearLayout, getStandardFont
 from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
 
-from ...delegates.quickSelectDelegates import DelegateColor
-from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ...delegates.ICQuickSelect import DelegateColor
+from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 
 import pandas as pd
@@ -456,7 +456,7 @@ class QuickSelectTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
