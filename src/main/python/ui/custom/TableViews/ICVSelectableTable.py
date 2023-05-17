@@ -155,6 +155,7 @@ class PandaTable(QTableView):
             eventIndex = self.mouseEventToIndex(event)
             self.model().setCheckState(eventIndex)
             self.model().completeDataChanged() 
+            
         else:
             super(QTableView,self).mouseReleaseEvent(event)
 
@@ -504,6 +505,7 @@ class SelectablePandaModel(PandaModel):
                 return Qt.CheckState.Checked
             else:
                 return Qt.CheckState.Unchecked
+            
         elif role == Qt.ItemDataRole.ForegroundRole:
             return QBrush(QColor(getStdTextColor()))
         elif role == Qt.ItemDataRole.BackgroundRole:
@@ -532,7 +534,7 @@ class SelectablePandaModel(PandaModel):
 
     def getCheckStateByDataIndex(self,dataIndex):
         "Returns current check state by data row index"
-        return self.checkedLabels.loc[dataIndex] == 1
+        return self.checkedLabels.loc[dataIndex]
 
     def getCheckStateByTableIndex(self,tableIndex):
         "Returns current check state by table index"
@@ -547,15 +549,15 @@ class SelectablePandaModel(PandaModel):
 
     def setCheckState(self,tableIndex):
         "Sets check state by table index."
+       
         try:
             if self.singleSelection:
                 self.setCheckedSeries()
             dataIndex = self.getRowDataIndexByTableIndex(tableIndex)
             newState = not self.checkedLabels.loc[dataIndex]
-            
             if newState and self.lastClicked is None:
                 self.lastClicked = tableIndex
-            
+           
             elif hasattr(self.parent(),"shiftHold") and not self.parent().shiftHold:
                 self.lastClicked = None
             
@@ -570,8 +572,8 @@ class SelectablePandaModel(PandaModel):
                     self.setCheckStateByDataIndex(dataIndices)
                 self.lastClicked = None
             else:
+               
                 self.checkedLabels.loc[dataIndex] = newState
-
             return newState
         except Exception as e:
             print(e)
@@ -579,6 +581,7 @@ class SelectablePandaModel(PandaModel):
 
     def setCheckStateByDataIndex(self,dataIndex, state = 1):
         ""
+        print(dataIndex)
         matchedIdx = dataIndex.intersection(self.checkedLabels.index)
         self.checkedLabels.loc[matchedIdx] = state
 

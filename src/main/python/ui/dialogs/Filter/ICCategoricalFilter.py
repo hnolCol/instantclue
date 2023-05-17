@@ -2,6 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
+
 #internal imports
 from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable, MultiColumnSelectablePandaModel
 from ...custom.utils import LabelLikeCombo
@@ -31,6 +32,9 @@ class FilterBase(QDialog):
     def __init__(self,*args,**kwargs):
         ""
         super(FilterBase, self).__init__(*args,**kwargs)
+        self.setSizeGripEnabled(True)
+        self.setMinimumWidth(450)
+        self.setMinimumHeight(700)
         
     def forceSearch(self,event=None):
         "Forcing the search"
@@ -60,15 +64,8 @@ class FilterBase(QDialog):
             return
         elif event.key() == Qt.Key.Key_Escape:
             self.close() 
-        elif event.key() == Qt.Key.Key_Shift:
-            setattr(self.table,"shiftHold",True)
-            
-
-    def keyReleaseEvent(self,event=None):
-        ""
-        if event.key() == Qt.Key.Key_Shift:
-            setattr(self.table,"shiftHold",False)
-       
+    
+        
 
 class CustomCategoricalFilter(FilterBase):
 

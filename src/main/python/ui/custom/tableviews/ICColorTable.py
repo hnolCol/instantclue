@@ -550,7 +550,6 @@ class ColorTable(QTableView):
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""
         rowIndex = self.rightClickedRowIndex
-        
         dataIndex = self.model().getDataIndex(rowIndex)
         self.model().setColor(dataIndex,hexColor)
         self.parent().selectionChanged.emit()
@@ -563,20 +562,12 @@ class ColorTable(QTableView):
             self.model().setColorForAllIdcs(color.name())
             self.parent().selectionChanged.emit()
 
-    # def colorByUniqueValuesInCategoricalColumn(self, categoricalColumn):
-    #     ""
-    #     print(categoricalColumn)
-    #     colorColumns = self.parent().encodedColumnNames
-    #     print(colorColumns)
-        
-        
-
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
         
         if self.model() is not None and hasattr(self.model(),"isEditable") and self.model().isEditable: #if editable - add the option to choose color from palette
-            menu = createSubMenu(None,["Subset by ..","Color from palette","Color by unique values in ..","Add Legend at ..","Add Legend at (-NaN Color) .."])
+            menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
             colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
             # categoricalColumns = self.mC.data.getCategoricalColumns(dataID = self.mC.getDataID())
             # for categoricalColumn in categoricalColumns:
@@ -591,6 +582,8 @@ class ColorTable(QTableView):
                 i.addPixmap(pixmap)
                 pq.end()
                 action.setIcon(i)
+                
+            menu["main"].addAction("Single color for selected items", self.selectSingleColor)
             menu["main"].addAction("Single color for all items", self.selectSingleColor)
         else:
             menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) ..","Color Range (min/max)"])
