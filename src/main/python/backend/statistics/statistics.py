@@ -152,13 +152,12 @@ def calcUtest(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSi
                             "categoricalColumn" : categoricalColumn,
                             "p-value":p,
                             "U-statistic":U,
-                            "n":N,
                             "mean":uniqueCatMean,
                             "categorySize(noNaN)":X.size,
                             "median":uniqueCatMedian,
                             "categorySize":N,
                             "stdev":stdev,
-                            "difference":groupDifference,
+                            "difference(toRest)":groupDifference,
                             "labels" : labelString}
                             )
     return (numericColumn,r) 
@@ -1045,16 +1044,17 @@ class StatisticCenter(object):
                                             "categoricalColumn",
                                             "category",
                                             "p-value",
+                                            "-log10 p-value",
+                                            "adj. p-value",
+                                            "labels"
                                             "U-statistic",
                                             "categorySize",
                                             "categorySize(noNaN)",
                                             "mean",
                                             "median",
                                             "stdev",
-                                            "difference",
-                                            "-log10 p-value",
-                                            "adj. p-value",
-                                            "labels"])
+                                            "difference(toRest)",
+                                            ])
         r = []
         #not thread safe -> start process
         with Pool(1) as p:
@@ -1353,19 +1353,23 @@ class StatisticCenter(object):
         return {}
 
     def runCluster(self,dataID,columnNames,methodName,returnModel = False):
-        "Clsuter analysis for cluster plot"
+        "Cluster analysis for cluster plot"
         if methodName in clusteringMethodNames:
             if methodName == "HDBSCAN":
 
                 clusterLabels, data = self.runHDBSCAN(dataID,columnNames,attachToSource = False)
                 clusterLabels.columns = ["Labels"]
             
-            else:
+            elif methodName in clusteringMethodNames:
                 data = self.getData(dataID,columnNames).dropna()
                 alg = clusteringMethodNames[methodName](**self._getClusterKwargs(methodName))
                 alg.fit(data.values)
                 if hasattr(alg,"labels_"):
                     clusterLabels = pd.DataFrame(alg.labels_, index=data.index,columns = ["Labels"])
+                else:
+                    return pd.DataFrame(), pd.DataFrame() 
+            else:
+                return pd.DataFrame(), pd.DataFrame() 
             if returnModel:
 
                 return clusterLabels,data,alg

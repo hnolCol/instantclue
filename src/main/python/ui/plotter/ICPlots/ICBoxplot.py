@@ -15,7 +15,7 @@ class ICBoxplot(ICChart):
     
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Show summary data", self.displaySummaryData)
+        menus["main"].addAction("Boxplot data", self.displaySummaryData)
         #menus["main"].addAction("Show number of data points", self.showNumberOfDatapoints)
 
     def displaySummaryData(self,*args,**kwargs):

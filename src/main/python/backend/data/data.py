@@ -312,6 +312,7 @@ class DataCollection(object):
 		try:
 			if loadFileProps is not None and "sheet_name" in loadFileProps and loadFileProps["sheet_name"] is not None:
 				loadFileProps["sheet_name"] = loadFileProps["sheet_name"].split(";")
+
 			df = pd.read_excel(pathToFile,**loadFileProps)
 		except Exception as e:
 			print(e)
@@ -982,7 +983,9 @@ class DataCollection(object):
 			columnList = columnList.values.tolist()
 		
 		if isinstance(columnList,list):
-			groupByObject = self.dfs[dataID].groupby(columnList,sort = sort,as_index=as_index)
+			columnNames = self.getPlainColumnNames(dataID) #get all column names
+			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"] #required to account for grouping.
+			groupByObject = data.groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 
 	def getTooltipdata(self,dataID):
@@ -1235,7 +1238,7 @@ class DataCollection(object):
 
 				funcProps["categoryEncoded"] = "QuickSelect"
 				funcProps["ommitRedraw"] = useBlit
-				
+				funcProps["encodedColumns"] = columnName
 				
 				return funcProps
 		else:
@@ -2831,7 +2834,8 @@ class DataCollection(object):
 			mergedDataFrames.reset_index(drop=True,inplace=True)
 			return self.addDataFrame(
 							dataFrame = mergedDataFrames, 
-							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID])
+							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID]),
+							cleanObjectColumns=True
 							)
 
 		return errorMessage

@@ -186,13 +186,19 @@ class ICScatterPlot(ICChart):
         if self.getParam("scatter.equal.axis.limits"):
             self.alignLimitsOfAllAxes(updateFigure=False)
 
-        if "dataColorGroups" in self.data:
+        if "dataColorGroups" in self.data and isinstance(self.data["dataColorGroups"], pd.DataFrame):
             self.setDataInColorTable(self.data["dataColorGroups"], 
                                     title = "Scatter Points")
 
-        if "dataSizeGroups" in self.data:
+        if "dataSizeGroups" in self.data and isinstance(self.data["dataSizeGroups"], pd.DataFrame):
             self.setDataInSizeTable(self.data["dataSizeGroups"],
                                     title="Scatter Points")
+
+        if "colorCategoryIndexMatch" in self.data and self.data["colorCategoryIndexMatch"] is not None:
+            self.setColorCategoryIndexMatch(self.data["colorCategoryIndexMatch"])
+
+        if "sizeCategoryIndexMatch" in self.data and self.data["sizeCategoryIndexMatch"] is not None:
+            self.setSizeCategoryIndexMatch(self.data["sizeCategoryIndexMatch"])           
 
         #annotate data that are selected by user in QuickSelect widget
         self.checkForQuickSelectDataAndUpdateFigure()

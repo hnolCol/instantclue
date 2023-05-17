@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont, BuddyLabel
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit, getStdTextColor
 
 from ...delegates.ICQuickSelect import DelegateColor#, ItemDelegate #borrow delegate
 from ...dialogs.ICDataInputDialog import ICDataInput
@@ -21,7 +21,7 @@ class ItemDelegate(QStyledItemDelegate):
         painter.setFont(getStandardFont())
         rect = option.rect
         if self.parent().mouseOverItem is not None and index.row() == self.parent().mouseOverItem:
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
@@ -32,7 +32,7 @@ class ItemDelegate(QStyledItemDelegate):
     
     def addText(self,index,painter,rect):
         ""
-        painter.setPen(QPen(self.parent().model().data(index,Qt.ItemDataRole.ForegroundRole)))
+        painter.setPen(QPen(QColor(getStdTextColor())))
         rect.adjust(9,0,0,0)
         painter.drawText(rect,   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
        
@@ -49,6 +49,7 @@ class ICColorSizeTableBase(QWidget):
         super(ICColorSizeTableBase,self).__init__(*args,**kwargs)
         self.mC = mainController
         self.title = ""
+        self.encodedColumnNames = []
 
         self.setMaximumHeight(0)
         self.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
@@ -58,12 +59,17 @@ class ICColorSizeTableBase(QWidget):
         if isinstance(title,str):
             self.titleLabel.setText(title)
             self.title = title
+
+    def setEncodedColumnNames(self,encoedColumnNames : pd.Series):
+        ""
+        self.encodedColumnNames = encoedColumnNames
     
-    def setData(self,data, title=None, isEditable = True):
+    def setData(self,data, title=None, isEditable = True, encodedColumnNames = None):
         "" 
+        print(encodedColumnNames)
         if isinstance(data,pd.DataFrame):
             self.setTitle(title)
-            
+            self.setEncodedColumnNames(encodedColumnNames)
             self.table.model().layoutAboutToBeChanged.emit()
             self.table.model().isEditable = isEditable
             self.table.createMenu()
@@ -74,11 +80,16 @@ class ICColorSizeTableBase(QWidget):
             
     def setWidgetHeight(self):
         ""
+        if "\n" in self.title:
+            linesTakenByTitle = self.title.count("\n")
+        else:
+            linesTakenByTitle = 1 
+        
         rowCount = self.table.model().rowCount()
         if rowCount == 0:
             maxHeight = 0
         else:
-            maxHeight = int(95 + rowCount * self.table.rowHeight)
+            maxHeight = int(rowCount * self.table.rowHeight + linesTakenByTitle * 14 + 45) #header + title
      
         self.setMaximumHeight(maxHeight)
     
@@ -143,7 +154,7 @@ class ICColorTable(ICColorSizeTableBase):
         self.titleLabel = BuddyLabel(self.titleEdit) # Create our custom label, and assign myEdit as its buddy
         self.titleLabel.setText(self.title)
         self.titleLabel.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed) # Change vertical size policy so they both match and you don't get popping when switching
-
+        self.titleLabel.setWordWrap(True)
 
         #self.titleLabel = createLabel(text = self.title)
         self.table = ColorTable(parent = self, mainController=self.mC)
@@ -274,7 +285,7 @@ class ColorTableModel(QAbstractTableModel):
         self.isEditable = isEditable
 
     def initData(self,labels):
-
+        "Init data"
         self._labels = labels
         self._inputLabels = labels.copy()
         self._inLegend = pd.Series(np.ones(shape = self._labels.index.size).astype(bool) ,index=self._labels.index)
@@ -295,6 +306,10 @@ class ColorTableModel(QAbstractTableModel):
         ""
         if self.validDataIndex(row):
             return self._labels.index[row]
+        
+    def getLabelsName(self):
+        ""
+        return self._labels.columns
 
     def updateGroupData(self,value,index):
         ""
@@ -379,11 +394,11 @@ class ColorTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
             if not self.isEditable:
                 return False
             if index.column() != 1:
@@ -401,6 +416,9 @@ class ColorTableModel(QAbstractTableModel):
         
         self._labels.loc[dataIndex,"color"] = hexColor
         
+    def setColorForAllIdcs(self,hexColor):
+        ""
+        self._labels.loc[:,"color"] = hexColor
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
@@ -433,7 +451,7 @@ class ColorTableModel(QAbstractTableModel):
                 return "Color encoded categorical or numerical values. Double click + cmd/ctrl+c to copy entry."
 
         elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
             
     def flags(self, index):
         "Set Flags of Column"
@@ -523,11 +541,11 @@ class ColorTable(QTableView):
         self.colorChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.ColorRole.Highlight,QColor(HOVER_COLOR))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""
@@ -538,15 +556,31 @@ class ColorTable(QTableView):
         self.parent().selectionChanged.emit()
         self.model().rowDataChanged(rowIndex)
 
+    def selectSingleColor(self):
+        "Select a single color for all items in the table"
+        color = QColorDialog(parent=self.parent()).getColor()
+        if color.isValid():
+            self.model().setColorForAllIdcs(color.name())
+            self.parent().selectionChanged.emit()
+
+    # def colorByUniqueValuesInCategoricalColumn(self, categoricalColumn):
+    #     ""
+    #     print(categoricalColumn)
+    #     colorColumns = self.parent().encodedColumnNames
+    #     print(colorColumns)
+        
+        
+
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
         
-        
-        
         if self.model() is not None and hasattr(self.model(),"isEditable") and self.model().isEditable: #if editable - add the option to choose color from palette
-            menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
+            menu = createSubMenu(None,["Subset by ..","Color from palette","Color by unique values in ..","Add Legend at ..","Add Legend at (-NaN Color) .."])
             colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
+            # categoricalColumns = self.mC.data.getCategoricalColumns(dataID = self.mC.getDataID())
+            # for categoricalColumn in categoricalColumns:
+            #     menu["Color by unique values in .."].addAction(categoricalColumn, lambda categoricalColumn = categoricalColumn: self.colorByUniqueValuesInCategoricalColumn(categoricalColumn))
             for col in colors:
                 pixmap = QPixmap(20,20)
                 pq = QPainter(pixmap) 
@@ -557,6 +591,7 @@ class ColorTable(QTableView):
                 i.addPixmap(pixmap)
                 pq.end()
                 action.setIcon(i)
+            menu["main"].addAction("Single color for all items", self.selectSingleColor)
         else:
             menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) ..","Color Range (min/max)"])
             menu["Color Range (min/max)"].addAction("user defined", self.parent().setMinMaxByUser)
@@ -665,7 +700,6 @@ class ColorTable(QTableView):
             self.mouseOverItem = rowAtEvent
             
             #self.parent().highlightColorGroup()
-            
 
         self.model().completeDataChanged()
  

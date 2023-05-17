@@ -1,8 +1,6 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import QStyledItemDelegate, QSpinBox
-
-from ..utils import HOVER_COLOR
 import numpy as np
 
 class SpinBoxDelegate(QStyledItemDelegate):

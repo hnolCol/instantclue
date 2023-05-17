@@ -2,7 +2,6 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..utils import HOVER_COLOR, getStandardFont
 
 class DelegateSize(QStyledItemDelegate):
     def __init__(self,parent):

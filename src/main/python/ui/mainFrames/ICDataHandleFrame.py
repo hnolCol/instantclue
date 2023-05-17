@@ -14,7 +14,7 @@ from ..custom.Widgets.ICButtonDesgins import BigArrowButton, BigPlusButton, View
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
-from ..utils import removeFileExtension, areFilesSuitableToLoad
+from ..utils import removeFileExtension, areFilesSuitableToLoad, getHoverColor, getCollapsableButtonBG
 from ..custom.warnMessage import WarningMessage
 
 
@@ -187,7 +187,10 @@ class DataHandleFrame(QFrame):
                 {"title":"Quick Select","open":False,"fixedHeight":False,"height":0.4,"layout":vbox3},
                 {"title":"Live Graph","open":False,"fixedHeight":False,"height":0.4,"layout":vbox4},
                 {"title":"Analysis","open":False,"fixedHeight":False,"height":150,"layout":vbox5}]
-        self.frames.addCollapsableFrame(frameWidgets,widgetHeight=20,fontSize=9)
+        self.frames.addCollapsableFrame(frameWidgets,widgetHeight=20,fontSize=9,
+            closeColor = getCollapsableButtonBG(),
+            openColor = getCollapsableButtonBG(),
+            hoverColor = getHoverColor())
         
     def addShortcuts(self):
         "Add Shortcuts for copying/pasting data."
@@ -295,21 +298,11 @@ class DataHandleFrame(QFrame):
         if self.mC.data.hasData():
             self.dataTreeView.findAndReplace()
 
-    def addExcelFiles(self,files, loadFileProps = None):
+    def addExcelFiles(self,files):
         ""
         files = [f for f in files if f.endswith(".xlsx")]
-        for filePath in files:
-            if os.path.exists(filePath):
-                fileName = removeFileExtension(Path(filePath).name)
-                self.mC.config.setParam("WorkingDirectory",os.path.dirname(filePath))
-                funcProps = dict()
-                funcProps["key"] = "data::addDataFrameFromExcelFile"
-                funcProps["kwargs"] = {"fileName":fileName,
-                                    "pathToFile":filePath,
-                                    "loadFileProps":loadFileProps}
-                #self.mC.ICDataManger.loadDf.emit(filePath,fileName,loadFileProps)
-                
-                self.mC.sendRequestToThread(funcProps)
+        self.openDialog(selectedFiles=files)
+        # 
 
 
     def addTxtFiles(self,files, loadFileProps = None):

@@ -89,7 +89,7 @@ class ICProteinProteinView(QDialog):
         h = dlg.getApparentHeight()
         dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
         #handle result
-        if dlg.exec_():
+        if dlg.exec():
             selectedColumns = dlg.getSelection()
             self.peptideIntensityColumns = selectedColumns.values.flatten().tolist()
             numColumnsSelected = len(self.peptideIntensityColumns)

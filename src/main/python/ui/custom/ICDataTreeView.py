@@ -10,7 +10,7 @@ from .resortableTable import ResortableTable
 from .warnMessage import WarningMessage, AskQuestionMessage, AskForFile
 
 from ..delegates.ICDataTreeView import *
-from ..utils import createSubMenu, createMenu, createMenus, getStandardFont
+from ..utils import createSubMenu, createMenu, createMenus, getStandardFont, getStdTextColor
 from ..dialogs.Selections.ICSelectionDialog import SelectionDialog
 from ..dialogs.Groupings.ICGrouper import ICGrouper
 from ..dialogs.Groupings.ICCompareGroups import ICCompareGroups
@@ -954,7 +954,7 @@ menuBarItems = [
         "dataType": "Categories",
     },
     {
-        "subM":"Column operation ..",
+        "subM":"Value Transformation",
         "name":"Row wise calculations",
         "funcKey": "rowWiseCalculations",
         "dataType": "Numeric Floats"
@@ -1849,6 +1849,10 @@ class DataTreeModel(QAbstractTableModel):
         elif role == Qt.ItemDataRole.FontRole:
             font = getStandardFont()
             return font
+        elif role == Qt.ItemDataRole.ForegroundRole:
+            return QColor(getStdTextColor())
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            return QColor(getStdTextColor())
         elif role == Qt.ItemDataRole.ToolTipRole:
             if columnIndex == 3:
                 groupName = self.getGroupNameByTableIndex(index)
@@ -2744,12 +2748,14 @@ class DataTreeViewTable(QTableView):
                 "alternative":["two-sided","greater","less"],
                 "splitString":[";",">","<","_",",","."]},
                 {"categoricalColumn":selectedColumn.values[0],"alternative":"two-sided","splitString":";"},
-                title="Fisher Exact Settings.")
+                title="Categorical Enrichment Settings.")
   
         if selDiag.exec():
             #select test settings (side, splitSTring, etc)
             categoricalColumn = selDiag.savedSelection["categoricalColumn"]
-            dlg = ICDSelectItems(data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
+            dlg = ICDSelectItems(
+                title="Choose categorical column to perform the enrichment on.",
+                data = pd.DataFrame(categoricalColumns[categoricalColumns != categoricalColumn]))#filter test column out
             
             if dlg.exec():
 
@@ -2760,7 +2766,7 @@ class DataTreeViewTable(QTableView):
                 if len(labelColumns) > 0:
                     selectedLabelColumnsByUser = self.mC.askForItemSelection(
                             items =  labelColumns, 
-                            title="Select columns that should be used to annotate categorical groups.")
+                            title="Select columns that should be used to annotate categorical groups (such as Gene names).")
                     if selectedLabelColumnsByUser is not None:
                         selectedLabelColumns = selectedLabelColumnsByUser.values.flatten().tolist()
         

@@ -61,6 +61,7 @@ app = BUNDLE(coll,
                 'NSHighResolutionCapable': 'True',
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False,
-                'LSBackgroundOnly' : False
+                'LSBackgroundOnly' : False,
+                'UIUserInterfaceStyle': 'Light'
                 }
             )

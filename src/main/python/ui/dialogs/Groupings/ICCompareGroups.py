@@ -2,7 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton
-from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox
+from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getBoolFromCheckState, getCheckStateFromBool
 
 
 
@@ -37,7 +37,7 @@ class ICCompareGroups(QDialog):
         
         self.logPValuesCB = QCheckBox("-log10 p-value")
         self.logPValuesCB.setTristate(False)
-        self.logPValuesCB.setCheckState(True)
+        self.logPValuesCB.setCheckState(getCheckStateFromBool(True))
         self.logPValuesCB.setChecked(True)
         
         self.okayButton = ICStandardButton("Okay")

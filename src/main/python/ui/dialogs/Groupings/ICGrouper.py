@@ -8,7 +8,7 @@ from ...custom.Widgets.ICButtonDesgins import BigPlusButton, ResetButton, ICStan
 from ...utils import createLabel, createLineEdit, getMessageProps, createMenu
 from ...custom.utils import BuddyLabel, LabelLikeCombo, ICSCrollArea
 from ...custom.resortableTable import ResortTableWidget, ResortTableModel
-from ...custom.ICReceiverBox import ItemHolder, BoxItem
+from ...custom.Widgets.ICReceiverBox import ItemHolder, BoxItem
 from ...custom.warnMessage import WarningMessage
 from .ICGroupingExtractionFromString import ICGroupingSelection
 from backend.color.data import colorParameterRange

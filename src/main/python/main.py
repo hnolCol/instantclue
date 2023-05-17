@@ -752,8 +752,6 @@ class InstantClue(QMainWindow):
         #self.setStyleSheet("QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 5px}")
         self.setStyleSheet("""
                 QToolTip {
-                    background-color: white;
-                    color: black;
                     font-family: Arial;
                     line-height: 1.75;
                     padding: 2px;

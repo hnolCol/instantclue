@@ -3,7 +3,7 @@ import sys
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ..utils import createLabel, createTitleLabel, HOVER_COLOR
+from ..utils import createLabel, createTitleLabel, getHoverColor
 import pandas as pd
 import numpy as np
 
@@ -92,7 +92,7 @@ class ResortTableWidget(QTableView):
         #self.setDragDropMode(QAbstractItemView.InternalMove)
 
         p = self.palette()
-        p.setColor(QPalette.ColorRole.Highlight,QColor(HOVER_COLOR))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
         p.setColor(QPalette.ColorRole.HighlightedText  ,QColor("black"))
         self.setPalette(p)
        

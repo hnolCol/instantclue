@@ -3,7 +3,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from backend.transformations.transformer import summarizeMetric
-from ...utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, isWindows, HOVER_COLOR, getCheckStateFromBool
+from ...utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, getCheckStateFromBool, getBoolFromCheckState
 from ...custom.Widgets.ICButtonDesgins import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
 from ...custom.warnMessage import WarningMessage
 from ..Selections.ICDSelectItems import ICDSelectItems
@@ -235,8 +235,8 @@ class ICNumericFilterForSelection(QDialog):
                 "metric" : self.filterMetric.currentText(),
                 "filterMode" : self.filterMode.currentText(),
                 "filterProps" : filterProps,
-                "setNonMatchNan" : self.CBFilterOptions["Set NaN"].checkState(),
-                "subsetData" : self.CBFilterOptions["Subset Matches"].checkState()
+                "setNonMatchNan" : getBoolFromCheckState(self.CBFilterOptions["Set NaN"].checkState()),
+                "subsetData" : getBoolFromCheckState(self.CBFilterOptions["Subset Matches"].checkState())
             }
         }
         self.mC.sendRequestToThread(funcProps)
@@ -355,7 +355,7 @@ class NumericFilter(QDialog):
             filterName = self.columnNameCombo.currentText()
             if filterName == "Choose additional column":
                 w = WarningMessage(infoText="Choose column from drop down menu that you would like to use the filter on.")
-                w.exec_() 
+                w.exec() 
                 return
         if filterName not in self.filterProps:
             self.filterProps[filterName] = dict()
@@ -374,7 +374,7 @@ class NumericFilter(QDialog):
         #set sender status 
         self.sender().mouseOver = False
         #cast menu
-        action = menu.exec_(topLeft)
+        action = menu.exec(topLeft)
         if action:
             self.filterProps[filterName]["filterType"] = str(action.text())
             
@@ -468,7 +468,7 @@ class NumericFilter(QDialog):
         h = dlg.getApparentHeight()
         dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
         #handle result
-        if dlg.exec_():
+        if dlg.exec():
             selectedColumns = dlg.getSelection()
             self.filterProps[filterName]["specColumns"] = selectedColumns.values.flatten().tolist()
             numSelectedColumns = len(self.filterProps[filterName]["specColumns"])
@@ -518,10 +518,10 @@ class NumericFilter(QDialog):
             "kwargs":{
                 "dataID":self.dataID,
                 "filterProps":funcProps,
-                "setNonMatchNan":self.CBFilterOptions["Set NaN"].checkState() or self.CBFilterOptions["Set NaN in spec. columns"].checkState()}}
+                "setNonMatchNan":getBoolFromCheckState(self.CBFilterOptions["Set NaN"].checkState()) or getBoolFromCheckState(self.CBFilterOptions["Set NaN in spec. columns"].checkState())}}
         if self.CBFilterOptions["Set NaN in spec. columns"].checkState():
             funcProps["kwargs"]["selectedColumns"] =  OrderedDict([(k,v["specColumns"]) for k,v in self.filterProps.items()])
-        elif self.CBFilterOptions["Subset Matches"].checkState():
+        elif getBoolFromCheckState(self.CBFilterOptions["Subset Matches"].checkState()):
             funcProps["kwargs"]["subsetData"] = True
             funcProps["key"] = "filter::subsetNumericFilter"
        

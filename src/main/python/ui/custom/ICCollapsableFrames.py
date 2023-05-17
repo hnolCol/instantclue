@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 import numpy as np
 from collections import OrderedDict
-
+from ..utils import getMainWindowBGColor
 
 class CollapsableFrames(QWidget):
     def __init__(self,buttonDesign, buttonMenu = None, parent = None, animationDuration = 550, spacing = 0):
@@ -89,7 +89,7 @@ class CollapsableFrames(QWidget):
         
         contentArea = QScrollArea(self)
         contentArea.setWidgetResizable(True)
-        contentArea.setStyleSheet("""QScrollArea {background-color: white;border:None};""")
+        contentArea.setStyleSheet("QScrollArea {background-color:"+f" {getMainWindowBGColor()}"+";border:None};")
 
         self.animation.addAnimation(QPropertyAnimation(contentArea,b"maximumHeight"))
         self.animation.addAnimation(QPropertyAnimation(contentArea,b"minimumHeight"))

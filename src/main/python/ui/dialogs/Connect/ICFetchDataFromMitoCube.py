@@ -31,7 +31,7 @@ class ICFetchDataFromMitoCube(QDialog):
         self.dataID = createLineEdit("dataID","Provide a valid dataID.")
         self.APIUrl = createLineEdit("API-URL","Provide the API Url.")
         self.websitePassword = createLineEdit("Password","Provide the website password.")
-        self.websitePassword.setEchoMode(QLineEdit.Password)
+        self.websitePassword.setEchoMode(QLineEdit.EchoMode.Password)
         self.shareToken = createLineEdit("Share Token","Enter the share token provided by the MitoCube admin.")
         if self.APIUrlConfig is not None:
             self.APIUrl.setText(self.APIUrlConfig)

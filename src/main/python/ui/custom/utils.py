@@ -6,6 +6,7 @@ from .Widgets.ICButtonDesgins import LabelLikeButton
 from ..dialogs.Marks.ICColorChooser import ColorLabel
 import numpy as np
 
+
 INSTANT_CLUE_ANAYLSIS = [
                     {"Model":
                     [

@@ -14,7 +14,7 @@ from ..dialogs.OmicsTools.ICSampleList import ICSampleListCreater
 from ..dialogs.OmicsTools.ICProteinPeptideView import ICProteinProteinView
 from .utils import dataFileExport
 from ..custom.warnMessage import AskForFile, WarningMessage, AskStringMessage
-from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
+from ..utils import WIDGET_HOVER_COLOR, getHoverColor, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu, getCollapsableButtonBG
 
 
 #external imports
@@ -92,11 +92,12 @@ class CollapsableDataTreeView(QWidget):
                      "height":0,
                      "layout":self.dataHeaders[header].layout()}
             frameWidgets.append(frame)
+            
         self.frames.addCollapsableFrame(frameWidgets, 
-                                        closeColor = "#ECECEC", 
-                                        openColor = "#ECECEC",
+                                        closeColor = getCollapsableButtonBG(),
+                                        openColor = getCollapsableButtonBG(),
                                         dotColor = INSTANT_CLUE_BLUE,
-                                        hoverColor = HOVER_COLOR,
+                                        hoverColor = getHoverColor(),
                                         hoverDotColor = WIDGET_HOVER_COLOR, 
                                         widgetHeight = 20)
 

@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 from .ICDataTable import ICLabelDataTableDialog
@@ -231,7 +231,7 @@ class LabelTableModel(QAbstractTableModel):
                 return "kk"
 
         elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
         
     def flags(self, index):
         "Set Flags of Column"
@@ -287,7 +287,7 @@ class LabelTable(QTableView):
         self.sizeChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.ColorRole.Highlight,QColor(HOVER_COLOR))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 

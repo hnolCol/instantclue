@@ -88,7 +88,7 @@ class ICVolcanoPlotStyling(QDialog):
     def openColorColumnSelection(self,*args,**kwargs) -> None:
         ""
         selectionDialog = ICDSelectItems(data = pd.DataFrame(self.categoricalColumns),title="Significance Column Selection", selectAll=False)
-        if selectionDialog.exec_():
+        if selectionDialog.exec():
             selectedItems = selectionDialog.getSelection()
             self.colorColumns = pd.Series(selectedItems.values.flatten())
 
@@ -98,7 +98,7 @@ class ICVolcanoPlotStyling(QDialog):
         #print(self.categoricalColumns)
 
         selectionDialog = ICDSelectItems(data = pd.DataFrame(self.categoricalColumns),title="Significance Column Selection", selectAll=False)
-        if selectionDialog.exec_():
+        if selectionDialog.exec():
             selectedItems = selectionDialog.getSelection()
             nSelected = selectedItems.size
             if self.volcanos == nSelected:

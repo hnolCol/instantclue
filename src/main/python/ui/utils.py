@@ -9,11 +9,15 @@ import hashlib
 import base64 
 import random
 import string
+import darkdetect 
 
-HOVER_COLOR = "#E4DED4"
+
+
+CONTRAST_BG_COLOR = "#f6f6f6" if darkdetect.isDark() else "white"
+#WIDGET_HOVER_COLOR = "#616161" if darkdetect.isDark() else "#B84D29"
 WIDGET_HOVER_COLOR = "#B84D29" #red
 TABLE_ODD_ROW_COLOR = "#E4DED4"
-INSTANT_CLUE_BLUE = "#286FA4"
+INSTANT_CLUE_BLUE = "#286FA4" #"lightgrey" if darkdetect.isDark() else "#286FA4" 
 
 headerLabelStyleSheet = """ 
                     QLabel {
@@ -28,12 +32,65 @@ standardFontFamily = "Helvetica"
 
 legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
 
-def getCheckStateFromBool(checked):
+def getMainWindowBGColor():
     ""
+    if darkdetect.isDark():
+        return "#393939"
+    else:
+        return "white"
+def getLargeWidgetBG():
+    "Hex color used for receiver box and large frames."
+    if darkdetect.isDark():
+        return "#616161" 
+    return "white"
+
+def getCollapsableButtonBG():
+    "Hex color for the background of buttons in the collapsable data tree view frame"
+    if darkdetect.isDark():
+        return "#808080" 
+    else:
+        return "#ECECEC"
+
+def getDefaultWidgetBGColor():
+    "HexColor to be used as bg for widgets"
+    if darkdetect.isDark():
+        return "#808080" 
+    return "white"
+
+def getHoverColor():
+    ""
+    hoverColor = "#616161" if darkdetect.isDark() else "#E4DED4"
+    return hoverColor 
+def getStdTextColor():
+    if darkdetect.isDark():
+        return "white"
+    else:
+        return "black"
+
+def getStdTitleTextColor():
+    ""
+    if darkdetect.isDark():
+        return "white"
+    else:
+        return "#4F6571"
+
+def getBoolFromCheckState(checkState):
+    "Returns a bool from a PyQt6 CheckState"
+    return checkState == Qt.CheckState.Checked
+   
+def getCheckStateFromBool(checked):
+    "Returns a bool from a PyQt6 CheckState"
     if checked:
         return Qt.CheckState.Checked
     
     return Qt.CheckState.Unchecked
+
+
+def toggleCheckState(checkState):
+    "Toggle a PyQt6 specifc State"
+    if checkState == Qt.CheckState.Checked:
+        return Qt.CheckState.Unchecked, False
+    return Qt.CheckState.Checked, True
 
 def getRandomString(N = 20):
     ""
@@ -96,8 +153,9 @@ def createLabel(text,tooltipText = None, **kwargs):
     return w
 
 
-def createTitleLabel(text, fontSize = 18, colorString = "#4F6571"):
+def createTitleLabel(text, fontSize = 18, *args, **kwargs):
     ""
+
     w = QLabel()
     #set font
     font = QFont(getStandardFont()) 
@@ -107,7 +165,13 @@ def createTitleLabel(text, fontSize = 18, colorString = "#4F6571"):
     w.setFont(font)
     #set Text
     w.setText(text)
+    #style
+    colorString = getStdTitleTextColor()
     w.setStyleSheet("QLabel {color : "+colorString+"; }")
+    
+    
+    
+    
     return w
 
 def createLineEdit(placeHolderText="",tooltipText="",*args,**kwargs):
@@ -174,7 +238,28 @@ def isWindows():
 
 def setStyleSheetForMenu(menu):
     ""
-    menu.setStyleSheet("""
+    if darkdetect.isDark():
+
+        menu.setStyleSheet("""
+                QMenu 
+                    {
+                        background:#393939;
+                        border: solid 1px black;
+                    }
+                QMenu::item 
+                    {
+                        font-family: Arial; 
+                        font-size: 12px;
+                        margin: 2 4 2 4;
+                        padding: 0 20 0 10;
+                    }
+                QMenu::item:selected 
+                    {
+                        color:#286FA4;
+                    }
+                    """)
+    else:
+        menu.setStyleSheet("""
                 QMenu 
                     {
                         background:white;

@@ -2,7 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ..utils import HOVER_COLOR, getStandardFont
+from ..utils import getHoverColor, getStandardFont
 
 class DeleteDelegate(QStyledItemDelegate):
     def __init__(self,parent, highLightColumn = 1):
@@ -18,7 +18,7 @@ class DeleteDelegate(QStyledItemDelegate):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             centerPoint = option.rect.center()
             background = QRect(option.rect)
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
@@ -61,7 +61,7 @@ class GroupDelegate(QStyledItemDelegate):
             b  = QBrush(Qt.BrushStyle.NoBrush)
             r = 5
             if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-                b = QBrush(QColor(HOVER_COLOR)) 
+                b = QBrush(QColor(getHoverColor())) 
                 r = 7
             elif self.parent().selectionModel().isSelected(self.parent().model().index(index.row(),0)):
                 b =  QBrush(QColor("lightgrey"))
@@ -87,7 +87,7 @@ class GroupDelegate(QStyledItemDelegate):
         elif self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
             centerPoint = option.rect.center()
             background = QRect(option.rect)
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
@@ -125,7 +125,7 @@ class MaskDelegate(QStyledItemDelegate):
             w = h #square paint area
 
 
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)
@@ -154,7 +154,7 @@ class MaskDelegate(QStyledItemDelegate):
             painter.setBrush(b)
             painter.drawPath(path)
 
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
 
             #draw smile
@@ -204,7 +204,7 @@ class FilterDelegate(QStyledItemDelegate):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
             centerPoint = option.rect.center()
             background = QRect(option.rect)
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)            
@@ -255,7 +255,7 @@ class ItemDelegate(QStyledItemDelegate):
         painter.setFont(getStandardFont())
         rect = option.rect
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
@@ -293,7 +293,7 @@ class AddDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(option.rect)
@@ -348,7 +348,7 @@ class CopyDelegate(QStyledItemDelegate):
             path.lineTo(x0+h,y0+2*h)
             path.lineTo(x0+h,y0+0.8*h)
             path.lineTo(x0-h,y0+0.8*h)
-            b = QBrush(QColor(HOVER_COLOR))
+            b = QBrush(QColor(getHoverColor()))
             painter.setBrush(b)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(background)

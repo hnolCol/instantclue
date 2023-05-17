@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import *
 from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable, MultiColumnSelectablePandaModel
 from ...custom.utils import LabelLikeCombo
 from ...custom.warnMessage import WarningMessage
-from ...utils import createLabel, createLineEdit, getMessageProps, createCombobox, getCheckStateFromBool
+from ...utils import createLabel, createLineEdit, getMessageProps, createCombobox, getCheckStateFromBool, toggleCheckState, getBoolFromCheckState
 from ...custom.Widgets.ICButtonDesgins import AcceptButton, RefreshButton
 from backend.utils.stringOperations import mergeListToString
 
@@ -147,13 +147,13 @@ class CustomCategoricalFilter(FilterBase):
         #check if any data were selected
         if len(checkedData) == 0 or all(len(v) == 0 for v in checkedData.values()):
             w = WarningMessage(infoText = "No category selected.")
-            w.exec_()
+            w.exec()
             return
         if not all(columnName in checkedData for columnName in self.categoricalColumns.values):
             w = WarningMessage(infoText = "No category selected for at least one column.")
-            w.exec_()
+            w.exec()
             return
-        elif self.CBFilterOptions["Annotate Selection"].checkState():
+        elif getBoolFromCheckState(self.CBFilterOptions["Annotate Selection"].checkState()):
 
             
             funcProps = {"key":"filter::applyLiveFilter","kwargs":{
@@ -163,7 +163,7 @@ class CustomCategoricalFilter(FilterBase):
             
             self.mC.sendRequest(funcProps)
 
-        elif self.CBFilterOptions["Subset Selection"].checkState():
+        elif getBoolFromCheckState(self.CBFilterOptions["Subset Selection"].checkState()):
             funcProps = {"key":"filter::subsetData","kwargs":{"searchString":checkedData,
                                                               "dataID":self.mC.getDataID(),
                                                               "filterType":"multiColumnCategory",
@@ -192,10 +192,12 @@ class CustomCategoricalFilter(FilterBase):
     def setCBCheckStates(self,event=None):
         ""
         for cb in self.CBFilterOptions.values():
+            cbCheckState = cb.checkState()
             if cb != self.sender():
-                newState = not cb.checkState()
-                self.sender().setCheckState(getCheckStateFromBool(not newState))
-                cb.setCheckState(getCheckStateFromBool(newState))
+                newCheckState, _ = toggleCheckState(cb.checkState())
+                cb.setCheckState(newCheckState)
+            else:
+                cb.setCheckState(cbCheckState)
 
 class CategoricalFilter(FilterBase):
 
@@ -263,14 +265,14 @@ class CategoricalFilter(FilterBase):
             self.mC.sendMessageRequest(getMessageProps("Error ..","No category selected."))
             return
 
-        elif self.CBFilterOptions["Annotate Selection"].checkState():
+        elif getBoolFromCheckState(self.CBFilterOptions["Annotate Selection"].checkState()):
 
             
             funcProps = {"key":"filter::applyLiveFilter","kwargs":{
                                             "searchString":selectedCategories}}
             self.mC.sendRequest(funcProps)
 
-        elif self.CBFilterOptions["Subset Selection"].checkState():
+        elif getBoolFromCheckState(self.CBFilterOptions["Subset Selection"].checkState()):
             funcProps = {"key":"filter::subsetData","kwargs":{"searchString":selectedCategories,
                                                               "dataID":self.mC.mainFrames["data"].getDataID(),
                                                               "columnName":self.categoricalColumns.values[0]}}
@@ -282,11 +284,13 @@ class CategoricalFilter(FilterBase):
     def setCBCheckStates(self,event=None):
         ""
         for cb in self.CBFilterOptions.values():
+            cbCheckState = cb.checkState()
             if cb != self.sender():
-                newState = not cb.checkState()
-                self.sender().setCheckState(getCheckStateFromBool(not newState))
-                cb.setCheckState(getCheckStateFromBool(newState))
-                
+                newCheckState, _ = toggleCheckState(cb.checkState())
+                cb.setCheckState(newCheckState)
+            else:
+                cb.setCheckState(cbCheckState)
+
     def updateData(self,event=None):
         "Update data when update button is pressed"
         if hasattr(self.mC.data.categoricalFilter, "filterProps"):
@@ -366,8 +370,8 @@ class FindStrings(FilterBase):
             self.lastSearch = searchString
             self.searchLine.setText(searchString)
             self.lineEditChanged(searchString, 
-                            caseSensitive=self.CBFilterOptions["Case sensitive"].checkState(),
-                            inputIsRegEx = self.CBFilterOptions["Input is regular expression"].checkState())
+                            caseSensitive= getBoolFromCheckState(self.CBFilterOptions["Case sensitive"].checkState()),
+                            inputIsRegEx = getBoolFromCheckState(self.CBFilterOptions["Input is regular expression"].checkState()))
         
 
     def applyFilter(self,event=None):
@@ -380,9 +384,9 @@ class FindStrings(FilterBase):
         
         funcProps = {"key":"filter::applyLiveFilter",
                     "kwargs":{"searchString":self.searchLine.text(),
-                            "caseSensitive":self.CBFilterOptions["Case sensitive"].checkState(),
-                            "inputIsRegEx":self.CBFilterOptions["Input is regular expression"].checkState(),
-                            "annotateSearchString":self.CBFilterOptions["Annotate matches by search string"].checkState()}}
+                            "caseSensitive":getBoolFromCheckState(self.CBFilterOptions["Case sensitive"].checkState()),
+                            "inputIsRegEx":getBoolFromCheckState(self.CBFilterOptions["Input is regular expression"].checkState()),
+                            "annotateSearchString":getBoolFromCheckState(self.CBFilterOptions["Annotate matches by search string"].checkState())}}
 
         self.mC.sendRequest(funcProps)
        

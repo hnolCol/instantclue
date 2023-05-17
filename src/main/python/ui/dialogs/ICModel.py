@@ -110,7 +110,7 @@ class ICLinearFitModel(QDialog):
             
         if warnString is not None:
             w = WarningMessage(infoText=warnString)
-            w.exec_() 
+            w.exec() 
             return
 
         kwargs = {

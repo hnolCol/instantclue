@@ -6,7 +6,7 @@ from .ICCollapsableFrames import CollapsableFrames
 from .Widgets.ICButtonDesgins import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDataInputDialog import ICDataInput
-from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE
+from ..utils import WIDGET_HOVER_COLOR, getHoverColor, INSTANT_CLUE_BLUE, getCollapsableButtonBG
 import pandas as pd
 from collections import OrderedDict
 
@@ -49,10 +49,10 @@ class AnalysisSelection(QWidget):
             self.dataHeaders[header].table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         self.frames.addCollapsableFrame(frameWidgets, 
-                                        closeColor = "#ECECEC", 
-                                        openColor = "#ECECEC",
+                                        closeColor = getCollapsableButtonBG(),
+                                        openColor = getCollapsableButtonBG(),
                                         dotColor = INSTANT_CLUE_BLUE,
-                                        hoverColor = HOVER_COLOR,
+                                        hoverColor = getHoverColor(),
                                         hoverDotColor = WIDGET_HOVER_COLOR, 
                                         widgetHeight = 20)
 

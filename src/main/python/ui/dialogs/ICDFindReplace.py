@@ -27,7 +27,7 @@ class FindReplaceDialog(QDialog):
 
     def __windowUpdate(self):
 
-        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setWindowOpacity(0.95)
     
     def __controls(self):
@@ -132,7 +132,7 @@ class FindReplaceDialog(QDialog):
         if hasattr(self,"findString"):
             if len(self.findString) == 0:
                 w = WarningMessage(infoText = "Please enter a search string.",iconDir = self.mC.mainPath)
-                w.exec_()
+                w.exec()
                 return False
             else:
                 self.findStrings, self.replaceStrings = self.getStringLists()
@@ -143,12 +143,12 @@ class FindReplaceDialog(QDialog):
                     return True
                 else:
                     w = WarningMessage(infoText = "Please enter either a replace string or a matching number of strings (find vs replace).",iconDir = self.mC.mainPath)
-                    w.exec_()
+                    w.exec()
                     return False
         
         else:
             w = WarningMessage(infoText = "Please enter strings to find.")
-            w.exec_()
+            w.exec()
             return False
        
 

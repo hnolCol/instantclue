@@ -15,7 +15,7 @@ from ..dialogs.Marks.ICSizeDialog import ICSizeDialog
 from ..dialogs.Filter.ICCategoricalFilter import CategoricalFilter, FindStrings, CustomCategoricalFilter
 from ..dialogs.Filter.ICNumericFilter import NumericFilter
 from ui.custom.warnMessage import WarningMessage,AskOptionsMessage
-from ..utils import createSubMenu, createLabel
+from ..utils import createSubMenu, createLabel, getStdTextColor, getLargeWidgetBG
 from ..tooltips import SLICE_MARKS_TOOLTIPSTR
 
 import seaborn as sns
@@ -56,7 +56,7 @@ class ThreadCircle(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         c = QColor(self._colors[self._circleColor])
         painter.setBrush(c)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.drawEllipse(15,15,13,13)
@@ -130,7 +130,7 @@ class SliceMarksFrame(QWidget):
     def __controls(self):
         #control background role
         p = self.palette()
-        p.setColor(self.backgroundRole(), QColor("#f6f6f6"))
+        p.setColor(self.backgroundRole(), QColor(getLargeWidgetBG()))
         self.setPalette(p)
         self.setAutoFillBackground(True)
         #create buttons
@@ -196,10 +196,10 @@ class SliceMarksFrame(QWidget):
         self.tooltipTable = ICLabelTable(mainController=self.mC, header="Tooltip")
         self.statisticTable = ICStatisticTable(mainController=self.mC)
         self.markerTable = ICMarkerTable(mainController=self.mC)
-
+        
         self.scrollWidget = QWidget()
         p = self.scrollWidget.palette()
-        p.setColor(self.scrollWidget.backgroundRole(), QColor("#f6f6f6"))
+        p.setColor(self.scrollWidget.backgroundRole(), QColor(getLargeWidgetBG()))
         self.scrollWidget.setPalette(p)
 
         self.tableScrollArea.setWidget(self.scrollWidget)
@@ -369,8 +369,8 @@ class SliceMarksFrame(QWidget):
         else:
             
                 self.filterDlg = NumericFilter(mainController = self.mC, selectedNumericColumn = columnNames)
-            
-        self.filterDlg.exec()
+        if hasattr(self,"filterDlg"):
+            self.filterDlg.exec()
     
     def handleColorDrop(self):
         ""
@@ -471,18 +471,18 @@ class SliceMarksFrame(QWidget):
         self.mC.sendRequestToThread(funcProps)
     
   
-    def setColorGroupData(self,colorGroupData,title="",isEditable = True):
+    def setColorGroupData(self,colorGroupData,title="",isEditable = True, encodedColumnNames = None):
         ""
-        self.colorTable.setData(colorGroupData,title,isEditable)
+        self.colorTable.setData(colorGroupData,title,isEditable,encodedColumnNames)
 
-    def setSizeGroupData(self,sizeGroupData,title="", isEditable = True):
+    def setSizeGroupData(self,sizeGroupData,title="", isEditable = True,encodedColumnNames = None):
         ""
-        self.sizeTable.setData(sizeGroupData,title,isEditable)
+        self.sizeTable.setData(sizeGroupData,title,isEditable,encodedColumnNames)
 
-    def setQuickSelectData(self,quickSelectData,title="",isEditable=True):
+    def setQuickSelectData(self,quickSelectData,title="",isEditable=True, encodedColumnNames = None):
         ""
-        self.quickSelectTable.setData(quickSelectData,title,isEditable)
+        self.quickSelectTable.setData(quickSelectData,title,isEditable,encodedColumnNames)
 
-    def setMarkerGroupData(self,markerGroupData,title=""):
+    def setMarkerGroupData(self,markerGroupData,title="", encodedColumnNames = None):
         ""
-        self.markerTable.setData(markerGroupData,title)
+        self.markerTable.setData(markerGroupData,title,encodedColumnNames)

@@ -188,7 +188,7 @@ class ICDMergeDataFrames(QDialog):
                 dfProps = self.mergeParams[dfID]
                 if "columnNames" not in dfProps:
                     w = WarningMessage(title = "No data frame.", infoText = "Please select a dataframe first.",iconDir = self.mC.mainPath)
-                    w.exec_()
+                    w.exec()
                     return
                 selectableColumns = pd.DataFrame(dfProps["columnNames"])
                 preSelectionIdx = dfProps[paramID].index
@@ -203,7 +203,7 @@ class ICDMergeDataFrames(QDialog):
                 dlg.setGeometry(bottomRight.x() + 15,bottomRight.y()-int(h/2),185,h)
 
                 #handle result
-                if dlg.exec_():
+                if dlg.exec():
                     selectedColumns = dlg.getSelection()
                     self.mergeParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0],index = selectedColumns.index)
                     self.sender().setText(";".join([str(x) for x in selectedColumns.values.flatten()]))

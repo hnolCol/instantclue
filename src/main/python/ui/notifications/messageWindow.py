@@ -28,11 +28,11 @@ class Message(QFrame):
 
         self.setStyleSheet("""background:#F2F2F2""")
         
-        self.messageLabel.setFixedWidth(250)
+        self.messageLabel.setFixedWidth(650)
         self.messageLabel.setWordWrap(True)
 
         self.layout().setContentsMargins(5,4,5,4)
-        self.layout().setSpacing(5)
+        self.layout().setSpacing(4)
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.messageLabel)
         self.layout().addStretch(1)
@@ -63,7 +63,7 @@ class Notification(QWidget):
     def __init__(self, parent = None, padding = {"right":50,"top":50}):
 
         super(QWidget, self).__init__(parent)
-
+        print(self.parent)
         self.padding = padding
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         
@@ -80,7 +80,7 @@ class Notification(QWidget):
     def setLocation(self,sizeHint):
         ""
         self.move(
-                    self.screenWidth-sizeHint.width()-self.padding["right"],
+                    int(self.screenWidth/2)-int(sizeHint.width()/2)-self.padding["right"],
                     self.padding["top"]
                 )
 

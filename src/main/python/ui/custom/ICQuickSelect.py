@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from ..delegates.ICQuickSelect import DelegateColor, DelegateSize
 from .Widgets.ICButtonDesgins import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
 from ..dialogs.Selections.ICQuickSelectModeSelection import QuickSelectDialog
-from ..utils import createTitleLabel, createMenu, createSubMenu, getMessageProps, HOVER_COLOR, getStandardFont, legendLocations
+from ..utils import createTitleLabel, createMenu, createSubMenu, getMessageProps, getHoverColor, getStandardFont, legendLocations
 import os
 import pandas as pd
 import numpy as np
@@ -403,9 +403,9 @@ class QuickSelect(QWidget):
         filterMode = self.quickSelectProps["filterProps"]["mode"]
         selectionData = self.model.getCompleteSelectionData(attachSizes=True)
         selectionData = selectionData.dropna(subset=["checkedValues"])
+        selectionData.loc[:,"selectedInQuickSelect"] = "+"
         selectionData = selectionData.dropna(axis=1,how="all")
         
-
         if selectionData["checkedValues"].index.size == 0:
                 self.mC.sendMessageRequest({"title":"Error ..","message":"No selection made in Quick Select"})
                 return  
@@ -962,7 +962,7 @@ class QuickSelectModel(QAbstractTableModel):
 
         elif self.parent().table.mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().table.mouseOverItem:
             
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
 
         elif role == Qt.ItemDataRole.FontRole and index.column() == 0:
 
@@ -1041,9 +1041,7 @@ class QuickSelectModel(QAbstractTableModel):
             self._labels = self._inputLabels.copy()
         elif isinstance(dataIndex, pd.Series):
             self._labels = self._inputLabels.loc[dataIndex]
-        elif isinstance(dataIndex, pd.Int64Index):
-            self._labels = self._inputLabels.loc[dataIndex]
-        elif isinstance(dataIndex, pd.Float64Index):
+        elif isinstance(dataIndex, pd.Index) and dataIndex.is_numeric():
             self._labels = self._inputLabels.loc[dataIndex]
         elif dataIndex in self._inputLabels.index:  
             self._labels = self._inputLabels.loc[pd.Series(dataIndex)]

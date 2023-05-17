@@ -3,13 +3,13 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from scipy.spatial.distance import braycurtis
 
-from ...utils import HOVER_COLOR, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, isWindows
+from ...utils import getHoverColor, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, getDefaultWidgetBGColor, getStandardFont, isWindows, getStdTextColor
 import numpy as np
 import seaborn as sns
 import random
 from matplotlib.colors import ListedColormap
 from numpy.random import default_rng
-
+import darkdetect
 
 #colorCmap = sns.choose_colorbrewer_palette("Blues",as_cmap=True)
 flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
@@ -33,12 +33,13 @@ class CollapsButton(QPushButton):
                 closeColor = "#f6f6f6",
                 openColor = None,#"#C6C6B6",
                 dotColor = INSTANT_CLUE_BLUE,
-                hoverColor = HOVER_COLOR,
                 hoverDotColor = WIDGET_HOVER_COLOR,
+                hoverColor = None, #depracted
                 font = None,
                 mouseTracking = True,
                 fontSize = 12,
-                widgetHeight = 30
+                widgetHeight = 30,
+                
                 ):
 
         super(CollapsButton,self).__init__(parent)
@@ -49,7 +50,7 @@ class CollapsButton(QPushButton):
         self.closeColor = closeColor
         self.openColor = openColor
         self.dotColor = dotColor
-        self.hoverColor = hoverColor
+        self.hoverColor = getHoverColor()
         self.hoverDotColor = hoverDotColor
         self.strokeWidth = strokeWidth
         self.setMouseTracking(mouseTracking)
@@ -119,7 +120,7 @@ class CollapsButton(QPushButton):
         centerPoint = rect.center()
         centerPoint.setX(int(centerPoint.x() + rect.width() / 2 - 10))    
     
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(self.strokeWidth)
         
         painter.setPen(pen)
@@ -206,10 +207,9 @@ class DataHeaderButton(CollapsButton):
         brush = QBrush(QColor(brushColor))
         painter.setBrush(brush)
         
-        if self.active:
-            pen = QPen(QColor("black"))
-        else: 
-            pen = QPen(QColor("grey"))
+        
+        pen = QPen(QColor(getStdTextColor()))
+        #if self.active
         pen.setWidthF(0.1)
         painter.setPen(pen)
         painter.drawRect(rect)
@@ -281,7 +281,8 @@ class PushHoverButton(QPushButton):
         if self.menuFn is not None:
             self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             self.customContextMenuRequested.connect(lambda _, menuKw = menuKeyWord: self.menuFn(menuKw,self))
-            
+
+
     def paintEvent(self,event):
         
         painter = QPainter(self)
@@ -289,7 +290,7 @@ class PushHoverButton(QPushButton):
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
-        b = QBrush(QColor(HOVER_COLOR if self.mouseOver else "white"))
+        b = QBrush(QColor(getHoverColor() if self.mouseOver else getDefaultWidgetBGColor()))
         painter.setBrush(b)
         rect, h, w, x0, y0 = self.getRectProps(event)
 
@@ -496,10 +497,10 @@ class ICStandardButton(PushHoverButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
         if self.isEnabled():
-            pen = QPen(QColor("black"))
+            pen = QPen(QColor(getStdTextColor()))
         else:
             pen = QPen(QColor("grey"))
-        brush = QBrush(QColor("white"))
+        brush = QBrush(QColor("transparent"))
         pen.setWidthF(0.5)
         painter.setBrush(brush)
         painter.setPen(pen)
@@ -592,7 +593,7 @@ class BigArrowButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -677,7 +678,7 @@ class BigPlusButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else "#397546"))
+        pen = QPen(QColor(WIDGET_HOVER_COLOR if self.mouseOver else INSTANT_CLUE_BLUE))
         pen.setWidthF(self.strokeWidth)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -705,7 +706,7 @@ class SubsetDataButton(PushHoverButton):
             super().paintEvent(event)
             #crate painter
             painter = QPainter(self)
-            pen = QPen(QColor("black"))
+            pen = QPen(QColor(getStdTextColor()))
             pen.setWidthF(0.5)
             painter.setPen(pen)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -763,7 +764,7 @@ class ViewDataButton(PushHoverButton):
         super().paintEvent(event)
         #crate painter
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -837,7 +838,7 @@ class SizeButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -890,7 +891,7 @@ class FilterButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -951,7 +952,7 @@ class SelectButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -1017,7 +1018,7 @@ class ColorButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -1069,7 +1070,7 @@ class MarkerButton(PushHoverButton):
         super().paintEvent(event)
         
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -1130,7 +1131,7 @@ class LabelButton(PushHoverButton):
         #create common background/reacts to hover
         super().paintEvent(event)
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
 
         #font.setCapitalization(QFont.Capitalization.SmallCaps)
         pen.setWidthF(0.5)
@@ -1171,7 +1172,7 @@ class TooltipButton(PushHoverButton):
         super().paintEvent(event)
         painter = QPainter(self)
         #set up pen for border
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.2)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -1197,7 +1198,7 @@ class TooltipButton(PushHoverButton):
             painter.drawLine(QPointF(x1,y),QPointF(x2,y))
 
         #set back the border pen
-        pen.setColor(QColor("black"))
+        pen.setColor(QColor(getStdTextColor()))
         pen.setWidthF(0.2)
         painter.setPen(pen)
 
@@ -1963,6 +1964,7 @@ class PlotTypeButton(PushHoverButton):
 
     def drawAxis(self,qp, rect, slopeOneLine = True, offset = 7):
         ""
+        
         rect.adjust(offset,offset,-offset,-offset)
 
         rectHeight = rect.height()
@@ -2178,7 +2180,7 @@ class PlotTypeButton(PushHoverButton):
 
     def drawWordcloud(self, qp, height, width, rectX, rectY):
         ""
-        defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546","black"]
+        defaultColors = ["#A0D4CB",INSTANT_CLUE_BLUE,"#397546",getStdTextColor()]
         qp.setFont(self.getStandardFont())
         
         c1 = random.choice(defaultColors)
@@ -2452,7 +2454,7 @@ class MultiScatterButton(PlotTypeButton):
        
         super().paintEvent(event,noAxis = True)
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -2487,7 +2489,7 @@ class MainFigureButton(PlotTypeButton):
        
         super().paintEvent(event,noAxis = True)
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
@@ -2525,7 +2527,7 @@ class SettingsButton(PlotTypeButton):
         ""
         super().paintEvent(event,noAxis = True)
         painter = QPainter(self)
-        pen = QPen(QColor("black"))
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)

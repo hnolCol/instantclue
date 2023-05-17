@@ -109,7 +109,7 @@ class ICShareGraph(QDialog):
         h = dlg.getApparentHeight()
         dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
         #handle result
-        if dlg.exec_():
+        if dlg.exec():
             selectedColumns = dlg.getSelection()
             self.selectedSearchableColumns = selectedColumns.values.flatten().tolist()
             numColumnsSelected = len(self.selectedSearchableColumns)
@@ -223,7 +223,7 @@ class ICShareGraph(QDialog):
                 if self.mC.webAppComm.isChartProtected(chartDetails["graphID"]):
                    
                     qs = AskStringMessage(q="Please enter password.",passwordMode=True)
-                    if qs.exec_():
+                    if qs.exec():
                         pwd = qs.text.encode("utf-8")
                     else:
                         return

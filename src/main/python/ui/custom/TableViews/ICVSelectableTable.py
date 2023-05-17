@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 
 #ui utils
-from ...utils import INSTANT_CLUE_BLUE, TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createLineEdit, createTitleLabel, getMessageProps, createMenu, createSubMenu, getStandardFont
+from ...utils import INSTANT_CLUE_BLUE, TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, getHoverColor, getStdTextColor, getMessageProps, createMenu, getStandardFont, getDefaultWidgetBGColor
 
 from ..warnMessage import AskQuestionMessage, AskStringMessage
 
@@ -20,8 +20,6 @@ contextMenuData = OrderedDict([
             ("addDataFrame",{"label":"Add as new data frame","fn":"addDf"})
 
         ])
-
-
 
 class PandaTable(QTableView):
     
@@ -266,12 +264,9 @@ class PandaModel(QAbstractTableModel):
             elif columnIndex in self.highlightBackgroundHeaderColors:
                 return QBrush(QColor(self.highlightBackgroundHeaderColors[columnIndex]))
             return QBrush(QColor("white"))
-
         elif role == Qt.ItemDataRole.ForegroundRole:
-            if self.df.iloc[rowIndex,columnIndex] == "+":
-                return QColor("white")
-            else:
-                return QColor("black")
+
+            return QBrush(QColor(getStdTextColor()))
             
     def setData(self,index,value,role):
         ""
@@ -315,7 +310,7 @@ class PandaModel(QAbstractTableModel):
 
         elif role == Qt.ItemDataRole.ForegroundRole:
 
-            return QBrush(QColor("black"))
+            return QBrush(QColor(getStdTextColor()))
 
         elif role == Qt.ItemDataRole.FontRole:
             font = getStandardFont()
@@ -509,14 +504,17 @@ class SelectablePandaModel(PandaModel):
                 return Qt.CheckState.Checked
             else:
                 return Qt.CheckState.Unchecked
+        elif role == Qt.ItemDataRole.ForegroundRole:
+            return QBrush(QColor(getStdTextColor()))
         elif role == Qt.ItemDataRole.BackgroundRole:
+
             if self.getCheckStateByTableIndex(index) or \
                 (self.parent() is not None and self.parent().highlightRow is not None and self.parent().highlightRow == index.row()):
 
-                return QBrush(QColor(HOVER_COLOR))
+                return QBrush(QColor(getHoverColor()))
             else:
                 
-                return QBrush(QColor("white"))
+                return QBrush(QColor(getDefaultWidgetBGColor()))
        
     def setData(self,index,value,role):
 
@@ -575,7 +573,8 @@ class SelectablePandaModel(PandaModel):
                 self.checkedLabels.loc[dataIndex] = newState
 
             return newState
-        except:
+        except Exception as e:
+            print(e)
             return False
 
     def setCheckStateByDataIndex(self,dataIndex, state = 1):
@@ -653,7 +652,7 @@ class MultiColumnSelectablePandaModel(PandaModel):
             if self.getCheckStateByTableIndex(index) or \
                 (self.parent() is not None and self.parent().highlightRow is not None and self.parent().highlightRow == index.row()):
 
-                return QBrush(QColor(HOVER_COLOR))
+                return QBrush(QColor(getHoverColor()))
             else:
                 return QBrush(QColor("white"))
        

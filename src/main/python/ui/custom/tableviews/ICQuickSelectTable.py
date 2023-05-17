@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
 
 from ...delegates.ICQuickSelect import DelegateColor
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
@@ -261,9 +261,12 @@ class QuickSelectTableModel(QAbstractTableModel):
 
     def setColor(self, dataIndex, hexColor):
         ""
-        
         self._labels.loc[dataIndex,"color"] = hexColor
         
+    def setColorForAllIdcs(self,hexColor):
+        ""
+        self._labels.loc[:,"color"] = hexColor 
+
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
@@ -295,7 +298,7 @@ class QuickSelectTableModel(QAbstractTableModel):
             return self._labels.iloc[index.row(),index.column()]
 
         elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
             
     def flags(self, index):
         "Set Flags of Column"
@@ -397,7 +400,7 @@ class QuickSelectTable(QTableView):
         self.sizeChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.ColorRole.Highlight,QColor(HOVER_COLOR))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
@@ -412,11 +415,19 @@ class QuickSelectTable(QTableView):
         self.parent().selectionChanged.emit()
         self.model().rowDataChanged(rowIndex)
 
+    def selectSingleColor(self):
+        "Select a single color for all items in the table"
+        color = QColorDialog(parent=self.parent()).getColor()
+        if color.isValid():
+            self.model().setColorForAllIdcs(color.name())
+            self.parent().selectionChanged.emit()
+
     def createMenu(self):
         ""
         legendLocations = ["upper right","upper left","center left","center right","lower left","lower right"]
         menu = createSubMenu(None,["Subset by ..","Color from palette","Add Legend at ..","Add Legend at (-NaN Color) .."])
-        menu["main"].addAction("Remove", self.parent().removeFromGraph)
+        menu["main"].addAction("Single color for all items", self.selectSingleColor)
+        
         colors = self.mC.colorManager.getNColorsByCurrentColorMap(8)
         for col in colors:
             pixmap = QPixmap(20,20)
@@ -428,13 +439,14 @@ class QuickSelectTable(QTableView):
             i.addPixmap(pixmap)
             pq.end()
             action.setIcon(i)
-                
+        
         for legendLoc in legendLocations:
             menu["Add Legend at .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(legendKwargs = {"loc":lloc}))
             menu["Add Legend at (-NaN Color) .."].addAction(legendLoc,lambda lloc = legendLoc: self.parent().addLegendToGraph(ignoreNaN = True,legendKwargs = {"loc":lloc}))
         
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
         menu["Subset by .."].addAction("Group", self.parent().subsetSelection)
+        menu["main"].addAction("Remove", self.parent().removeFromGraph)
         self.menu = menu["main"]
     
 
@@ -524,7 +536,7 @@ class QuickSelectTable(QTableView):
             self.mouseOverItem = None
         else:
             self.mouseOverItem = rowAtEvent
-        self.model().rowDataChanged(rowAtEvent)
+        self.model().completeDataChanged()
  
     def resizeColumns(self):
         ""

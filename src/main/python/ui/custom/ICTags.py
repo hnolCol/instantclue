@@ -6,7 +6,7 @@ from ..utils import createLineEdit
 
 
 from .Widgets.ICButtonDesgins import ResetButton
-from .ICReceiverBox import BoxItem
+from .Widgets.ICReceiverBox import BoxItem
 from ..utils import getRandomString
 
 import numpy as np 

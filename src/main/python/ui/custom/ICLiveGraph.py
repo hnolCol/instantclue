@@ -282,6 +282,13 @@ class BlitingLiveGraph(object):
         #hide line
         self.setInvisible()
 
+    def addText(self):
+        ""
+        self.hoverText = self.ax.text(0.1, 0.99, "",
+            horizontalalignment='left',
+            verticalalignment='top',
+            transform=self.ax.transAxes)
+
     def addXTicks(self, xTicksVisible, numColumn):
         #add some minor border
         if self.plotType == "Line":
@@ -344,7 +351,7 @@ class BlitingLiveGraph(object):
                 self.ax.draw_artist(l)
             for box in self.hoverBoxplots:
                 self.ax.draw_artist(box)
-
+        self.ax.draw_artist(self.hoverText)
         self.figure.canvas.blit(self.ax.bbox)
 
     def clearAxis(self):
@@ -394,6 +401,7 @@ class BlitingLiveGraph(object):
             self.setXAxisProps()
             self.setYAxisProps()
             self.addArtist()
+            self.addText()
             self.setLineProps()
         try:
             self.plotDataQauntiles()
@@ -416,6 +424,8 @@ class BlitingLiveGraph(object):
                 bar.set_visible(False)   
             for l in self.hoverBoxplotLines:
                 l.set_visible(False)
+        if hasattr(self,"hoverText"):
+            self.hoverText.set_visible(False)
 
     def setLineProps(self):
         ""
@@ -441,9 +451,10 @@ class BlitingLiveGraph(object):
 
     def updateGraph(self):
         ""
-        if self.selectionIndex is not None:
-            #plot lines
-            pass
+        # if self.selectionIndex is not None:
+        #     #plot lines
+
+        #     pass
         
         if self.plotType == "Line":
             Y = self.data.loc[self.selectionIndex,:].mean().values
@@ -454,7 +465,15 @@ class BlitingLiveGraph(object):
         elif self.plotType == "Boxplot":
             Y = self.data.loc[self.selectionIndex,:].quantile(q=[0.0,0.25,0.5,0.75,1.0]).values
             self.updateBoxData(self.xTicks, Y)
+        numberRows = len(self.selectionIndex)
+        self.updateNumber(numberRows)
         self.updateAxis()
+
+    def updateNumber(self,n):
+        ""
+        
+        self.hoverText.set_visible(True)
+        self.hoverText.set_text(f"n : {n}")
 
     def updateBarData(self,x,y):
         ""

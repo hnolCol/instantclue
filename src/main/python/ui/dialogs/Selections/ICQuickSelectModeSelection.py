@@ -1,7 +1,7 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ...utils import createTitleLabel, createLabel, createLineEdit
+from ...utils import createTitleLabel, createLabel, createLineEdit, toggleCheckState, getCheckStateFromBool
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton
 
 class QuickSelectDialog(QDialog):
@@ -77,13 +77,15 @@ class QuickSelectDialog(QDialog):
 
     def changeProps(self, mode = "unique"):
         ""
+        #toggleCheckState, getCheckStateFromBool
         #toogle checkbox state
+        if not hasattr(self.sender(),"checkState"): return
+
+        toggledheckState, _ = toggleCheckState(self.sender().checkState())
         if self.sender() == self.rawValues:
-            newCheckState = not self.rawValues.checkState()
-            self.uniqueValues.setCheckState(Qt.CheckState.Checked if newCheckState else Qt.CheckState.Unchecked)
+            self.uniqueValues.setCheckState(toggledheckState)
         elif self.sender() == self.uniqueValues:
-            newCheckState = not self.uniqueValues.checkState()
-            self.rawValues.setCheckState(Qt.CheckState.Checked if newCheckState else Qt.CheckState.Unchecked)
+            self.rawValues.setCheckState(toggledheckState)
 
         self.props["mode"] = mode
         if mode == "unique":

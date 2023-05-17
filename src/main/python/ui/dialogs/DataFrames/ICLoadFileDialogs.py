@@ -1,13 +1,19 @@
-from csv import excel_tab
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
+
+from collections import OrderedDict
+
 from backend.config.data.params import encodingsCommonInPython, commonSepartor, decimalForFloats,thoursandsString, nanReplaceString
+
+from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton
 from ...utils import createLabel, createCombobox, createTitleLabel
-from collections import OrderedDict
-from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
+
 import pandas as pd 
+import openpyxl
+
+
 compressionsForSourceFile = ['infer','gzip', 'bz2', 'zip', 'xz']
 
 

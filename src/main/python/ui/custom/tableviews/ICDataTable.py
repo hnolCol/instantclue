@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 from pandas.core.indexes import multi 
 
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
+from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
 from .ICVSelectableTable import PandaTable, PandaModel, MultiColumnSelectablePandaModel
 from ..warnMessage import AskQuestionMessage
 from ..Widgets.ICButtonDesgins import ICStandardButton, ResetButton

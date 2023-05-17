@@ -2,7 +2,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
-from ...utils import createTitleLabel, createLabel, createLineEdit, createMenu
+from ...utils import createTitleLabel, createLabel, createLineEdit, createMenu, getCheckStateFromBool, getBoolFromCheckState
 from ...custom.utils import LabelLikeCombo
 from ..Selections.ICDSelectItems import ICDSelectItems
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton, LabelLikeButton
@@ -107,7 +107,7 @@ class ICCorrelateDataFrames(QDialog):
         self.ignoreIndex = QCheckBox(parent=self)
         self.ignoreIndex.setText("Ignore index")
         self.ignoreIndex.setToolTip("If disabled, correlation will be performed between matching indicies (e.g. column names) of the two data frames.\nIf you have the same header names but different order, this should be disabled.")
-        self.ignoreIndex.setCheckState(True)
+        self.ignoreIndex.setCheckState(getCheckStateFromBool(True))
         grid.addWidget(self.label)
         grid.addWidget(self.methodCombo)
         grid.addWidget(self.axisCombo)
@@ -146,7 +146,7 @@ class ICCorrelateDataFrames(QDialog):
                 method = "pearson"
             if axis == "Select axis":
                 w = WarningMessage(self,infoText="Please select the axis to which the correlation should be performed.",iconDir= self.mC.mainPath)
-                w.exec_() 
+                w.exec() 
                 return
 
             corrParams = {  
@@ -156,7 +156,7 @@ class ICCorrelateDataFrames(QDialog):
                             "columnNames2" : self.corrParams["right"]["selectedColumns"],
                             "axis" : axis,
                             "method":method,
-                            "ignoreIndex" : self.ignoreIndex.checkState()
+                            "ignoreIndex" : getBoolFromCheckState(self.ignoreIndex.checkState())
                             }
             
             funcProps = {"key":"data::correlateDataFrames","kwargs":
@@ -165,7 +165,7 @@ class ICCorrelateDataFrames(QDialog):
             self.mC.sendRequestToThread(funcProps)
         else:
             w = WarningMessage(self,infoText="Please select data frames.",iconDir= self.mC.mainPath)
-            w.exec_() 
+            w.exec() 
             return
     
 
@@ -177,7 +177,7 @@ class ICCorrelateDataFrames(QDialog):
                 dfProps = self.corrParams[dfID]
                 if "columnNames" not in dfProps:
                     w = WarningMessage(title = "No data frame.", infoText = "Please select a dataframe first.",iconDir = self.mC.mainPath)
-                    w.exec_()
+                    w.exec()
                     return
                 selectableColumns = pd.DataFrame(dfProps["columnNames"])
                 preSelectionIdx = dfProps[paramID].index
@@ -192,7 +192,7 @@ class ICCorrelateDataFrames(QDialog):
                 dlg.setGeometry(bottomRight.x() + 15,bottomRight.y()-int(h/2),185,h)
 
                 #handle result
-                if dlg.exec_():
+                if dlg.exec():
                     selectedColumns = dlg.getSelection()
                     self.corrParams[dfID][paramID] = pd.Series(selectedColumns.values[:,0],index = selectedColumns.index)
                     self.sender().setToolTip("{} columns selected.".format(selectableColumns.size))

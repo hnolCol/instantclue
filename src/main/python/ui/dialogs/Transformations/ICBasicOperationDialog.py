@@ -109,7 +109,7 @@ class BasicOperationDialog(QDialog):
         calculationProps = OrderedDict([(k,v) for k,v in self.calculationProps.items() if len(v) != 0])
         if len(calculationProps) == 0:
             w = WarningMessage(infoText="Use the '+' sings next to the metrices to add them to specific columns.")
-            w.exec_()
+            w.exec()
             return
 
         funcProps = {"key":"data::rowWiseCalculations",
@@ -132,7 +132,7 @@ class BasicOperationDialog(QDialog):
                     df["Selected Metric/Column"] = np.tile(metricParams.values.flatten(),int(df.index.size/metricParams.values.size))
                 else:
                     w = WarningMessage(infoText="Slected metric column size could not be used to fill selected columns.")
-                    w.exec_()
+                    w.exec()
                     return
 
                 for column,metricParam in df[["Selected Columns","Selected Metric/Column"]].values:

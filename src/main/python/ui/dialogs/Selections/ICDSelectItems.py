@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 from numpy.lib.arraysetops import isin 
 
-from ...utils import createTitleLabel, createLabel, createLineEdit
+from ...utils import createTitleLabel, getCheckStateFromBool, toggleCheckState, getBoolFromCheckState
 from ...custom.tableviews.ICVSelectableTable import SelectablePandaModel, PandaTable
 from ...custom.Widgets.ICButtonDesgins import ResetButton, AcceptButton, CheckButton
 import pandas as pd
@@ -85,16 +85,16 @@ class ICDSelectItems(QDialog):
        
         return self.model.getCheckedData()
     
-    def manageSelection(self,newSate):
+    def manageSelection(self,e):
         ""
-       
-        if newSate == 0:
+        newState = self.sender().checkState()
+        if newState == getCheckStateFromBool(False):
             self.sender().setText("Select all")
-
         else:
             self.sender().setText("Deselect all")
         try:
-            self.model.setAllCheckStates(newSate != 0)
+            
+            self.model.setAllCheckStates(getBoolFromCheckState(newState))
             self.model.completeDataChanged()
             
         except Exception as e:

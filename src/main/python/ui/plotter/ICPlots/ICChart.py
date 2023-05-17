@@ -4,7 +4,7 @@ from PyQt6.QtGui import QCursor
 
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Circle
+from matplotlib.patches import Patch
 from matplotlib.collections import LineCollection, PathCollection
 from matplotlib.pyplot import scatter
 from matplotlib.text import Text
@@ -18,13 +18,11 @@ from matplotlib.font_manager import FontProperties
 
 #external imports
 from backend.utils.stringOperations import getRandomString
+from .charts.scatter_plotter import scatterPlot
+from .ICScatterAnnotations import find_nearest_index, xLim_and_yLim_delta
 from ...utils import INSTANT_CLUE_BLUE, createSubMenu
-from .ICScatterAnnotations import find_nearest, find_nearest_index, xLim_and_yLim_delta
 from ...custom.warnMessage import WarningMessage
 from ...dialogs.ICShareGraph import ICShareGraph
-from .charts.scatter_plotter import scatterPlot
-
-import requests
 
 
 class ICChart(QObject):
@@ -319,11 +317,19 @@ class ICChart(QObject):
 		self.addMainFigActions(menus)
 		self.addAppActions(menus)
 		self.addMenuActions(menus)
+		menus["main"].addSeparator()
 		self.addGraphSpecActions(menus)
-		menus["main"].addAction("Copy figure to clipboard",self.mC.mainFrames["middle"].copyFigureToClipboard)
+		menus["main"].addSeparator()
+		menus["main"].addAction("Figure/Chart Style",lambda : self.mC.mainFrames["right"].openConfig(specificSettingsTab ="Matplotlib"))
+		menus["main"].addAction("Copy Figure to Clipboard",self.handleClipboardRequest)
 		pos = QCursor.pos()
 		pos += QPoint(3,3)
 		menus["main"].exec(pos)
+
+	def handleClipboardRequest(self):
+		""
+		self.mC.mainFrames["middle"].copyFigureToClipboard()
+		
 
 	def getToolbarState(self):
 		"Returns tooolbar state (ZOOM;PAN)"
@@ -2091,9 +2097,9 @@ class ICChartToolTip(object):
 	def changeColor(self,artist,color):
 		"Set color of artis"
 		if hasattr(artist,'set_facecolor'):
-				artist.set_facecolor(color)
+			artist.set_facecolor(color)
 		elif hasattr(artist,'set_color'):
-					artist.set_color(color)			
+			artist.set_color(color)			
 
 
 	def adjustArtistPropsByInternalID(self,intID,color):
@@ -2115,8 +2121,6 @@ class ICChartToolTip(object):
 			self.currentArtist = None
 			#update colors to default colors
 			self.adjustColor()
-
-			return
 
 		else:
 			#an artist was found

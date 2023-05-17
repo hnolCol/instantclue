@@ -218,7 +218,7 @@ class ICSampleListCreater(QDialog):
 
 
         sortDialog = ResortableTable(inputLabels=currentColumnNames)
-        if sortDialog.exec_():
+        if sortDialog.exec():
             if sortDialog.savedData is not None:
                 self.customColumnOrder = sortDialog.savedData.values.tolist()
 

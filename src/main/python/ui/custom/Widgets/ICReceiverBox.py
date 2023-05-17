@@ -4,19 +4,19 @@ from PyQt6.QtWidgets import *
 
 from collections import OrderedDict
 
-from .Widgets.ICButtonDesgins import ResetButton, PushHoverButton, ResortButton
-from .resortableTable import ResortableTable
-from .utils import clearLayout, ICSCrollArea
-from ..utils import INSTANT_CLUE_BLUE, HOVER_COLOR ,WIDGET_HOVER_COLOR, createLabel, createTitleLabel, isWindows
+from .ICButtonDesgins import ResetButton, PushHoverButton, ResortButton
+from ..resortableTable import ResortableTable
+from ..utils import clearLayout, ICSCrollArea
+from ...utils import INSTANT_CLUE_BLUE, getHoverColor ,WIDGET_HOVER_COLOR,CONTRAST_BG_COLOR, getStdTextColor ,createLabel, createTitleLabel, isWindows, getLargeWidgetBG, getMainWindowBGColor
 
 class BoxItem(PushHoverButton):
 
-    def __init__(self,itemName = "", parent=None, itemBorder = 5, fColor = "black", bgColor = "white", *args,**kwargs):
+    def __init__(self,itemName = "", parent=None, itemBorder = 5, *args,**kwargs):
         super(BoxItem,self).__init__(parent=parent,*args,**kwargs)
         self.itemName = itemName
         self.itemBorder = itemBorder
-        self.bgColor = bgColor
-        self.fColor = fColor
+        self.bgColor = getMainWindowBGColor()
+        self.fColor = getStdTextColor()
         self.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
         self.setToolTip(itemName)
         self.getWidthAndHeight()
@@ -60,7 +60,7 @@ class BoxItem(PushHoverButton):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing,True)
 
         if self.mouseOver:
-            brush = QBrush(QColor(HOVER_COLOR))
+            brush = QBrush(QColor(getHoverColor()))
         else:
             brush = QBrush(QColor(self.bgColor))
 
@@ -101,7 +101,7 @@ class ItemHolder(QWidget):
         self.layout().addLayout(self.itemLayout)
         self.itemLayout.setContentsMargins(2,1,2,1)
         p = self.palette()
-        p.setColor(self.backgroundRole(), QColor("#f6f6f6"))
+        p.setColor(self.backgroundRole(), QColor(getLargeWidgetBG()))
         self.setPalette(p)
 
         self.dragLabel = createTitleLabel(title,fontSize=14)
@@ -151,7 +151,7 @@ class ReceiverBox(QFrame):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         p = self.palette()
-        p.setColor(self.backgroundRole(),QColor("#f6f6f6"))
+        p.setColor(self.backgroundRole(),QColor(getLargeWidgetBG()))
         self.setPalette(p)
         
         self.setAutoFillBackground(True)
@@ -161,7 +161,7 @@ class ReceiverBox(QFrame):
         ""
         self.titleLabel = createLabel(self.title)
         self.clearButton = ResetButton(self, tooltipStr="Remove all items from receiver box.")
-        self.sortButton = ResortButton(parent=self,tooltipStr="Resort items in receiver box.")
+        self.sortButton = ResortButton(parent=self,tooltipStr="Sort/delete items in receiver box.")
 
         self.itemHolder = ItemHolder()
 

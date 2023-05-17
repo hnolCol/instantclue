@@ -574,7 +574,8 @@ class scatterPlot(object):
 		columnsInData = [x for x in updatableProps if x in self.data.columns and x in columnsPresent]
 
 		#delete columns if they exists
-		self.data.drop(columnsInData,axis=1,inplace=True) 
+		self.data = self.data.drop(columnsInData,axis=1) 
+		
 		if len(columnsPresent) > 0:
 			#join property to self.data
 			self.data = self.data.join(propsData)

@@ -1353,8 +1353,10 @@ class PlotterBrain(object):
                 errorValues = [e if not np.isnan(e) else 0 for e in errorValues]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
+                
                 if np.isnan(maxErrorValue):
                     maxErrorValue = 0.05*maxValue
+                
                 tickLabels[n] = numericColumns
                 tickPositions[n] = np.arange(len(numericColumns))
 
@@ -1382,12 +1384,14 @@ class PlotterBrain(object):
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
                 #define axis limits
-                marginY = np.sqrt((maxValue+3*maxErrorValue)**2-(minValue-2*maxErrorValue)**2)*0.05
+                
+                #marginY = np.sqrt(((maxValue+3*maxErrorValue)-(minValue-2*maxErrorValue))**2)
+               
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
-                        "yLimit" : (minValue-maxErrorValue-marginY,maxValue+maxErrorValue+marginY)
+                        "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
-                
+                print(axisLimits)
                 colorGroups["color"] = colorList
                 colorGroups["group"] = numericColumns
                 colorGroups["internalID"] = [getRandomString() for n in range(len(numericColumns))]
@@ -1410,7 +1414,8 @@ class PlotterBrain(object):
             hoverData[0] = rawData 
             ci = extractCIFromstring(self.barplotError)
             for n in axisPositions.keys():
-                columnMeans = [data[numericColumns[0]].mean() for groupName, data in groupByCatColumn]
+                columnMeans = [data.loc[:,numericColumns[0]].mean() for groupName, data in groupByCatColumn]
+               
                 errorValues = [CI(data[numericColumns[0]].dropna(),ci) for groupName, data in groupByCatColumn]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
@@ -1511,7 +1516,7 @@ class PlotterBrain(object):
                 errorKwargs[n] = line2DErrorKwargs
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
-                        "yLimit" : (minValue-3*maxErrorValue,maxValue+3*maxErrorValue)
+                        "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
                 axisLabels[n] = {"x":"","y":"value"}
         
@@ -1627,7 +1632,6 @@ class PlotterBrain(object):
             colorGroups["internalID"] = [getRandomString() for n in colors.values()]
             #some calculataions for axis limits
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
-            yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             #create groupby 
             
             axisGroupby = rawData.groupby(categoricalColumns[2],sort=False)
@@ -2511,18 +2515,25 @@ class PlotterBrain(object):
         except Exception as e:
                 print(e)
 
-        
+        colorInternalID = getRandomString()
         colorGroupsData = pd.DataFrame() 
         colorGroupsData["color"] = [self.sourceData.colorManager.nanColor]
         colorGroupsData["group"] = [""]
-
+        colorGroupsData["internalID"] = [colorInternalID]
+        sizeInternalID = getRandomString()
         sizeGroupsData = pd.DataFrame() 
         sizeGroupsData["size"] = [self.scatterSize]
         sizeGroupsData["group"] = [""]
+        sizeGroupsData["internalID"] = [sizeInternalID]
+
+        colorCategoryIndexMatch = {colorInternalID : data.index}
+        sizeCategoryIndexMatch = {sizeInternalID : data.index}
 
         return {"data":{
             "plotData":data,
             "axisPositions":axisPositions, 
+            "colorCategoryIndexMatch" : colorCategoryIndexMatch,
+            "sizeCategoryIndexMatch" : sizeCategoryIndexMatch,
             "axisTitles": axisTitles,
             "columnPairs":numericColumnPairs,
             "dataColorGroups": colorGroupsData,
@@ -3040,7 +3051,13 @@ class PlotterBrain(object):
         title = mergeListToString(sizeColumn.values,"\n")                                                                   
 
         
-        return {"sizeGroupData":sizeGroupData,"propsData":propsData,"title":title,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"size","isEditable":sizeColumnType == "Categories"}
+        return {"sizeGroupData":sizeGroupData,
+                "propsData":propsData,
+                "title":title,
+                "categoryIndexMatch":categoryIndexMatch,
+                "categoryEncoded":"size",
+                "encodedColumnNames" : sizeColumn,
+                "isEditable":sizeColumnType == "Categories"}
 
 
     def getLinearRegression(self,dataID,numericColumnPairs):
@@ -3244,6 +3261,7 @@ class PlotterBrain(object):
         funcProps["colorGroupData"] = colorGroupData
         funcProps["categoryIndexMatch"] = categoryIndexMatch
         funcProps["texts"] = textKwargs
+        funcProps["encodedColumnNames"] = colorColumns
        # print(funcProps)
         return funcProps 
         
@@ -3259,7 +3277,6 @@ class PlotterBrain(object):
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
         colorColumnName = colorColumn.values[0]
-        
         
         categoryIndexMatch = None
 
@@ -3291,23 +3308,24 @@ class PlotterBrain(object):
                                         columns=["color"],
                                         index=rawData.index)
             #add color layer props
+
+
+            
             colorData["layer"] = colorData["color"].map(layerMap)
             
             if colorGroupData is None:
                 colorGroupData = pd.DataFrame(columns=["color","group"])
-                colorGroupData["group"] = colorCategories
+                colorGroupData["group"] = [f"{colorCategory} ({np.sum(rawColorData == colorCategory)})" for colorCategory in colorCategories]
                 colorGroupData["color"] = [colors[k] for k in colorCategories]
                 #map color data and save as df
-                
-                
-                colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
+                colorGroupData["internalID"] = [getRandomString() for _ in colorGroupData.index]
                # categoryIndexMatch = dict([(intID,rawData[rawColorData.values == category].index) for category, intID in zip(colorGroupData["group"].values,
                 #                                                                                                            colorGroupData["internalID"].values)])
             else:
                 
                 colorGroupData["color"] = [colors[k] for k in colorCategories]
             
-            categoryIndexMatch = dict([(intID,rawData.index[rawColorData == category]) for category, intID in zip(colorGroupData["group"].values,
+            categoryIndexMatch = dict([(intID,rawData.index[rawColorData == category]) for category, intID in zip(colorCategories,
                                                                                                                 colorGroupData["internalID"].values)])
 
 
@@ -3363,6 +3381,7 @@ class PlotterBrain(object):
             "title":tableTitle,
             "categoryIndexMatch":categoryIndexMatch,
             "categoryEncoded":"color",
+            "encodedColumnNames" : colorColumn,
             "isEditable":colorColumnType == "Categories"}
 
 
@@ -4035,6 +4054,7 @@ class PlotterBrain(object):
             "cmap":cmap,
             "title":mergeListToString(colorColumnNames,"\n"),
             "isEditable":False,
+            "encodedColumnNames" : colorColumn,
             "colorMeshLimits" : colorMeshLimits
             }
         
