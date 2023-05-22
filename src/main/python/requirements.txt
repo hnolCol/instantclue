@@ -19,7 +19,7 @@ llvmlite==0.39.1
 lmfit==1.0.3
 macholib==1.16.2
 matplotlib==3.6.2
-mpmath==1.2.1
+mpmath==1.3.0
 numba==0.56.2
 numpy==1.23.3
 outdated==0.2.1
