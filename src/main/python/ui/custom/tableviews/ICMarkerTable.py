@@ -14,13 +14,11 @@ import os
 
 
 class ICMarkerTable(ICColorSizeTableBase):
-   ## clorMapChanged = pyqtSignal() 
     def __init__(self, *args,**kwargs):
 
         super(ICMarkerTable,self).__init__(*args,**kwargs)
         
         self.selectionChanged.connect(self.updateMarkerInGraph)
-      #  self.clorMapChanged.connect(self.updateColorsByColorMap)
         self.__controls()
         self.__layout()
         
@@ -37,7 +35,6 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Fixed)
         self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
         self.table.resizeColumns()
-       # self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
 
     def __layout(self):
         ""
@@ -46,23 +43,6 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.table)  
 
-    # @pyqtSlot()
-    # def updateColorsByColorMap(self):
-    #     ""
-        
-    #     if self.model.rowCount() > 0:
-    #         self.table.createMenu()
-    #         if self.mC.getPlotType() == "scatter":
-    #             funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
-    #                 "colorColumn":None,
-    #                 "colorColumnType":None,
-    #                 "colorGroupData":self.model._labels}}
-            
-    #             self.mC.sendRequestToThread(funcProps)
-    #         else:
-    #             colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
-    #             self.model.updateColors(colorList)
-    
     def updateMarkerInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -329,7 +309,7 @@ class MarkerTable(QTableView):
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""

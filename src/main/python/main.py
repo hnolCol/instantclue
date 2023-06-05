@@ -694,7 +694,6 @@ class InstantClue(QMainWindow):
 
     def showMessageForNewVersion(self,releaseURL):
         ""
-        print(releaseURL)
         w = AskQuestionMessage(
             parent=self,
             infoText = "A new version of Instant Clue is available. Download now?", 

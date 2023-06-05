@@ -1,7 +1,7 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit, isWindows
+from ..utils import createLabel, INSTANT_CLUE_BLUE, WIDGET_HOVER_COLOR, getStandardFont, createMenu, createCombobox, createLineEdit, isWindows, getStdTextColor
 from .Widgets.ICButtonDesgins import LabelLikeButton
 from ..dialogs.Marks.ICColorChooser import ColorLabel
 import numpy as np
@@ -73,12 +73,10 @@ class ICSCrollArea(QScrollArea):
         return super().viewportEvent(a0)
 
     def updateWidgetsOnWindows(self):
-        if isWindows() and self.getUpdatabelWidgets is not None:
-        #print(self.parent().filterProps)
             
-            for _, widgetCollection in self.getUpdatabelWidgets().items():
-                for w in widgetCollection["widgetsToUpdate"]:
-                    w.update()
+        for _, widgetCollection in self.getUpdatabelWidgets().items():
+            for w in widgetCollection["widgetsToUpdate"]:
+                w.update()
            
       
 
@@ -129,9 +127,10 @@ class QToggle(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.translate(center)
+        
         painter.setBrush(QColor(0,0,0))
 
-        pen = QPen(Qt.GlobalColor.black)
+        pen = QPen(QColor(getStdTextColor()))
         pen.setWidthF(0.5)
         painter.setPen(pen)
 
@@ -142,6 +141,7 @@ class QToggle(QPushButton):
         sw_rect = QRectF(-radius, -radius, width + radius, 2*radius)
       
         painter.setFont(getStandardFont())
+       
         painter.drawText(sw_rect, Qt.AlignmentFlag.AlignVCenter, label)
 
 
@@ -173,7 +173,7 @@ class PropertyChooser(QWidget):
 
     def addProperties(self, parameters, clearLayoutBefore = True, updateParamsBefore = True):
         ""
-        
+        self.colorLabels = []
         if updateParamsBefore:
             self.updateParams()
 
@@ -196,7 +196,7 @@ class PropertyChooser(QWidget):
                         colorButton = ColorLabel(backgroundColor=hexColor)
                         colorButton.setFixedSize(QSize(20,20))
                         colorButton.mousePressEvent = lambda event,parentLineEdit = vInput, hexColor = hexColor, sender = colorButton: self.chooseColor(event, parentLineEdit,hexColor,sender)
-                       
+                        self.colorLabels.append(colorButton)
             elif p.getAttr("dtype") == bool:
 
                 vInput = QToggle()
@@ -218,6 +218,9 @@ class PropertyChooser(QWidget):
             self.inputValues.append(vInput)
         self.parameters = parameters
             
+    def getItemsToUpdateOnScroll(self):
+        return {"scrollbar" : {"widgetsToUpdate" : self.colorLabels}}
+
     def clear(self):
         clearLayout(self.layout())  
 

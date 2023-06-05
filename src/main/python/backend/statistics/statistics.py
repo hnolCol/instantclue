@@ -1448,7 +1448,7 @@ class StatisticCenter(object):
         timeGroupsByColumns = grouping.getGrouping(timeGrouping)
         columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings if groupingName is not None and groupingName != "None"]
         combinedGroupingColumns = pd.concat(columnNamesForGroupings)
-        print(combinedGroupingColumns)
+       # print(combinedGroupingColumns)
 
         #unique column names in groups
         columnNames = combinedGroupingColumns.unique().tolist()

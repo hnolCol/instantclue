@@ -3,12 +3,9 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from backend.config.data.params import WIKI_LINKGS
-from ...utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
-from ...custom.utils import PropertyChooser
+from ...utils import createLabel, createTitleLabel, WIDGET_HOVER_COLOR, createMenu, createCombobox
+from ...custom.utils import PropertyChooser, ICSCrollArea
 from ...custom.Widgets.ICButtonDesgins import BigArrowButton, HelpButton
-
-import seaborn as sns
-import os
 import webbrowser 
 
 
@@ -82,7 +79,7 @@ class ConfigDialog(QDialog):
 
     def _setupScrollarea(self):
         ""
-        self.itemFrame = QScrollArea()
+        self.itemFrame = ICSCrollArea(getUpdatabelWidgets=self.getUpdatableItemsForScrollbar)
         self.itemFrame.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.itemFrame.setWidgetResizable(True)
         self.itemFrame.setFrameShape(QFrame.Shape.NoFrame)
@@ -90,6 +87,11 @@ class ConfigDialog(QDialog):
         self.itemFrame.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Expanding)
         self.itemFrame.setWidget(self.propHolder)
         
+
+    def getUpdatableItemsForScrollbar(self):
+        ""
+        return self.propHolder.getItemsToUpdateOnScroll()
+    
     def closeEvent(self,event=None):
         ""
         #save current parameter group

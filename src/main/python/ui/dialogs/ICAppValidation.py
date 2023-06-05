@@ -90,7 +90,7 @@ class ICValidateEmail(QDialog):
             email = self.mC.webAppComm.encryptStringWithPublicKey(currentText.encode('utf-8'))
             appID = self.mC.webAppComm.getAppID()
             r = requests.put(URL,json={"app-id":appID,"email":email})
-            print(email,appID)
+            #print(email,appID)
             self.statusLabel.setText("Request sent. Please check email.")
             if r.status_code == 200:
                 self.verificationCodeEdit.setEnabled(True)

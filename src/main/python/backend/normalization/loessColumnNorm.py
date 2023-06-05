@@ -45,17 +45,13 @@ class LoessColumnNormalizator(object):
         ""
         X = X.dropna()
         Y = X.mean(axis=1)
-        print(Y)
         for n in range(3):
             Y = X.mean(axis=1)
             with multiprocessing.Pool(4) as p:
                 r = p.starmap(loessCorr,[(X[colName],Y,colName) for colName in X.columns])
-                print(r)
                 R = pd.concat(r,axis=1)
-                print(R)
                 R.to_csv("data_out{}.txt".format(n),sep="\t")
             X = R[X.columns]
-            print("it {}done".format(n) )
             
 
 X = pd.read_csv("data.txt",sep="\t")

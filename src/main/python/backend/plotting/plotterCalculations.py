@@ -603,12 +603,7 @@ class PlotterBrain(object):
                     X = distanceMeasures.loc[clusterData.index,n].values
                     colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Spectral",vmin=minValue,vmax=maxValue)
                     faceCs.append((n,colorArray))
-                # for n,uniqueCluster in enumerate(uniqueClusters):
-                #     boolIdx = clusterLabels[columnName] == "C({})".format(n)
-                #     X = distanceMeasures[boolIdx.index,n] #get distance for cluster
-                #     print(X)
-                #     colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Blues_r")
-                #     faceCs.append((n,colorArray))
+                
                 faceColors = dict(faceCs)#dict([(n,colorMap[uniqueCluster]) ])
 
             else:
@@ -1391,7 +1386,6 @@ class PlotterBrain(object):
                         "xLimit": (-0.5,len(numericColumns)-0.5),
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
-                print(axisLimits)
                 colorGroups["color"] = colorList
                 colorGroups["group"] = numericColumns
                 colorGroups["internalID"] = [getRandomString() for n in range(len(numericColumns))]
@@ -3373,7 +3367,6 @@ class PlotterBrain(object):
         #save data to enable fast update 
         self.colorColumn = colorColumn
         self.colorColumnType = colorColumnType
-       # print({"colorGroupData":colorGroupData,"propsData":colorData,"title":tableTitle,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"color"})
         
         return {
             "colorGroupData":colorGroupData,
@@ -3644,6 +3637,7 @@ class PlotterBrain(object):
             interalIDColumnPairs[0] = dict() #0 = axis ID
 
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
+            
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             colorGroupsData["color"] = colorDict.values() 
             colorGroupsData["group"] = colorCategories
@@ -4139,11 +4133,6 @@ class PlotterBrain(object):
         splitString = config.getParam("word.cloud.split_string")
         cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
         
-        #countedValues = rawData[categoricalColumns[0]].value_counts(normalize=True).to_dict()
-        #print(splitData)
-        
-        #print(countedValues)
-        
         wc = WordCloud(
             font_path = "Arial",
             max_font_size = config.getParam("word.cloud.max_font_size"),
@@ -4210,7 +4199,6 @@ class PlotterBrain(object):
             colorCategories = ["None"]
         else:
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns)
-            #print(colorCategories)
             numColorCategories = colorCategories.size
             colorGroupsData["group"] = colorCategories
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(numColorCategories)

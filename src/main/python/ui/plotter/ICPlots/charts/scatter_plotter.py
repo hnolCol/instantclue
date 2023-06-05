@@ -213,15 +213,15 @@ class scatterPlot(object):
 		if not self.adjustLimits:
 			return
 		
-		##ugly code restyle
-		
+		##ugly code restylye
 		if self.multiScatter:
-			xMin = np.nanmin(self.data[self.numericColumns[0::2]].values)
-			xMax = np.nanmax(self.data[self.numericColumns[0::2]].values)
-			yMin = np.nanmin(self.data[self.numericColumns[1::2]].values)
-			yMax = np.nanmax(self.data[self.numericColumns[1::2]].values)
+			xaxisData = self.data[self.numericColumns[0::2]].values 
+			yaxisData = self.data[self.numericColumns[1::2]].values
+			xMin, xMax = np.nanquantile(xaxisData, q=[0,1])
+			yMin, yMax = np.nanquantile(yaxisData, q=[0,1])
 		else:
-			nonNaNData = self.data[self.numericColumns].dropna()
+			with pd.option_context('mode.use_inf_as_null', True):
+				nonNaNData = self.data[self.numericColumns].dropna()
 			xMin, yMin = nonNaNData[self.numericColumns].min()
 			xMax, yMax = nonNaNData[self.numericColumns].max()
 		

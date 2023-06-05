@@ -97,7 +97,7 @@ class ItemHolder(QWidget):
             self.itemLayout = QVBoxLayout()
             self.itemLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
             
-
+        
         self.layout().addLayout(self.itemLayout)
         self.itemLayout.setContentsMargins(2,1,2,1)
         p = self.palette()
@@ -107,6 +107,8 @@ class ItemHolder(QWidget):
         self.dragLabel = createTitleLabel(title,fontSize=14)
 
         self.layout().addWidget(self.dragLabel)
+
+    
         
     def toggleDragLabelVisibility(self):
         ""

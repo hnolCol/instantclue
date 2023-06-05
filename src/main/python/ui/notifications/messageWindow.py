@@ -63,7 +63,7 @@ class Notification(QWidget):
     def __init__(self, parent = None, padding = {"right":50,"top":50}):
 
         super(QWidget, self).__init__(parent)
-        print(self.parent)
+       # print(self.parent)
         self.padding = padding
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         
@@ -80,7 +80,7 @@ class Notification(QWidget):
     def setLocation(self,sizeHint):
         ""
         self.move(
-                    int(self.screenWidth/2)-int(sizeHint.width()/2)-self.padding["right"],
+                    self.screenWidth-int(sizeHint.width()/2)-self.padding["right"],
                     self.padding["top"]
                 )
 

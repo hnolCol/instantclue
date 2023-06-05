@@ -100,7 +100,7 @@ class ICGrouper(QDialog):
         self.scrollArea.setWidgetResizable(True)
 
         self.groupingEdit = createLineEdit("Enter Grouping Name",
-                    tooltipText="Provide name for selected grouping.\nWhen a test requires grouping, the grouping has to be choosen by this name.",parent=self.rightFrame)
+                    tooltipText="Provide a name for selected grouping.\nWhen a test requires grouping, the grouping has to be choosen by this name.",parent=self.rightFrame)
         self.addGroup = BigPlusButton(buttonSize=(25,25), tooltipStr="Add an additional group.", parent=self.rightFrame)
         self.addGroup.setDefault(False)
         self.addGroup.setAutoDefault(False)

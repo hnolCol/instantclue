@@ -179,8 +179,7 @@ class ICSizeDialog(QDialog):
         for n,w in enumerate(self.lineEditSliders):
             value = w.getValue()
             paramName = widgetParamMatches[n]["paramName"]
-            print(paramName)
-            print(self.mC.config.getParam(paramName))
+            
             self.mC.config.setParam(paramName,value)
     
         self.mC.sendMessageRequest(getMessageProps("Done..","Sizes changed and saved."))

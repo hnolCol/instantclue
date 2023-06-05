@@ -581,7 +581,6 @@ class SelectablePandaModel(PandaModel):
 
     def setCheckStateByDataIndex(self,dataIndex, state = 1):
         ""
-        print(dataIndex)
         matchedIdx = dataIndex.intersection(self.checkedLabels.index)
         self.checkedLabels.loc[matchedIdx] = state
 

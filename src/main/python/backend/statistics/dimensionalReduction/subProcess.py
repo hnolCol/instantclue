@@ -17,7 +17,7 @@ class SubProcessCall(object):
         ""
         self.cmd = cmd
         self.arr = arr
-        print(self.cmd)
+       # print(self.cmd)
         self.initSubProcess()
 
     def initSubProcess(self):
@@ -26,7 +26,7 @@ class SubProcessCall(object):
 
     def run(self):
         ""
-        print(type(self.arr))
+        #print(type(self.arr))
         if isinstance(self.arr,np.ndarray):
             self.sendArray(self.arr)
             self.sendStop()

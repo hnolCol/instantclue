@@ -77,7 +77,6 @@ class PCVA(object):
 
 X = pd.read_csv("data.txt",sep="\t",index_col="probe_set")
 groups = pd.read_csv("groups.txt",sep="\t")
-print(groups)
 
 
 

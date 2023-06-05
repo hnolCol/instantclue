@@ -323,7 +323,7 @@ class SizeTable(QTableView):
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
 
     def createMenu(self):

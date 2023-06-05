@@ -743,7 +743,7 @@ class MainFigure(QDialog):
             self.axisItems[axisID] = {}
             self.addAxisLabel(self.figureProps[axisID]["ax"],axisID,self.figureProps[axisID]["axisLabel"])
             self.mainFigureCollection.update_params(self.figureID,axisID,self.figureProps[axisID])
-        print(self.figureProps)
+        #print(self.figureProps)
 
     def findAxByLabel(self,axisID):
         ""

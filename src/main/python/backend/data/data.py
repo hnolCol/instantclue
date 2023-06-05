@@ -167,7 +167,6 @@ def corr2_coeff(A, B):
 
 	A_mA = A - np.nanmean(A, axis=1)[:, None]
 	B_mB = B - np.nanmean(B,axis=1)[:, None]
-	print(A_mA)
 	
 	#mulSum = np.nansum(mul, axis=1)
 	# Sum of squares across rows
@@ -537,12 +536,12 @@ class DataCollection(object):
 		ColumnNames can only be numeric.
 		"""
 		if dataID in self.dfs:
-			requiredColumns = columnNames.append(groupbyColumn,ignore_index=True)
+			requiredColumns = columnNames.append(pd.Series(groupbyColumn.values.flatten()),ignore_index=True)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
 			if metric == "text-merge":
-				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
+				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
 			else:
-				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric).reset_index()
+				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False).aggregate(metric).reset_index()
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
@@ -2162,6 +2161,7 @@ class DataCollection(object):
 
 			except Exception as e:
 				print(e)
+				return getMessageProps("Error", "There was an error: "+str(e))
 
 	def replaceGroupOutlierWithNaN(self,dataID,grouping):
 		""
@@ -2245,7 +2245,7 @@ class DataCollection(object):
 			return getMessageProps("Error..","FillBy method not found.")
 		
 		kwargs = {**self.joinDataFrame(dataID,nanBoolIdx),**getMessageProps("Done ..","NaN were replaced.")}
-		print(kwargs)
+		#print(kwargs)
 		return kwargs
 	
 

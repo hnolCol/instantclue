@@ -263,7 +263,6 @@ class MatplotlibFigure(QWidget):
 
     def updateQuickSelectSelectionInGraph(self,propsData):
         ""
-        print(propsData)
         exists, graph = self.mC.getGraph()
         if exists:
            

@@ -30,7 +30,7 @@ class ICBoxplot(ICChart):
         ""
         if "groupedPlotData" in self.data:
             groupedPlotData = self.data["groupedPlotData"]
-            print(groupedPlotData)
+            #print(groupedPlotData)
 
 
 

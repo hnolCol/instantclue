@@ -66,7 +66,6 @@ class ICColorSizeTableBase(QWidget):
     
     def setData(self,data, title=None, isEditable = True, encodedColumnNames = None):
         "" 
-        print(encodedColumnNames)
         if isinstance(data,pd.DataFrame):
             self.setTitle(title)
             self.setEncodedColumnNames(encodedColumnNames)
@@ -89,7 +88,7 @@ class ICColorSizeTableBase(QWidget):
         if rowCount == 0:
             maxHeight = 0
         else:
-            maxHeight = int(rowCount * self.table.rowHeight + linesTakenByTitle * 14 + 45) #header + title
+            maxHeight = int(rowCount * (self.table.rowHeight+2) + linesTakenByTitle * 15 + 55) #header + title
      
         self.setMaximumHeight(maxHeight)
     

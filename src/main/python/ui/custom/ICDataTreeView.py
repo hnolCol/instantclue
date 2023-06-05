@@ -2596,7 +2596,7 @@ class DataTreeViewTable(QTableView):
                 if "otherKwargs" in kwargs:
                     fnKwargs = {**fnKwargs,**kwargs["otherKwargs"]}
                 funcKey = kwargs["funcKey"]
-                print(fnKwargs)
+                #(fnKwargs)
                 self.prepareMenuAction(funcKey,fnKwargs,addColumnSelection=False,addDataID=True)
         
             else:

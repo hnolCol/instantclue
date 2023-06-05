@@ -166,7 +166,7 @@ class ResortTableWidget(QTableView):
         self.selectionModel().clear()
         for idx in self.model().hiddenIndex:
             tableIndex = self.model().index(idx,0)
-            self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
+            self.selectionModel().select(tableIndex,QItemSelectionModel.SelectionFlag.Select)
     
     def keyPressEvent(self,e):
         ""

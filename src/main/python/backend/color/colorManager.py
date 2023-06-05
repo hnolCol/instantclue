@@ -88,8 +88,6 @@ class ColorManager(object):
             try:
                 uniqueValues = self.sourceData.getUniqueValues(dataID, categoricalColumn)
                 #nColors = uniqueValues.size
-                #colorPalette = sns.color_palette(self.colorMap,nColors,desat=self.desat).as_hex()
-                #print(checkedLabels)
                 colorMapDict, layerColorDict = self.createColorMapDict(uniqueValues, as_hex=True)
                 colorData = self.sourceData.dfs[dataID][categoricalColumn].map(colorMapDict)
                 colorData["layer"] = colorData.map(layerColorDict)
@@ -143,11 +141,9 @@ class ColorManager(object):
                 nColors = checkedLabels.index.size
                 colorPalette = sns.color_palette(colorMap,nColors,desat=self.desat).as_hex()
                 idxByCheckedLabel = {}
-                #print(checkedLabels)
                 for n,idx in enumerate(checkedLabels.index):
                     if idx in userColors.index:
                         color = userColors.loc[idx]
-                        #print(color)
                     else:
                         color = rgbToHex(colorPalette[n])
                     

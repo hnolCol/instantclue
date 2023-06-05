@@ -139,7 +139,6 @@ class CollapsableDataTreeView(QWidget):
         
     def reportMenuRequest(self,dataType, menuPosition):
         ""
-        #print(dataType, menuPosition)
         if self.dataID is not None:
             sender = self.sender()
             if hasattr(sender,"loseFocus"):
@@ -178,7 +177,6 @@ class CollapsableDataTreeView(QWidget):
             funcProps = {
                 "key":"data::getColumnNamesByDataID" if not self.sessionIsBeeingLoaded else "data::getColumnNamesByDataIDSilently",
                 "kwargs":{"dataID":dataID}}
-            #print(funcProps)
             self.dataID = dataID
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()

@@ -72,7 +72,6 @@ class ICGrouping(object):
         if groupingName in self.groups and overwrite:
             self.deleteGrouping(groupingName)
         if isinstance(groupedItems,list): #if fetched from MitoCube, or loaded from json.
-            print("this is done.")
             groupedItems = pd.Series(groupedItems)
 
         self.groups[groupingName] = groupedItems
@@ -304,11 +303,9 @@ class ICGrouping(object):
         #groupNames = self.getCurrentGroupNames()
         
         if referenceGroup is not None and referenceGroup in grouping:
-            #print("yea",grouping)
             return [(referenceGroup,groupName) for groupName in groupNames if groupName != referenceGroup]
         
         else:
-           # print(list(combinations(groupNames,r=2)))
             return list(combinations(groupNames,r=2))
     
     def getGroupPairsOfGrouping(self,grouping):

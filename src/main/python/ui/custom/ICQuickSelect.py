@@ -1240,8 +1240,8 @@ class QuickSelectTableView(QTableView):
                 for readType in ["Clipboard","Text/CSV file"]:
                     menus["Selection from .."].addAction(readType, self.readSelection)
 
-                for legendLocation in legendLocations:
-                    menus["Add filter legend"].addAction(legendLocation,lambda loc = legendLocation : self.addLegendForMasking(loc))
+                #for legendLocation in legendLocations:
+                #    menus["Add filter legend"].addAction(legendLocation,lambda loc = legendLocation : self.addLegendForMasking(loc))
                 
                 menus["Export selection"].addAction("To clipboard", self.exportSelectionClipboard)
                 menus["Export selection"].addAction("To clipboard (all columns)", self.exportSelectionClipboard)
@@ -1283,7 +1283,7 @@ class QuickSelectTableView(QTableView):
 
     def addLegendForMasking(self,loc):
         ""
-        print(loc)
+       # print(loc)
 
     def mouseMoveEvent(self,event):
         ""
