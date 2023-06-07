@@ -2828,9 +2828,9 @@ class DataCollection(object):
 								left_on = leftMergeColumn, 
 								right_on = rightMergeColumn, 
 								indicator = indicator)
-
-			if "_merge" in mergedDataFrames.columns:
-				mergedDataFrames["_merge"] = mergedDataFrames["_merge"].astype(str)
+			mergeIndicatorColumns = [colName for colName in mergedDataFrames.columns if "_merge" in colName]
+			if len(mergeIndicatorColumns) > 0:
+				mergedDataFrames[mergeIndicatorColumns] = mergedDataFrames[mergeIndicatorColumns].astype(str)
 			mergedDataFrames.reset_index(drop=True,inplace=True)
 			return self.addDataFrame(
 							dataFrame = mergedDataFrames, 
