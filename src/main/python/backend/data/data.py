@@ -542,6 +542,9 @@ class DataCollection(object):
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
 			else:
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False).aggregate(metric).reset_index()
+			#colnames that are not string, must be tuples - merge them to string.
+			columnNames = [colName if isinstance(colName,str) else "_".join(colName) for colName in aggregatedData.columns.values.tolist()]
+			aggregatedData.columns = columnNames
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
