@@ -867,7 +867,6 @@ class DataCollection(object):
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
-			print(dataType, columnHeaders)
 			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders)
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
