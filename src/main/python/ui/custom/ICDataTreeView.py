@@ -2843,7 +2843,8 @@ class DataTreeViewTable(QTableView):
             categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
             selectedColumns = self.mC.askForItemSelection(items=categoricalColumns,title = "Select groupby columns")
             if selectedColumns is not None:
-                fnKwargs = {"metric":[selectableMetrices[k] for k in selectedMetrices.values]}
+                
+                fnKwargs = {"metric":[selectableMetrices[k] for k in selectedMetrices.values.flatten()]}
                 fnKwargs["groupbyColumn"]=selectedColumns
                 self.prepareMenuAction(kwargs["funcKey"],fnKwargs)
 
