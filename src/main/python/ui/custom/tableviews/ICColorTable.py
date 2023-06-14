@@ -88,7 +88,7 @@ class ICColorSizeTableBase(QWidget):
         if rowCount == 0:
             maxHeight = 0
         else:
-            maxHeight = int(rowCount * (self.table.rowHeight+2) + linesTakenByTitle * 15 + 55) #header + title
+            maxHeight = int(rowCount * (self.table.rowHeight+2) + linesTakenByTitle * 25 + 55) #header + title
      
         self.setMaximumHeight(maxHeight)
     
@@ -419,6 +419,10 @@ class ColorTableModel(QAbstractTableModel):
         ""
         self._labels.loc[:,"color"] = hexColor
 
+    def setColorSelectedIdcs(self,hexColor,indexList):
+        ""
+        self._labels.loc[self.getSelectedData(indexList).index,"color"] = hexColor
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         
@@ -554,11 +558,16 @@ class ColorTable(QTableView):
         self.parent().selectionChanged.emit()
         self.model().rowDataChanged(rowIndex)
 
-    def selectSingleColor(self):
+    def selectSingleColor(self, selectedItemsOnly = False):
         "Select a single color for all items in the table"
         color = QColorDialog(parent=self.parent()).getColor()
         if color.isValid():
-            self.model().setColorForAllIdcs(color.name())
+            if selectedItemsOnly:
+                indices = self.selectionModel().selectedRows()
+                print(indices)
+                self.model().setColorSelectedIdcs(color.name(),indices)
+            else:
+                self.model().setColorForAllIdcs(color.name())
             self.parent().selectionChanged.emit()
 
     def createMenu(self):
@@ -582,7 +591,7 @@ class ColorTable(QTableView):
                 pq.end()
                 action.setIcon(i)
                 
-            menu["main"].addAction("Single color for selected items", self.selectSingleColor)
+            menu["main"].addAction("Single color for selected items", lambda : self.selectSingleColor(True))
             menu["main"].addAction("Single color for all items", self.selectSingleColor)
         else:
             menu = createSubMenu(None,["Add Legend at ..","Add Legend at (-NaN Color) ..","Color Range (min/max)"])

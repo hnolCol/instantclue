@@ -1909,10 +1909,12 @@ class ICChart(QObject):
 
 	def updateScatterProps(self,propsData):
 		""
+		print(propsData)
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
 				self.addColorLegendToGraph(self.getDataInColorTable(),title=self.getTitleOfColorTable(),update=False)
 			if isinstance(propsData,pd.DataFrame):
+				print("here")
 				for scatterPlot in self.scatterPlots.values():
 					scatterPlot.updateScatterProps(propsData)	
 			else:

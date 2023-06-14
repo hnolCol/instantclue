@@ -225,7 +225,7 @@ class ICNumericFilterForSelection(QDialog):
         if not maxReadOnly and filterProps["max"] == np.inf:
             self.mC.sendToWarningDialog(infoText = "Please enter max value.",parent=self)
             return
-
+       
         #send to Thread
         funcProps = {
             "key" : "filter::selectionNumericFilter",
@@ -519,7 +519,7 @@ class NumericFilter(QDialog):
                 "dataID":self.dataID,
                 "filterProps":funcProps,
                 "setNonMatchNan":getBoolFromCheckState(self.CBFilterOptions["Set NaN"].checkState()) or getBoolFromCheckState(self.CBFilterOptions["Set NaN in spec. columns"].checkState())}}
-        if self.CBFilterOptions["Set NaN in spec. columns"].checkState():
+        if getBoolFromCheckState(self.CBFilterOptions["Set NaN in spec. columns"].checkState()):
             funcProps["kwargs"]["selectedColumns"] =  OrderedDict([(k,v["specColumns"]) for k,v in self.filterProps.items()])
         elif getBoolFromCheckState(self.CBFilterOptions["Subset Matches"].checkState()):
             funcProps["kwargs"]["subsetData"] = True
