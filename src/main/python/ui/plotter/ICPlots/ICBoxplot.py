@@ -84,7 +84,7 @@ class ICBoxplot(ICChart):
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
                 #adda qucik select hover
-                self.setHoverItemGroups(hoverGroups)
+                #self.setHoverItemGroups(hoverGroups)
                 self.addQuickSelectHoverScatter()
 
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])

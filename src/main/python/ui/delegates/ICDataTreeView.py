@@ -9,9 +9,9 @@ class DeleteDelegate(QStyledItemDelegate):
         super(DeleteDelegate,self).__init__(parent)
         self.highLightColumn = highLightColumn
 
-    def sizeHint(self):
-        ""
-        return QSize(10,10)
+    # def sizeHint(self, *args, **kwargs):
+    #     ""
+    #     return QSize(10,10)
 
     def paint(self, painter, option, index):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
@@ -45,9 +45,9 @@ class GroupDelegate(QStyledItemDelegate):
         super(GroupDelegate,self).__init__(parent)
         self.highLightColumn = highLightColumn
 
-    def sizeHint(self):
-        ""
-        return QSize(10,10)
+    # def sizeHint(self):
+    #     ""
+    #     return QSize(10,10)
 
     def paint(self, painter, option, index):
         groupingActive = self.parent().isGroupigActive()
@@ -194,9 +194,9 @@ class FilterDelegate(QStyledItemDelegate):
         super(FilterDelegate,self).__init__(parent)
         self.highLightColumn = highLightColumn
 
-    def sizeHint(self):
-        ""
-        return QSize(10,10)
+    # def sizeHint(self):
+    #     ""
+    #     return QSize(10,10)
 
     def paint(self, painter, option, index):
         

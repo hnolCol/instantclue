@@ -92,7 +92,7 @@ class ICXYPlot(ICChart):
 
             #self.addTitles()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-            self.setHoverItemGroups(hoverGroups)
+            #self.setHoverItemGroups(hoverGroups)
             self.checkForQuickSelectDataAndUpdateFigure()
            
         except Exception as e:

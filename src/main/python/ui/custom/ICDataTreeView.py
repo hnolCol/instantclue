@@ -1525,12 +1525,12 @@ class DataTreeView(QWidget):
         
 
         self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeMode.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(3,QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(4,QHeaderView.ResizeMode.ResizeToContents)
         self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.table.resizeColumns()
+        #self.table.resizeColumns()
         
     def __layout(self):
         ""
