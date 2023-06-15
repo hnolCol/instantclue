@@ -2019,7 +2019,8 @@ class DataTreeViewTable(QTableView):
             print(e)
     
     def resizeColumns(self):
-        columnWidths = [(0,400)] + [(n+1,self.rowHeight) for n in range(self.model().columnCount())]
+        #self.rowHeight
+        columnWidths = [(0,400)] + [(n+1,10) for n in range(self.model().columnCount()-1)]
         for columnId,width in columnWidths:
             self.setColumnWidth(columnId,width)
 
