@@ -1069,17 +1069,18 @@ class ICChart(QObject):
 		
 	def addTooltips(self):
 		""
-		
-		for ax in self.axisDict.values():
-			if ax in self.hoverGroupItems:
-				self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
+		if hasattr(self,"hoverGroupItems"):
+			for ax in self.axisDict.values():
+				if ax in self.hoverGroupItems:
+					self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
 	
 	def adjustColorsInTooltip(self,intID,color):
 		""
-		for ax in self.axisDict.values():
-			if ax in self.hoverGroupItems:
+		if hasattr(self,"hoverGroupItems"):
+			for ax in self.axisDict.values():
+				if ax in self.hoverGroupItems:
 				
-				self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
+					self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
 
 	def addYLimChangeEvent(self,ax,callbackFn):
 		""

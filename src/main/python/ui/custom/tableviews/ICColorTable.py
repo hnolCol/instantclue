@@ -564,7 +564,6 @@ class ColorTable(QTableView):
         if color.isValid():
             if selectedItemsOnly:
                 indices = self.selectionModel().selectedRows()
-                print(indices)
                 self.model().setColorSelectedIdcs(color.name(),indices)
             else:
                 self.model().setColorForAllIdcs(color.name())

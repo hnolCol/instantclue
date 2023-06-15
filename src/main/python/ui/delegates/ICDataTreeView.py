@@ -290,6 +290,7 @@ class AddDelegate(QStyledItemDelegate):
     def __init__(self,parent,highLightColumn = 1):
         super(AddDelegate,self).__init__(parent)
         self.highLightColumn = highLightColumn
+        
 
     def paint(self, painter, option, index):
         if self.parent().focusRow is not None and index.row() == self.parent().focusRow and self.parent().focusColumn is not None:
