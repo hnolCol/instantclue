@@ -1,12 +1,12 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
 from .ICColorTable import ICColorSizeTableBase
 
-from ...delegates.quickSelectDelegates import DelegateColor #borrow delegate
+from ...delegates.ICQuickSelect import DelegateColor #borrow delegate
 
 import pandas as pd
 import numpy as np
@@ -14,13 +14,11 @@ import os
 
 
 class ICMarkerTable(ICColorSizeTableBase):
-   ## clorMapChanged = pyqtSignal() 
     def __init__(self, *args,**kwargs):
 
         super(ICMarkerTable,self).__init__(*args,**kwargs)
         
         self.selectionChanged.connect(self.updateMarkerInGraph)
-      #  self.clorMapChanged.connect(self.updateColorsByColorMap)
         self.__controls()
         self.__layout()
         
@@ -34,10 +32,9 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.model = MarkerTableModel(parent=self.table)
         self.table.setModel(self.model)
 
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
         self.table.resizeColumns()
-       # self.table.setItemDelegateForColumn(0,DelegateColor(self.table))
 
     def __layout(self):
         ""
@@ -46,23 +43,6 @@ class ICMarkerTable(ICColorSizeTableBase):
         self.layout().addWidget(self.titleLabel)
         self.layout().addWidget(self.table)  
 
-    # @pyqtSlot()
-    # def updateColorsByColorMap(self):
-    #     ""
-        
-    #     if self.model.rowCount() > 0:
-    #         self.table.createMenu()
-    #         if self.mC.getPlotType() == "scatter":
-    #             funcProps = {"key":"plotter:getScatterColorGroups","kwargs":{"dataID":self.mC.getDataID(),
-    #                 "colorColumn":None,
-    #                 "colorColumnType":None,
-    #                 "colorGroupData":self.model._labels}}
-            
-    #             self.mC.sendRequestToThread(funcProps)
-    #         else:
-    #             colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
-    #             self.model.updateColors(colorList)
-    
     def updateMarkerInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -224,7 +204,7 @@ class MarkerTableModel(QAbstractTableModel):
         ""
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
         if role == Qt.CheckStateRole:
@@ -246,33 +226,33 @@ class MarkerTableModel(QAbstractTableModel):
             return True
         
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         
         if not index.isValid(): 
 
             return QVariant()
             
-        elif role == Qt.DisplayRole: 
+        elif role == Qt.ItemDataRole.DisplayRole: 
             return str(self._labels.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
 
             return getStandardFont()
 
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
 
             return "Markers are from matplotlib package."
 
-        elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
-            return QColor(HOVER_COLOR)
+        elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
+            return QColor(getHoverColor())
             
     def flags(self, index):
         "Set Flags of Column"
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled #| Qt.ItemIsEditable
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled #| Qt.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
@@ -313,8 +293,8 @@ class MarkerTable(QTableView):
         self.horizontalHeader().setVisible(False)
 
         self.mC = mainController
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) 
         
 
         self.createMenu()
@@ -325,11 +305,11 @@ class MarkerTable(QTableView):
         self.colorChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
-        p.setColor(QPalette.HighlightedText, QColor("black"))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
+        p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""
@@ -369,7 +349,7 @@ class MarkerTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False

@@ -1,10 +1,9 @@
 #
-from PyQt5.QtCore import QObject, pyqtSignal
 from matplotlib.pyplot import axis, scatter
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
-from ...dialogs.ICVolcanoStyling import ICVolcanoPlotStyling
+from ...dialogs.OmicsTools.ICVolcanoStyling import ICVolcanoPlotStyling
 import pandas as pd
 import numpy as np
 
@@ -111,7 +110,7 @@ class ICScatterPlot(ICChart):
         numericColumns = pd.Series(np.array(columnPairs).flatten())
         categoricalColumns = self.mC.data.getCategoricalColumns(dataID )
         dlg = ICVolcanoPlotStyling(self.mC,dataID, numericColumns,categoricalColumns)
-        if dlg.exec_(): #returns true if accept() ran 
+        if dlg.exec(): #returns true if accept() ran 
             significantColumns = dlg.getSignificantColumns()
             colorColumns = dlg.getColorColumns()
             self.centerXToZero(update=False) #should be moved into the response from the backend.
@@ -187,13 +186,19 @@ class ICScatterPlot(ICChart):
         if self.getParam("scatter.equal.axis.limits"):
             self.alignLimitsOfAllAxes(updateFigure=False)
 
-        if "dataColorGroups" in self.data:
+        if "dataColorGroups" in self.data and isinstance(self.data["dataColorGroups"], pd.DataFrame):
             self.setDataInColorTable(self.data["dataColorGroups"], 
                                     title = "Scatter Points")
 
-        if "dataSizeGroups" in self.data:
+        if "dataSizeGroups" in self.data and isinstance(self.data["dataSizeGroups"], pd.DataFrame):
             self.setDataInSizeTable(self.data["dataSizeGroups"],
                                     title="Scatter Points")
+
+        if "colorCategoryIndexMatch" in self.data and self.data["colorCategoryIndexMatch"] is not None:
+            self.setColorCategoryIndexMatch(self.data["colorCategoryIndexMatch"])
+
+        if "sizeCategoryIndexMatch" in self.data and self.data["sizeCategoryIndexMatch"] is not None:
+            self.setSizeCategoryIndexMatch(self.data["sizeCategoryIndexMatch"])           
 
         #annotate data that are selected by user in QuickSelect widget
         self.checkForQuickSelectDataAndUpdateFigure()

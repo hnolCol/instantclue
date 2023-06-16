@@ -1,9 +1,9 @@
 import sys
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
-from ..utils import createLabel, createTitleLabel, HOVER_COLOR
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
+from ..utils import createLabel, createTitleLabel, getHoverColor
 import pandas as pd
 import numpy as np
 
@@ -82,18 +82,18 @@ class ResortTableWidget(QTableView):
         self.viewport().setAcceptDrops(True)
         self.setDragDropOverwriteMode(False)
         self.setDropIndicatorShown(True)
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.verticalHeader().setDefaultSectionSize(15)
         self.verticalHeader().setVisible(False)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         #self.setDragDropMode(QAbstractItemView.InternalMove)
 
         p = self.palette()
-        p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
-        p.setColor(QPalette.HighlightedText  ,QColor("black"))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
+        p.setColor(QPalette.ColorRole.HighlightedText  ,QColor("black"))
         self.setPalette(p)
        
     
@@ -119,22 +119,22 @@ class ResortTableWidget(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
-        column = self.columnAt(event.pos().x())
+        row = self.rowAt(int(event.position().y()))
+        column = self.columnAt(int(event.position().x()))
         return self.model().index(row,column)
 
     def mouseReleaseEvent(self,event):
         ""
         if self.rightClick:
             if self.menu is not None:
-                pos = self.mapToGlobal(event.pos())
-                self.menu.exec_(pos)
+                pos = self.mapToGlobal(event.position())
+                self.menu.exec(QPoint(int(pos.x()),int(pos.y())))
 
     def mousePressEvent(self,event):
         ""
-        if event.buttons() == Qt.RightButton:
+        if event.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
-        elif event.buttons() == Qt.LeftButton:
+        elif event.buttons() == Qt.MouseButton.LeftButton:
             super(QTableView,self).mousePressEvent(event)
             self.rightClick = False
         else:
@@ -166,11 +166,11 @@ class ResortTableWidget(QTableView):
         self.selectionModel().clear()
         for idx in self.model().hiddenIndex:
             tableIndex = self.model().index(idx,0)
-            self.selectionModel().select(tableIndex,QItemSelectionModel.Select)
+            self.selectionModel().select(tableIndex,QItemSelectionModel.SelectionFlag.Select)
     
     def keyPressEvent(self,e):
         ""
-        if e.key() in [Qt.Key_Delete, Qt.Key_Backspace]:
+        if e.key() in [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]:
             idx = self.getSelectedRows() 
             self.model().deleteRowsByTableIndex(idx)
 
@@ -212,24 +212,24 @@ class ResortTableModel(QAbstractTableModel):
         
         return 1
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
   
         if not index.isValid(): 
             return QVariant()
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
             return self.getFont()
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ItemDataRole.DisplayRole:
             try:
                 return str(self._labels.iloc[index.row()])
             except:
                 return ""
-        elif role == Qt.BackgroundRole:
+        elif role == Qt.ItemDataRole.BackgroundRole:
             return QBrush(QColor("white"))#TABLE_ODD_ROW_COLOR
             
     def setData(self,index,value,role):
         ""
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
     
             return True
     
@@ -242,22 +242,22 @@ class ResortTableModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def headerData(self, col, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return str(self.title)
-        elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+        elif orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
             return str(self._labels.index[col])
-        elif role == Qt.BackgroundRole:
-            if orientation == Qt.Horizontal:
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            if orientation == Qt.Orientation.Horizontal:
                 return QBrush(QColor("#4C626F"))
             else:
                 return QBrush(QColor("grey"))
-        elif role == Qt.ForegroundRole:
+        elif role == Qt.ItemDataRole.ForegroundRole:
             return QBrush(QColor("black"))
         return None
 
     def flags(self, index):
         ""
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.MoveAction | Qt.ItemIsDropEnabled 
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled 
 
     def completeDataChanged(self):
         ""

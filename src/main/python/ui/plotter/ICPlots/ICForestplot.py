@@ -18,7 +18,7 @@ class ICForestplot(ICChart):
     def initGraphElements(self, onlyForID = None, targetAx = None):
         ""
         if "plotData" in self.data:
-            print(self.data["plotData"])
+            #print(self.data["plotData"])
             self.circlesByInternalID = OrderedDict() 
 
             for axisID, categoricalGraphElements in self.data["plotData"].items():

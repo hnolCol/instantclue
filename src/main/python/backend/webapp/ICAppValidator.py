@@ -56,7 +56,7 @@ class ICAppValidator(object):
     def validateApp(self):
         ""
         appIDPath, validPath = self.appIDFound()
-        print(appIDPath)
+
         if not validPath:
             appIDValid = False
             while not appIDValid:

@@ -1,10 +1,10 @@
 from cgi import test
-from PyQt5.QtCore import QObject, pyqtSignal, QPoint
-from PyQt5.QtGui import QCursor
+from PyQt6.QtCore import QObject, pyqtSignal, QPoint
+from PyQt6.QtGui import QCursor
 
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Circle
+from matplotlib.patches import Patch
 from matplotlib.collections import LineCollection, PathCollection
 from matplotlib.pyplot import scatter
 from matplotlib.text import Text
@@ -18,13 +18,11 @@ from matplotlib.font_manager import FontProperties
 
 #external imports
 from backend.utils.stringOperations import getRandomString
+from .charts.scatter_plotter import scatterPlot
+from .ICScatterAnnotations import find_nearest_index, xLim_and_yLim_delta
 from ...utils import INSTANT_CLUE_BLUE, createSubMenu
-from .ICScatterAnnotations import find_nearest, find_nearest_index, xLim_and_yLim_delta
 from ...custom.warnMessage import WarningMessage
 from ...dialogs.ICShareGraph import ICShareGraph
-from .charts.scatter_plotter import scatterPlot
-
-import requests
 
 
 class ICChart(QObject):
@@ -319,11 +317,19 @@ class ICChart(QObject):
 		self.addMainFigActions(menus)
 		self.addAppActions(menus)
 		self.addMenuActions(menus)
+		menus["main"].addSeparator()
 		self.addGraphSpecActions(menus)
-		menus["main"].addAction("Copy figure to clipboard",self.mC.mainFrames["middle"].copyFigureToClipboard)
+		menus["main"].addSeparator()
+		menus["main"].addAction("Figure/Chart Style",lambda : self.mC.mainFrames["right"].openConfig(specificSettingsTab ="Matplotlib"))
+		menus["main"].addAction("Copy Figure to Clipboard",self.handleClipboardRequest)
 		pos = QCursor.pos()
 		pos += QPoint(3,3)
-		menus["main"].exec_(pos)
+		menus["main"].exec(pos)
+
+	def handleClipboardRequest(self):
+		""
+		self.mC.mainFrames["middle"].copyFigureToClipboard()
+		
 
 	def getToolbarState(self):
 		"Returns tooolbar state (ZOOM;PAN)"
@@ -365,7 +371,7 @@ class ICChart(QObject):
 			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			self.updateFigure.emit()
 			w = WarningMessage(infoText="Same data selected. Selection reset.",iconDir = self.mC.mainPath)
-			w.exec_()
+			w.exec()
 			return
 			
 		else:
@@ -409,7 +415,7 @@ class ICChart(QObject):
 		if (group1,group2) in statGroupByGroups or (group2,group1) in statGroupByGroups:
 			
 			w = WarningMessage(infoText = "Comparision ({} vs {}) exists already.".format(group1,group2), iconDir = self.mC.mainPath)
-			w.exec_()
+			w.exec()
 			return False
 		return True
 	
@@ -448,7 +454,7 @@ class ICChart(QObject):
 				r = self.mC.statCenter.performPairwiseTest(self.statData["data"], kind = testType)
 			if isinstance(r,str):
 				w = WarningMessage(infoText=r)
-				w.exec_()
+				w.exec()
 				return None, None, None
 			else:
 				s,p = r #s = test statistic 
@@ -646,7 +652,7 @@ class ICChart(QObject):
 		"Not available yet"
 	
 		shareDialog = ICShareGraph(mainController=self.mC)
-		shareDialog.exec_()
+		shareDialog.exec()
 
 	def removeSizeLegend(self):
 		""
@@ -760,7 +766,7 @@ class ICChart(QObject):
 			if len(groupData) > 200:
 				w = WarningMessage(title="To many items for grouping legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			
 			legendItems = []
@@ -808,7 +814,7 @@ class ICChart(QObject):
 			if colorData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if ignoreNaN:
 				idx = colorData["color"] != self.getParam("nanColor")
@@ -861,7 +867,7 @@ class ICChart(QObject):
 			if colorSizeData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.\nYou can export the color mapping to excel instead.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if ignoreNaN:
 				idx = colorSizeData["color"] != self.getParam("nanColor")
@@ -918,7 +924,7 @@ class ICChart(QObject):
 			if markerData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.")
-				w.exec_()	
+				w.exec()	
 				return			
 			if "marker" in scatterKwargs:
 				del scatterKwargs["marker"]
@@ -1013,7 +1019,7 @@ class ICChart(QObject):
 			if sizeData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
 								infoText = "More than 200 items for legend which is not supported.")
-				w.exec_()	
+				w.exec()	
 				return			
 			scatterKwargs = self.getScatterKwargForLegend(legendType="size")
 			legendItems = [scatter(
@@ -1063,17 +1069,18 @@ class ICChart(QObject):
 		
 	def addTooltips(self):
 		""
-		
-		for ax in self.axisDict.values():
-			if ax in self.hoverGroupItems:
-				self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
+		if hasattr(self,"hoverGroupItems"):
+			for ax in self.axisDict.values():
+				if ax in self.hoverGroupItems:
+					self.tooltips[ax] = ICChartToolTip(self.p,ax,self.hoverGroupItems[ax])
 	
 	def adjustColorsInTooltip(self,intID,color):
 		""
-		for ax in self.axisDict.values():
-			if ax in self.hoverGroupItems:
+		if hasattr(self,"hoverGroupItems"):
+			for ax in self.axisDict.values():
+				if ax in self.hoverGroupItems:
 				
-				self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
+					self.tooltips[ax].adjustArtistPropsByInternalID(intID,color)
 
 	def addYLimChangeEvent(self,ax,callbackFn):
 		""
@@ -1086,7 +1093,7 @@ class ICChart(QObject):
 		try:
 			if not (self.isBoxplotViolinBar() or self.isBoxenplot()):
 				w = WarningMessage(infoText = "Swarms can only be added to box, boxen, bar and violinplots.")
-				w.exec_()
+				w.exec()
 				return
 			
 			
@@ -1903,10 +1910,12 @@ class ICChart(QObject):
 
 	def updateScatterProps(self,propsData):
 		""
+		
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
 				self.addColorLegendToGraph(self.getDataInColorTable(),title=self.getTitleOfColorTable(),update=False)
 			if isinstance(propsData,pd.DataFrame):
+				
 				for scatterPlot in self.scatterPlots.values():
 					scatterPlot.updateScatterProps(propsData)	
 			else:
@@ -2091,9 +2100,9 @@ class ICChartToolTip(object):
 	def changeColor(self,artist,color):
 		"Set color of artis"
 		if hasattr(artist,'set_facecolor'):
-				artist.set_facecolor(color)
+			artist.set_facecolor(color)
 		elif hasattr(artist,'set_color'):
-					artist.set_color(color)			
+			artist.set_color(color)			
 
 
 	def adjustArtistPropsByInternalID(self,intID,color):
@@ -2115,8 +2124,6 @@ class ICChartToolTip(object):
 			self.currentArtist = None
 			#update colors to default colors
 			self.adjustColor()
-
-			return
 
 		else:
 			#an artist was found

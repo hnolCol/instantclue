@@ -1,12 +1,12 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
-from ..dialogs.ICDSelectItems import ICDSelectItems
+from ..dialogs.Selections.ICDSelectItems import ICDSelectItems
 
 from ..utils import createLabel, createTitleLabel, createSubMenu, createMenu
 from .utils import LabelLikeCombo, LabelLikeButton
-from .buttonDesigns import ICStandardButton, ResetButton, BigPlusButton
+from .Widgets.ICButtonDesgins import ICStandardButton, ResetButton, BigPlusButton
 
 import pandas as pd 
 
@@ -64,7 +64,7 @@ class ICTextSelectWidget(QWidget):
 
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(2,2,2,2)
-        self.layout().setAlignment(Qt.AlignLeft)
+        self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.layout().addWidget(self.bigFrame)
 
     def __connectEvents(self):
@@ -82,7 +82,7 @@ class ICTextSelectWidget(QWidget):
         bottomRight = self.mapToGlobal(senderGeom.bottomRight())
         h = dlg.getApparentHeight()
         dlg.setGeometry(bottomRight.x() + 15,bottomRight.y()-int(h/2),185,h)
-        if dlg.exec_():
+        if dlg.exec():
             selectedColumns = dlg.getSelection()
             self.openItemSelectDialog.setToolTip("\n".join([str(x) for x in selectedColumns.values.flatten()]))
             self.openItemSelectDialog.setText("{} columns selected".format(selectedColumns.size))
@@ -110,4 +110,4 @@ class ICTextSelectWidget(QWidget):
 
                 senderGeom = self.sender().geometry()
                 bottomLeft = self.bigFrame.mapToGlobal(senderGeom.bottomLeft())
-                menu.exec_(bottomLeft)
+                menu.exec(bottomLeft)

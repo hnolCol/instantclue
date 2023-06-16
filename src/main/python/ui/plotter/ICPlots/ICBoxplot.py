@@ -15,7 +15,7 @@ class ICBoxplot(ICChart):
     
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Show summary data", self.displaySummaryData)
+        menus["main"].addAction("Boxplot data", self.displaySummaryData)
         #menus["main"].addAction("Show number of data points", self.showNumberOfDatapoints)
 
     def displaySummaryData(self,*args,**kwargs):
@@ -30,7 +30,7 @@ class ICBoxplot(ICChart):
         ""
         if "groupedPlotData" in self.data:
             groupedPlotData = self.data["groupedPlotData"]
-            print(groupedPlotData)
+            #print(groupedPlotData)
 
 
 
@@ -84,7 +84,7 @@ class ICBoxplot(ICChart):
                 for ax in self.axisDict.values():
                     self.addHoverScatter(ax) 
                 #adda qucik select hover
-                self.setHoverItemGroups(hoverGroups)
+                #self.setHoverItemGroups(hoverGroups)
                 self.addQuickSelectHoverScatter()
 
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])

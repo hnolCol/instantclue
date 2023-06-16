@@ -1,20 +1,20 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 #internal imports
 from .ICCollapsableFrames import CollapsableFrames
-from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, ICStandardButton
+from .Widgets.ICButtonDesgins import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton, ICStandardButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDFindReplace import FindReplaceDialog
-from ..dialogs.ICMultiBlockSGCCA import ICMultiBlockSGCCA
-from ..dialogs.ICDMergeDataFrames import ICDMergeDataFrames
-from ..dialogs.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
-from ..dialogs.ICSampleList import ICSampleListCreater
-from ..dialogs.ICProteinPeptideView import ICProteinProteinView
+from ..dialogs.Transformations.ICMultiBlockSGCCA import ICMultiBlockSGCCA
+from ..dialogs.DataFrames.ICDMergeDataFrames import ICDMergeDataFrames
+from ..dialogs.DataFrames.ICCorrelateDataFrames import ICCorrelateDataFrames, ICCorrelateFeatures
+from ..dialogs.OmicsTools.ICSampleList import ICSampleListCreater
+from ..dialogs.OmicsTools.ICProteinPeptideView import ICProteinProteinView
 from .utils import dataFileExport
 from ..custom.warnMessage import AskForFile, WarningMessage, AskStringMessage
-from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu
+from ..utils import WIDGET_HOVER_COLOR, getHoverColor, INSTANT_CLUE_BLUE, getStandardFont, createMenu, createSubMenu, getCollapsableButtonBG
 
 
 #external imports
@@ -92,11 +92,12 @@ class CollapsableDataTreeView(QWidget):
                      "height":0,
                      "layout":self.dataHeaders[header].layout()}
             frameWidgets.append(frame)
+            
         self.frames.addCollapsableFrame(frameWidgets, 
-                                        closeColor = "#ECECEC", 
-                                        openColor = "#ECECEC",
+                                        closeColor = getCollapsableButtonBG(),
+                                        openColor = getCollapsableButtonBG(),
                                         dotColor = INSTANT_CLUE_BLUE,
-                                        hoverColor = HOVER_COLOR,
+                                        hoverColor = getHoverColor(),
                                         hoverDotColor = WIDGET_HOVER_COLOR, 
                                         widgetHeight = 20)
 
@@ -125,7 +126,7 @@ class CollapsableDataTreeView(QWidget):
         ""
         self.combo.currentIndexChanged.connect(self.dfSelectionChanged)
         self.menuButton.clicked.connect(self.showMenu)
-        self.exportButton.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.exportButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.exportButton.clicked.connect(self.exportData)
         self.exportButton.customContextMenuRequested.connect(self.exportMenu)
 
@@ -138,7 +139,6 @@ class CollapsableDataTreeView(QWidget):
         
     def reportMenuRequest(self,dataType, menuPosition):
         ""
-        #print(dataType, menuPosition)
         if self.dataID is not None:
             sender = self.sender()
             if hasattr(sender,"loseFocus"):
@@ -152,7 +152,7 @@ class CollapsableDataTreeView(QWidget):
                 if dataType in self.dataHeaders:
                     action.triggered.connect(getattr(self.dataHeaders[dataType],menuItem["funcKey"]))
 
-            menus["main"].exec_(menuPosition)
+            menus["main"].exec(menuPosition)
 
     def addSelectionOfAllDataTypes(self,funcProps):
         """
@@ -177,7 +177,6 @@ class CollapsableDataTreeView(QWidget):
             funcProps = {
                 "key":"data::getColumnNamesByDataID" if not self.sessionIsBeeingLoaded else "data::getColumnNamesByDataIDSilently",
                 "kwargs":{"dataID":dataID}}
-            #print(funcProps)
             self.dataID = dataID
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()
@@ -211,7 +210,7 @@ class CollapsableDataTreeView(QWidget):
 
         senderGeom = self.sender().geometry()
         bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
-        menu.exec_(bottomLeft) 
+        menu.exec(bottomLeft) 
 
     def getDfId(self,comboIndex):
         "Return DataID from index selection"
@@ -272,7 +271,7 @@ class CollapsableDataTreeView(QWidget):
 
                 frd = FindReplaceDialog(self.mC)
                 frd.setGeometry(bottomLeft.x(),bottomLeft.y(),200,150)
-                if frd.exec_():
+                if frd.exec():
                     funcKey = "data::replace"
                     fS = frd.findStrings 
                     rS = frd.replaceStrings
@@ -372,36 +371,36 @@ class CollapsableDataTreeView(QWidget):
     def openMergeDialog(self,e=None):
         "Open a merge dialog."
         dlg = ICDMergeDataFrames(mainController = self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateDataFrames(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openFeatureCorrelateDialog(self,e=None):
         ""
         dlg = ICCorrelateFeatures(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def openRenameDialog(self,e=None):
         ""
         dataID = self.mC.getDataID()
         oldName = self.mC.data.getFileNameByID(dataID)
         dlg = AskStringMessage(q="Provide new name for the data frame: {}".format(oldName))
-        if dlg.exec_():
+        if dlg.exec():
             funcProps = {"key": "data::renameDataFrame", "kwargs":{"dataID":dataID,"fileName":dlg.state}}
             self.mC.sendRequestToThread(funcProps)
 
     def openSGCCADialog(self,e=None):
         ""
         # dlg = ICMultiBlockSGCCA(mainController = self.mC)
-        # dlg.exec_()
+        # dlg.exec()
 
     def openProteinPeptideView(self,e=None):
         ""
         dlg = ICProteinProteinView(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
 
     def showMenu(self,e=None):
@@ -481,7 +480,7 @@ class CollapsableDataTreeView(QWidget):
             senderGeom = self.sender().geometry()
             bottomLeft = self.mapToGlobal(senderGeom.bottomLeft())
 
-            menus["main"].exec_(bottomLeft)
+            menus["main"].exec(bottomLeft)
         except Exception as e:
             print(e)
     
@@ -519,7 +518,7 @@ class CollapsableDataTreeView(QWidget):
     def renameGrouping(self,groupingName,*args,**kwargs):
         ""
         dlg = AskStringMessage(q="Provide new name for the grouping: {}".format(groupingName))
-        if dlg.exec_():
+        if dlg.exec():
 
             key = "grouping::renameGrouping"
             kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
@@ -536,7 +535,7 @@ class CollapsableDataTreeView(QWidget):
     def createSampleList(self,e=None):
         "This is a proteomic-xcalibur functionality."
         dlg = ICSampleListCreater(mainController=self.mC)
-        dlg.exec_()
+        dlg.exec()
 
     def updateGrouping(self, groupingName):
         "Updates Grouping"

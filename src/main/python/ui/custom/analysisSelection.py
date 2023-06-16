@@ -1,12 +1,12 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from .ICCollapsableFrames import CollapsableFrames
-from .buttonDesigns import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton
+from .Widgets.ICButtonDesgins import DataHeaderButton, ViewHideIcon, FindReplaceButton, ResetButton, BigArrowButton
 from .ICDataTreeView import DataTreeView
 from ..dialogs.ICDataInputDialog import ICDataInput
-from ..utils import WIDGET_HOVER_COLOR, HOVER_COLOR, INSTANT_CLUE_BLUE
+from ..utils import WIDGET_HOVER_COLOR, getHoverColor, INSTANT_CLUE_BLUE, getCollapsableButtonBG
 import pandas as pd
 from collections import OrderedDict
 
@@ -46,13 +46,13 @@ class AnalysisSelection(QWidget):
             frameWidgets.append(frame)
             self.dataHeaders[header].addData(pd.Series(values))
             self.dataHeaders[header].hideShowShortCuts()
-            self.dataHeaders[header].table.setSelectionMode(QAbstractItemView.SingleSelection)
+            self.dataHeaders[header].table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
         self.frames.addCollapsableFrame(frameWidgets, 
-                                        closeColor = "#ECECEC", 
-                                        openColor = "#ECECEC",
+                                        closeColor = getCollapsableButtonBG(),
+                                        openColor = getCollapsableButtonBG(),
                                         dotColor = INSTANT_CLUE_BLUE,
-                                        hoverColor = HOVER_COLOR,
+                                        hoverColor = getHoverColor(),
                                         hoverDotColor = WIDGET_HOVER_COLOR, 
                                         widgetHeight = 20)
 
@@ -107,7 +107,7 @@ class AnalysisSelection(QWidget):
                 if exists:
                     if task == "Line (y = m*x + b)":
                         askLineData = ICDataInput(mainController=self.mC, title = "Provide line's slope and intercep.\ny = m*x + b",valueNames = ["m","b"], valueTypes = {"m":float,"b":float})
-                        if askLineData.exec_():
+                        if askLineData.exec():
                             m, b = askLineData.providedValues["m"], askLineData.providedValues["b"]
                         else:
                             return
@@ -118,20 +118,20 @@ class AnalysisSelection(QWidget):
                     graph.updateFigure.emit()
             elif task == "Cross":
                 askCrossData = ICDataInput(mainController=self.mC, title = "Provide the x- and y-axis coordinates for the cross.",valueNames = ["x","y"], valueTypes = {"x":float,"y":float})
-                if askCrossData.exec_():
+                if askCrossData.exec():
                         xCrossCoord, yCrossCoord = askCrossData.providedValues["x"], askCrossData.providedValues["y"]
                         graph.addCrossLine(xCrossCoord, yCrossCoord)
                         graph.updateFigure.emit() 
             
             elif task == "Vertical Line":
                 askVLineData = ICDataInput(mainController=self.mC, title = "Provide the x-axis coordinate for the line.",valueNames = ["x"], valueTypes = {"x":float})
-                if askVLineData.exec_():
+                if askVLineData.exec():
                     xCoord = askVLineData.providedValues["x"]
                     graph.addVerticalLine(xCoord)
                     graph.updateFigure.emit() 
             elif task == "Horizontal Line":
                 askHLineData = ICDataInput(mainController=self.mC, title = "Provide the y-axis coordinate for the line.",valueNames = ["y"], valueTypes = {"y":float})
-                if askHLineData.exec_():
+                if askHLineData.exec():
                     xCoord = askHLineData.providedValues["y"]
                     graph.addHorizontalLine(xCoord)
                     graph.updateFigure.emit() 
@@ -140,7 +140,7 @@ class AnalysisSelection(QWidget):
                 reqFloats = ["x_min","x_max","y_min","y_max"]
                 askQuadData = ICDataInput(mainController=self.mC,title = "Provide x and y axis quadrant limits",valueNames = reqFloats, 
                         valueTypes = {"x_min":float,"x_max":float,"y_min":float,"y_max":float})
-                if askQuadData.exec_():
+                if askQuadData.exec():
                     quadrantCoords = [askQuadData.providedValues[floatName] for floatName in reqFloats]
                     graph.addQuadrantLines(quadrantCoords)
                     
@@ -164,7 +164,7 @@ class AnalysisSelection(QWidget):
                         dlg = QFileDialog(caption="Select File for Line data",
                                 filter = "ICLoad Files (*.txt *.csv *tsv );;Text files (*.txt *.csv *tsv)")
                         dlg.setFileMode(QFileDialog.ExistingFiles)
-                        if dlg.exec_():
+                        if dlg.exec():
                             fileName = dlg.selectedFiles()[0]
                             data = pd.read_csv(fileName,sep="\t")
                         else:

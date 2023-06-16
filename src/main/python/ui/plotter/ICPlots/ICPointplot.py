@@ -63,8 +63,6 @@ class ICPointplot(ICChart):
                 self.addHoverBinding()
             self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
-            print("==")
-            print(self.data)
             print(str(e))
     
     def getInternalIDByColor(self, color):
@@ -87,6 +85,8 @@ class ICPointplot(ICChart):
                                 el.set_color(newColor)
                     else:
                         l.set_markerfacecolor(newColor)
+                        if self.getParam("pointplot.edgecolor.as.line"):
+                            l.set_markeredgecolor(newColor)
                         if self.getParam("pointplot.line.marker.same.color"):
                                 l.set_color(newColor)
                     
@@ -102,6 +102,8 @@ class ICPointplot(ICChart):
                                 el.set_color(color)
                         else:
                             l.set_markerfacecolor(color)
+                            if self.getParam("pointplot.edgecolor.as.line"):
+                                l.set_markeredgecolor(color)
                             if self.getParam("pointplot.line.marker.same.color"):
                                 l.set_color(color)
         if hasattr(self,"colorLegend"):

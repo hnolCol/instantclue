@@ -24,7 +24,10 @@ class ICDataExcelExporter(object):
        
         self.data = data
         self.softwareParams = softwareParams
+        
         self.sheetNames = [sheetName[0:30] if len(sheetName) > 30 else sheetName for sheetName in sheetNames]
+        #to do: take this to a new function
+        self.sheetNames = [sheetName.replace(":","_").replace("*","_").replace("/","_").replace("?","_").replace("[","_").replace("]","_")  for sheetName in sheetNames]
         if len(self.sheetNames) != np.unique(self.sheetNames).size:
             #lazy . just create random names if the shortening leads to duplicates!
             self.sheetNames = [getRandomString(N=5) for _ in self.sheetNames]
@@ -213,20 +216,16 @@ class ICHClustExporter(object):
                         cell_format = workbook.add_format(formatDict)
                         worksheet.write_number(nWRow ,nCol+columnOffset,self.clusteredData.iloc[nRow,nCol - 1], cell_format) #-1 to account for first Cluster ID column
                     elif nCol < self.clusteredData.columns.size + 1 + len(self.colorColumnNames) and self.colorData is not None and self.columnHeaders[nCol] in self.colorColumnNames:
-                        print(self.colorDataArray)
-                        print(self.colorColumnNames)
-                        print(self.columnHeaders[nCol])
-                        print(nCol - 1- self.clusteredData.columns.size)
+                       
                         colIdx = nCol - 1- self.clusteredData.columns.size
-                        print(self.colorDataArray.shape)
-                        print(self.colorData.iloc[nRow,colIdx])
+                        
                         c = self.colorDataArray[self.totalRows-nRow-1,colIdx].tolist()
-                        print(c)
+                        
                         formatDict = baseNumFormat.copy()
                         formatDict["bg_color"] = to_hex(c)
                         cell_format = workbook.add_format(formatDict)
                         worksheet.write_number(nWRow ,nCol+columnOffset,self.colorData.iloc[nRow,colIdx], cell_format) 
-                        print("=")
+                        
                     elif self.columnHeaders[nCol] == "IC Data Index":
                         worksheet.write_number(nWRow,nCol+columnOffset, self.clusteredData.index.values[nRow])
                     elif self.columnHeaders[nCol] == "IC Cluster Index":

@@ -1,10 +1,10 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from matplotlib.pyplot import title 
-from ..custom.buttonDesigns import ICStandardButton, LabelLikeButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton, LabelLikeButton
 from ..custom.warnMessage import AskStringMessage
-from .ICDSelectItems import ICDSelectItems
+from .Selections.ICDSelectItems import ICDSelectItems
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
 
 import requests
@@ -109,7 +109,7 @@ class ICShareGraph(QDialog):
         h = dlg.getApparentHeight()
         dlg.setGeometry(bottomRight.x() + 15, bottomRight.y()-int(h/2), 185, h)
         #handle result
-        if dlg.exec_():
+        if dlg.exec():
             selectedColumns = dlg.getSelection()
             self.selectedSearchableColumns = selectedColumns.values.flatten().tolist()
             numColumnsSelected = len(self.selectedSearchableColumns)
@@ -223,7 +223,7 @@ class ICShareGraph(QDialog):
                 if self.mC.webAppComm.isChartProtected(chartDetails["graphID"]):
                    
                     qs = AskStringMessage(q="Please enter password.",passwordMode=True)
-                    if qs.exec_():
+                    if qs.exec():
                         pwd = qs.text.encode("utf-8")
                     else:
                         return

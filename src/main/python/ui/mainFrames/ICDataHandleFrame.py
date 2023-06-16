@@ -1,20 +1,20 @@
 
 from fileinput import filename
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
-from ..dialogs.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
-from ..dialogs.ICFetchDataFromMitoCube import ICFetchDataFromMitoCube
+from ..dialogs.DataFrames.ICLoadFileDialogs import PlainTextImporter, ExcelImporter
+from ..dialogs.Connect.ICFetchDataFromMitoCube import ICFetchDataFromMitoCube
 from ..custom.ICCollapsableFrames import CollapsableFrames
-from ..custom.buttonDesigns import CollapsButton
+from ..custom.Widgets.ICButtonDesgins import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
-from ..custom.buttonDesigns import BigArrowButton, BigPlusButton, ViewDataButton
+from ..custom.Widgets.ICButtonDesgins import BigArrowButton, BigPlusButton, ViewDataButton
 from ..custom.tableviews.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
-from ..utils import removeFileExtension, areFilesSuitableToLoad
+from ..utils import removeFileExtension, areFilesSuitableToLoad, getHoverColor, getCollapsableButtonBG
 from ..custom.warnMessage import WarningMessage
 
 
@@ -108,7 +108,7 @@ class DropButton(QPushButton):
 class DataHandleFrame(QFrame):
 
     def __init__(self,parent=None, mainController = None):
-        super(DataHandleFrame, self).__init__(parent)
+        super(DataHandleFrame, self).__init__(parent=parent)
 
         self.mC = mainController
         self.__controls()
@@ -132,6 +132,7 @@ class DataHandleFrame(QFrame):
         
         vbox1 = QHBoxLayout()
         loadDataButton = BigPlusButton(
+                parent = self,
                 callback = self.addTxtFiles, 
                 tooltipStr ="Load Data from file.\nThis will reset the current plot.",
                 menuFn = self.showSettingMenu,
@@ -140,10 +141,10 @@ class DataHandleFrame(QFrame):
         #addDataButton = BigPlusButton()
         #addDataButton.clicked.connect(self.loadSession)
 
-        loadSessionButton = BigArrowButton(direction="up", tooltipStr="Load session.")
+        loadSessionButton = BigArrowButton(parent = self,direction="up", tooltipStr="Load session.")
         loadSessionButton.clicked.connect(self.loadSession)
 
-        saveSessionButton = BigArrowButton(direction="down", tooltipStr="Saves session. Note: the current figure is not saved with full properties\nMake sure to save the figure before.")
+        saveSessionButton = BigArrowButton(parent = self,direction="down", tooltipStr="Saves session. Note: the current figure is not saved with full properties\nMake sure to save the figure before.")
         saveSessionButton.clicked.connect(self.saveSession)
 
         viewDataButton = ViewDataButton(self, 
@@ -165,7 +166,7 @@ class DataHandleFrame(QFrame):
         #vbox1.addStretch(1)
         loadDataButton.clicked.connect(self.askForFile)
         vbox2 = QVBoxLayout()
-        self.dataTreeView = CollapsableDataTreeView(self, sendToThreadFn = self.sendToThread, mainController = self.mC)
+        self.dataTreeView = CollapsableDataTreeView(parent=self, sendToThreadFn = self.sendToThread, mainController = self.mC)
         vbox2.addWidget(self.dataTreeView)
         vbox2.setContentsMargins(0,0,0,0)
         
@@ -186,7 +187,10 @@ class DataHandleFrame(QFrame):
                 {"title":"Quick Select","open":False,"fixedHeight":False,"height":0.4,"layout":vbox3},
                 {"title":"Live Graph","open":False,"fixedHeight":False,"height":0.4,"layout":vbox4},
                 {"title":"Analysis","open":False,"fixedHeight":False,"height":150,"layout":vbox5}]
-        self.frames.addCollapsableFrame(frameWidgets,widgetHeight=20,fontSize=9)
+        self.frames.addCollapsableFrame(frameWidgets,widgetHeight=20,fontSize=9,
+            closeColor = getCollapsableButtonBG(),
+            openColor = getCollapsableButtonBG(),
+            hoverColor = getHoverColor())
         
     def addShortcuts(self):
         "Add Shortcuts for copying/pasting data."
@@ -207,9 +211,9 @@ class DataHandleFrame(QFrame):
     def askForFile(self):
         "Get File Names"
         dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *tsv *xlsx);;Text files (*.txt *.csv *tsv);;Excel files (*.xlsx)")
-        dlg.setFileMode(QFileDialog.ExistingFiles)
+        dlg.setFileMode(QFileDialog.FileMode.ExistingFiles)
 
-        if dlg.exec_():
+        if dlg.exec():
             filenames = dlg.selectedFiles()
             self.openDialog(filenames)
 
@@ -258,7 +262,7 @@ class DataHandleFrame(QFrame):
         try:
             if any(f.endswith(".txt") | f.endswith(".csv") | f.endswith(".tsv") for f in selectedFiles):
                 d = PlainTextImporter(mainController = self.mC) 
-                d.exec_()
+                d.exec()
                 if d.result():
                     #set replace object
                     txtFiles = [f for f in selectedFiles if f.endswith(".txt")]
@@ -271,7 +275,7 @@ class DataHandleFrame(QFrame):
                
                 self.excelImporter = ExcelImporter(mainController = self.mC, selectedFiles = selectedFiles) 
                 
-                self.excelImporter.exec_()
+                self.excelImporter.exec()
                 del self.excelImporter
                 # if d.result():
                 #     #set replace object
@@ -294,21 +298,11 @@ class DataHandleFrame(QFrame):
         if self.mC.data.hasData():
             self.dataTreeView.findAndReplace()
 
-    def addExcelFiles(self,files, loadFileProps = None):
+    def addExcelFiles(self,files):
         ""
         files = [f for f in files if f.endswith(".xlsx")]
-        for filePath in files:
-            if os.path.exists(filePath):
-                fileName = removeFileExtension(Path(filePath).name)
-                self.mC.config.setParam("WorkingDirectory",os.path.dirname(filePath))
-                funcProps = dict()
-                funcProps["key"] = "data::addDataFrameFromExcelFile"
-                funcProps["kwargs"] = {"fileName":fileName,
-                                    "pathToFile":filePath,
-                                    "loadFileProps":loadFileProps}
-                #self.mC.ICDataManger.loadDf.emit(filePath,fileName,loadFileProps)
-                
-                self.mC.sendRequestToThread(funcProps)
+        self.openDialog(selectedFiles=files)
+        # 
 
 
     def addTxtFiles(self,files, loadFileProps = None):
@@ -416,7 +410,7 @@ class DataHandleFrame(QFrame):
        
         if not self.mC.data.hasData():
             warn  = WarningMessage(infoText="No data found. Please load data first.",iconDir = self.mC.mainPath)
-            warn.exec_()
+            warn.exec()
             return
        
         dataID = self.getDataID()
@@ -428,7 +422,7 @@ class DataHandleFrame(QFrame):
     def openDataFrameinDialog(self,dataFrame,*args,**kwargs):
         ""
         dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self,*args,**kwargs)
-        dlg.exec_()
+        dlg.exec()
         
 
     def updateFilter(self,boolIndicator,resetData=False):
@@ -505,7 +499,7 @@ class DataHandleFrame(QFrame):
         ""
         bottomLeft = self.findSendersBottomLeft(sender)
         menu = self.mC.createSettingMenu(menuKeyWord)
-        menu.exec_(bottomLeft)
+        menu.exec(bottomLeft)
         
     def findSendersBottomLeft(self,sender):
         ""

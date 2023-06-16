@@ -162,14 +162,17 @@ class CategoricalFilter(object):
 
         if isinstance(columnNames,str):
             columnNames = [columnNames]
-
+       
         if inputIsRegEx:
 
             regExp = searchString
+            splitSearchString = ["reg"]
         else:
 
             regExp, splitSearchString = self.getRegExpFromSepSearchString(searchString,withSeparator=False)
         
+       
+
         if annotateSearchString:
             #set up flags for search
             flag = 0 if caseSensitive else re.IGNORECASE

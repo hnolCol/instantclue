@@ -167,7 +167,6 @@ def corr2_coeff(A, B):
 
 	A_mA = A - np.nanmean(A, axis=1)[:, None]
 	B_mB = B - np.nanmean(B,axis=1)[:, None]
-	print(A_mA)
 	
 	#mulSum = np.nansum(mul, axis=1)
 	# Sum of squares across rows
@@ -312,6 +311,7 @@ class DataCollection(object):
 		try:
 			if loadFileProps is not None and "sheet_name" in loadFileProps and loadFileProps["sheet_name"] is not None:
 				loadFileProps["sheet_name"] = loadFileProps["sheet_name"].split(";")
+
 			df = pd.read_excel(pathToFile,**loadFileProps)
 		except Exception as e:
 			print(e)
@@ -536,12 +536,15 @@ class DataCollection(object):
 		ColumnNames can only be numeric.
 		"""
 		if dataID in self.dfs:
-			requiredColumns = columnNames.append(groupbyColumn,ignore_index=True)
+			requiredColumns = columnNames.append(pd.Series(groupbyColumn.values.flatten()),ignore_index=True)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
 			if metric == "text-merge":
-				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
+				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
 			else:
-				aggregatedData = data.groupby(by=groupbyColumn.values.tolist(),sort=False).aggregate(metric).reset_index()
+				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False).aggregate(metric).reset_index()
+			#colnames that are not string, must be tuples - merge them to string.
+			columnNames = [colName if isinstance(colName,str) else "_".join(colName) for colName in aggregatedData.columns.values.tolist()]
+			aggregatedData.columns = columnNames
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
@@ -867,7 +870,6 @@ class DataCollection(object):
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
-			
 			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders)
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
@@ -982,7 +984,9 @@ class DataCollection(object):
 			columnList = columnList.values.tolist()
 		
 		if isinstance(columnList,list):
-			groupByObject = self.dfs[dataID].groupby(columnList,sort = sort,as_index=as_index)
+			columnNames = self.getPlainColumnNames(dataID) #get all column names
+			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"] #required to account for grouping.
+			groupByObject = data.groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 
 	def getTooltipdata(self,dataID):
@@ -1235,7 +1239,7 @@ class DataCollection(object):
 
 				funcProps["categoryEncoded"] = "QuickSelect"
 				funcProps["ommitRedraw"] = useBlit
-				
+				funcProps["encodedColumns"] = columnName
 				
 				return funcProps
 		else:
@@ -2159,6 +2163,7 @@ class DataCollection(object):
 
 			except Exception as e:
 				print(e)
+				return getMessageProps("Error", "There was an error: "+str(e))
 
 	def replaceGroupOutlierWithNaN(self,dataID,grouping):
 		""
@@ -2242,7 +2247,7 @@ class DataCollection(object):
 			return getMessageProps("Error..","FillBy method not found.")
 		
 		kwargs = {**self.joinDataFrame(dataID,nanBoolIdx),**getMessageProps("Done ..","NaN were replaced.")}
-		print(kwargs)
+		#print(kwargs)
 		return kwargs
 	
 
@@ -2825,13 +2830,14 @@ class DataCollection(object):
 								left_on = leftMergeColumn, 
 								right_on = rightMergeColumn, 
 								indicator = indicator)
-
-			if "_merge" in mergedDataFrames.columns:
-				mergedDataFrames["_merge"] = mergedDataFrames["_merge"].astype(str)
+			mergeIndicatorColumns = [colName for colName in mergedDataFrames.columns if "_merge" in colName]
+			if len(mergeIndicatorColumns) > 0:
+				mergedDataFrames[mergeIndicatorColumns] = mergedDataFrames[mergeIndicatorColumns].astype(str)
 			mergedDataFrames.reset_index(drop=True,inplace=True)
 			return self.addDataFrame(
 							dataFrame = mergedDataFrames, 
-							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID])
+							fileName = "merged({}:{})".format(self.fileNameByID[leftDataID],self.fileNameByID[rightDataID]),
+							cleanObjectColumns=True
 							)
 
 		return errorMessage

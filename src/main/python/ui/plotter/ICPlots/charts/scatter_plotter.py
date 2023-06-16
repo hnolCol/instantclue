@@ -213,15 +213,15 @@ class scatterPlot(object):
 		if not self.adjustLimits:
 			return
 		
-		##ugly code restyle
-		
+		##ugly code restylye
 		if self.multiScatter:
-			xMin = np.nanmin(self.data[self.numericColumns[0::2]].values)
-			xMax = np.nanmax(self.data[self.numericColumns[0::2]].values)
-			yMin = np.nanmin(self.data[self.numericColumns[1::2]].values)
-			yMax = np.nanmax(self.data[self.numericColumns[1::2]].values)
+			xaxisData = self.data[self.numericColumns[0::2]].values 
+			yaxisData = self.data[self.numericColumns[1::2]].values
+			xMin, xMax = np.nanquantile(xaxisData, q=[0,1])
+			yMin, yMax = np.nanquantile(yaxisData, q=[0,1])
 		else:
-			nonNaNData = self.data[self.numericColumns].dropna()
+			with pd.option_context('mode.use_inf_as_null', True):
+				nonNaNData = self.data[self.numericColumns].dropna()
 			xMin, yMin = nonNaNData[self.numericColumns].min()
 			xMax, yMax = nonNaNData[self.numericColumns].max()
 		
@@ -572,9 +572,9 @@ class scatterPlot(object):
 		self.setSelecRectInvisible()
 		columnsPresent = [x for x in  updatableProps if x in propsData.columns]
 		columnsInData = [x for x in updatableProps if x in self.data.columns and x in columnsPresent]
-
 		#delete columns if they exists
-		self.data.drop(columnsInData,axis=1,inplace=True) 
+		self.data = self.data.drop(columnsInData,axis=1) 
+		
 		if len(columnsPresent) > 0:
 			#join property to self.data
 			self.data = self.data.join(propsData)
@@ -699,10 +699,11 @@ class scatterPlot(object):
 
 		## we need to replot this, otherwise the layer/order cannot be changed. 
 		self.removeMainCollection()
+		if "marker" in self.data.columns:
+			self._plotMarkerSpecScatter()
+			return
+
 		if isinstance(self.mainCollecion,dict):
-			if "marker" in self.data.columns:
-				self._plotMarkerSpecScatter()
-			else:
 
 				numericColumnPairs = list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))
 				defaultKwargs = self.scatterKwargs.copy()
@@ -731,7 +732,6 @@ class scatterPlot(object):
 		defaultKwargs = self.scatterKwargs.copy()
 		self.mainCollecion = {}
 		for groupName, groupData in self.data.groupby("marker"):
-			#print(data)
 			kwargs = defaultKwargs.copy()
 			kwargs["marker"] = groupName
 			kwargs["s"] = groupData['size'].values

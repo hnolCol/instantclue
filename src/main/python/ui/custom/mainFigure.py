@@ -1,9 +1,9 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createMenu, createTitleLabel, createLabel, createSubMenu, createMenus
-from .buttonDesigns import BigPlusButton, ResetButton, RefreshButton
+from .Widgets.ICButtonDesgins import BigPlusButton, ResetButton, RefreshButton
 from .warnMessage import AskQuestionMessage
 
 
@@ -281,12 +281,12 @@ class MainFigure(QDialog):
         self.setAcceptDrops(True)
         self.acceptDrop = False
         self.setModal(False) 
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.mainFigureCollection = mainFigureRegistry
         self.updateFigure.connect(self.update)
-        self.setWindowFlags(Qt.Window | Qt.WindowSystemMenuHint
-                            | Qt.WindowMinimizeButtonHint
-                            | Qt.WindowCloseButtonHint)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowSystemMenuHint
+                            | Qt.WindowType.WindowMinimizeButtonHint
+                            | Qt.WindowType.WindowCloseButtonHint)
         
         self.mC = mainController
         self.figSize = figSize
@@ -325,13 +325,13 @@ class MainFigure(QDialog):
         self.scrollArea.setWidgetResizable(False)
 
         self.gridLabel = createTitleLabel("Define Grid Layout", fontSize=14)
-        self.gridLabel.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.gridLabel.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
 
         self.rowColumnLabel = createTitleLabel("Set position and width/height of axis.", fontSize=14)
-        self.rowColumnLabel.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.rowColumnLabel.setSizePolicy(QSizePolicy.Policy.Fixed,QSizePolicy.Policy.Fixed)
 
         self.figureTitle = createTitleLabel("Figure {}".format(self.figureID),fontSize=14)
-        self.figureTitle.setAlignment(Qt.AlignRight)
+        self.figureTitle.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.gridProps = OrderedDict() 
         #add grid props
@@ -444,7 +444,7 @@ class MainFigure(QDialog):
         
         if posRow-1 + rowSpan > gridRow or posCol -1 + colSpan > gridCol:
             warn = WarningMessage(title = "Invalid Input",infoText='Axis specification out of grid.',iconDir = self.mC.mainPath)
-            warn.exec_()
+            warn.exec()
             return
 
         grid_spec = GridSpec(gridRow,gridCol)
@@ -494,7 +494,7 @@ class MainFigure(QDialog):
         legend = ax.get_legend()
         if legend is None:
             warn = WarningMessage(parent=self,infoText="No legend found.",iconDir = self.mC.mainPath)
-            warn.exec_()
+            warn.exec()
             return 
         else:
             return legend	
@@ -538,7 +538,7 @@ class MainFigure(QDialog):
         if len(self.figureProps) > 0:
             
             askQ = AskQuestionMessage(title="Question",infoText = "Are you sure to reset the figure?", iconDir = self.mC.mainPath)
-            askQ.exec_()
+            askQ.exec()
             if askQ.state:
                 self.figure.clf()
                 self.updateFigure.emit()
@@ -610,7 +610,7 @@ class MainFigure(QDialog):
             propsIntegers = [int(float(item)) for item in propsStrings]  
         except:
             w = WarningMessage(infoText="Axis properties could not be converted to integers. Invlid input.",iconDir = self.mC.mainPath)
-            w.exec_()
+            w.exec()
             return None
         subplotLabel = self.axisPropsLabels["Axis label:"][1].currentText()
         #bind subplotlabel
@@ -636,7 +636,7 @@ class MainFigure(QDialog):
         if event.inaxes is not None and event.button != 1:
             self.createMenu()
             self.inaxes = event.inaxes
-            self.menu.exec_(QCursor.pos())
+            self.menu.exec(QCursor.pos())
 
         self.inaxes = None
 
@@ -693,7 +693,7 @@ class MainFigure(QDialog):
                     newValue = int(float(changedValue))
                 except:
                     warn = WarningMessage(infoText="Could not convert to integer : {}".format(changedValue),iconDir = self.mC.mainPath)
-                    warn.exec_()
+                    warn.exec()
                 propRange = [str(i) for i in range(1,newValue+1)]
                 self.axisRanges[propLabel] = propRange
                 oldValue = self.axisPropsLabels[propLabel][1].currentText() 
@@ -743,7 +743,7 @@ class MainFigure(QDialog):
             self.axisItems[axisID] = {}
             self.addAxisLabel(self.figureProps[axisID]["ax"],axisID,self.figureProps[axisID]["axisLabel"])
             self.mainFigureCollection.update_params(self.figureID,axisID,self.figureProps[axisID])
-        print(self.figureProps)
+        #print(self.figureProps)
 
     def findAxByLabel(self,axisID):
         ""

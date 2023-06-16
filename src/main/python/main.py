@@ -1,9 +1,9 @@
 
 import matplotlib
 matplotlib.use('Qt5Agg')
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 
 from pynndescent import NNDescent, PyNNDescentTransformer
@@ -13,18 +13,17 @@ from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
 from ui.custom.warnMessage import AskStringMessage
-from ui.dialogs.ICDSelectItems import ICDSelectItems
+from ui.dialogs.Selections.ICDSelectItems import ICDSelectItems
 from ui.dialogs.ICWorkfowBuilder import ICWorkflowBuilder
 from ui.utils import removeFileExtension, areFilesSuitableToLoad, isWindows, standardFontSize, getHashedUrl, createMenu
 from ui.mainFrames.ICFigureReceiverBoxFrame import MatplotlibFigure
-from ui.custom.ICWelcomeScreen import ICWelcomeScreen
 from ui.custom.warnMessage import AskQuestionMessage, WarningMessage
 from ui.dialogs.ICAppValidation import ICValidateEmail
 
 from backend.utils.worker import Worker
 from backend.data.data import DataCollection
+from backend.update.Update import UpdateChecker
 from backend.data.ICGrouping import ICGrouping
-from backend.filter.categoricalFilter import CategoricalFilter
 from backend.utils.funcControl import funcPropControl
 from backend.utils.misc import getTxtFilesFromDir
 from backend.utils.stringOperations import getRandomString
@@ -51,7 +50,7 @@ os.environ["OUTDATED_IGNORE"] = "1"
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.11.3"
+__VERSION__ = "v0.12.0"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
@@ -228,7 +227,7 @@ class InstantClue(QMainWindow):
         self.logger = ICLogger(self.config,__VERSION__)
         #setup web app communication
         self.webAppComm = ICAppValidator(self)
-        
+        self.updateChecker = UpdateChecker(__VERSION__)
 
         _widget = QWidget()
         _layout = QVBoxLayout(_widget)
@@ -253,6 +252,8 @@ class InstantClue(QMainWindow):
         self.acceptDrop = False
         #update parameters saved in parents (e.g data, plotter etc)
         self.config.updateAllParamsInParent()
+        #check for update
+        self.sendRequestToThread({"key":"update::checkForUpdate","kwargs":{}})
         ##### 
         #self.webAppComm.isAppIDValidated()
         #self.webAppComm.getChartData()
@@ -279,7 +280,8 @@ class InstantClue(QMainWindow):
 
     def _setupFontStyle(self):
         ""
-        self.config.setParamRange("label.font.family",QFontDatabase().families())
+        
+        self.config.setParamRange("label.font.family",QFontDatabase.families())
         from ui import utils
         utils.standardFontSize = self.config.getParam("label.font.size")
         fontFamily = self.config.getParam("label.font.family") 
@@ -392,7 +394,7 @@ class InstantClue(QMainWindow):
         ""
 
         dlg = AskStringMessage(q="Please provide graphID from which you would like to retrieve the data.")
-        if dlg.exec_():
+        if dlg.exec():
             fkey = "webApp::getChartData"
             kwargs = {"graphID":dlg.state}
             self.sendRequestToThread({"key":fkey,"kwargs":kwargs})
@@ -475,7 +477,7 @@ class InstantClue(QMainWindow):
         ""
         if self.webAppComm.isAppIDValidated():
             dlg = ICValidateEmail(self)
-            dlg.exec_()
+            dlg.exec()
         else:
             self.sendToWarningDialog(infoText="Web AppID is already validated.")
     
@@ -490,7 +492,7 @@ class InstantClue(QMainWindow):
         dataFrame = pd.DataFrame(items)
         if not dataFrame.empty:
             dlg = ICDSelectItems(data = dataFrame, title = title, **kwargs)
-            if dlg.exec_():
+            if dlg.exec():
                
            
                 selectedItems = dlg.getSelection()
@@ -506,7 +508,7 @@ class InstantClue(QMainWindow):
             groupings = self.grouping.groups.copy()
         if len(groupings) > 0:
             dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = title, **kwargs)
-            if dlg.exec_():
+            if dlg.exec():
                 selectedGrupings = dlg.getSelection().values.flatten()
                 if selectedGrupings.size > 0: #check
                     funcKey["kwargs"][kwargName] = selectedGrupings
@@ -620,7 +622,7 @@ class InstantClue(QMainWindow):
             title="Question",
             iconDir = self.mainPath,
             yesCallback = lambda e = event: self.saveParameterAndClose(e))
-        w.exec_()
+        w.exec()
         if w.state is None:
             event.ignore()
 
@@ -632,7 +634,7 @@ class InstantClue(QMainWindow):
     def startBuildWorkflowDialog(self,event=None):
         ""
         dlg = ICWorkflowBuilder(self)
-        dlg.exec_()
+        dlg.exec()
 
     def getUserLoginInfo(self):
         "Visionary ..."
@@ -666,7 +668,6 @@ class InstantClue(QMainWindow):
         ""
         return self.mainFrames["data"].getDataID()
 
-
     def getGraph(self):
         "Returns the graph object from the figure mainFrame (middle)."
         graph = None
@@ -691,6 +692,17 @@ class InstantClue(QMainWindow):
         "Checks if there is any data loaded."
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
 
+    def showMessageForNewVersion(self,releaseURL):
+        ""
+        w = AskQuestionMessage(
+            parent=self,
+            infoText = "A new version of Instant Clue is available. Download now?", 
+            title="Information",
+            iconDir = self.mainPath,
+            yesCallback = lambda : webbrowser.open(releaseURL))
+        w.exec()
+
+
     def setBufToClipboardImage(self,buf):
         ""
         QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
@@ -710,12 +722,12 @@ class InstantClue(QMainWindow):
     def sendToWarningDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
         ""
         w = WarningMessage(title="Warning", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable, *args,**kwargs)
-        w.exec_()
+        w.exec()
 
     def sendToInformationDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
         ""
         w = WarningMessage(title="Information", infoText=infoText,iconDir=self.mainPath, textIsSelectable = textIsSelectable,*args,**kwargs)
-        w.exec_()
+        w.exec()
 
     def addWindowMenu(self,actionName,actionFn,fnKwargs):
         ""
@@ -739,8 +751,6 @@ class InstantClue(QMainWindow):
         #self.setStyleSheet("QToolTip{ background-color: white ; color: black;font: 12pt;font-family: Arial;margin: 3px 3px 3px 3px;border: 5px}")
         self.setStyleSheet("""
                 QToolTip {
-                    background-color: white;
-                    color: black;
                     font-family: Arial;
                     line-height: 1.75;
                     padding: 2px;
@@ -852,8 +862,8 @@ class InstantClue(QMainWindow):
 
 class MainWindowSplitter(QWidget):
     "Main Window Splitter to separate ui in different frames."
-    def __init__(self, parent):
-        super(MainWindowSplitter, self).__init__(parent)
+    def __init__(self, *args,**kwargs):
+        super(MainWindowSplitter, self).__init__(*args,**kwargs)
 
         self.mC = self.parent()
         self.__controls()
@@ -863,8 +873,9 @@ class MainWindowSplitter(QWidget):
     def __controls(self):
         "Creates widgets"
         
-        self.ICwelcome = ICWelcomeScreen(parent=self,version=__VERSION__)
-        self.mainSplitter = QSplitter(Qt.Horizontal)
+        #self.ICwelcome = ICWelcomeScreen(parent=self,version=__VERSION__)
+        self.mainSplitter = QSplitter(parent=self)
+        
         mainWindowWidth = self.parent().frameGeometry().width()
         sizeCalculation = []
         self.mainFrames = dict()
@@ -881,37 +892,27 @@ class MainWindowSplitter(QWidget):
             self.mainFrames[layoutId] = w 
             self.mainSplitter.addWidget(w)
             sizeCalculation.append(int(mainWindowWidth * sizeFrac*1000)) #hack, do not know why it is not working properly with small numbers
-    
         #make splitter expand
-        self.mainSplitter.setSizePolicy(QSizePolicy.Expanding,
-                                        QSizePolicy.Expanding)
+        self.mainSplitter.setSizePolicy(QSizePolicy.Policy.Expanding,
+                                        QSizePolicy.Policy.Expanding)
         self.mainSplitter.setSizes(sizeCalculation)
 
     def __layout(self):
         "Adds widgets to layout"
-        self.vbox = QVBoxLayout()
-        self.vbox.addWidget(self.ICwelcome)#self.mainSplitter)
-        self.setLayout(self.vbox)
+        vbox = QVBoxLayout(self)
+       # vbox.addWidget(self.ICwelcome)#self.mainSplitter)
+        self.setLayout(vbox)
+        self.layout().addWidget(self.mainSplitter)
 
     def getMainFrames(self):
         ""
         return self.mainFrames
 
-    def showMessageForNewVersion(self,releaseURL):
-        ""
-        w = AskQuestionMessage(
-            parent=self,
-            infoText = "A new version of Instant Clue is available. Download now?", 
-            title="Information",
-            iconDir = self.mC.mainPath,
-            yesCallback = lambda : webbrowser.open(releaseURL))
-        w.show()
-
     def welcomeScreenDone(self):
         "Indicate layout changes once Welcome Screen finished."
-        self.layout().removeWidget(self.ICwelcome)
-        self.layout().addWidget(self.mainSplitter)
-        self.ICwelcome.deleteLater()
+      # self.layout().removeWidget(self.ICwelcome)
+       # self.layout().addWidget(self.mainSplitter)
+       # self.ICwelcome.deleteLater()
 
 
 def main():
@@ -924,7 +925,7 @@ def main():
             pyi_splash.close()
 
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
+    #QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
@@ -936,7 +937,7 @@ def main():
     #win.showMaximized()
     win.show()    
     win.raise_()
-    app.exec_()
+    app.exec()
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

@@ -369,7 +369,6 @@ class Anova(object):
 				c = np.kron(c,contrasts[(f,cw[Nf-f])])
 			Nc = np.shape(c)[1] # Number of condition in effect
 			No = Nd/Nc*1. #Number of observations per condition in effect
-			#print(Nc,No)
 			y = np.dot(self.df_pivot_array,c) 
 			nc = np.shape(y)[1]
 			

@@ -1,13 +1,13 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from pandas.core.indexes import multi 
 
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
+from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
 from .ICVSelectableTable import PandaTable, PandaModel, MultiColumnSelectablePandaModel
 from ..warnMessage import AskQuestionMessage
-from ..buttonDesigns import ICStandardButton, ResetButton
+from ..Widgets.ICButtonDesgins import ICStandardButton, ResetButton
 from ..ICTags import Tag, ICSearchWithTags
 #external imports
 import pandas as pd 
@@ -234,11 +234,11 @@ class PandaTableDialog(QDialog):
             e.accept()
         else:
             quest = AskQuestionMessage(title = "Question", infoText = "Data have changed. Update data?")
-            quest.exec_()
+            quest.exec()
             if quest.state:
                 questForCopy = AskQuestionMessage(title = "Question", 
                         infoText = "Would you like to update the current data in place?\n\n(no - creates a new data frame with the changes made (sorting and filtering included))?")
-                questForCopy.exec_()
+                questForCopy.exec()
                 if questForCopy.state:
                     funcProps = dict() 
                     funcProps["key"] = "data::updateData"

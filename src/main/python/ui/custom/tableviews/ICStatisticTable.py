@@ -1,10 +1,10 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 from backend.utils.stringOperations import getReadableNumber
 import pandas as pd
@@ -27,8 +27,8 @@ class ICStatisticTable(ICColorSizeTableBase):
         self.table = StatisticTable(parent = self, mainController=self.mC)
         self.model = StatisticTableModel(parent=self.table)
         self.table.setModel(self.model)
-        #self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Stretch)
-        #self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        #self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
+        #self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
         #self.table.resizeColumns()
       
         
@@ -136,7 +136,7 @@ class StatisticTableModel(QAbstractTableModel):
         ""
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
         if role == Qt.CheckStateRole:
@@ -144,13 +144,13 @@ class StatisticTableModel(QAbstractTableModel):
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         "Shows data"
         if not index.isValid(): 
 
             return QVariant()
             
-        elif role == Qt.DisplayRole: 
+        elif role == Qt.ItemDataRole.DisplayRole: 
             if index.column() < 2:
                 
                 value = self._labels.iloc[index.row(),index.column()]
@@ -182,15 +182,15 @@ class StatisticTableModel(QAbstractTableModel):
             return "This is a beatufil tooltip."
 
         elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
 
             
     def flags(self, index):
         "Set Flags of Column"
         if index.column() == 0:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
         else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def setNewData(self,labels):
         ""
@@ -232,8 +232,8 @@ class StatisticTable(QTableView):
         self.horizontalHeader().setVisible(False)
 
         self.mainController = mainController
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) 
 
         self.createMenu()
 
@@ -243,8 +243,8 @@ class StatisticTable(QTableView):
         self.sizeChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
-        p.setColor(QPalette.HighlightedText, QColor("black"))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
+        p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
         self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
@@ -276,7 +276,7 @@ class StatisticTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False

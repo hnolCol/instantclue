@@ -1,14 +1,14 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.pyplot import figure, plot
 from collections import OrderedDict
-from ..custom.ICReceiverBox import ReceiverBox
-from ..dialogs.ICDSelectItems import ICDSelectItems
+from ..custom.Widgets.ICReceiverBox import ReceiverBox
+from ..dialogs.Selections.ICDSelectItems import ICDSelectItems
 #from ..plotter.plotter import Plotter
 from ..plotter.plotManager import ICPlotter
 import numpy as np 
@@ -59,7 +59,8 @@ class MatplotlibFigure(QWidget):
         ""
         fkey = "plotter:figToClipboard"
         kwargs = {"figure":self.figure}
-        self.mC.sendRequestToThread({"key":fkey,"kwargs":kwargs})
+        self.mC.sendRequest({"key":fkey,"kwargs":kwargs})
+        self.mC.sendMessageRequest({"title":"Done ..","message":"Figure copied to clipboard."})
        
 
     def initiateChart(self, *args, **kwargs):
@@ -86,7 +87,7 @@ class MatplotlibFigure(QWidget):
                 # groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
                 # if len(groupings) > 0:
                 #     dlg = ICDSelectItems(data = pd.DataFrame(list(groupings.keys())), title = "Groupings to display in h. clustering.")
-                #     if dlg.exec_():
+                #     if dlg.exec():
                 #         selectedGrupings = dlg.getSelection().values.flatten()
                 #         if selectedGrupings.size > 0: #check
                 #             funcKey["kwargs"]["groupingName"] = selectedGrupings
@@ -262,7 +263,6 @@ class MatplotlibFigure(QWidget):
 
     def updateQuickSelectSelectionInGraph(self,propsData):
         ""
-        
         exists, graph = self.mC.getGraph()
         if exists:
            

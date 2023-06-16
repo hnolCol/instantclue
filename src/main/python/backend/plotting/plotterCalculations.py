@@ -603,12 +603,7 @@ class PlotterBrain(object):
                     X = distanceMeasures.loc[clusterData.index,n].values
                     colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Spectral",vmin=minValue,vmax=maxValue)
                     faceCs.append((n,colorArray))
-                # for n,uniqueCluster in enumerate(uniqueClusters):
-                #     boolIdx = clusterLabels[columnName] == "C({})".format(n)
-                #     X = distanceMeasures[boolIdx.index,n] #get distance for cluster
-                #     print(X)
-                #     colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Blues_r")
-                #     faceCs.append((n,colorArray))
+                
                 faceColors = dict(faceCs)#dict([(n,colorMap[uniqueCluster]) ])
 
             else:
@@ -1353,8 +1348,10 @@ class PlotterBrain(object):
                 errorValues = [e if not np.isnan(e) else 0 for e in errorValues]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
+                
                 if np.isnan(maxErrorValue):
                     maxErrorValue = 0.05*maxValue
+                
                 tickLabels[n] = numericColumns
                 tickPositions[n] = np.arange(len(numericColumns))
 
@@ -1382,12 +1379,13 @@ class PlotterBrain(object):
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
                 #define axis limits
-                marginY = np.sqrt((maxValue+3*maxErrorValue)**2-(minValue-2*maxErrorValue)**2)*0.05
+                
+                #marginY = np.sqrt(((maxValue+3*maxErrorValue)-(minValue-2*maxErrorValue))**2)
+               
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
-                        "yLimit" : (minValue-maxErrorValue-marginY,maxValue+maxErrorValue+marginY)
+                        "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
-                
                 colorGroups["color"] = colorList
                 colorGroups["group"] = numericColumns
                 colorGroups["internalID"] = [getRandomString() for n in range(len(numericColumns))]
@@ -1410,7 +1408,8 @@ class PlotterBrain(object):
             hoverData[0] = rawData 
             ci = extractCIFromstring(self.barplotError)
             for n in axisPositions.keys():
-                columnMeans = [data[numericColumns[0]].mean() for groupName, data in groupByCatColumn]
+                columnMeans = [data.loc[:,numericColumns[0]].mean() for groupName, data in groupByCatColumn]
+               
                 errorValues = [CI(data[numericColumns[0]].dropna(),ci) for groupName, data in groupByCatColumn]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
@@ -1511,7 +1510,7 @@ class PlotterBrain(object):
                 errorKwargs[n] = line2DErrorKwargs
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
-                        "yLimit" : (minValue-3*maxErrorValue,maxValue+3*maxErrorValue)
+                        "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
                 axisLabels[n] = {"x":"","y":"value"}
         
@@ -1627,7 +1626,6 @@ class PlotterBrain(object):
             colorGroups["internalID"] = [getRandomString() for n in colors.values()]
             #some calculataions for axis limits
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
-            yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             #create groupby 
             
             axisGroupby = rawData.groupby(categoricalColumns[2],sort=False)
@@ -1845,6 +1843,7 @@ class PlotterBrain(object):
         #display grouping setting
         displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
         distanceBetweenClusterMapAndColor = self.sourceData.parent.config.getParam("hclust.color.axis.border.left")
+        removeRowsWithNoStd = self.sourceData.parent.config.getParam("hclust.remove.rows.with.no.std")
         colorsByColumnNames = OrderedDict()
         colorsByColumnNamesFiltered = OrderedDict()
 
@@ -1884,7 +1883,8 @@ class PlotterBrain(object):
                         nanThreshold = len(numericColumns)
                     data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna(thresh=nanThreshold)
                     #remove no deviation data (Same value)
-                    data = data.loc[data.std(axis=1) != 0,:]
+                    if removeRowsWithNoStd:
+                        data = data.loc[data.std(axis=1) != 0,:]
                     rowMetric = "nanEuclidean" 
                     if columnMetric != "None":
                         columnMetric = "nanEuclidean"
@@ -1892,11 +1892,14 @@ class PlotterBrain(object):
                     if (rowMetric != "None" and rowMethod != "None") or  (columnMetric != "None" and columnMethod != "None"):
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
                         #remove no deviation data (Same value)
-                        data = data.loc[data.std(axis=1) != 0,:]
+                        if removeRowsWithNoStd:
+                            data = data.loc[data.std(axis=1) != 0,:]
                     else:
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
                         #if no clustering applied, we can keep all values (e.g. just display)
-                        
+            
+            data = data.astype(float)
+            
         
             #nRows, nCols = data.shape
             rawIndex = data.index
@@ -1915,7 +1918,7 @@ class PlotterBrain(object):
                     distanceBetweenClusterMapAndColor = distanceBetweenClusterMapAndColor
                     )
             
-
+            #perform clustering on rows.
             if data.shape[0] > 1 and rowMetric != "None" and rowMethod != "None":
                 rowLinkage, rowMaxD = self.sourceData.statCenter.clusterData(data,rowMetric,rowMethod)
 
@@ -1929,10 +1932,10 @@ class PlotterBrain(object):
                 data = data.iloc[Z_row['leaves']]
                 
             else:
-                #print("deleting")
                 del axisDict["axRowDendro"]
                 Z_row = None
 
+            #perform clustering on columns
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
                 columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
 
@@ -1946,7 +1949,8 @@ class PlotterBrain(object):
 
             else:
                 del axisDict["axColumnDendro"]
-        
+
+            #add grouping rectangles. TO DO: Better just save the props? 
             groupingRectangles = []
             if groupingName is not None and displayGrouping and len(colorsByColumnNamesFiltered) > 0:
                 for ii, (gN, colorsByColumnNamesForGn) in enumerate(colorsByColumnNamesFiltered.items()):
@@ -1961,11 +1965,8 @@ class PlotterBrain(object):
         except Exception as e:
             print(e)
             return {}
-       
-     #   print(axisDict)
-        
+               
         groupingAxLabels = {"tickLabels":groupingName,"tickPosition":np.arange(len(groupingName))} if groupingName is not None else {}
-        #print(groupingName)
         return {"newPlot":True,
             "data":{"plotData":data,
                 "rowMaxD" : rowMaxD,
@@ -2137,10 +2138,11 @@ class PlotterBrain(object):
                 heightMain = pixelRelativeHeight
          
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
-        if not corrMatrix:
-            y0 = bottomLabelMargin
-        else:
-            y0 = 1 - heightMain - topMargin
+        # if not corrMatrix:
+        #     y0 = bottomLabelMargin
+
+        # else:
+        y0 = 1 - heightMain - topMargin
         x0 = leftMargin
 
         rowDendroWidth = width * 0.08 if rowOn else 0
@@ -2507,18 +2509,25 @@ class PlotterBrain(object):
         except Exception as e:
                 print(e)
 
-        
+        colorInternalID = getRandomString()
         colorGroupsData = pd.DataFrame() 
         colorGroupsData["color"] = [self.sourceData.colorManager.nanColor]
         colorGroupsData["group"] = [""]
-
+        colorGroupsData["internalID"] = [colorInternalID]
+        sizeInternalID = getRandomString()
         sizeGroupsData = pd.DataFrame() 
         sizeGroupsData["size"] = [self.scatterSize]
         sizeGroupsData["group"] = [""]
+        sizeGroupsData["internalID"] = [sizeInternalID]
+
+        colorCategoryIndexMatch = {colorInternalID : data.index}
+        sizeCategoryIndexMatch = {sizeInternalID : data.index}
 
         return {"data":{
             "plotData":data,
             "axisPositions":axisPositions, 
+            "colorCategoryIndexMatch" : colorCategoryIndexMatch,
+            "sizeCategoryIndexMatch" : sizeCategoryIndexMatch,
             "axisTitles": axisTitles,
             "columnPairs":numericColumnPairs,
             "dataColorGroups": colorGroupsData,
@@ -3036,7 +3045,13 @@ class PlotterBrain(object):
         title = mergeListToString(sizeColumn.values,"\n")                                                                   
 
         
-        return {"sizeGroupData":sizeGroupData,"propsData":propsData,"title":title,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"size","isEditable":sizeColumnType == "Categories"}
+        return {"sizeGroupData":sizeGroupData,
+                "propsData":propsData,
+                "title":title,
+                "categoryIndexMatch":categoryIndexMatch,
+                "categoryEncoded":"size",
+                "encodedColumnNames" : sizeColumn,
+                "isEditable":sizeColumnType == "Categories"}
 
 
     def getLinearRegression(self,dataID,numericColumnPairs):
@@ -3240,6 +3255,7 @@ class PlotterBrain(object):
         funcProps["colorGroupData"] = colorGroupData
         funcProps["categoryIndexMatch"] = categoryIndexMatch
         funcProps["texts"] = textKwargs
+        funcProps["encodedColumnNames"] = colorColumns
        # print(funcProps)
         return funcProps 
         
@@ -3255,7 +3271,6 @@ class PlotterBrain(object):
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
         colorColumnName = colorColumn.values[0]
-        
         
         categoryIndexMatch = None
 
@@ -3287,23 +3302,24 @@ class PlotterBrain(object):
                                         columns=["color"],
                                         index=rawData.index)
             #add color layer props
+
+
+            
             colorData["layer"] = colorData["color"].map(layerMap)
             
             if colorGroupData is None:
                 colorGroupData = pd.DataFrame(columns=["color","group"])
-                colorGroupData["group"] = colorCategories
+                colorGroupData["group"] = [f"{colorCategory} ({np.sum(rawColorData == colorCategory)})" for colorCategory in colorCategories]
                 colorGroupData["color"] = [colors[k] for k in colorCategories]
                 #map color data and save as df
-                
-                
-                colorGroupData["internalID"] = [getRandomString() for n in colorGroupData.index]
+                colorGroupData["internalID"] = [getRandomString() for _ in colorGroupData.index]
                # categoryIndexMatch = dict([(intID,rawData[rawColorData.values == category].index) for category, intID in zip(colorGroupData["group"].values,
                 #                                                                                                            colorGroupData["internalID"].values)])
             else:
                 
                 colorGroupData["color"] = [colors[k] for k in colorCategories]
             
-            categoryIndexMatch = dict([(intID,rawData.index[rawColorData == category]) for category, intID in zip(colorGroupData["group"].values,
+            categoryIndexMatch = dict([(intID,rawData.index[rawColorData == category]) for category, intID in zip(colorCategories,
                                                                                                                 colorGroupData["internalID"].values)])
 
 
@@ -3351,7 +3367,6 @@ class PlotterBrain(object):
         #save data to enable fast update 
         self.colorColumn = colorColumn
         self.colorColumnType = colorColumnType
-       # print({"colorGroupData":colorGroupData,"propsData":colorData,"title":tableTitle,"categoryIndexMatch":categoryIndexMatch,"categoryEncoded":"color"})
         
         return {
             "colorGroupData":colorGroupData,
@@ -3359,6 +3374,7 @@ class PlotterBrain(object):
             "title":tableTitle,
             "categoryIndexMatch":categoryIndexMatch,
             "categoryEncoded":"color",
+            "encodedColumnNames" : colorColumn,
             "isEditable":colorColumnType == "Categories"}
 
 
@@ -3621,6 +3637,7 @@ class PlotterBrain(object):
             interalIDColumnPairs[0] = dict() #0 = axis ID
 
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
+            
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
             colorGroupsData["color"] = colorDict.values() 
             colorGroupsData["group"] = colorCategories
@@ -4031,6 +4048,7 @@ class PlotterBrain(object):
             "cmap":cmap,
             "title":mergeListToString(colorColumnNames,"\n"),
             "isEditable":False,
+            "encodedColumnNames" : colorColumn,
             "colorMeshLimits" : colorMeshLimits
             }
         
@@ -4115,11 +4133,6 @@ class PlotterBrain(object):
         splitString = config.getParam("word.cloud.split_string")
         cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
         
-        #countedValues = rawData[categoricalColumns[0]].value_counts(normalize=True).to_dict()
-        #print(splitData)
-        
-        #print(countedValues)
-        
         wc = WordCloud(
             font_path = "Arial",
             max_font_size = config.getParam("word.cloud.max_font_size"),
@@ -4186,7 +4199,6 @@ class PlotterBrain(object):
             colorCategories = ["None"]
         else:
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns)
-            #print(colorCategories)
             numColorCategories = colorCategories.size
             colorGroupsData["group"] = colorCategories
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(numColorCategories)

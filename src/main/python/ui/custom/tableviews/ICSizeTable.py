@@ -1,10 +1,10 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import HOVER_COLOR, createSubMenu, createMenu, createLabel, createTitleLabel
-from ...delegates.spinboxDelegate import SpinBoxDelegate #borrow delegate
+from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase, ItemDelegate
 import pandas as pd
 import numpy as np
@@ -28,8 +28,8 @@ class ICSizeTable(ICColorSizeTableBase):
         self.model = SizeTableModel(parent=self.table,labels=df)
         self.table.setModel(self.model)
 
-        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.Stretch) 
+        self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Fixed)
+        self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
         self.table.resizeColumns()
         self.table.setItemDelegateForColumn(0,SpinBoxDelegate(self.table))
         self.table.setItemDelegateForColumn(1,ItemDelegate(self.table))
@@ -166,15 +166,15 @@ class SizeTableModel(QAbstractTableModel):
         
         row =index.row()
         indexBottomRight = self.index(row,self.columnCount())
-        if role == Qt.UserRole:
+        if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
 
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
             if not self.isEditable:
                 return False
             #get value
@@ -213,25 +213,25 @@ class SizeTableModel(QAbstractTableModel):
             self.minSize = np.nanmin(vs)
            
 
-    def data(self, index, role=Qt.DisplayRole): 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole): 
         ""
         
         if not index.isValid(): 
 
             return QVariant()
 
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
 
             return self._labels.iloc[index.row(),index.column()]
             
-        elif role == Qt.DisplayRole and index.column() == 1: 
+        elif role == Qt.ItemDataRole.DisplayRole and index.column() == 1: 
             return str(self._labels.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
 
             return getStandardFont()
         
-        elif role == Qt.ForegroundRole and index.column() == 1:
+        elif role == Qt.ItemDataRole.ForegroundRole and index.column() == 1:
             
             if self._inLegend.iloc[index.row()]:
 
@@ -239,7 +239,7 @@ class SizeTableModel(QAbstractTableModel):
             else:
                 return QColor("grey")
 
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
 
             dataIndex = self.getDataIndex(index.row())
             if index.column() == 0:
@@ -250,17 +250,17 @@ class SizeTableModel(QAbstractTableModel):
             elif index.column() == 1:
                 return "Current size: {}\nSize encoded categorical or numeric values.\nDouble click to change the name (categorical columns only). This does not effect the source data but allows to change the legend label.".format(self._labels.loc[dataIndex,"size"])
 
-        elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
+        elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
 
-            return QColor(HOVER_COLOR)
+            return QColor(getHoverColor())
             
     def flags(self, index):
         "Set Flags of Column"
 
         if self.isEditable:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled 
+            return Qt.ItemFlag.ItemIsEnabled 
 
     def setNewData(self,labels):
         ""
@@ -308,8 +308,8 @@ class SizeTable(QTableView):
         self.horizontalHeader().setVisible(False)
 
         self.mainController = mainController
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) 
 
         
 
@@ -319,11 +319,11 @@ class SizeTable(QTableView):
         self.sizeChangedForItem = None
         
         p = self.palette()
-        p.setColor(QPalette.Highlight,QColor(HOVER_COLOR))
-        p.setColor(QPalette.HighlightedText, QColor("black"))
+        p.setColor(QPalette.ColorRole.Highlight,QColor(getHoverColor()))
+        p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
 
     def createMenu(self):
@@ -346,7 +346,7 @@ class SizeTable(QTableView):
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
             prevMouseOver = int(self.mouseOverItem)
             self.mouseOverItem = None
-            self.model().rowDataChanged(prevMouseOver)
+            self.model().completeDataChanged()
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
@@ -357,7 +357,7 @@ class SizeTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False
@@ -406,7 +406,7 @@ class SizeTable(QTableView):
     def mouseMoveEvent(self,event):
         
         ""
-        if self.state() == QAbstractItemView.EditingState:
+        if self.state() == QAbstractItemView.State.EditingState:
             return 
         if not self.model().dataAvailable():
             return
@@ -415,7 +415,7 @@ class SizeTable(QTableView):
             self.mouseOverItem = None
         else:
             self.mouseOverItem = rowAtEvent
-        self.model().rowDataChanged(rowAtEvent)
+        self.model().completeDataChanged()
  
     def resizeColumns(self):
         ""

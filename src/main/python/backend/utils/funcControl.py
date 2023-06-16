@@ -24,14 +24,14 @@ addDataOrShow = [
  #               sendMessageProps]
 #
 funcPropControl = {
-    
-    "addDataFrame": #will be removed soon.
+    "update::checkForUpdate": #will be removed soon.
         {
-            "threadRequest":{"obj":"data","fn":"addDataFrame","requiredKwargs":["dataFrame"]},
+            "threadRequest":{"obj":"updateChecker","fn":"checkForUpdates","requiredKwargs":[]},
             "completedRequest": 
-                            addDataAndRefresh
-        },
-
+                            [
+                                {"obj":"self","fn":"showMessageForNewVersion","requiredKwargs":["releaseURL"]},
+                                sendMessageProps]
+        }, 
     "data::annotateDataByIndicies":
         {
             "threadRequest":{"obj":"data","fn":"addAnnotationColumnByIndex","requiredKwargs":["dataID", "indices", "columnName"]},
@@ -279,7 +279,7 @@ funcPropControl = {
                     {"obj":"self","fn":"updateColorAndSizeInQuickSelect","objKey":"data","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["checkedColors","checkedSizes"]},
                     {"obj":"self","fn":"updateQuickSelectSelectionInGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                     {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot","ommitRedraw"]},
-                    {"obj":"self","fn":"setQuickSelectData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["quickSelectData"],"optionalKwargs":["title"]},
+                    {"obj":"self","fn":"setQuickSelectData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["quickSelectData"],"optionalKwargs":["title","encodedColumnNames"]},
                     sendMessageProps]   
         },
     "data::getColorMapByCategoricalColumn":
@@ -833,7 +833,7 @@ funcPropControl = {
             "threadRequest":{"obj":"plotterBrain","fn":"figToClipboard","requiredKwargs":["figure"]},
             "completedRequest":[
                 {"obj":"self","fn":"setBufToClipboardImage","requiredKwargs":["buf"]},
-                sendMessageProps
+               
             ]           
         },  
         
@@ -871,7 +871,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsForVolcanoModeScatter","requiredKwargs":["dataID","significantColumns", "numericColumns", "columnPairs","colorColumns"]},
             "completedRequest":[
-                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable","encodedColumnNames"]},
                 {"obj":"self","fn":"addTextToGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["texts"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
@@ -882,7 +882,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsDataForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
-                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable","encodedColumnNames"]},
                 {"obj":"self","fn":"addTextToGraph","objKey":"middle","objName":"mainFrames","requiredKwargs":["texts"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
@@ -893,7 +893,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getColorGroupsDataForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
-                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"setColorGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["colorGroupData"],"optionalKwargs":["title","isEditable","encodedColumnNames"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                 sendMessageProps
@@ -903,7 +903,7 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"plotterBrain","fn":"getSizeGroupsForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
-                {"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title","isEditable"]},
+                {"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title","isEditable","encodedColumnNames","encodedColumnNames"]},
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
                 {"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
                 sendMessageProps
@@ -927,7 +927,7 @@ funcPropControl = {
             "threadRequest":{"obj":"plotterBrain","fn":"getMarkerGroupsForScatter","requiredKwargs":["dataID"]},
             "completedRequest":[
                 {"obj":"self","fn":"updateScatterProps","objKey":"middle","objName":"mainFrames","requiredKwargs":["propsData"]},
-                {"obj":"self","fn":"setMarkerGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["markerGroupData"],"optionalKwargs":["title"]},
+                {"obj":"self","fn":"setMarkerGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["markerGroupData"],"optionalKwargs":["title","encodedColumnNames"]},
                 sendMessageProps
             ]           
         },

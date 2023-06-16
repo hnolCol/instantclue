@@ -1,4 +1,3 @@
-from PyQt5.QtCore import QObject, pyqtSignal
 from .ICPlots.ICBoxplot import ICBoxplot
 from .ICPlots.ICBarplot import ICBarplot
 from .ICPlots.ICPointplot import ICPointplot

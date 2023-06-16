@@ -111,7 +111,7 @@ class ICClusterplot(ICChart):
             clusterDataIndex = self.data["clusterLabels"].loc[self.data["clusterLabels"][columnName] == selectedCluster].index
             dataFrame = self.mC.data.dfs[self.data["dataID"]].loc[clusterDataIndex]
             dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self.mC, ignoreChanges=True)
-            dlg.exec_()
+            dlg.exec()
             
     def getClusterIDsByDataIndex(self):
         ""

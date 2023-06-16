@@ -1,10 +1,10 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createTitleLabel,createLabel, createLineEdit
 from ..custom.warnMessage import WarningMessage
-from ..custom.buttonDesigns import ICStandardButton
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from collections import OrderedDict 
 import numpy as np 
 
@@ -88,7 +88,7 @@ class ICDataInput(QDialog):
                 warn = WarningMessage(title="Warning",
                     iconDir = self.mC.mainPath,
                     infoText = "Value for parameter {} could not be converted to requested type {}.".format(valueName,self.valueTypes[valueName]))
-                warn.exec_()
+                warn.exe()
                 return False
             self.providedValues[valueName] = value
         else:

@@ -1,7 +1,7 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
-from ..custom.buttonDesigns import ICStandardButton
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from ..custom.warnMessage import WarningMessage
 
 from ..utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, createCombobox
@@ -90,7 +90,7 @@ class ICValidateEmail(QDialog):
             email = self.mC.webAppComm.encryptStringWithPublicKey(currentText.encode('utf-8'))
             appID = self.mC.webAppComm.getAppID()
             r = requests.put(URL,json={"app-id":appID,"email":email})
-            print(email,appID)
+            #print(email,appID)
             self.statusLabel.setText("Request sent. Please check email.")
             if r.status_code == 200:
                 self.verificationCodeEdit.setEnabled(True)

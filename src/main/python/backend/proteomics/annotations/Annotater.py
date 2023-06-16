@@ -54,7 +54,7 @@ class Annotator(object):
 	     
         with Pool(NProcesses) as p:
             rs = p.starmap(idxMatch, [(chunk,Y, ";",chunkIdx) for chunkIdx, chunk in enumerate(chunks)])
-            print(rs)
+            #print(rs)
    
 
     def _loadInternal(self):

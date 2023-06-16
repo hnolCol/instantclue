@@ -8,11 +8,14 @@ a = Analysis(['main.py'],
              pathex=['/Users/hnolte/Documents/GitHub/instantclue/src/main/python'],
              binaries=[],
              datas=[],
+             hooksconfig={
+                "matplotlib": {"backends": "all"}},
              hiddenimports=['setuptools','pynndescent','pkg_resources','sklearn.utils.murmurhash', 'sklearn.neighbors.typedefs','sklearn.neighbors._typedefs',
              				'sklearn.neighbors.quad_tree','sklearn.tree._utils',
              				'scipy._lib.messagestream','numpy.random.common',
                                    'numpy.random.bounded_integers','numpy.random.entropy','scipy.special.cython_special',
-                                   'sklearn.utils._cython_blas','openTSNE._matrix_mul','openTSNE._matrix_mul.matrix_mul'],
+                                   'sklearn.utils._cython_blas','openTSNE._matrix_mul','openTSNE._matrix_mul.matrix_mul',
+                                   'sklearn.metrics._pairwise_distances_reduction._datasets_pair','sklearn.metrics._pairwise_distances_reduction._middle_term_computer'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -39,6 +42,7 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=True)
+
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -50,12 +54,14 @@ coll = COLLECT(exe,
                
 app = BUNDLE(coll,
              name='InstantClue.app',
-             version='0.11.0',
-             bundle_identifier='instantclue.de',
+             icon = '/Users/hnolte/Documents/GitHub/instantclue/src/main/python/icons/IC.icns', 
+             version='0.12.0',
+             bundle_identifier='com.nolte.instantclue',
              info_plist={
                 'NSHighResolutionCapable': 'True',
                 'NSPrincipalClass': 'NSApplication',
                 'NSAppleScriptEnabled': False,
-                'LSBackgroundOnly' : False
+                'LSBackgroundOnly' : False,
+                'UIUserInterfaceStyle': 'Light'
                 }
             )

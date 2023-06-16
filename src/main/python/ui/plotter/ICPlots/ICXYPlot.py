@@ -2,7 +2,7 @@
 
 
 from .ICChart import ICChart
-from ...dialogs.ICAUCCalculation import ICDAUCDialog
+from ...dialogs.Transformations.ICAUCCalculation import ICDAUCDialog
 from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.collections import LineCollection
@@ -92,7 +92,7 @@ class ICXYPlot(ICChart):
 
             #self.addTitles()
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
-            self.setHoverItemGroups(hoverGroups)
+            #self.setHoverItemGroups(hoverGroups)
             self.checkForQuickSelectDataAndUpdateFigure()
            
         except Exception as e:
@@ -119,7 +119,7 @@ class ICXYPlot(ICChart):
     def openAUCCalcDialog(self,e=None):
         ""
         dlg = ICDAUCDialog(self.mC,self.data["dataID"],self.data["numericColumnPairs"],self.data["hoverData"])
-        dlg.exec_()
+        dlg.exec()
 
     def updateQuickSelectItems(self,propsData=None):
         
