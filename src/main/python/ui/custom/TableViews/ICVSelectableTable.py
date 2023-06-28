@@ -640,17 +640,17 @@ class MultiColumnSelectablePandaModel(PandaModel):
             else:
                 return str(self.df.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.ForegroundRole:
             return self.getFont()
         
-        elif role == Qt.CheckStateRole:
+        elif role == Qt.ItemDataRole.CheckStateRole:
             if pd.isna(self.df.iloc[index.row(),index.column()]):
                 return QVariant()
             if self.getCheckStateByTableIndex(index):
-                return Qt.Checked
+                return Qt.CheckState.Checked
             else:
-                return Qt.Unchecked
-        elif role == Qt.BackgroundRole:
+                return Qt.CheckState.Unchecked
+        elif role == Qt.ItemDataRole.BackgroundRole:
             if self.getCheckStateByTableIndex(index) or \
                 (self.parent() is not None and self.parent().highlightRow is not None and self.parent().highlightRow == index.row()):
 
@@ -660,14 +660,15 @@ class MultiColumnSelectablePandaModel(PandaModel):
        
     def setData(self,index,value,role):
 
-        if role != Qt.CheckStateRole:
+        if role != Qt.ItemDataRole.CheckStateRole:
             #use default setData
             return super().setData(index,role)
 
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             #this model uses first column to check complet row
             indexBottomRight = self.index(index.row(),self.columnCount())
             _, dataIndex, columnIndex = self.setCheckState(index)
+            print(dataIndex)
             if self.selectionCallBack is not None:
                 self.selectionCallBack(dataIndex,columnIndex)
             self.dataChanged.emit(index,indexBottomRight)

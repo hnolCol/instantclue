@@ -989,13 +989,16 @@ class StatisticCenter(object):
                     
                     r["{} p-value(Fisher)".format(adjPvalueMethod)] = adjFisherPValue.astype(float)
                     r["{} p-value(Chi2)".format(adjPvalueMethod)] = adjChi2PValue.astype(float)
-                    
+                   
                     boolIdxAdjPvalue = boolIdxFisher | boolIdxChi
                     r = r.loc[boolIdxAdjPvalue,:]
+
                     if r.index.size > 0:
-                        results = results.append(r,ignore_index=True)
+                        results = pd.concat([results,r],ignore_index=True)
+        
         if results.index.size == 0:
             return getMessageProps("Error","No significant hits found.")
+        
         return self.sourceData.addDataFrame(results,fileName="FisherEnrichmentResults({})".format(categoricalColumn))
        
     def runBatchCorrection(self,dataID, groupingName,*args,**kwargs):
@@ -1046,7 +1049,6 @@ class StatisticCenter(object):
                                             "p-value",
                                             "-log10 p-value",
                                             "adj. p-value",
-                                            "labels"
                                             "U-statistic",
                                             "categorySize",
                                             "categorySize(noNaN)",
@@ -1054,7 +1056,9 @@ class StatisticCenter(object):
                                             "median",
                                             "stdev",
                                             "difference(toRest)",
-                                            ])
+                                            "-log10 p-value",
+                                            "adj. p-value",
+                                            "labels"])
         r = []
         #not thread safe -> start process
         with Pool(1) as p:
@@ -1488,7 +1492,7 @@ class StatisticCenter(object):
                     fitData.index  = dataCompRep.index
                     fitData.columns = ["{}:_{}_{}".format(groupNameComp,colName,repID) for colName in ["A","k","b","r2"]]
                     output.append(fitData)
-                    print(data)
+                    #print(data)
 		    #A = np.concatenate([r[1] for r in rs],axis=0)
         return self.sourceData.joinDataFrame(dataID,pd.concat(output,axis=1))
 

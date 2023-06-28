@@ -532,6 +532,7 @@ class ICChart(QObject):
 
 	def removeStatsArtistsByInternalID(self,internalID):
 		"Removes artits by making them invisible and removes them from statCollection - updates table in slice and marks frame"
+
 		if self.setStatArtistsVisibility(internalID,False):
 			toRemoveBoolIdx = self.statCollection["internalID"] == internalID
 			self.statCollection = self.statCollection.loc[~toRemoveBoolIdx,:]
@@ -1946,12 +1947,9 @@ class ICChart(QObject):
                 
 	def getQuickSelectScatterProps(self,ax,quickSelectGroup):
 		""
-		#internalIDs = quickSelectGroup["internalID"]
 		scatterSizes = []
 		scatterColors = []
-		dataIndicies = []
 		#get index
-		#dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
 		intIDs = self.quickSelectScatterDataIdx[ax]["coords"]["intID"] 
 		colorMapper = dict([(intID,colorValue) for intID, colorValue in quickSelectGroup[["internalID","color"]].values])
 		sizeMapper = dict([(intID,sizeValue) for intID, sizeValue in quickSelectGroup[["internalID","size"]].values])
@@ -1959,18 +1957,6 @@ class ICChart(QObject):
 		scatterSizes = intIDs.map(sizeMapper)
 		
 		return scatterSizes, scatterColors, self.quickSelectScatterDataIdx[ax]["idx"]
-
-		
-		# for intID, colorValue, sizeValue in quickSelectGroup[["internalID","color","size"]].values:
-		# #for intID, indics in self.quickSelectCategoryIndexMatch.items():
-		# 	indics = self.quickSelectCategoryIndexMatch[intID]
-		# 	#boolIdx = internalIDs == intID
-		# 	#colorValue, sizeValue = quickSelectGroup.loc[boolIdx,["color","size"]].values[0]
-		# 	scatterColors.extend([colorValue] * indics.size)
-		# 	scatterSizes.extend([sizeValue] * indics.size)
-		# 	dataIndicies.extend(indics.tolist())
-
-		# return scatterSizes,scatterColors,dataIndicies
 
 		
 	def updateQuickSelectScatter(self,ax,coords = None,scatterColors = None, scatterSizes = None):

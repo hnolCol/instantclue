@@ -123,9 +123,15 @@ class StatisticTableModel(QAbstractTableModel):
 
     def getCurrentInternalID(self):
         ""
-        mouseOverItem = self.parent().mouseOverItem
-        if mouseOverItem is not None and "internalID" in self._labels.columns: 
-            return self._labels.iloc[mouseOverItem].loc["internalID"]
+        if hasattr(self.parent(),"rightClickedRowIndex"):
+            rowIdx = self.parent().rightClickedRowIndex
+            return self._labels.iloc[rowIdx].loc["internalID"]
+
+        # mouseOverItem = self.parent().mouseOverItem
+        # print(self._labels.columns)
+        # print(mouseOverItem)
+        # if mouseOverItem is not None and "internalID" in self._labels.columns: 
+        #     return self._labels.iloc[mouseOverItem].loc["internalID"]
 
     def getItemChangedInternalID(self):
         ""
@@ -163,11 +169,11 @@ class StatisticTableModel(QAbstractTableModel):
             else:
                 return str(self._labels.iloc[index.row(),index.column()])
         
-        elif role == Qt.FontRole:
+        elif role == Qt.ItemDataRole.FontRole:
 
             return getStandardFont()
         
-        elif role == Qt.ForegroundRole:
+        elif role == Qt.ItemDataRole.ForegroundRole:
             if "visible" in self._labels.columns:
                 if self._labels["visible"].iloc[index.row()]:
                     return QColor("black")
@@ -175,13 +181,13 @@ class StatisticTableModel(QAbstractTableModel):
                     return QColor("grey")                
             return QColor("black")
 
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             
             if "Group1" and "Group2" in self._labels.columns:
                 return "Comparision:\n{}\nvs\n{}\nColumn Headers: p-value, test-statistic, Test".format(self._labels["Group1"].iloc[index.row()],self._labels["Group2"].iloc[index.row()])
-            return "This is a beatufil tooltip."
+            return ""
 
-        elif self.parent().mouseOverItem is not None and role == Qt.BackgroundRole and index.row() == self.parent().mouseOverItem:
+        elif self.parent().mouseOverItem is not None and role == Qt.ItemDataRole.BackgroundRole and index.row() == self.parent().mouseOverItem:
             return QColor(getHoverColor())
 
             
@@ -200,7 +206,6 @@ class StatisticTableModel(QAbstractTableModel):
 
     def completeDataChanged(self):
         ""
-        
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
 
     def rowRangeChange(self,row1, row2):
@@ -261,7 +266,6 @@ class StatisticTable(QTableView):
     
     def leaveEvent(self,event=None):
         ""
-        
         if hasattr(self, "mouseOverItem") and self.mouseOverItem is not None:
             prevMouseOver = int(self.mouseOverItem)
             self.mouseOverItem = None
@@ -294,24 +298,26 @@ class StatisticTable(QTableView):
             tableIndex = self.mouseEventToIndex(e)
             if tableIndex is None:
                 return
-            tableIndexCol = tableIndex.column()
-            if tableIndexCol == 0 and not self.rightClick: 
-                dataIndex = self.model().getDataIndex(tableIndex.row())
-                if not self.rightClick:
-                    return
-
-                else:
-                    return
-
-                self.sizeChangedForItem = tableIndex.row()
+          
+            #dataIndex = self.model().getDataIndex(tableIndex.row())
+            #if tableIndexCol == 0 and not self.rightClick: 
                 
-                self.parent().selectionChanged.emit()
-                self.model().rowDataChanged(tableIndex.row())
+                #if not self.rightClick:
+              #      return
+
+              #  else:
+               #     return
+
+               # self.sizeChangedForItem = tableIndex.row()
+                
+               # self.parent().selectionChanged.emit()
+               # self.model().rowDataChanged(tableIndex.row())
                 
                 
             elif self.rightClick:
                 #idx = self.model().index(0,0)
-                self.menu.exec(QCursor.pos()+QPoint(2,2))
+                self.rightClickedRowIndex = tableIndex.row()
+                self.menu.exec(QCursor.pos() + QPoint(4,4))
                 
                 self.rightClick = False
             else:
@@ -326,6 +332,7 @@ class StatisticTable(QTableView):
         if not self.model().dataAvailable():
             return
         rowAtEvent = self.rowAt(event.pos().y())
+        
         if rowAtEvent == -1:
             self.mouseOverItem = None
         else:

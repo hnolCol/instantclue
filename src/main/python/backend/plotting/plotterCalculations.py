@@ -422,6 +422,16 @@ class PlotterBrain(object):
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         subplotBorders = dict(wspace=0.05, hspace = 0.0,bottom=0.15,right=0.95,top=0.95)
+
+
+        if len(numericColumns) > 0 and len(categoricalColumns) == 0:
+            print("numeric count plot")
+            #visualize missing data using the countplot 
+
+            return getMessageProps("Error..","Not yet implemented.")
+
+
+
         axisDict = OrderedDict([(0,[2,4,(1,3)]),(1,[2,4,(5,7)]),(2,[2,4,8])]) #getAxisPosition(3, maxCol = 1)
         groupbyCatColumns = data.groupby(by=categoricalColumns, sort=False)
         colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(categoricalColumns),"countplotLabelColorMap")
@@ -432,8 +442,8 @@ class PlotterBrain(object):
                 c = groupData["counts"].sum()
                 totalCountData.append((groupName,c))
        
-        if groupbyCatColumns.ngroups > 50:
-            return getMessageProps("Error..","More than 50 unique categories found. This plot type is not appropiate for so many categories.")
+        if groupbyCatColumns.ngroups > 30:
+            return getMessageProps("Error..","More than 30 unique categories found. This plot type is not appropiate for so many categories.")
     
         colorGroups["group"] = categoricalColumns
         colorGroups["color"] = colors

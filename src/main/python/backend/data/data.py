@@ -870,7 +870,7 @@ class DataCollection(object):
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
 			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
-			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders)
+			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders, dtype=str)
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
 	
@@ -1980,26 +1980,6 @@ class DataCollection(object):
 			newColumnName = columnName		
 		
 		return newColumnName
-	
-	def extract_data_type_of_columns(self,dataFrame,id):
-		'''
-		Saves the columns name per data type. In InstantClue there is no difference between
-		objects and others non float, int, bool like columns.
-		'''
-		dataTypeColumnRelationship = dict() 
-		for dataType in ['float64','int64','object']:
-			try:
-				if dataType != 'object':
-					dfWithSpecificDataType = dataFrame.select_dtypes(include=[dataType])
-				else:
-					dfWithSpecificDataType = dataFrame.select_dtypes(exclude=['float64','int64'])
-			except ValueError:
-				dfWithSpecificDataType = pd.DataFrame() 		
-			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
-			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders)
-				
-		self.dfsDataTypesAndColumnNames[id] = dataTypeColumnRelationship
-		
 	
 		
 	def exportData(self,dataID,path = 'exportData.txt', columnOrder = None,fileFormat = "txt"):
