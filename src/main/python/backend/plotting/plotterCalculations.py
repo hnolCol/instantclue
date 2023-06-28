@@ -3585,10 +3585,11 @@ class PlotterBrain(object):
                         interalIDColumnPairs[0][internalID].append((xName,numColumn))
                 
             else:
-
+                print("here")
                 for n,numColumn in enumerate(numericColumns):
                     xName = "x({})".format(numColumn)
                     groupData = rawData[[numColumn]].dropna()
+                    print("H")
                     if groupData.empty:
                         continue
                     elif groupData.index.size == 1:
@@ -3596,19 +3597,22 @@ class PlotterBrain(object):
                         data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                         kdeIndex = data.index
                     else:
+                        print("H")
                         #get kernel data
                         kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                         #get random x position around 0 to spread data
+                        print("H")
                         allSame = np.all(kdeData == kdeData[0])
                         if allSame:
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
-
+                        print("H")
                         kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
                         kdeData = kdeData + positions[n]
                         #save data
+                        print("H")
                         data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
 
 

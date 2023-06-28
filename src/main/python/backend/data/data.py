@@ -61,7 +61,7 @@ from sklearn.preprocessing import scale
 from threadpoolctl import threadpool_limits
 
 from scipy.signal import lfilter
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, gaussian_kde
 
 from ..utils.stringOperations import getMessageProps, getReadableNumber, mergeListToString, findCommonStart, getRandomString
 from ..filter.categoricalFilter import CategoricalFilter
@@ -1364,8 +1364,21 @@ class DataCollection(object):
 	def getKernelDensityFromDf(self,data,kernel = "gaussian", bandwidth = None):
 		""
 		if data.index.size > 1:
-			if bandwidth is None:
-				bandwidth = data.index.size**(-1/(data.columns.size+4)) 
+			
+			# if bandwidth is None:
+			# 	bandwidth = data.index.size**(-1/(data.columns.size+4)) 
+			data_noNan = data.dropna()
+			if data.shape[1] == 1:
+				X = data_noNan.values.flatten()
+			else:
+				X = data_noNan.values
+
+			hist, bin_edges = np.histogram(X,bins='auto',density=True)
+	
+			kdeData = np.array([hist[-1] if idx == hist.size else hist[idx] for idx in np.digitize(X,bin_edges,right=True)])
+			
+			return kdeData, data.index
+			print(kdeData)
 			kde = KernelDensity(bandwidth=bandwidth,
                         kernel=kernel, algorithm='ball_tree')
 			kde.fit(data) 
