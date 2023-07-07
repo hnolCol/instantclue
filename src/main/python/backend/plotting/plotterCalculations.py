@@ -457,8 +457,8 @@ class PlotterBrain(object):
         xCountValues = np.arange(groupSizes.index.size)
         rawCounts = groupSizes["counts"]
         if self.countTransform != "none" and self.countTransform in transformDict:
-            groupSizes["counts"] = transformDict[self.countTransform](groupSizes["counts"])
-        yCountValues = groupSizes["counts"].values 
+            groupSizes["counts"] = transformDict[self.countTransform](rawCounts)
+        yCountValues = groupSizes["counts"]
         maxCountValue = np.max(yCountValues)
         yTicksPoints = np.arange(numUniqueValues)
         #get facotrs for unique cats
@@ -483,13 +483,13 @@ class PlotterBrain(object):
 
             vs = np.array([(idx, factors[categoricalColumns[n]][idx]) for n,x in enumerate(groupValues)])
             lines[idx] = {"xdata" :vs[:,0],"ydata" : vs[:,1]}
-            
 
         return {"data":{
             "dataID" : dataID,
             "axisPositions":axisDict,
             "subplotBorders":subplotBorders,
             "rawCounts" : rawCounts,
+            "rawTotalCounts" : [x[1] for x in totalCountData],
             "tickColors" : tickColors,
             "plotData" : {
                     "bar-counts" : 
@@ -564,7 +564,7 @@ class PlotterBrain(object):
         clusterLabels, data, model = self.sourceData.statCenter.runCluster(dataID,numericColumns,method,True)
         clusterLabels = clusterLabels.sort_values("Labels")
         columnName = "C({})".format(method)
-
+        dataMinValue, dataMaxValue = np.nanquantile(data.values.flatten(),q=[0,1])
         clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
         
 
@@ -626,6 +626,7 @@ class PlotterBrain(object):
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
         #tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
         tickLabels = dict([(n,numericColumns) for n in range(nClusters)])#
+        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,nClusters+0.5]}) for n in range(nClusters)])#)
 
 
 
@@ -649,6 +650,7 @@ class PlotterBrain(object):
             "axisLabels"    :   axisLabels,
             "tickPositions": tickPositions,
             "tickLabels": tickLabels,
+            "axisLimits" : axisLimits,
             "axisTitles" : axisTitles,
             "facecolors" : faceColors,
             "dataColorGroups" : colorGroups,
@@ -3585,11 +3587,10 @@ class PlotterBrain(object):
                         interalIDColumnPairs[0][internalID].append((xName,numColumn))
                 
             else:
-                print("here")
                 for n,numColumn in enumerate(numericColumns):
                     xName = "x({})".format(numColumn)
                     groupData = rawData[[numColumn]].dropna()
-                    print("H")
+                   
                     if groupData.empty:
                         continue
                     elif groupData.index.size == 1:
@@ -3597,22 +3598,22 @@ class PlotterBrain(object):
                         data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                         kdeIndex = data.index
                     else:
-                        print("H")
+                        
                         #get kernel data
                         kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                         #get random x position around 0 to spread data
-                        print("H")
+                       
                         allSame = np.all(kdeData == kdeData[0])
                         if allSame:
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
-                        print("H")
+                       
                         kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
                         kdeData = kdeData + positions[n]
                         #save data
-                        print("H")
+                        
                         data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
 
 

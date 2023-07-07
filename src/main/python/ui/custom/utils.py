@@ -241,7 +241,7 @@ class PropertyChooser(QWidget):
                         newValue = np.int(np.float(vInput.text())) if p.getAttr("dtype") == int else np.float(vInput.text())
                     except:
 
-                        
+                        print(p)
                         self.mC.sendToWarningDialog(infoText="Could not convert input to float or integer. Paramater not updated")
                         continue
                             

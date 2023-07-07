@@ -10,6 +10,7 @@ signMacApps
 pyinstaller-hooks
 env-3.9/
 env-310/
+env-311/
 build/
 dist/
 src/main/python/temp/

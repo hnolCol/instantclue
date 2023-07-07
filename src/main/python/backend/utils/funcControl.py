@@ -402,6 +402,18 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView
         },
+    "data::countValidProfiles":
+        {
+            "threadRequest":{"obj":"data","fn":"countQuantProfiles","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },
+    "data::countValidValuesInColumns":
+        {
+            "threadRequest":{"obj":"data","fn":"countValidValuesInColumns","requiredKwargs":["dataID","columnNames"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },
     "data::countValidValuesInSubset":
         {
             "threadRequest":{"obj":"data","fn":"countValidValuesInSubset","requiredKwargs":["dataID","columnNames","categoricalColumns"]},

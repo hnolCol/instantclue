@@ -103,6 +103,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "Standard fontsize for the graphical user interface. The effect will only be visible after a restart."
     },
     {
+    "name"          :   "export.file.clipboard.separator",
+    "value"         :   "tab",
+    "dtype"         :   str,
+    "range"         :   commonSepartor,
+    "parent"        :   "intern",
+    "parentType"    :   "Export Data",
+    "description"   :   "Separator to be used when export data to clipboard.."
+    },
+    {
     "name"          :   "load.file.encoding",
     "value"         :   "utf-8",
     "dtype"         :   str,
@@ -232,7 +241,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "annotationFontSize",
-    "value"         :   8,
+    "value"         :   9,
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
@@ -241,7 +250,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "tooltipFontSize",
-    "value"         :   5,
+    "value"         :   6,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
@@ -250,7 +259,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "annotationFontFamily",
-    "value"         :   "monospace",
+    "value"         :   "Arial",
     "dtype"         :   str,
     "range"         :   ["monospace","serif","sans-serif","Arial"],
     "parent"        :   "intern",
@@ -543,7 +552,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "axes.labelsize",
-    "value"         :   8,
+    "value"         :   10,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
@@ -552,7 +561,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "axes.titlesize",
-    "value"         :   8,
+    "value"         :   10,
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "matplotlib",
@@ -606,7 +615,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "xtick.labelsize",
-    "value"         :   8,
+    "value"         :   10,
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "matplotlib",
@@ -615,7 +624,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "ytick.labelsize",
-    "value"         :   8,
+    "value"         :   10,
     "dtype"         :   int,
     "range"         :   [2,np.inf],
     "parent"        :   "matplotlib",

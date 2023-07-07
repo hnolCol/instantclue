@@ -268,11 +268,14 @@ class ICColorTable(ICColorSizeTableBase):
         ""
         ""
         exists, graph =  self.mC.getGraph()
-        if exists:
+
+        if exists and (graph.hasScatters() or graph.isHclust()):
             graph.setHoverObjectsInvisible()
             graph.setLegendInvisible()
             graph.setNaNColor()
             self.model.completeDataChanged()
+        elif exists:
+            self.table.setNaNColorForAllItems()
     
     
 
@@ -383,6 +386,7 @@ class ColorTableModel(QAbstractTableModel):
     def toggleInLegend(self,*args,**kwargs):
         ""
         mouseOverItem = self.parent().mouseOverItem
+
         if mouseOverItem is not None:
             self._inLegend.iloc[mouseOverItem] = not self._inLegend.iloc[mouseOverItem] 
 
@@ -550,6 +554,13 @@ class ColorTable(QTableView):
 
         self.setStyleSheet("""QTableView {border:None};""")
 
+
+    def setNaNColorForAllItems(self):
+        "Just set all idcs to items."
+        hexNanColor = self.mC.config.getParam("nanColor")
+        self.model().setColorForAllIdcs(hexNanColor)
+        self.parent().selectionChanged.emit()
+
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""
         rowIndex = self.rightClickedRowIndex
@@ -603,7 +614,7 @@ class ColorTable(QTableView):
         
         menu["main"].addAction("Hide/Show in Legend", self.model().toggleInLegend)
         
-        menu["main"].addAction("Remove", self.parent().removeFromGraph)
+        menu["main"].addAction("Remove Color Encoding", self.parent().removeFromGraph)
         menu["main"].addAction("Copy to clipboard",self.parent().copyToClipboard)
         menu["main"].addAction("Save to xlsx",self.parent().saveModelDataToExcel)
         if "Subset by .." in menu:

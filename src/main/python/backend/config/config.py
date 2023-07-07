@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.rcParams['font.sans-serif'] = "Arial"
 # Then, "ALWAYS use sans-serif fonts"
 matplotlib.rcParams['font.family'] = "sans-serif"
-
+sepConverter = {"tab":"\t","space":"\s+"}
 class Config(object):
     ""
     def __init__(self, mainController):
@@ -62,10 +62,9 @@ class Config(object):
             self.updateParamsFromProfile(DEFAULT_PARAMETER,overwriteOnlyWhenNotPresent=True)
 
         if paramName in self.parameters:
-            return self.parameters[paramName].getAttr("value")
-       
-            
-            
+            value = self.parameters[paramName].getAttr("value")
+            if value in sepConverter: return sepConverter[value]
+            return value
             
         
     def getParams(self, paramNames):

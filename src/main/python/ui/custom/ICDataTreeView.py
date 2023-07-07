@@ -974,6 +974,20 @@ menuBarItems = [
     },
     {
         "subM":"Counting",
+        "name":"Count valid values in columns",
+        "funcKey": "data::countValidValuesInColumns",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Counting",
+        "name":"Count valid values in row (Frequencies)",
+        "funcKey": "data::countValidProfiles",
+        "dataType": "Numeric Floats",
+    },
+
+    
+    {
+        "subM":"Counting",
         "name":"Count valid values in row (Selection)",
         "funcKey": "data::countValidValues",
         "dataType": "Numeric Floats",
@@ -983,6 +997,7 @@ menuBarItems = [
         "name":"Count valid values in row (Grouping)",
         "funcKey": "data::countValidValues",
         "dataType": "Numeric Floats",
+        "fnKwargs": {"grouping":True}
     },
     {
         "subM":"Counting",
@@ -2799,7 +2814,7 @@ class DataTreeViewTable(QTableView):
             defaultKwargs = {
                         "dataID": self.mC.getDataID(),
                         "groupingName":currentGrouping,
-                        "toGroups": selectedColumns.values.tolist(),
+                        "toGroups": selectedColumns.values.flatten(),
                         "withinGroupingName": None
                     }
           
@@ -2815,13 +2830,14 @@ class DataTreeViewTable(QTableView):
                     withinGroupings = pd.Series([x for x in groupingNames if x != currentGrouping])
                     withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values[0]
                     if withinGrouping is None:return
-                    defaultKwargs["withinGroupingName"] = withinGrouping
+                    defaultKwargs["withinGroupingName"] = withinGrouping.values.flatten()
                     
             funcProps = {"key":fkey,"kwargs":defaultKwargs}
             self.mC.sendRequestToThread(funcProps)
 
         else:
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found. Please add a grouping first."})
+            
     def getCustomGroupByInput(self,*args,**kwargs):
         ""
 
