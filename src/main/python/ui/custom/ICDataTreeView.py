@@ -658,7 +658,7 @@ menuBarItems = [
         "funcKey": "getUserInput",
         "dataType": "Numeric Floats",
         "fnKwargs": {"funcKey":"dimReduction::LDA",
-                    "requiredGrouping": ["Class Labels"],
+                    "requiredGrouping": ["groupingName"],
                     "otherKwargs": {}}
     },
     # {
@@ -1912,7 +1912,7 @@ class DataTreeModel(QAbstractTableModel):
     def setTooltipdata(self,tooltipData):
         ""
         if isinstance(tooltipData,dict):
-            self.tooltipData = tooltipData
+            self.tooltipData = tooltipData.copy()
 
     def search(self,searchString):
         ""

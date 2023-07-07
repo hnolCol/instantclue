@@ -803,6 +803,7 @@ class DataCollection(object):
 
 		count = 0
 		evalColumnName = columnName
+		print("a")
 		while evalColumnName in columnList:
 			if "_" in evalColumnName and evalColumnName.split("_")[-1].isdigit():
 				removeChar = len(evalColumnName.split("_")[-1])
@@ -810,7 +811,7 @@ class DataCollection(object):
 				evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(count)
 			else:
 				evalColumnName = "{}_{:02d}".format(evalColumnName, count)
-			
+		print("a")
 		return evalColumnName
 
 	def evaluateColumMapper(self,dataID,columnNameMapper):
@@ -1161,9 +1162,7 @@ class DataCollection(object):
 		#try:
 		print("==")
 		for columnName in columns:
-			print(columnName, evalColumns)
 			evalColumnName = self.evaluateColumnName(columnName,dataID=dataID,extraColumnList=evalColumns)
-			print(evalColumnName)
 			evalColumns.append(evalColumnName)
 		print("==")
 		df.columns = evalColumns
@@ -2256,7 +2255,6 @@ class DataCollection(object):
 			return getMessageProps("Error..","FillBy method not found.")
 		
 		kwargs = {**self.joinDataFrame(dataID,nanBoolIdx),**getMessageProps("Done ..","NaN were replaced.")}
-		#print(kwargs)
 		return kwargs
 	
 
@@ -2407,7 +2405,6 @@ class DataCollection(object):
 	def setDataByIndexNaN(self,dataID,filterIdx,selectedColumns,baseString = "numFil:NaN"):
 		""
 		if dataID in self.dfs:
-			#print(selectedColumns)
 			if selectedColumns is None:
 				X = self.dfs[dataID][list(filterIdx.keys())]
 				for columnName, idx in filterIdx.items():
@@ -2415,7 +2412,6 @@ class DataCollection(object):
 				X.columns = ["{}::{}".format(baseString,colName) for colName in X.columns]
 			elif isinstance(selectedColumns,dict):
 				totalColumns = np.unique(list(selectedColumns.values())).tolist()
-				#print(totalColumns)
 				X = self.dfs[dataID][totalColumns]
 				for columnName, idx in filterIdx.items():
 					if columnName in selectedColumns:
@@ -2428,7 +2424,6 @@ class DataCollection(object):
 
 	def setNaNBasedOnCondition(self,dataID,columnNames, belowThreshold = None, aboveThreshold = None):
 		""
-		#print(aboveThreshold,belowThreshold)
 		if dataID in self.dfs:
 			data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
 			filterIdx = {} 
@@ -2750,8 +2745,6 @@ class DataCollection(object):
 			if ignoreIndex and corrParams["axis"] == 1:
 				df.columns = np.arange(df.columns.size)
 				otherDf.columns = np.arange(otherDf.columns.size)
-			#print(df, otherDf)
-			#print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
 			return {}
 		else:
 			return errorMessage

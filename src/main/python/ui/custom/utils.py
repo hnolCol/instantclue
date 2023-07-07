@@ -46,10 +46,13 @@ dataFileExport = [("txt","Text File"),
 
 def clearLayout(layout):
     "Clears all widgets from layout"
+    print("a2")
     while layout.count():
         child = layout.takeAt(0)
         if child.widget():
             child.widget().deleteLater()
+
+    print("a2")
 
 
 class ICSCrollArea(QScrollArea):

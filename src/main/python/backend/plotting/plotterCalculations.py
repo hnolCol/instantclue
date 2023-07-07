@@ -567,7 +567,7 @@ class PlotterBrain(object):
         dataMinValue, dataMaxValue = np.nanquantile(data.values.flatten(),q=[0,1])
         clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
         
-
+        numNumericColumns = len(numericColumns)
 
         if method in ["kmeans","Birch"] and config.getParam("clusterplot.show.cluster.center"):
 
@@ -577,7 +577,7 @@ class PlotterBrain(object):
                 clusterCenters = model.subcluster_centers_
 
             extraLines = dict([(n,{
-                                "xdata":np.arange(len(numericColumns)),
+                                "xdata":np.arange(numNumericColumns),
                                 "ydata":clusterCenter.flatten(),
                                 "linewidth":0.75,
                                 "color":"black"}) for n,clusterCenter in enumerate(clusterCenters)])
@@ -593,7 +593,7 @@ class PlotterBrain(object):
         #print(colorMap)
         if plottype == "boxplot":
             plotData,qSData = self.getClusterBoxplots(clusterLabels,data,numericColumns,columnName)
-            faceColors = dict([(n,[colorMap[uniqueCluster]] * len(numericColumns)) for n,uniqueCluster in enumerate(uniqueClusters)])
+            faceColors = dict([(n,[colorMap[uniqueCluster]] * numNumericColumns) for n,uniqueCluster in enumerate(uniqueClusters)])
 
         elif plottype == "lineplot":
             
@@ -626,7 +626,7 @@ class PlotterBrain(object):
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
         #tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
         tickLabels = dict([(n,numericColumns) for n in range(nClusters)])#
-        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,nClusters+0.5]}) for n in range(nClusters)])#)
+        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,numNumericColumns+0.5]}) for n in range(nClusters)])#)
 
 
 
