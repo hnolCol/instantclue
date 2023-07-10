@@ -803,7 +803,7 @@ class DataCollection(object):
 
 		count = 0
 		evalColumnName = columnName
-		print("a")
+
 		while evalColumnName in columnList:
 			if "_" in evalColumnName and evalColumnName.split("_")[-1].isdigit():
 				removeChar = len(evalColumnName.split("_")[-1])
@@ -811,7 +811,7 @@ class DataCollection(object):
 				evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(count)
 			else:
 				evalColumnName = "{}_{:02d}".format(evalColumnName, count)
-		print("a")
+	
 		return evalColumnName
 
 	def evaluateColumMapper(self,dataID,columnNameMapper):
