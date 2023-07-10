@@ -668,7 +668,6 @@ class MultiColumnSelectablePandaModel(PandaModel):
             #this model uses first column to check complet row
             indexBottomRight = self.index(index.row(),self.columnCount())
             _, dataIndex, columnIndex = self.setCheckState(index)
-            print(dataIndex)
             if self.selectionCallBack is not None:
                 self.selectionCallBack(dataIndex,columnIndex)
             self.dataChanged.emit(index,indexBottomRight)

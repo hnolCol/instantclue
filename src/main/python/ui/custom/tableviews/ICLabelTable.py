@@ -87,7 +87,7 @@ class ICLabelTable(ICColorSizeTableBase):
             data = self.mC.data.getDataByColumnNames(self.mC.getDataID(),columnNames)["fnKwargs"]["data"]
             dataIndices = data.index
             #pool the annotation data
-            data = data.values.astype(np.str)
+            data = data.values.astype(str)
             if data.shape[1] > 1:
                 data = np.apply_along_axis(' ; '.join, 1, data)
             if nAxes > 1:
@@ -291,7 +291,7 @@ class LabelTable(QTableView):
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
 
     def createMenu(self):
@@ -330,7 +330,7 @@ class LabelTable(QTableView):
     def mousePressEvent(self,e):
         ""
        # super().mousePressEvent(e)
-        if e.buttons() == Qt.RightButton:
+        if e.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         else:
             self.rightClick = False

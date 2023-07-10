@@ -972,6 +972,9 @@ class DataCollection(object):
 		if isinstance(columnList,list):
 			columnNames = self.getPlainColumnNames(dataID) #get all column names
 			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"] #required to account for grouping.
+			if len(columnList) == 1:
+				#unpack list, future warning pandas
+				columnList = columnList[0]
 			groupByObject = data.groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 

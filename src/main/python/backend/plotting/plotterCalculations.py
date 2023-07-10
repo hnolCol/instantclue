@@ -689,9 +689,10 @@ class PlotterBrain(object):
             plotData["color"] = faceColors[n]
             if "CI" in self.barplotError:
                 ci = extractCIFromstring(self.barplotError)
-                plotData["yerr"] = [CI(a.values,ci) for a in data]
+                yerrorValues = [CI(a.values,ci) for a in data]
             elif self.barplotError == "Std":
-                plotData["yerr"] = [np.std(a.values) for a in data]
+                yerrorValues = [np.std(a.values) for a in data]
+            plotData["yerr"] = None if all(not np.isfinite(x) for x in yerrorValues) else yerrorValues
             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
 
             plotData["x"] = boxPositions[n] 
