@@ -402,7 +402,6 @@ class StatisticCenter(object):
         groupingName = grouping.getCurrentGroupingName()
         columnNames = grouping.getColumnNames(groupingName)
         groupingAnnotation = grouping.getGroupNamesByColumnNames(columnNames)
-        #print(groupingAnnotation)
         if len(columnNames) > 0:
             X = self.getData(dataID,columnNames.values).dropna()
             Y = groupingAnnotation.values.flatten()
@@ -1179,16 +1178,14 @@ class StatisticCenter(object):
       
         with Pool(NProcesses) as p:
             rPool = p.starmap(p_anova,[(indexDf,"value",groupings.tolist(),idx) for idx,indexDf in groupedDF])
-           # print(rPool)
             idx, data = zip(*[r[0] for r in rPool if r is not None and r[0] is not None])
             sourceName = rPool[0][1]
             columnNames = ["p-unc ({})".format(idx) for idx in sourceName.values]
-            #print(rPool)
-        #print(rPool[0])
+
         if len(rPool) > 0:
             df = pd.DataFrame(data,index=idx,columns=columnNames)
             return self.sourceData.joinDataFrame(dataID,df)
-           # print(df)
+    
         else:
             return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")
     
@@ -1452,7 +1449,7 @@ class StatisticCenter(object):
         timeGroupsByColumns = grouping.getGrouping(timeGrouping)
         columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings if groupingName is not None and groupingName != "None"]
         combinedGroupingColumns = pd.concat(columnNamesForGroupings)
-       # print(combinedGroupingColumns)
+
 
         #unique column names in groups
         columnNames = combinedGroupingColumns.unique().tolist()

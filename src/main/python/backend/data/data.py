@@ -61,7 +61,7 @@ from sklearn.preprocessing import scale
 from threadpoolctl import threadpool_limits
 
 from scipy.signal import lfilter
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, gaussian_kde
 
 from ..utils.stringOperations import getMessageProps, getReadableNumber, mergeListToString, findCommonStart, getRandomString
 from ..filter.categoricalFilter import CategoricalFilter
@@ -235,7 +235,7 @@ class DataCollection(object):
 	def addAnnotationColumnByIndex(self,dataID, indices, columnName):
 		""
 		if dataID in self.dfs:
-			columnName = self.evaluateColumnName(columnName,dataID)
+			columnName = self.evaluateColumnName(columnName,dataID=dataID)
 			annotationData = pd.Series(
 					[self.getNaNString()] * self.dfs[dataID].index.size, 
 					index = self.dfs[dataID].index,
@@ -258,7 +258,7 @@ class DataCollection(object):
 		Adds a new column to the data
 		'''
 		if evaluateName:
-			columnName = self.evaluateColumnName(columnName,dataID,**kwargs)
+			columnName = self.evaluateColumnName(columnName,dataID=dataID,**kwargs)
 		if rowIndex is None:
 			self.dfs[dataID].loc[:,columnName] = columnData
 		else:
@@ -407,16 +407,6 @@ class DataCollection(object):
 					props = self.checkLoadProps(props)
 					df = pd.read_excel(excelFile,sheet_name=readExcelProps["sheet_name"],**props)
 					funcProps = self.addDataFrame(df,fileName=dataFrameName,cleanObjectColumns=True)
-					
-		# if deleteExcelFiles:
-		# 	for v in excelFiles.values():
-		# 		if "excelFile" in v:
-		# 			v["excelFile"].close()
-		# 	del excelFiles 
-		# 	for v in ioAndSheets.values():
-		# 		if "io" in v:
-		# 			v["io"].close()
-		# 	del ioAndSheets
 
 		return funcProps
 
@@ -632,7 +622,6 @@ class DataCollection(object):
 
 	def joinAndCopyDataForQuickSelect(self,dataID,columnName,selectionData,splitString):
 		""
-
 		dataToConcat = []
 		for checkedValue,checkedColor,userDefinedColors,checkSizes in selectionData.values:
 
@@ -649,11 +638,12 @@ class DataCollection(object):
 			dataToConcat.append(valueSubset)
 
 		data = pd.concat(dataToConcat,ignore_index=True)
-		data.to_clipboard()
+		data.to_clipboard(sep=self.parent.config.getParam("export.file.clipboard.separator"))
 		return getMessageProps("Done ..","Quick Select data copied to clipboard. Data might contain duplicated rows.")
 
 	def copyDataFrameToClipboard(self,dataID=None,data=None,attachDataToMain = None):
 		""
+		sepForExport=self.parent.config.getParam("export.file.clipboard.separator")
 		if dataID is None and data is None:
 			return {"messageProps":{"title":"Error",
 								"message":"Neither id nor data specified.."}
@@ -661,15 +651,15 @@ class DataCollection(object):
 		elif dataID is not None and dataID in self.dfs and attachDataToMain is not None:
 			#attach new data to exisisitng
 			dataToCopy = attachDataToMain.join(self.dfs[dataID])
-			dataToCopy.to_clipboard(excel=True)
+			dataToCopy.to_clipboard(sep=sepForExport)
 
 		elif dataID is not None and dataID in self.dfs:
 			data = self.getDataByDataID(dataID)
-			data.to_clipboard(excel=True)
+			data.to_clipboard(sep=sepForExport)
 
 		elif isinstance(data,pd.DataFrame):
 
-			data.to_clipboard(excel=True)
+			data.to_clipboard(sep=sepForExport)
 		
 		else:
 			return  {"messageProps":{"title":"Error",
@@ -813,17 +803,15 @@ class DataCollection(object):
 
 		count = 0
 		evalColumnName = columnName
+
 		while evalColumnName in columnList:
-			if "_" in evalColumnName and evalColumnName[-2:].isdigit() and evalColumnName.split("_")[-1].isdigit():
+			if "_" in evalColumnName and evalColumnName.split("_")[-1].isdigit():
 				removeChar = len(evalColumnName.split("_")[-1])
 				count += 1
-				try:
-					evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(int(float(evalColumnName.split("_")[-1])) + count)
-				except Exception as e:
-					evalColumnName = "{}_{:02d}".format(evalColumnName, count)
+				evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(count)
 			else:
 				evalColumnName = "{}_{:02d}".format(evalColumnName, count)
-			
+	
 		return evalColumnName
 
 	def evaluateColumMapper(self,dataID,columnNameMapper):
@@ -856,16 +844,14 @@ class DataCollection(object):
 					quantiles = dfWithSpecificDataType.quantile(q=[0,0.25,0.5,0.75,1])
 					nanSum = dfWithSpecificDataType.isna().sum()
 					fracs = nanSum / dfWithSpecificDataType.index.size
-
 					for columnHeader in dfWithSpecificDataType.columns:
 						nans = nanSum[columnHeader]
 						frac = round(fracs[columnHeader]*100,1)
-						self.tooltipData[dataID][columnHeader] = "Min : {}\n25% Quantile : {}\nMedian : {}\n75% Quantile : {}\nMax : {}\n#-nans : {} ({}%)".format(*[getReadableNumber(x) for x in quantiles[columnHeader].values.tolist()],nans,frac)
+						self.tooltipData[dataID][columnHeader] = "Min : {}\n25% Quantile : {}\nMedian : {}\n75% Quantile : {}\nMax : {}\n#-nans : {} ({}%)".format(*[getReadableNumber(x) for x in quantiles[columnHeader].values.flatten()],nans,frac)
 				else:
 					dfWithSpecificDataType = self.dfs[dataID].select_dtypes(exclude=['float64','int64'])
 					
 					for columnHeader in dfWithSpecificDataType.columns:
-						
 						self.tooltipData[dataID][columnHeader] = "#unique values = {}".format(dfWithSpecificDataType[columnHeader].unique().size)
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
@@ -986,6 +972,9 @@ class DataCollection(object):
 		if isinstance(columnList,list):
 			columnNames = self.getPlainColumnNames(dataID) #get all column names
 			data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"] #required to account for grouping.
+			if len(columnList) == 1:
+				#unpack list, future warning pandas
+				columnList = columnList[0]
 			groupByObject = data.groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 
@@ -998,7 +987,7 @@ class DataCollection(object):
 		
 		if dataID in self.dfsDataTypesAndColumnNames:
 			return {"messageProps":
-						{"title":"Data Frame Updated",
+						{"title":"Updated",
 						"message":"Data Frame Selection updated."},
 					"dataID" : dataID,
 					"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
@@ -1364,8 +1353,21 @@ class DataCollection(object):
 	def getKernelDensityFromDf(self,data,kernel = "gaussian", bandwidth = None):
 		""
 		if data.index.size > 1:
-			if bandwidth is None:
-				bandwidth = data.index.size**(-1/(data.columns.size+4)) 
+			
+			# if bandwidth is None:
+			# 	bandwidth = data.index.size**(-1/(data.columns.size+4)) 
+			data_noNan = data.dropna()
+			if data.shape[1] == 1:
+				X = data_noNan.values.flatten()
+			else:
+				X = data_noNan.values
+
+			hist, bin_edges = np.histogram(X,bins='auto',density=True)
+	
+			kdeData = np.array([hist[-1] if idx == hist.size else hist[idx] for idx in np.digitize(X,bin_edges,right=True)])
+			
+			return kdeData, data.index
+			print(kdeData)
 			kde = KernelDensity(bandwidth=bandwidth,
                         kernel=kernel, algorithm='ball_tree')
 			kde.fit(data) 
@@ -1710,14 +1712,41 @@ class DataCollection(object):
 		self.update_columns_of_current_data()
 		return newColumnNames
 		
+	def countQuantProfiles(self,dataID,columnNames):
+		"Counts the number of full profiles (e.g. no nans over column names)"
+		fileName = self.getFileNameByID(dataID)
+		clippingActive = self.hasClipping(dataID)
+		data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=False)["fnKwargs"]["data"]
+		numberRows = data.index.size
+		isNotNullData = ~data.isnull()
+		nonNullCounts = isNotNullData.sum(axis=1)
+		counts = pd.DataFrame(nonNullCounts.value_counts()).reset_index()
+		counts.columns = ["#Valid in out of {}".format(columnNames.size),"#Counts"]
+		counts["Rel. Counts ({})".format(numberRows)] = counts["#Counts"] / data.index.size
+		return self.addDataFrame(counts,fileName="ProfileCounts({})-Clipping-{}".format(fileName,clippingActive))
+
+	def countValidValuesInColumns(self,dataID,columnNames):
+		""
+		fileName = self.getFileNameByID(dataID)
+		clippingActive = self.hasClipping(dataID)
+		data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=False)["fnKwargs"]["data"]
+		isNullData = data.isnull()
 		
+		nans = isNullData.sum(axis=0)
+		total = isNullData.count(axis=0)
+		valid = total - nans 
+		resultMatrix = pd.concat([nans,valid,total],axis=1,ignore_index=True).astype(int).reset_index()
+		result = pd.DataFrame(resultMatrix.values,columns=["Column Names","#NaN","#Valid","#Total"])
+		result[["#NaN","#Valid","#Total"]] = result[["#NaN","#Valid","#Total"]].astype("int64")
+		return self.addDataFrame(result,fileName="Counts({})-Clipping-{}".format(fileName,clippingActive))
+	
 	def countNaN(self,dataID, columnNames, grouping = None):
 		""
 		if dataID in self.dfs:
 			if grouping is None:
 				data = self.dfs[dataID][columnNames].isnull().sum(axis=1)
 				return self.addColumnData(dataID,"count(nan):{}".format(mergeListToString(columnNames)),data)
-			else:
+			elif isinstance(grouping,dict):
 				grouping = self.parent.grouping.getCurrentGrouping() 
 				groupingName = self.parent.grouping.getCurrentGroupingName()
 				columnNames = self.parent.grouping.getColumnNames(groupingName)
@@ -1728,7 +1757,7 @@ class DataCollection(object):
 					countData["count(nan):{}".format(groupName)] = X[columnNames].isnull().sum(axis=1)
 				
 				return self.joinDataFrame(dataID,countData)
-
+			else: return getMessageProps("Error..","Grouping must be a dictionary.")
 		else:
 			return getMessageProps("Error ..","DataID not found.")
 
@@ -2227,7 +2256,6 @@ class DataCollection(object):
 			return getMessageProps("Error..","FillBy method not found.")
 		
 		kwargs = {**self.joinDataFrame(dataID,nanBoolIdx),**getMessageProps("Done ..","NaN were replaced.")}
-		#print(kwargs)
 		return kwargs
 	
 
@@ -2378,7 +2406,6 @@ class DataCollection(object):
 	def setDataByIndexNaN(self,dataID,filterIdx,selectedColumns,baseString = "numFil:NaN"):
 		""
 		if dataID in self.dfs:
-			#print(selectedColumns)
 			if selectedColumns is None:
 				X = self.dfs[dataID][list(filterIdx.keys())]
 				for columnName, idx in filterIdx.items():
@@ -2386,7 +2413,6 @@ class DataCollection(object):
 				X.columns = ["{}::{}".format(baseString,colName) for colName in X.columns]
 			elif isinstance(selectedColumns,dict):
 				totalColumns = np.unique(list(selectedColumns.values())).tolist()
-				#print(totalColumns)
 				X = self.dfs[dataID][totalColumns]
 				for columnName, idx in filterIdx.items():
 					if columnName in selectedColumns:
@@ -2399,7 +2425,6 @@ class DataCollection(object):
 
 	def setNaNBasedOnCondition(self,dataID,columnNames, belowThreshold = None, aboveThreshold = None):
 		""
-		#print(aboveThreshold,belowThreshold)
 		if dataID in self.dfs:
 			data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
 			filterIdx = {} 
@@ -2681,8 +2706,10 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			addColumnNames = self.parent.config.getParam("melt.data.add.column.names")
 			idVars = [column for column in self.dfs[dataID].columns if column not in columnNames.values] #all columns but the selected ones
-			valueName = self.evaluateColumnName(["melt_value" if not addColumnNames else 'melt_value:{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]
-			variableName = self.evaluateColumnName(["melt_variable" if not addColumnNames else 'melt_variable:{}'.format(mergeListToString(columnNames)).replace("'",'')], dataID = dataID)[0]		
+			potentialValueName = "melt_value" if not addColumnNames else 'melt_value:{}'.format(mergeListToString(columnNames)).replace("'",'')
+			potentialVariableName = "melt_variable" if not addColumnNames else 'melt_variable:{}'.format(mergeListToString(columnNames)).replace("'",'')
+			valueName = self.evaluateColumnName(columnName = potentialValueName, dataID = dataID)
+			variableName = self.evaluateColumnName(columnName=potentialVariableName, dataID = dataID)
 			meltedDataFrame = pd.melt(self.dfs[dataID], id_vars = idVars, value_vars = columnNames,
 									var_name = variableName,
 									value_name = valueName)
@@ -2719,8 +2746,6 @@ class DataCollection(object):
 			if ignoreIndex and corrParams["axis"] == 1:
 				df.columns = np.arange(df.columns.size)
 				otherDf.columns = np.arange(otherDf.columns.size)
-			#print(df, otherDf)
-			#print(df.corrwith(otherDf, axis=corrParams["axis"],method=corrParams["method"]))
 			return {}
 		else:
 			return errorMessage

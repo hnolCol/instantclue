@@ -1993,9 +1993,9 @@ class ICChart(QObject):
 				kwargs["color"] = scatterColors
 				targetAx.scatter(x = coords[:,0], y = coords[:,1], **kwargs)
 
-
 	def setNaNColor(self):
 		""
+		
 
 	def setFigureBorders(self):
 		""

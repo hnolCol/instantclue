@@ -15,9 +15,9 @@ from .utils import INSTANT_CLUE_ANAYLSIS
 
 class AnalysisSelection(QWidget):
     
-    def __init__(self, parent=None, mainController = None, sendToThreadFn = None):
+    def __init__(self, parent=None, mainController = None):
         super(AnalysisSelection, self).__init__(parent)
-        self.sendToThreadFn = sendToThreadFn
+        
         self.mC = mainController
         self.__controls()
         self.__layout() 
@@ -225,11 +225,10 @@ class AnalysisSelection(QWidget):
   
     def sendToThread(self, funcProps, addSelectionOfAllDataTypes = False, addDataID = False):
         ""
-        if hasattr(self,"sendToThreadFn"):
-            if self.sendToThreadFn is not None:
-                if addSelectionOfAllDataTypes:
-                    funcProps = self.addSelectionOfAllDataTypes(funcProps)
-                if addDataID and "kwargs" in funcProps:
-                    funcProps["kwargs"]["dataID"] = self.dataID
-                self.sendToThreadFn(funcProps)
+        
+        if addSelectionOfAllDataTypes:
+            funcProps = self.addSelectionOfAllDataTypes(funcProps)
+        if addDataID and "kwargs" in funcProps:
+            funcProps["kwargs"]["dataID"] = self.dataID
+        self.mC.sendRequestToThread(funcProps)
               

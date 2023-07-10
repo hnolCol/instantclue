@@ -205,12 +205,11 @@ class Normalizer(object):
 
     def normalizeToGroup(self,dataID,groupingName,toGroups,withinGroupingName = None):
         ""
-        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
         grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
         withinGrouping  = self.sourceData.parent.grouping.getGrouping(withinGroupingName)
-        groupNamesByColumnName = self.sourceData.parent.grouping.getGroupNameByColumn(groupingName)
         data = self.sourceData.dfs[dataID]
         r = OrderedDict()
+        print(toGroups)
         for specGroup in toGroups:
             if specGroup in grouping:
                 specGroupColumnNames = grouping[specGroup]

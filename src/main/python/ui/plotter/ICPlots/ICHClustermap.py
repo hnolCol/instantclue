@@ -977,7 +977,6 @@ class ICClustermap(ICChart):
 
     def setNaNColor(self):
         ""
-        
         self.resetColorGroupElements()
         self.mC.resetGroupColorTable.emit()
         self.updateFigure.emit()

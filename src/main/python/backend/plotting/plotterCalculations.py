@@ -457,8 +457,8 @@ class PlotterBrain(object):
         xCountValues = np.arange(groupSizes.index.size)
         rawCounts = groupSizes["counts"]
         if self.countTransform != "none" and self.countTransform in transformDict:
-            groupSizes["counts"] = transformDict[self.countTransform](groupSizes["counts"])
-        yCountValues = groupSizes["counts"].values 
+            groupSizes["counts"] = transformDict[self.countTransform](rawCounts)
+        yCountValues = groupSizes["counts"]
         maxCountValue = np.max(yCountValues)
         yTicksPoints = np.arange(numUniqueValues)
         #get facotrs for unique cats
@@ -483,13 +483,13 @@ class PlotterBrain(object):
 
             vs = np.array([(idx, factors[categoricalColumns[n]][idx]) for n,x in enumerate(groupValues)])
             lines[idx] = {"xdata" :vs[:,0],"ydata" : vs[:,1]}
-            
 
         return {"data":{
             "dataID" : dataID,
             "axisPositions":axisDict,
             "subplotBorders":subplotBorders,
             "rawCounts" : rawCounts,
+            "rawTotalCounts" : [x[1] for x in totalCountData],
             "tickColors" : tickColors,
             "plotData" : {
                     "bar-counts" : 
@@ -564,10 +564,10 @@ class PlotterBrain(object):
         clusterLabels, data, model = self.sourceData.statCenter.runCluster(dataID,numericColumns,method,True)
         clusterLabels = clusterLabels.sort_values("Labels")
         columnName = "C({})".format(method)
-
+        dataMinValue, dataMaxValue = np.nanquantile(data.values.flatten(),q=[0,1])
         clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
         
-
+        numNumericColumns = len(numericColumns)
 
         if method in ["kmeans","Birch"] and config.getParam("clusterplot.show.cluster.center"):
 
@@ -577,7 +577,7 @@ class PlotterBrain(object):
                 clusterCenters = model.subcluster_centers_
 
             extraLines = dict([(n,{
-                                "xdata":np.arange(len(numericColumns)),
+                                "xdata":np.arange(numNumericColumns),
                                 "ydata":clusterCenter.flatten(),
                                 "linewidth":0.75,
                                 "color":"black"}) for n,clusterCenter in enumerate(clusterCenters)])
@@ -593,7 +593,7 @@ class PlotterBrain(object):
         #print(colorMap)
         if plottype == "boxplot":
             plotData,qSData = self.getClusterBoxplots(clusterLabels,data,numericColumns,columnName)
-            faceColors = dict([(n,[colorMap[uniqueCluster]] * len(numericColumns)) for n,uniqueCluster in enumerate(uniqueClusters)])
+            faceColors = dict([(n,[colorMap[uniqueCluster]] * numNumericColumns) for n,uniqueCluster in enumerate(uniqueClusters)])
 
         elif plottype == "lineplot":
             
@@ -626,6 +626,7 @@ class PlotterBrain(object):
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
         #tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
         tickLabels = dict([(n,numericColumns) for n in range(nClusters)])#
+        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,numNumericColumns-0.5]}) for n in range(nClusters)])#)
 
 
 
@@ -649,6 +650,7 @@ class PlotterBrain(object):
             "axisLabels"    :   axisLabels,
             "tickPositions": tickPositions,
             "tickLabels": tickLabels,
+            "axisLimits" : axisLimits,
             "axisTitles" : axisTitles,
             "facecolors" : faceColors,
             "dataColorGroups" : colorGroups,
@@ -687,9 +689,10 @@ class PlotterBrain(object):
             plotData["color"] = faceColors[n]
             if "CI" in self.barplotError:
                 ci = extractCIFromstring(self.barplotError)
-                plotData["yerr"] = [CI(a.values,ci) for a in data]
+                yerrorValues = [CI(a.values,ci) for a in data]
             elif self.barplotError == "Std":
-                plotData["yerr"] = [np.std(a.values) for a in data]
+                yerrorValues = [np.std(a.values) for a in data]
+            plotData["yerr"] = None if all(not np.isfinite(x) for x in yerrorValues) else yerrorValues
             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
 
             plotData["x"] = boxPositions[n] 
@@ -3187,21 +3190,7 @@ class PlotterBrain(object):
                 self.sourceData.colorManager.nanColor : -1
 
             }
-        
     
-        #print(potentialColorAndSignificantCategories)
-       # print(colors)
-        #colorCategories = pd.DataFrame(np.tile(colorUniqueValues.transpose(), (1, boolIdcs.columns.size)), columns=boolIdcs.columns)
-        #print(colorCategories)
-        #crate color dict.
-        # if colorColumns.size > 0:   
-        #     colorCategories = [tuple([sigCat,uniqueValue]) for uniqueValue in rawData[colorColumns[0]].unique() for sigCat in [f"{significantStr} & up",f"{significantStr} & down","-"]]
-        #     print(colorCategories)
-
-        #     colors, layerMap = self.getColorMapDictAndLayers(colorCategories, colorColumns) 
-
-        # df3 = pd.DataFrame({x: zip(df1[x], df2[x]) for x in df1.columns})
-
         colorData = potentialColorAndSignificantCategories.applymap(lambda x: colors[x])
         layerData = colorData.applymap(lambda x: layerMap[x])
 
@@ -3244,18 +3233,10 @@ class PlotterBrain(object):
                     "va" : "top"
                     }]
             rawColorCategories = potentialColorAndSignificantCategories.iloc[:,n]
-           # print(rawColorCategories)
-           # print(colorGroupData)
-           # print(colorGroupData["group"].iloc[0])
+
             
             categoryIndexMatch[columnPair] =  dict([(intID,rawColorCategories.index[[x == category for x in rawColorCategories.values]]) for category, intID in zip(colorGroupData["group"].values,
                                                                                                                  colorGroupData["internalID"].values)])
-            # create index matches
-            # categoryIndexMatch[columnPair] = {
-            #         internalIDs[0] : boolIdx.index[aboveZeroAndSignificant],
-            #         internalIDs[1] : boolIdx.index[belowZeroAndSignificant],
-            #         internalIDs[2] : boolIdx.index[~np.logical_or(aboveZeroAndSignificant,belowZeroAndSignificant)]
-            # }
 
         tableTitle = mergeListToString(colorColumns.values,"\n") if colorColumns.size > 0 else "Significance"
 
@@ -3585,10 +3566,10 @@ class PlotterBrain(object):
                         interalIDColumnPairs[0][internalID].append((xName,numColumn))
                 
             else:
-
                 for n,numColumn in enumerate(numericColumns):
                     xName = "x({})".format(numColumn)
                     groupData = rawData[[numColumn]].dropna()
+                   
                     if groupData.empty:
                         continue
                     elif groupData.index.size == 1:
@@ -3596,19 +3577,22 @@ class PlotterBrain(object):
                         data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                         kdeIndex = data.index
                     else:
+                        
                         #get kernel data
                         kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                         #get random x position around 0 to spread data
+                       
                         allSame = np.all(kdeData == kdeData[0])
                         if allSame:
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
-
+                       
                         kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
                         kdeData = kdeData + positions[n]
                         #save data
+                        
                         data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
 
 

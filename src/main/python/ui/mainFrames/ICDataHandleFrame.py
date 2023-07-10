@@ -125,7 +125,7 @@ class DataHandleFrame(QFrame):
         self.bigFrame.layout().setContentsMargins(0,0,0,0)
 
         self.frames = CollapsableFrames(parent=self.bigFrame,buttonDesign=CollapsButton)
-        self.qS = QuickSelect(parent=self,sendToThreadFn = self.sendToThread, mainController=self.mC) 
+        self.qS = QuickSelect(parent=self,mainController=self.mC) 
         self.liveGraph = LiveGraph(self,self.mC) ## could als be retrieved from parent?
         self.analysisSelection = AnalysisSelection(self,mainController=self.mC)
         self.bigFrame.layout().addWidget(self.frames)
@@ -166,7 +166,7 @@ class DataHandleFrame(QFrame):
         #vbox1.addStretch(1)
         loadDataButton.clicked.connect(self.askForFile)
         vbox2 = QVBoxLayout()
-        self.dataTreeView = CollapsableDataTreeView(parent=self, sendToThreadFn = self.sendToThread, mainController = self.mC)
+        self.dataTreeView = CollapsableDataTreeView(parent=self, mainController = self.mC)
         vbox2.addWidget(self.dataTreeView)
         vbox2.setContentsMargins(0,0,0,0)
         

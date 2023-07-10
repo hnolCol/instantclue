@@ -13,7 +13,7 @@ import numpy as np
 import pickle
 
 class QuickSelect(QWidget):
-    def __init__(self,sendToThreadFn = None, mainController = None, parent=None):
+    def __init__(self,mainController = None, parent=None):
         
         super(QuickSelect, self).__init__(parent)
         self.__controls()
@@ -21,7 +21,6 @@ class QuickSelect(QWidget):
         self.__connectEvents()
 
         self.setAcceptDrops(True)
-        self.sendToThreadFn = sendToThreadFn
         self.favSelection = FavoriteSelectionCollection(mainController)
         self.mC = mainController
         self.quickSelectProps = {}
@@ -172,7 +171,7 @@ class QuickSelect(QWidget):
         self.quickSelectProps["columnName"] = columnName
         self.quickSelectProps["dataID"] = dataID
         self.quickSelectProps["filterProps"] = filterProps
-        self.sendToThreadFn(funcProps)
+        self.mC.sendRequestToThread(funcProps)
 
 
 
@@ -416,7 +415,7 @@ class QuickSelect(QWidget):
             funcProps["kwargs"] = {}
             funcProps["kwargs"]["dataID"] = self.mC.getDataID()
             funcProps["kwargs"]["dataFrame"] = selectionData
-            self.sendToThreadFn(funcProps)
+            self.mC.sendRequestToThread(funcProps)
 
         else:
             self.mC.sendMessageRequest({"title":"Error ..","message":"Only supported for raw selection mode."})
@@ -452,11 +451,11 @@ class QuickSelect(QWidget):
                     funcProps["kwargs"]["selectionData"] = selectionData
 
 
-                self.sendToThreadFn(funcProps)
+                self.mC.sendRequestToThread(funcProps)
 
             else:
-
-                selectionData.to_clipboard()
+                sepForExport=self.parent().mC.config.getParam("export.file.clipboard.separator")
+                selectionData.to_clipboard(sep=sepForExport)
 
             self.mC.sendMessageRequest({"title":"Done ..","message":"Selection copied to clipboard."})
 
@@ -640,7 +639,7 @@ class QuickSelect(QWidget):
         "Resets Clipping"
         if "dataID" in self.quickSelectProps and self.selectionMode != "annotate":
             funcProps = {"key":"data::resetClipping","kwargs":{"dataID":self.quickSelectProps["dataID"]}}
-            self.sendToThreadFn(funcProps)
+            self.mC.sendRequestToThread(funcProps)
 
 
 class FavoriteSelectionCollection(object):

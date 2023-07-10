@@ -658,7 +658,7 @@ menuBarItems = [
         "funcKey": "getUserInput",
         "dataType": "Numeric Floats",
         "fnKwargs": {"funcKey":"dimReduction::LDA",
-                    "requiredGrouping": ["Class Labels"],
+                    "requiredGrouping": ["groupingName"],
                     "otherKwargs": {}}
     },
     # {
@@ -974,6 +974,20 @@ menuBarItems = [
     },
     {
         "subM":"Counting",
+        "name":"Count valid values in columns",
+        "funcKey": "data::countValidValuesInColumns",
+        "dataType": "Numeric Floats",
+    },
+    {
+        "subM":"Counting",
+        "name":"Count valid values in row (Frequencies)",
+        "funcKey": "data::countValidProfiles",
+        "dataType": "Numeric Floats",
+    },
+
+    
+    {
+        "subM":"Counting",
         "name":"Count valid values in row (Selection)",
         "funcKey": "data::countValidValues",
         "dataType": "Numeric Floats",
@@ -983,6 +997,7 @@ menuBarItems = [
         "name":"Count valid values in row (Grouping)",
         "funcKey": "data::countValidValues",
         "dataType": "Numeric Floats",
+        "fnKwargs": {"grouping":True}
     },
     {
         "subM":"Counting",
@@ -1607,7 +1622,7 @@ class DataTreeView(QWidget):
 
     def addData(self,X, tooltipData = {} ,dataID = None):
         ""
-        #print(tooltipData)
+
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
         self.table.model().setTooltipdata(tooltipData)
@@ -1726,8 +1741,6 @@ class DataTreeModel(QAbstractTableModel):
 
     def setColumnStateByDataIndex(self,columnNameIndex,newState):
         ""
-       # print(columnNameIndex)
-       # print(newState)
         idx = self._labels.index.intersection(columnNameIndex)
         if not idx.empty:
              self.columnInGrouping[idx] = newState
@@ -1874,8 +1887,6 @@ class DataTreeModel(QAbstractTableModel):
                 dataIndex = self.getDataIndex(index.row())
                 if dataIndex is not None and dataIndex in self._labels.index:
                     tooltipText = self._labels.loc[dataIndex]
-                    #print(self._labels)
-                    #print(self.tooltipData)
                     if tooltipText in self.tooltipData:
                         return self.tooltipData[tooltipText]
                     else:
@@ -1897,7 +1908,7 @@ class DataTreeModel(QAbstractTableModel):
     def setTooltipdata(self,tooltipData):
         ""
         if isinstance(tooltipData,dict):
-            self.tooltipData = tooltipData
+            self.tooltipData = tooltipData.copy()
 
     def search(self,searchString):
         ""
@@ -2300,8 +2311,6 @@ class DataTreeViewTable(QTableView):
     def compareGroups(self, event=None, test = None, *args, **kwargs):
         ""
         try:
-            #print(test)
-            #print(self.mC.grouping.groupingExists())
             if not self.mC.grouping.groupingExists():
                 w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
                 w.exec()
@@ -2327,7 +2336,6 @@ class DataTreeViewTable(QTableView):
 
     def toggleParam(self,paramName):
         ""
-       # print(paramName)
         self.mC.config.toggleParam(paramName)#"perform.transformation.in.place"
         self.sender().setChecked(self.mC.config.getParam("perform.transformation.in.place"))
 
@@ -2799,7 +2807,7 @@ class DataTreeViewTable(QTableView):
             defaultKwargs = {
                         "dataID": self.mC.getDataID(),
                         "groupingName":currentGrouping,
-                        "toGroups": selectedColumns.values.tolist(),
+                        "toGroups": selectedColumns.values.flatten(),
                         "withinGroupingName": None
                     }
           
@@ -2815,13 +2823,14 @@ class DataTreeViewTable(QTableView):
                     withinGroupings = pd.Series([x for x in groupingNames if x != currentGrouping])
                     withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values[0]
                     if withinGrouping is None:return
-                    defaultKwargs["withinGroupingName"] = withinGrouping
+                    defaultKwargs["withinGroupingName"] = withinGrouping.values.flatten()
                     
             funcProps = {"key":fkey,"kwargs":defaultKwargs}
             self.mC.sendRequestToThread(funcProps)
 
         else:
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found. Please add a grouping first."})
+            
     def getCustomGroupByInput(self,*args,**kwargs):
         ""
 
@@ -2862,7 +2871,7 @@ class DataTreeViewTable(QTableView):
         dataID = self.mC.getDataID()
         categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
         selectedColumn = [colName for colName in self.getSelectedData() if colName in categoricalColumns]
-        #print(selectedColumn)
+
         selDiag = SelectionDialog(
                 ["proteinGroupColumn","modifiedPeptideColumn"],
                 {"proteinGroupColumn":categoricalColumns,"modifiedPeptideColumn":categoricalColumns},

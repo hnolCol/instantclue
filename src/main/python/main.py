@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 
 
-from pynndescent import NNDescent, PyNNDescentTransformer
+from pynndescent import NNDescent, PyNNDescentTransformer #try to remove error got with pyinstaller.
 
 from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
@@ -50,12 +50,12 @@ os.environ["OUTDATED_IGNORE"] = "1"
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
 
-__VERSION__ = "v0.12.0"
+__VERSION__ = "v0.12.1"
 
 filePath = os.path.dirname(sys.argv[0])
 exampleDir = os.path.join(filePath,"examples")
 exampleFuncs = []
-standardFontSize = 12 
+
 
 
 for fileName in getTxtFilesFromDir(exampleDir):
@@ -387,6 +387,7 @@ class InstantClue(QMainWindow):
 
     def errorInThread(self, errorType = None, v = None, e = None):
         "Error message if something went wrong in the calculation."
+        "TO DO: Improve error handling."
         self.sendMessageRequest({"title":"Error ..","message":"There was an unknwon error."})
 
 
@@ -436,7 +437,7 @@ class InstantClue(QMainWindow):
         if "data" not in resultDict:
             print("data not found in result dict")
             return
-        data = resultDict["data"]
+        data = resultDict["data"].copy()
         #iteratre over functions. This is a list of dicts
         #containing function name and object name
         for fnComplete in fnsComplete:
@@ -594,7 +595,7 @@ class InstantClue(QMainWindow):
                     worker.signals.error.connect(self.errorInThread)
                     self.threadpool.start(worker)
                     self.mainFrames["sliceMarks"].threadWidget.addActiveThread(threadID, funcKey)
-                    self.logger.add(funcKey,funcProps["kwargs"])
+                   # self.logger.add(funcKey,funcProps["kwargs"])
                     #Count.setText(str(self.threadpool.activeThreadCount()))
                 
                 else:

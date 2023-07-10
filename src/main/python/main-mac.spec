@@ -1,6 +1,6 @@
 
 # -*- mode: python ; coding: utf-8 -*-
-
+import shutil 
 block_cipher = None
 
 
@@ -65,3 +65,8 @@ app = BUNDLE(coll,
                 'UIUserInterfaceStyle': 'Light'
                 }
             )
+
+
+shutil.copyfile("/Users/hnolte/Documents/GitHub/instantclue/src/main/python/dist/stopwords","/Users/hnolte/Documents/GitHub/instantclue/src/main/python/dist/InstantClue.app/Contents/MacOS/wordcloud/stopwords")
+
+

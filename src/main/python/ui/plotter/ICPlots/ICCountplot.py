@@ -16,7 +16,7 @@ class ICCountplot(ICChart):
 
     def addGraphSpecActions(self,menus):
         ""
-        menus["main"].addAction("Show subset", self.openDataInDialog)
+        menus["main"].addAction("Show subset", self.openSubsetDataInDialog)
         menus["main"].addAction("Annotate subset.", self.annotateSubsetInData)
         menus["main"].addAction("Show count data", self.openCountDataInDialog)
 
@@ -39,18 +39,30 @@ class ICCountplot(ICChart):
         self.hoverRectangle2.set_visible(False)
         self.axisDict[2].add_artist(self.hoverRectangle2)
 
-    def addLabelsToBar(self,rects,ax):
+    def addLabelsToBar(self,rects,ax,dataKey = "rawCounts", horizontal = True):
         ""
         if self.getParam("show.counts"):
             for n,rect in enumerate(rects):
                 height = rect.get_height()
-                txt = self.data["rawCounts"][n]
-                ax.annotate(
+                txt = self.data[dataKey][n]
+                if horizontal:
+                    ax.annotate(
                         txt,
                         xy=(rect.get_x() + rect.get_width() / 2, height),
                         xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
                         ha='center', va='bottom',
+                        fontproperties = FontProperties(
+                                            family=self.getParam("annotationFontFamily"),
+                                            size = self.getParam("annotationFontSize"))
+                            )
+                else:
+                    ax.annotate(
+                        txt,
+                        xy=(rect.get_width(), rect.get_y() + rect.get_height()/2),
+                        xytext=(3, 0),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='left', va='center',
                         fontproperties = FontProperties(
                                             family=self.getParam("annotationFontFamily"),
                                             size = self.getParam("annotationFontSize"))
@@ -133,6 +145,7 @@ class ICCountplot(ICChart):
             self.initLineplot()
             self.initBarplot()
             self.addLabelsToBar(self.rects,self.axisDict[0])
+            self.addLabelsToBar(self.rects2,self.axisDict[2],dataKey="rawTotalCounts",horizontal=False)
             self.setXTicks(self.axisDict[0],[],[])
             self.setYTicks( self.axisDict[2],[],[])
             if self.interactive:
@@ -212,7 +225,7 @@ class ICCountplot(ICChart):
         if self.isLiveGraphActive():
             self.sendIndexToLiveGraph(dataIndex)
 
-    def openDataInDialog(self):
+    def openSubsetDataInDialog(self):
         ""
         if self.idx is not None:
             
@@ -224,7 +237,8 @@ class ICCountplot(ICChart):
                                                             ignoreChanges=True, 
                                                             headerLabel="Data in countplot", 
                                                             )
-
+        else:
+            self.mC.sendToWarningDialog(infoText="Please hover over a certain group (indicated by red coloring of the bars) to select a subset first.")
 
     def openCountDataInDialog(self):
         ""

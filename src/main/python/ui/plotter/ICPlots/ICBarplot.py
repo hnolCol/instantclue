@@ -12,21 +12,21 @@ class ICBarplot(ICChart):
         self.barplotItems = dict() 
 
     
-        
-    
     def initBarplots(self, onlyForID = None, targetAx = None):
         ""
-        try:
-            for n, barplotProps in self.data["plotData"].items():
-                if onlyForID is not None and n != onlyForID:
-                    continue
-                if targetAx is None and n in self.axisDict:
-                    self.barplotItems[n] = self.axisDict[n].bar(**barplotProps)
-                elif targetAx is not None:
-                    barplotProps["color"] = [a.get_facecolor() for a in self.barplotItems[n].patches]
-                    targetAx.bar(**barplotProps)
-        except Exception as e:
-            print(e)
+        # try:
+        for n, barplotProps in self.data["plotData"].items():
+            if onlyForID is not None and n != onlyForID:
+                continue
+            if targetAx is None and n in self.axisDict:
+            
+                self.barplotItems[n] = self.axisDict[n].bar(**barplotProps)
+            elif targetAx is not None:
+                barplotProps["color"] = [a.get_facecolor() for a in self.barplotItems[n].patches]
+                targetAx.bar(**barplotProps)
+        # except Exception as e:
+        #     print("ERROR?")
+        #     print(e)
 
     def onDataLoad(self, data):
         ""
@@ -54,7 +54,6 @@ class ICBarplot(ICChart):
         colorGroupData = self.data["dataColorGroups"]
         self.colorGroupArtists = OrderedDict([(intID,[]) for intID in colorGroupData["internalID"].values])
         self.groupColor = dict() 
-        
         for n, barprops in self.barplotItems.items():
             for artist, color in zip(barprops.patches,self.data["facecolors"][n]):
                 idx = colorGroupData.index[colorGroupData["color"] == color]
@@ -86,7 +85,7 @@ class ICBarplot(ICChart):
         ""
         for color, _ , intID in colorGroup.values:
             if intID in self.colorGroupArtists:
-                if self.groupColor[intID] != color:
+                if intID in self.groupColor and self.groupColor[intID] != color:
                     artists = self.colorGroupArtists[intID]
                     for artist in artists:
                         artist.set_facecolor(color)

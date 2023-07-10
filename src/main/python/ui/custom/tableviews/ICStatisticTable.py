@@ -27,10 +27,7 @@ class ICStatisticTable(ICColorSizeTableBase):
         self.table = StatisticTable(parent = self, mainController=self.mC)
         self.model = StatisticTableModel(parent=self.table)
         self.table.setModel(self.model)
-        #self.table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
-        #self.table.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch) 
-        #self.table.resizeColumns()
-      
+       
         
         
     def __layout(self):
@@ -260,6 +257,7 @@ class StatisticTable(QTableView):
         menu = createSubMenu(None,[])
         menu["main"].addAction("Show/Hide", self.parent().toggleVisibility)
         menu["main"].addAction("Remove", self.parent().removeStats)
+        menu["main"].addAction("Copy to clipboard",self.parent().copyToClipboard)
         menu["main"].addAction("Save to xlsx", self.parent().saveModelDataToExcel)
        
         self.menu = menu["main"]
