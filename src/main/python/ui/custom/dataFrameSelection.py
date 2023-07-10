@@ -40,10 +40,9 @@ menuFuncs = [
 
 class CollapsableDataTreeView(QWidget):
     
-    def __init__(self, parent=None, sendToThreadFn = None, dfs = OrderedDict(), mainController = None):
+    def __init__(self, parent=None,dfs = OrderedDict(), mainController = None):
         super(CollapsableDataTreeView, self).__init__(parent)
     
-        self.sendToThreadFn = sendToThreadFn
         self.mC = mainController
         self.dfs = dfs #OrderedDict keys: dataID, values: names
         self.preventReset = False
@@ -171,7 +170,7 @@ class CollapsableDataTreeView(QWidget):
     def dfSelectionChanged(self, comboIndex):
         ""
         dataID = self.getDfId(comboIndex)
-        if dataID is not None and self.sendToThreadFn is not None and self.dataID != dataID:
+        if dataID is not None and self.dataID != dataID:
             #send back to main
             
             funcProps = {
@@ -181,7 +180,7 @@ class CollapsableDataTreeView(QWidget):
             self.mC.mainFrames["data"].qS.resetView(updatePlot=False)
             self.mC.mainFrames["data"].liveGraph.clearGraph()
             self.updateDataIDInTreeViews()
-            self.sendToThreadFn(funcProps)
+            self.mC.sendRequestToThread(funcProps)
             self.sessionIsBeeingLoaded = False
            
 
@@ -338,7 +337,6 @@ class CollapsableDataTreeView(QWidget):
                 lastIndex = self.combo.currentIndex() 
             if sessionIsBeeingLoaded:
                 self.sessionIsBeeingLoaded = True
-            #print(sessionIsBeeingLoaded)
             self.combo.clear() 
             self.combo.addItems(["{} ({} x {})".format(fileName,*self.mC.data.getDataFrameShape(dataID)[0]) for dataID, fileName in self.dfs.items()])
             
@@ -360,13 +358,12 @@ class CollapsableDataTreeView(QWidget):
   
     def sendToThread(self, funcProps, addSelectionOfAllDataTypes = False, addDataID = False):
         "Sends a certain request to background thread."
-        if hasattr(self,"sendToThreadFn"):
-            if self.sendToThreadFn is not None:
-                if addSelectionOfAllDataTypes:
-                    funcProps = self.addSelectionOfAllDataTypes(funcProps)
-                if addDataID and "kwargs" in funcProps:
-                    funcProps["kwargs"]["dataID"] = self.dataID
-                self.sendToThreadFn(funcProps)    
+       
+        if addSelectionOfAllDataTypes:
+            funcProps = self.addSelectionOfAllDataTypes(funcProps)
+        if addDataID and "kwargs" in funcProps:
+            funcProps["kwargs"]["dataID"] = self.dataID
+        self.mC.sendRequestToThread(funcProps)    
 
     def openMergeDialog(self,e=None):
         "Open a merge dialog."

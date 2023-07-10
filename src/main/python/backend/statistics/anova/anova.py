@@ -411,7 +411,6 @@ class Anova(object):
 				# observations per cell
 				r['obs'] = dataframe[self.subj].unique().size
 				r['obs'] /= np.prod([self.uniqueLevels[f].size for f in efs]) 
-				#print(r['obs'])
 				# Loftus and Masson standard errors
 				r['critT'] = abs(scipy.stats.t(r['dfe']).ppf(.05/2.))
 				r['se'] = np.sqrt(r['mse']/r['obs'])*r['critT']/1.96
@@ -521,7 +520,6 @@ class Anova(object):
 				r['lambda%s'%x]=r['lambda']
 				r['power%s'%x]=self.observed_power( r['df'], r['dfe'], r['lambda'] ,eps=r['eps%s'%x])
 			self.results[tuple(efs)] = r
-		#print(self.results)
 		subMeans = np.mean(self.df_pivot_array, axis= 1) 
 		ssSubject = np.sum((subMeans-np.mean(self.df_pivot_array))**2)
 		ssSubject *= (np.prod([self.uniqueLevels[f].size for f in wFactors])*1.) #ensure float

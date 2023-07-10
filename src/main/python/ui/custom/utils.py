@@ -46,13 +46,10 @@ dataFileExport = [("txt","Text File"),
 
 def clearLayout(layout):
     "Clears all widgets from layout"
-    print("a2")
     while layout.count():
         child = layout.takeAt(0)
         if child.widget():
             child.widget().deleteLater()
-
-    print("a2")
 
 
 class ICSCrollArea(QScrollArea):
@@ -241,11 +238,9 @@ class PropertyChooser(QWidget):
                         newValue = vInput.text() 
                 else:
                     try:
-                        newValue = np.int(np.float(vInput.text())) if p.getAttr("dtype") == int else np.float(vInput.text())
-                    except:
-
-                        print(p)
-                        self.mC.sendToWarningDialog(infoText="Could not convert input to float or integer. Paramater not updated")
+                        newValue = int(float(vInput.text())) if p.getAttr("dtype") == int else float(vInput.text())
+                    except Exception as e:
+                        self.mC.sendToWarningDialog(infoText=f"Could not convert input to float or integer. Paramater not updated. Error details {e}")
                         continue
                             
                 p.setAttr("value",newValue)

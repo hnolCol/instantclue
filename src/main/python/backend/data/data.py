@@ -984,7 +984,7 @@ class DataCollection(object):
 		
 		if dataID in self.dfsDataTypesAndColumnNames:
 			return {"messageProps":
-						{"title":"Data Frame Updated",
+						{"title":"Updated",
 						"message":"Data Frame Selection updated."},
 					"dataID" : dataID,
 					"columnNamesByType":self.dfsDataTypesAndColumnNames[dataID],
@@ -1160,11 +1160,9 @@ class DataCollection(object):
 		columns = df.columns.values.tolist() 
 		evalColumns = []
 		#try:
-		print("==")
 		for columnName in columns:
 			evalColumnName = self.evaluateColumnName(columnName,dataID=dataID,extraColumnList=evalColumns)
 			evalColumns.append(evalColumnName)
-		print("==")
 		df.columns = evalColumns
 		return df
 		#except Exception as e:
@@ -1720,7 +1718,7 @@ class DataCollection(object):
 		isNotNullData = ~data.isnull()
 		nonNullCounts = isNotNullData.sum(axis=1)
 		counts = pd.DataFrame(nonNullCounts.value_counts()).reset_index()
-		counts.columns = ["#Valid out of {}".format(columnNames.size),"#Counts"]
+		counts.columns = ["#Valid in out of {}".format(columnNames.size),"#Counts"]
 		counts["Rel. Counts ({})".format(numberRows)] = counts["#Counts"] / data.index.size
 		return self.addDataFrame(counts,fileName="ProfileCounts({})-Clipping-{}".format(fileName,clippingActive))
 

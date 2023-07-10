@@ -1622,7 +1622,7 @@ class DataTreeView(QWidget):
 
     def addData(self,X, tooltipData = {} ,dataID = None):
         ""
-        #print(tooltipData)
+
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
         self.table.model().setTooltipdata(tooltipData)
@@ -1741,8 +1741,6 @@ class DataTreeModel(QAbstractTableModel):
 
     def setColumnStateByDataIndex(self,columnNameIndex,newState):
         ""
-       # print(columnNameIndex)
-       # print(newState)
         idx = self._labels.index.intersection(columnNameIndex)
         if not idx.empty:
              self.columnInGrouping[idx] = newState
@@ -1889,8 +1887,6 @@ class DataTreeModel(QAbstractTableModel):
                 dataIndex = self.getDataIndex(index.row())
                 if dataIndex is not None and dataIndex in self._labels.index:
                     tooltipText = self._labels.loc[dataIndex]
-                    #print(self._labels)
-                    #print(self.tooltipData)
                     if tooltipText in self.tooltipData:
                         return self.tooltipData[tooltipText]
                     else:
@@ -2315,8 +2311,6 @@ class DataTreeViewTable(QTableView):
     def compareGroups(self, event=None, test = None, *args, **kwargs):
         ""
         try:
-            #print(test)
-            #print(self.mC.grouping.groupingExists())
             if not self.mC.grouping.groupingExists():
                 w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
                 w.exec()
@@ -2342,7 +2336,6 @@ class DataTreeViewTable(QTableView):
 
     def toggleParam(self,paramName):
         ""
-       # print(paramName)
         self.mC.config.toggleParam(paramName)#"perform.transformation.in.place"
         self.sender().setChecked(self.mC.config.getParam("perform.transformation.in.place"))
 
@@ -2878,7 +2871,7 @@ class DataTreeViewTable(QTableView):
         dataID = self.mC.getDataID()
         categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
         selectedColumn = [colName for colName in self.getSelectedData() if colName in categoricalColumns]
-        #print(selectedColumn)
+
         selDiag = SelectionDialog(
                 ["proteinGroupColumn","modifiedPeptideColumn"],
                 {"proteinGroupColumn":categoricalColumns,"modifiedPeptideColumn":categoricalColumns},

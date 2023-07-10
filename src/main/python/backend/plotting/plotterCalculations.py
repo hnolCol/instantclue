@@ -626,7 +626,7 @@ class PlotterBrain(object):
         tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(nClusters)])#
         #tickLabels = dict([(n,[str(x) for x in np.arange(len(numericColumns))]) for n in range(nClusters)])#
         tickLabels = dict([(n,numericColumns) for n in range(nClusters)])#
-        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,numNumericColumns+0.5]}) for n in range(nClusters)])#)
+        axisLimits = dict([(n,{"yLimit":[dataMinValue, dataMaxValue],"xLimit" : [-0.5,numNumericColumns-0.5]}) for n in range(nClusters)])#)
 
 
 
@@ -3189,21 +3189,7 @@ class PlotterBrain(object):
                 self.sourceData.colorManager.nanColor : -1
 
             }
-        
     
-        #print(potentialColorAndSignificantCategories)
-       # print(colors)
-        #colorCategories = pd.DataFrame(np.tile(colorUniqueValues.transpose(), (1, boolIdcs.columns.size)), columns=boolIdcs.columns)
-        #print(colorCategories)
-        #crate color dict.
-        # if colorColumns.size > 0:   
-        #     colorCategories = [tuple([sigCat,uniqueValue]) for uniqueValue in rawData[colorColumns[0]].unique() for sigCat in [f"{significantStr} & up",f"{significantStr} & down","-"]]
-        #     print(colorCategories)
-
-        #     colors, layerMap = self.getColorMapDictAndLayers(colorCategories, colorColumns) 
-
-        # df3 = pd.DataFrame({x: zip(df1[x], df2[x]) for x in df1.columns})
-
         colorData = potentialColorAndSignificantCategories.applymap(lambda x: colors[x])
         layerData = colorData.applymap(lambda x: layerMap[x])
 
@@ -3246,18 +3232,10 @@ class PlotterBrain(object):
                     "va" : "top"
                     }]
             rawColorCategories = potentialColorAndSignificantCategories.iloc[:,n]
-           # print(rawColorCategories)
-           # print(colorGroupData)
-           # print(colorGroupData["group"].iloc[0])
+
             
             categoryIndexMatch[columnPair] =  dict([(intID,rawColorCategories.index[[x == category for x in rawColorCategories.values]]) for category, intID in zip(colorGroupData["group"].values,
                                                                                                                  colorGroupData["internalID"].values)])
-            # create index matches
-            # categoryIndexMatch[columnPair] = {
-            #         internalIDs[0] : boolIdx.index[aboveZeroAndSignificant],
-            #         internalIDs[1] : boolIdx.index[belowZeroAndSignificant],
-            #         internalIDs[2] : boolIdx.index[~np.logical_or(aboveZeroAndSignificant,belowZeroAndSignificant)]
-            # }
 
         tableTitle = mergeListToString(colorColumns.values,"\n") if colorColumns.size > 0 else "Significance"
 
