@@ -61,6 +61,16 @@ except:
 from lmfit import Model
 
 
+
+def calculateUMAP(metric,nN,min_dist,n_components, X):
+    ""
+    calcUMAP = umap.UMAP(n_neighbors = nN,
+                                                metric = metric,
+                                                min_dist = min_dist,
+                                                n_components = n_components
+                                                )
+    return calcUMAP.fit_transform(X)
+
 def threeCompModel(x, k_st, k_0a, k_bt, k_bi):
     "According to https://pubs.acs.org/doi/10.1021/ac203330z. Please cite this paper when using the three compartment model"
     u = 0.5 * ((k_st + k_0a + k_bt) - np.sqrt( (k_st + k_0a + k_bt) ** 2 - (4 * k_0a * k_bt)))
@@ -561,15 +571,14 @@ class StatisticCenter(object):
                     minDist = config.getParam("umap.min.dist")
                     metric = config.getParam("umap.metric")
                     nComp = config.getParam("umap.n.components")
-
-                    self.calcUMAP = umap.UMAP(n_neighbors = nN,
-                                                metric = metric,
-                                                min_dist = minDist,
-                                                n_components = nComp
-                                                )
+    
+                    with Pool(1) as p:
+                         rs = p.starmap(calculateUMAP,[(metric,nN,minDist,nComp,X) for i in range(1)])
+                         embedding = rs[0]
+                  
                     compNames = ["Comp::UMAP_{:02d}".format(n) for n in range(nComp)]
                     if transpose:
-                        embedding = self.calcUMAP.fit_transform(X.T)
+                        #embedding = self.calcUMAP.fit_transform(X.T)
                  
                         df = pd.DataFrame(embedding, columns=compNames)
                         df[compNames] = df[compNames].astype(float)
@@ -577,7 +586,7 @@ class StatisticCenter(object):
                         return self.sourceData.addDataFrame(df,fileName = "UMAP:2Comp:BaseFile")
                     else:
 
-                        embedding = self.calcUMAP.fit_transform(X)
+                        
                         
                         df = pd.DataFrame(embedding.astype(np.float64),index=dataIndex,columns = compNames)
                         msgProps = getMessageProps("Done..","UMAP calculation performed.\nColumns were added to the tree view.")

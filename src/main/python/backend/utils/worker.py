@@ -50,4 +50,8 @@ class Worker(QRunnable):
             self.signals.result.emit({"funcKey":self.funcKey,"data":result})
               # Return the result of the processing
         finally:
-            self.signals.finished.emit(self.ID)  # Done
+            #check if appropiate details are present in results (e.g. to show a message)
+            msg  = " "
+            if isinstance(result,dict) and "messageProps" in result:
+                msg = f"{result['messageProps']['title']}: {result['messageProps']['message']}"
+            self.signals.finished.emit(self.ID, msg)  # Done

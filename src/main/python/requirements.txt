@@ -57,3 +57,5 @@ urllib3==1.26.12
 wordcloud==1.9.2
 xarray==2022.6.0
 XlsxWriter==3.0.3
+tbb==2021.9.0
+intel-openmp==2023.1.0

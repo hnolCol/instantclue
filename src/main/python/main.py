@@ -8,7 +8,6 @@ from PyQt6.QtCore import *
 
 from pynndescent import NNDescent, PyNNDescentTransformer #try to remove error got with pyinstaller.
 
-from ui.notifications.messageWindow import Notification
 from ui.mainFrames.ICDataHandleFrame import DataHandleFrame
 from ui.mainFrames.ICPlotOptionsFrame import PlotOptionFrame
 from ui.mainFrames.ICSliceMarksFrame import SliceMarksFrame
@@ -43,9 +42,10 @@ import requests
 import warnings
 import multiprocessing
 import importlib
+import numpy as np
 
 
-os.environ["OUTDATED_IGNORE"] = "1"
+
 #ignore some warnings
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 warnings.filterwarnings("ignore", message="Numerical issues were encountered ")
@@ -221,8 +221,7 @@ class InstantClue(QMainWindow):
         self.plotterBrain = PlotterBrain(sourceData = self.data)
         #split widget
         self.splitterWidget = MainWindowSplitter(self)
-        #set up notifcation handler
-        self.notification = Notification()
+       
         #set up logger 
         self.logger = ICLogger(self.config,__VERSION__)
         #setup web app communication
@@ -437,6 +436,10 @@ class InstantClue(QMainWindow):
         if "data" not in resultDict:
             print("data not found in result dict")
             return
+        if resultDict["data"] is None:
+            print("data in result dict is none..")
+            return
+        
         data = resultDict["data"].copy()
         #iteratre over functions. This is a list of dicts
         #containing function name and object name
@@ -463,9 +466,10 @@ class InstantClue(QMainWindow):
                 print(e)
         
     
-    def _threadFinished(self,threadID):
+    def _threadFinished(self,threadID, messageText):
         "Indicate in the ui that a thread finished."
-        self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID)
+        self.mainFrames["sliceMarks"].threadWidget.threadFinished(threadID,messageText)
+       # self.mainFrames["sliceMarks"].threadWidget
     
 
     def getTable(self,tableName):
@@ -715,10 +719,10 @@ class InstantClue(QMainWindow):
         if all(x in messageProps for x in ["title","message"]): 
             if self.config.getParam("errorShownInDialog") and "Error" in messageProps["title"]:
                 self.sendToWarningDialog(infoText=messageProps["message"])
-            else:
-                self.notification.setNotify(
-                    messageProps["title"],
-                    messageProps["message"])
+            # else:
+            #     self.notification.setNotify(
+            #         messageProps["title"],
+            #         messageProps["message"])
 
     def sendToWarningDialog(self,infoText="",textIsSelectable=False,*args,**kwargs):
         ""

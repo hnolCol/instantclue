@@ -66,7 +66,7 @@ class ThreadCircle(QWidget):
 class ThreadWidget(QWidget):
     def __init__(self, parent=None):
         super(ThreadWidget, self).__init__(parent)
-
+        self.setFixedHeight(120)
 
         self.maxThreads = 1
         self.activeThreads = dict() 
@@ -76,20 +76,25 @@ class ThreadWidget(QWidget):
 
     def __controls(self):
         ""
-        self.mainText = createLabel("Threads")
+        self.threadInfoText = createLabel("Threads")
+        self.threadCompletedMsg = createLabel("")
+        self.threadCompletedMsg.setFixedWidth(200)
+        self.threadCompletedMsg.setWordWrap(True)
 
     def __layout(self):
         ""
 
-        self.setFixedHeight(80)
+       
         self.setLayout(QVBoxLayout())
         
         self.threadCircleLayout = QHBoxLayout()
         self.threadCircleLayout.setContentsMargins(0,0,0,0)
+        self.threadCircleLayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
         #self.layout().setVerticalSpacing(1)
-        self.layout().addWidget(self.mainText)
+        self.layout().addWidget(self.threadInfoText)
         self.layout().addLayout(self.threadCircleLayout)
+        self.layout().addWidget(self.threadCompletedMsg)
         self.layout().addStretch()
 
     def addActiveThread(self,ID, fnKey):
@@ -105,16 +110,21 @@ class ThreadWidget(QWidget):
         self.maxThreads = n
         self.updateThreadText()
     
-    def threadFinished(self, ID):
+    def threadFinished(self, ID, msg):
         ""
         self.layout().removeWidget(self.activeThreads[ID])
         self.activeThreads[ID].deleteLater()
         del self.activeThreads[ID]
         self.updateThreadText()
+        self.updateMessageText(msg)
     
     def updateThreadText(self):
         ""
-        self.mainText.setText("Threads ({}/{})".format(len(self.activeThreads),self.maxThreads))
+        self.threadInfoText.setText("Threads ({}/{})".format(len(self.activeThreads),self.maxThreads))
+
+    def updateMessageText(self, msg):
+        ""
+        self.threadCompletedMsg.setText(f"{msg}")
         
 
 class SliceMarksFrame(QWidget):
@@ -408,7 +418,6 @@ class SliceMarksFrame(QWidget):
 
     def handleMarkerDrop(self):
         ""
-        plotType = self.mC.getPlotType()
         
         columnNames = self.mC.mainFrames["data"].getDragColumns()
         dragType = self.mC.mainFrames["data"].getDragType()

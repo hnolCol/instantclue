@@ -84,7 +84,7 @@ class Normalizer(object):
         transformedColumnNames = ["CumulativeSum:{}".format(col) for col in columnNames.values] + ["RelCumulativeSum:{}".format(col) for col in columnNames.values] + ["CumulativeSumRank:{}".format(col) for col in columnNames.values]
         X = self.sourceData.dfs[dataID][columnNames].values
         df = self.sourceData.dfs[dataID][columnNames]
-        df["idx"] = df.index #add index to be used for pivoting back the data.
+        df.loc[df.index,"idx"] = df.index #add index to be used for pivoting back the data.
         #first melt to apply groupby functions
         melted = pd.melt(df,value_vars=columnNames,id_vars=["idx"]).sort_values(by="value",ascending=False)
         grouped = melted.groupby(by=["variable"])
