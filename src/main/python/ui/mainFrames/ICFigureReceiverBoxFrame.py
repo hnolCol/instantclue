@@ -42,8 +42,8 @@ class MatplotlibFigure(QWidget):
         
 
         self.receiverBoxes = OrderedDict() 
-        self.receiverBoxes["Numeric Floats"] = ReceiverBox(parent=self)
-        self.receiverBoxes["Categories"] = ReceiverBox(parent=self, title="Categories", acceptedDragTypes = ["Integers","Categories"])
+        self.receiverBoxes["Numeric Floats"] = ReceiverBox(parent=self, emitChanges=self.recieverBoxItemsChanged)
+        self.receiverBoxes["Categories"] = ReceiverBox(parent=self, title="Categories", acceptedDragTypes = ["Integers","Categories"],emitChanges=self.recieverBoxItemsChanged)
         # set the layout
         layout = QVBoxLayout()
         layout.addWidget(self.receiverBoxes["Numeric Floats"])
@@ -307,7 +307,7 @@ class MatplotlibFigure(QWidget):
         "Removes items from receiver boxes."
         if self.isAnyItemInAnyReceiverBox(columnNames):
             for recieverBox in self.getReceiverBoxes():
-                recieverBox.removeItems(columnNames)
+                recieverBox.deleteItems.emit(columnNames,False)
             self.recieverBoxItemsChanged()
 
     def setColumnStateInTreeView(self, columnNames, newState = False):

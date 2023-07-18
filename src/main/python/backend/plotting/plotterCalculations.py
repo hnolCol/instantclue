@@ -1900,7 +1900,7 @@ class PlotterBrain(object):
                         data = data.loc[data.std(axis=1) != 0,:]
                     rowMetric = "nanEuclidean" 
                     if columnMetric != "None":
-                        columnMetric = "nanEuclidean"
+                        columnMetric = "nanEuclidean"                   
                 else:
                     if (rowMetric != "None" and rowMethod != "None") or  (columnMetric != "None" and columnMethod != "None"):
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
@@ -1910,7 +1910,9 @@ class PlotterBrain(object):
                     else:
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
                         #if no clustering applied, we can keep all values (e.g. just display)
-            
+                if data.empty:
+                    return getMessageProps("Error..","Filtering (NaN, standard deviation) resulted in an empty data frame.")
+                
             data = data.astype(float)
             
         

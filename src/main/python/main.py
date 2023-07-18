@@ -43,6 +43,7 @@ import warnings
 import multiprocessing
 import importlib
 import numpy as np
+import copy
 
 
 
@@ -375,8 +376,10 @@ class InstantClue(QMainWindow):
         dataFrame = self.data.getDataByColumnNames(dataID,columnNames, ignore_clipping = not useClipping)["fnKwargs"]["data"]
         return dataFrame
 
-    def progress_fn(self, n):
+    def progress_fn(self, progressText):
         ""
+        
+
         
         
  
@@ -427,7 +430,6 @@ class InstantClue(QMainWindow):
 
     def _threadComplete(self,resultDict):
         ""
-        
         #check if thread returns a dict or none
         if resultDict is None:
             return
@@ -438,9 +440,9 @@ class InstantClue(QMainWindow):
             return
         if resultDict["data"] is None:
             print("data in result dict is none..")
-            return
-        
-        data = resultDict["data"].copy()
+            data = {}
+        else:
+            data = copy.deepcopy(resultDict["data"]) #deep copy - thread safe? 
         #iteratre over functions. This is a list of dicts
         #containing function name and object name
         for fnComplete in fnsComplete:
@@ -696,6 +698,14 @@ class InstantClue(QMainWindow):
     def isDataLoaded(self):
         "Checks if there is any data loaded."
         return len(self.mainFrames["data"].dataTreeView.dfs) > 0
+    
+    def getQuickSelect(self):
+        ""
+        return self.mainFrames["data"].qS
+
+    def getLiveGraph(self):
+        ""
+        return self.mainFrames["data"].liveGraph
 
     def showMessageForNewVersion(self,releaseURL):
         ""

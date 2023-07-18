@@ -45,7 +45,7 @@ class LiveGraph(QWidget):
         "control widgets"
         # a figure instance to plot on
         self.figure = Figure()
-        self.liveGraph = BlitingLiveGraph(self.figure, mainController = self.mC)
+        self.liveGraph = BlitingLiveGraph(self, self.figure, mainController = self.mC)
         # this is the Canvas Widget that displays the `figure`
         # it takes the `figure` instance as a parameter to __init__
         self.canvas = FigureCanvas(self.figure)
@@ -149,7 +149,8 @@ class LiveGraph(QWidget):
 
     def updateGraphByIndex(self,dataIndex):
         "Update Graph"
-        self.liveGraph.setDataIndex(dataIndex)
+        if not self.liveGraph.getFreezeState():
+            self.liveGraph.setDataIndex(dataIndex)
 
     def dropEvent(self,e):
         ""
@@ -165,9 +166,17 @@ class LiveGraph(QWidget):
         #try to find grouping
         colorMapper = self.mC.grouping.getColorsForGroupMembers()
         #init live graph
-        self.liveGraph.setData(data,colorMapper)
+        self.liveGraph.dataChanged.emit(data,{} if colorMapper is None else colorMapper)
         if storeData:
             self.data = data
+
+    def getFreezeState(self):
+        ""
+        return self.liveGraph.getFreezeState()
+    
+    def setFreezeState(self, state : bool) -> None:
+        ""
+        self.liveGraph.setFreezeState(state)
 
     def getDragType(self):
         ""
@@ -201,17 +210,23 @@ class LiveGraph(QWidget):
         if self.liveGraph.getResizeTrigger():
             self.liveGraph.canvasResized()
 
-class BlitingLiveGraph(object):
+class BlitingLiveGraph(QWidget):
+    dataChanged = pyqtSignal(pd.DataFrame,dict)
+    freezeImageChanged = pyqtSignal(bool)
 
-    def __init__(self,figure, plotType = "Line", mainController = None):
+    def __init__(self,parent, figure, plotType = "Line", mainController = None):
         ""
+        super(BlitingLiveGraph, self).__init__(parent)
         self.figure = figure
         self.plotType = plotType
         self.data = pd.DataFrame() 
         self.selectionIndex = None
+        self.frozen = False
         self.resized = False
-        self.colorMapper = None
+        self.colorMapper = {}
         self.mC = mainController
+        self.dataChanged.connect(self.setData)
+        self.freezeImageChanged.connect(self.setFreezeState)
         
     def addAxis(self):
         if not hasattr(self,"ax"):
@@ -366,7 +381,15 @@ class BlitingLiveGraph(object):
         self.removeAxis()
         self.redraw()
 
-    def setXAxisProps(self):
+    def setFreezeState(self,state : bool) -> None:
+        ""
+        setattr(self,"frozen",state)
+
+    def getFreezeState(self) -> bool:
+        ""
+        return getattr(self,"frozen")
+
+    def setXAxisProps(self) -> None:
         ""
         numColumn = self.data.columns.size
         try:
@@ -376,6 +399,7 @@ class BlitingLiveGraph(object):
             
         except Exception as e:
             print(e)
+
     def setYAxisProps(self):
         ""
         #calculate quants 
@@ -386,9 +410,9 @@ class BlitingLiveGraph(object):
         self.ax.set_ylim(minValue,maxValue)
 
        
-    def setData(self, data = None, colorMapper = None):
+    def setData(self, data : pd.DataFrame, colorMapper : dict):
         ""
-        
+        self.freezeImageChanged.emit(False)
         if data is not None and isinstance(data,pd.DataFrame):
             if data.index.size == 0:
                 return
@@ -396,8 +420,7 @@ class BlitingLiveGraph(object):
             if self.data.empty:
                 return
             self.removeArtists()
-            self.addAxis()
-            
+            self.addAxis() 
             self.setXAxisProps()
             self.setYAxisProps()
             self.addArtist()
@@ -439,7 +462,7 @@ class BlitingLiveGraph(object):
         ""
         if plotType in ["Line","Bar","Boxplot"]:
             self.plotType = plotType
-            self.setData(self.data,self.colorMapper)
+            self.dataChanged.emit(self.data,self.colorMapper)
 
     def setResizeTrigger(self,resized):
         ""

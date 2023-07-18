@@ -8,6 +8,7 @@ from .ICButtonDesgins import ResetButton, PushHoverButton, ResortButton
 from ..resortableTable import ResortableTable
 from ..utils import clearLayout, ICSCrollArea
 from ...utils import INSTANT_CLUE_BLUE, getHoverColor ,WIDGET_HOVER_COLOR,CONTRAST_BG_COLOR, getStdTextColor ,createLabel, createTitleLabel, isWindows, getLargeWidgetBG, getMainWindowBGColor
+import pandas as pd 
 
 class BoxItem(PushHoverButton):
 
@@ -123,7 +124,9 @@ class ItemHolder(QWidget):
         self.itemLayout.addWidget(boxItem)
     
     def deleteItem(self,boxItem):
+
         boxItem.deleteLater()
+  
 
     def clear(self):
         clearLayout(self.itemLayout)
@@ -131,8 +134,11 @@ class ItemHolder(QWidget):
 
 
 class ReceiverBox(QFrame):
+    deleteItems = pyqtSignal(pd.Series,bool)
+
     def __init__(self,parent=None,
                 title="Numeric", 
+                emitChanges = None,
                 acceptedDragTypes = ["Numeric Floats", "Integers"], 
                 *args,**kwargs):
         
@@ -142,11 +148,13 @@ class ReceiverBox(QFrame):
         self.acceptedDragTypes = acceptedDragTypes
         self.items = OrderedDict()
         self.performUpdate = False
+        self.emitChanges = emitChanges
 
         #create widget
         self.__controls()
         self.__layout()
         self.__connectEvents() 
+        self.__connectSignals()
 
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
@@ -205,6 +213,10 @@ class ReceiverBox(QFrame):
         self.clearButton.clicked.connect(self.clearDroppedItems)
         self.sortButton.clicked.connect(self.openSortDialog)
 
+    def __connectSignals(self):
+        ""
+        self.deleteItems.connect(self.removeItems)
+
     def getBoxItemsToUpdate(self):
         ""
         w = self.items.values()
@@ -220,7 +232,7 @@ class ReceiverBox(QFrame):
         self.addItems(items)
         self.reportStateBackToTreeView(event.source())
         self.update()
-        self.parent().recieverBoxItemsChanged()
+        self.emitChanges()
         event.accept()
         
     def dragEnterEvent(self,e):
@@ -266,21 +278,21 @@ class ReceiverBox(QFrame):
 
     def addItems(self,items):
         "Adds items (list) to widget"
-        
         for itemName in items:
             if itemName not in self.items:
              
-                w = BoxItem(itemName)
+                w = BoxItem(itemName, parent=self.itemHolder)
                 w.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                 w.customContextMenuRequested.connect(self.deleteBoxItem)
-                self.items[itemName] = w
                 self.itemHolder.addItem(w)
+                self.items[itemName] = w
         self.handleDragLabelVisibility()
 
     def deleteBoxItem(self,event):
         ""
-        itemName = [self.sender().itemName]
-        self.removeItems(itemName, reportStateToTreeView=True)
+        itemName = pd.Series([self.sender().itemName])
+        self.deleteItems.emit(itemName,True)
+        #self.removeItems(itemName, reportStateToTreeView=True)
         self.handleDragLabelVisibility()
         self.itemsChanged()
 
@@ -300,7 +312,7 @@ class ReceiverBox(QFrame):
     def itemsChanged(self):
         "Notify plotter that items changed."
         
-        self.parent().recieverBoxItemsChanged()
+        self.emitChanges()
 
     def handleDragLabelVisibility(self):
         ""
@@ -318,15 +330,20 @@ class ReceiverBox(QFrame):
             self.items[itemName].setText(newItemName) 
             self.performUpdate = True
                 
-    def removeItems(self, items, reportStateToTreeView = False):
+    def removeItems(self, items, reportStateToTreeView):
         ""
+        update = False
         for itemName in items:
             if itemName in self.items:
                 self.items[itemName].deleteLater()
                 del self.items[itemName]
-        if reportStateToTreeView:
-            self.reportItemRemovalToTreeView(items)
-        self.update()
+                update = True
+
+        print(update,items,self.items)
+        if update:
+            if reportStateToTreeView:
+                self.reportItemRemovalToTreeView(items)
+            self.update()
 
     def reportStateBackToTreeView(self,treeView):
         ""

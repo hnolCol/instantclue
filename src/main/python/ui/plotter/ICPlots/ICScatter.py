@@ -82,8 +82,14 @@ class ICScatterPlot(ICChart):
             menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
         else:
             menus["main"].addAction("Stop QuickSelect Capture", self.stopQuickSelectCapture)
-        
+        isFrozen = self.mC.getLiveGraph().getFreezeState()
+        menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
         menus["main"].addAction("Connect nearest neighbors",self.getNearestNeighborLines)
+
+    def toggleFreezeStateInLiveGraph(self, isFrozen):
+        ""
+
+        self.mC.getLiveGraph().setFreezeState(not isFrozen)
 
 
     def addTooltip(self, tooltipColumnNames,dataID):

@@ -51,11 +51,18 @@ class ICClustermap(ICChart):
                 menus["Color Map (Color column)"].addAction(cMap,self.updateColorMapOfColorColumns)
         if self.groupingExists():
             menus["main"].addAction("Add Grouping Legend", self.addGroupingLegend)
+        isFrozen = self.mC.getLiveGraph().getFreezeState()
+        menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
+
         menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
         if self.plotType == "hclust":
             menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
-            menus["main"].addAction("Share graph", self.shareGraph)
-            
+            #menus["main"].addAction("Share graph", self.shareGraph)
+       
+    def toggleFreezeStateInLiveGraph(self, isFrozen):
+        ""
+        self.mC.getLiveGraph().setFreezeState(not isFrozen)
+
     def groupingExists(self):
         return "axColumnGrouping" in self.axisDict
 

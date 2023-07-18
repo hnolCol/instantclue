@@ -13,12 +13,14 @@ import numpy as np
 import pickle
 
 class QuickSelect(QWidget):
+    dataChanged = pyqtSignal(pd.Series)
     def __init__(self,mainController = None, parent=None):
         
         super(QuickSelect, self).__init__(parent)
         self.__controls()
         self.__layout()
         self.__connectEvents()
+        self.__connectSignals()
 
         self.setAcceptDrops(True)
         self.favSelection = FavoriteSelectionCollection(mainController)
@@ -75,6 +77,9 @@ class QuickSelect(QWidget):
         self.loadButton.clicked.connect(self.loadSelection)
         self.colorButton.clicked.connect(self.openColorMenu)
 
+    def __connectSignals(self):
+        ""
+        self.dataChanged.connect(self.addData)
 
     def __setupTable(self):
         
@@ -728,12 +733,12 @@ class QuickSelectModel(QAbstractTableModel):
     def initColorSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedColors = pd.Series(dtype=str)
+            self.checkedColors = pd.Series(dtype=str, name="hex_color")
             self.userDefinedColors = pd.Series(dtype=str) 
         else:
             self.checkedColors = pd.Series(
                         [self.parent().mC.config.getParam("nanColor")] * self.rowCount(),
-                        index=self._inputLabels.index)
+                        index=self._inputLabels.index, name="hex_color")
 
     def setColorSeries(self, colorSeries):
         ""
@@ -745,13 +750,13 @@ class QuickSelectModel(QAbstractTableModel):
     def setSizeSeries(self):
         ""
         if self.rowCount() == 0:
-            self.checkedSizes = pd.Series(dtype=int)
+            self.checkedSizes = pd.Series(dtype=int, name = "int_sizes")
         else:
             self.checkedSizes = pd.Series(
                                 np.full(
                                 shape=self.rowCount(), 
                                 fill_value=self.parent().mC.config.getParam("scatterSize")), 
-                                index=self._inputLabels.index)
+                                index=self._inputLabels.index, name = "int_sizes")
         
 
     def setDefaultSize(self,size=50):
@@ -1015,16 +1020,21 @@ class QuickSelectModel(QAbstractTableModel):
         ""
         if self._inputLabels.size == 0:
             return
-        if self.lastSearchType is None or self.lastSearchType != how:
+        #merge with colors to facilitate sorting by this
+        sortData = pd.concat([self.checkedColors,self.checkedSizes,self._labels],axis=1)
+        columnNames = sortData.columns.values.flatten().tolist()
 
-            self._labels = self._labels.sort_values(
-                                    ascending = how == "ascending")
+        if self.lastSearchType is None or self.lastSearchType != how:
+            
+            self.sortIndex = sortData.sort_values(by = columnNames,ascending = how == "ascending",kind="stable").index
             self.lastSearchType = how
+
         else:
-            self._labels = self._labels.sort_index(
-                                    ascending=True)
+
+            self.sortIndex = sortData.sort_index(ascending=True).index  
             self.lastSearchType = None
 
+        self._labels = self._labels.loc[self.sortIndex]
         self.completeDataChanged()
 
     def sortByColor(self, e = None, how = "ascending"):

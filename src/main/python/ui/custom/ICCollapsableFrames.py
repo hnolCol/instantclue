@@ -7,6 +7,10 @@ from collections import OrderedDict
 from ..utils import getMainWindowBGColor
 
 class CollapsableFrames(QWidget):
+
+    headerNameChanged = pyqtSignal(str,str)
+    headerStateChange = pyqtSignal(str)
+    
     def __init__(self,buttonDesign, buttonMenu = None, parent = None, animationDuration = 550, spacing = 0):
         super(CollapsableFrames,self).__init__(parent)
         self.frameProps = OrderedDict()
@@ -19,8 +23,12 @@ class CollapsableFrames(QWidget):
         self.parentGeometry()
         self.animationDuration = animationDuration
         self.spacing = spacing
+        self.__connectSignals()
 
-        
+    def __connectSignals(self):
+        ""
+        self.headerNameChanged.connect(self.setHeaderNameByFrameID)
+        self.headerStateChange.connect(self.setInactiveByTitle)
         
     def parentGeometry(self, justReturn = False):
         
@@ -238,7 +246,6 @@ class CollapsableFrames(QWidget):
         return self.frameProps[frameID][frameKey].frameGeometry().width()
     def addToLayout(self):
         ""
-
         for _,collabsabelFrames in self.frameProps.items():
             vbox = QVBoxLayout()
             vbox.addWidget(collabsabelFrames["headerFrame"])

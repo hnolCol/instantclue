@@ -21,6 +21,8 @@ from ..utils import WIDGET_HOVER_COLOR, getHoverColor, INSTANT_CLUE_BLUE, getSta
 import pandas as pd
 from collections import OrderedDict
 import os 
+import time
+import datetime
 
 dataTypeMenu = ["Sort columns .."]
 
@@ -182,6 +184,7 @@ class CollapsableDataTreeView(QWidget):
             self.updateDataIDInTreeViews()
             self.mC.sendRequestToThread(funcProps)
             self.sessionIsBeeingLoaded = False
+            #print(dataID,"updated",datetime.datetime.now(), funcProps)
            
 
     def deleteData(self,e=None):
@@ -317,10 +320,11 @@ class CollapsableDataTreeView(QWidget):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
-                        self.dataHeaders[headerName].addData(values, tooltipData) 
-                        self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
+                        self.dataHeaders[headerName].updateData.emit(values, tooltipData) #addData(values, tooltipData) 
+                        self.frames.headerNameChanged.emit(headerName,"{} ({})".format(headerName,values.size))
+                        #self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
                         if values.size == 0:
-                            self.frames.setInactiveByTitle(headerName)
+                            self.frames.headerStateChange.emit(headerName)
                     else:
                         raise ValueError("Provided Data are not a pandas Series!") 
     

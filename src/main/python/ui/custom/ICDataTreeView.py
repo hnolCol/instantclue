@@ -1499,6 +1499,9 @@ menuBarItems = [
 ] + MT_MENUS + EXPORT_MENU
 
 class DataTreeView(QWidget):
+     
+    updateData = pyqtSignal(pd.Series,dict)
+
     def __init__(self,parent=None, mainController = None, dataID = None, tableID = None):
         super(DataTreeView, self).__init__(parent)
         self.tableID = tableID
@@ -1508,6 +1511,7 @@ class DataTreeView(QWidget):
         self.__controls()
         self.__layout()
         self.__connectEvents()
+        self.__connectSignals()
 
         self.showShortcuts = True
         self.dataID = dataID
@@ -1520,6 +1524,10 @@ class DataTreeView(QWidget):
 
     def __connectEvents(self):
         ""
+
+    def __connectSignals(self):
+        "Connect the signals to safely update"
+        self.updateData.connect(self.addData)
 
     def __setupTable(self):
         ""
@@ -1576,8 +1584,8 @@ class DataTreeView(QWidget):
         
         self.mC.sendRequestToThread(funcProps)
 
-    def setDataID(self,dataID):
-        ""
+    def setDataID(self,dataID : str) -> None:
+        "Save the dataID"
         self.dataID = dataID 
 
     def sortLabels(self):
@@ -1620,21 +1628,18 @@ class DataTreeView(QWidget):
 
         self.showShortcuts = not self.showShortcuts
 
-    def addData(self,X, tooltipData = {} ,dataID = None):
-        ""
-
+    def addData(self,X : pd.Series, tooltipData : dict = {} ,dataID = None) -> None:
+        "Add data to thre treeview. "
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
         self.table.model().setTooltipdata(tooltipData)
         self.table.selectionModel().clear()
         self.table.model().layoutChanged.emit()
 
-      
-        
         if dataID is not None:
             self.setDataID(dataID)
 
-    def setColumnState(self,columnNames,newState):
+    def setColumnState(self,columnNames,newState) -> None:
         ""
         self.table.model().setColumnStateByData(columnNames,newState)
 
@@ -2064,7 +2069,6 @@ class DataTreeViewTable(QTableView):
                 self.removeSelection(e)  
 
         elif tableColumn == 1:
-
             self.addRemoveItems(tableIndex)
 
         elif tableColumn == 2:
@@ -2206,6 +2210,7 @@ class DataTreeViewTable(QTableView):
         else:
             self.sendItemToRecieverbox(tableIndex)
         #update state (clicked) and refresh table
+       
         self.model().setColumnState(tableIndex)
         self.model().rowDataChanged(tableIndex.row())
 
@@ -2217,13 +2222,14 @@ class DataTreeViewTable(QTableView):
         ""
         items = self.getSelectedData(indices=[tableIndex])
         funcProps = {"key":"receiverBox:addItems","kwargs":{"columnNames":items,"dataType":self.tableID}}
-        self.sendToThread(funcProps,addDataID=True)
+        funcProps["kwargs"]["dataID"] = self.mC.getDataID()
+        self.mC.sendRequest(funcProps)
 
     def removeItemFromRecieverbox(self, tableIndex):
         ""
         items = self.getSelectedData(indices=[tableIndex])
         funcProps = {"key":"receiverBox:removeItems","kwargs":{"columnNames":items}}
-        self.sendToThread(funcProps)
+        self.mC.sendRequest(funcProps)
 
     def saveDragStart(self):
         ""
@@ -2372,7 +2378,7 @@ class DataTreeViewTable(QTableView):
     def dropColumnsInDataFrame(self,deletedColumns):
         ""
         funcProps = {"key":"data::dropColumns","kwargs":{"columnNames":deletedColumns,"dataID":self.mC.getDataID()}}
-        self.mC.sendRequestToThread(funcProps)
+        self.mC.sendRequest(funcProps)
 
     def copyDataToClipboard(self,tableIndex):
       

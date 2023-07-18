@@ -156,8 +156,8 @@ class ICDMergeDataFrames(QDialog):
 
         self.mergeParams[dfID]["dataID"] = dataID
         self.mergeParams[dfID]["columnNames"] = self.mC.data.getPlainColumnNames(dataID)
-        self.mergeParams[dfID]["mergeColumns"] = pd.Series()
-        self.mergeParams[dfID]["selectedColumns"] = pd.Series()
+        self.mergeParams[dfID]["mergeColumns"] = pd.Series(dtype="str")
+        self.mergeParams[dfID]["selectedColumns"] = pd.Series(dtype="str")
 
 
     def getDfID(self,widget):

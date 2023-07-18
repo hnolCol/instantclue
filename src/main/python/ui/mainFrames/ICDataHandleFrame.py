@@ -276,12 +276,7 @@ class DataHandleFrame(QFrame):
                 self.excelImporter = ExcelImporter(mainController = self.mC, selectedFiles = selectedFiles) 
                 
                 self.excelImporter.exec()
-                del self.excelImporter
-                # if d.result():
-                #     #set replace object
-                #     xlsxFiles = [f for f in selectedFiles if f.endswith(".xlsx")]
-                #     #load files on thread
-                #     self.addExcelFiles(xlsxFiles,d.getSettings())
+                
         except Exception as e:
             print(e)
 
@@ -327,7 +322,7 @@ class DataHandleFrame(QFrame):
             return
         dataID = self.getDataID()
         funcProps = {"key":"data::deleteData","kwargs":{"dataID" : dataID}}
-        self.mC.sendRequestToThread(funcProps)
+        self.mC.sendRequest(funcProps) #no thread needed super fast..
 
 
     def exportMultipleDataFramesToExcel(self,exportDataFormat):
@@ -434,6 +429,7 @@ class DataHandleFrame(QFrame):
         if dataID is not None:
             if not self.dataTreeView.getDataID() == dataID:
                 return
+       # self.dataTreeView.updateData.emit(columnNamesByType, tooltipData, dataID)
         self.dataTreeView.updateDataInTreeView(columnNamesByType, tooltipData)
         self.updateGroupingInTreeView()
     
@@ -453,13 +449,12 @@ class DataHandleFrame(QFrame):
 
     def updateDataInQuickSelect(self,data):
         ""
-        self.qS.addData(data)
+        self.qS.dataChanged.emit(data)
 
     def updateColorAndSizeInQuickSelect(self,checkedColors=None,checkedSizes=None):
         ""
         self.qS.updateColorsAndSizes(checkedColors,checkedSizes)
       
-        
     def sendToThread(self,funcProps):
         ""
         self.mC.sendRequestToThread(funcProps)

@@ -725,7 +725,7 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			self.dfs[dataID] = self.dfs[dataID].drop(columns = columnNames, errors = "ignore")
 			self.extractDataTypeOfColumns(dataID)
-			taskCompleteKwargs = getMessageProps("Column (s) deleted","Selected columns deleted.")
+			taskCompleteKwargs = getMessageProps("Column(s) deleted.","Data tree updated.")
 			taskCompleteKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
 			taskCompleteKwargs["columnNames"] = columnNames
 			return taskCompleteKwargs

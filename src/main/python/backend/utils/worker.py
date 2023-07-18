@@ -40,6 +40,7 @@ class Worker(QRunnable):
         '''
         # Retrieve args/kwargs here; and fire processing using them
         result = {}
+       # self.kwargs["signals"] = self.signals
         try:
             result = self.fn(*self.args, **self.kwargs)
         except:
