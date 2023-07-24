@@ -19,7 +19,7 @@ def _lv_box_ends(vals, k_depth="tukey",trust_alpha=0.05,):
     vals = np.asarray(vals)
     # Remove infinite values while handling a 'object' dtype
     # that can come from pd.Float64Dtype() input
-    with pd.option_context('mode.use_inf_as_null', True):
+    with pd.option_context('mode.use_inf_as_na', True):
         vals = vals[~pd.isnull(vals)]
     n = len(vals)
     p = 0.007

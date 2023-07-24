@@ -131,10 +131,11 @@ funcPropControl = {
         {
             "threadRequest":{"obj":"data","fn":"getDataByColumnNames","requiredKwargs":["dataID","columnNames"]},
             "completedRequest":[
+                
                # #{"obj":"self","fn":"updateActivePlotterFn","objKey":"middle","objName":"mainFrames","requiredKwargs":["fnName","fnKwargs"]},
                # {"obj":"self","fn":"setData","objKey":"middle","objName":"mainFrames","requiredKwargs":["fnName","fnKwargs"]}#
                 {"obj":"self","fn":"updateActivePlotterFn","objKey":"middle","objName":"mainFrames","requiredKwargs":["fnName","fnKwargs"]},
-                {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]}
+                {"obj":"self","fn":"updateFigure","objKey":"middle","objName":"mainFrames","requiredKwargs":[],"optionalKwargs":["newPlot"]},
                 ]     
         },
     "data::getDataByColumnNamesForTooltip":
@@ -159,6 +160,14 @@ funcPropControl = {
                 updateTreeView,
                 sendMessageProps]   
         },
+
+    "data::copyDataset":
+        {
+            "threadRequest":{"obj":"data","fn":"copyData","requiredKwargs":["dataID"]},
+            "completedRequest": addDataAndRefresh
+        },
+
+        
     "data::deleteData":
         {
             "threadRequest":{"obj":"data","fn":"deleteData","requiredKwargs":["dataID"]},

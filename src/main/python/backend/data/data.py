@@ -1526,6 +1526,19 @@ class DataCollection(object):
 		else:
 			return errorMessage 
 
+	def copyData(self,dataID):
+		""
+		if dataID not in self.dfs: return errorMessage
+
+		hasClipping = self.hasClipping(dataID)
+		columnNames = self.getPlainColumnNames(dataID)
+		#print(columnNames,hasClipping)
+		data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+		#print(data)
+		originalFileName = self.getFileNameByID(dataID)
+		fileName = f"c({originalFileName})" if not hasClipping else f"c(clipping-{originalFileName})"
+		dataFrame = data.copy()
+		return self.addDataFrame(dataFrame=dataFrame,fileName=fileName)
 
 	def duplicateColumns(self,dataID,columnNames):
 		'''

@@ -316,18 +316,23 @@ class CollapsableDataTreeView(QWidget):
 
     def updateDataInTreeView(self,columnNamesByType, tooltipData = {}):
         """Add data to the data treeview"""
+        print("updating data -- debug")
         if isinstance(columnNamesByType,dict):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
+                        print("calling signal", headerName)
                         self.dataHeaders[headerName].updateData.emit(values, tooltipData) #addData(values, tooltipData) 
+                        print("calling header change signal")
                         self.frames.headerNameChanged.emit(headerName,"{} ({})".format(headerName,values.size))
                         #self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
+                        print("header changed")
                         if values.size == 0:
                             self.frames.headerStateChange.emit(headerName)
                     else:
                         raise ValueError("Provided Data are not a pandas Series!") 
-    
+        print("completed")
+
     def updateDataIDInTreeViews(self):
         "Update Data in Treeview:: settingData"
         for treeView in self.dataHeaders.values():
@@ -432,6 +437,9 @@ class CollapsableDataTreeView(QWidget):
                 # ugly menu - need to be changed 
                 action = menus["Data frames .. "].addAction("Rename")
                 action.triggered.connect(self.openRenameDialog)
+                #copy dataframe
+                action = menus["Data frames .. "].addAction("Copy")
+                action.triggered.connect(self.copyDataset)
                 ## remove clipping
                 action = menus["Data frames .. "].addAction("Reset clipping")
                 action.triggered.connect(self.resetClipping)
@@ -525,6 +533,12 @@ class CollapsableDataTreeView(QWidget):
             kwargs = {"groupingName":groupingName,"newGroupingName":dlg.state}
             self.mC.sendRequestToThread({"key":key,"kwargs":kwargs})      
 
+    def copyDataset(self,*args,**kwargs) -> None:
+        "Copy a dataset and add to the data treeview"
+        dataID = self.mC.getDataID() 
+        key = "data::copyDataset"
+        funcProps = {"key" : key, "kwargs" : {"dataID" : dataID}}
+        self.mC.sendRequestToThread(funcProps)
 
     def resetClipping(self,*args,**kwargs):
         ""

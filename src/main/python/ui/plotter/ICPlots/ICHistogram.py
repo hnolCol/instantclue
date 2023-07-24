@@ -12,6 +12,7 @@ class ICHistogram(ICChart):
         ""
         super(ICHistogram,self).__init__(*args,**kwargs)
         self.histogramPatches = dict() 
+        self.histogramKey = dict()
 
        
     def addPatches(self, onlyForID = None, targetAx = None):
@@ -24,8 +25,10 @@ class ICHistogram(ICChart):
                     internalID = pProps["internalID"]
                     if not internalID in self.histogramPatches:
                         self.histogramPatches[internalID] = []
+                        self.histogramKey[internalID] = []
                     p = self.getPatch(pProps)
                     self.histogramPatches[internalID].append(p)
+                    self.histogramKey[internalID] = n
                     self.axisDict[n].add_patch(p)
             else:
                 if n != onlyForID:
@@ -77,13 +80,30 @@ class ICHistogram(ICChart):
         for color, group, internalID in colorGroup.values:
             if internalID in self.histogramPatches:
                 patches = self.histogramPatches[internalID]
+
                 for p in patches:
                     if isinstance(p,Polygon):
                         p.set_edgecolor(color)
+                        
                     else:
                         p.set_facecolor(color)
+                self.updateColorInProps(internalID,color)
 
         self.updateFigure.emit()
+
+
+    def updateColorInProps(self,internalID,color):
+        "Update the props to allow for export to main figure."
+        for n,patches in self.data["patches"].items():
+            
+            for pProps in patches:
+                if pProps["internalID"] == internalID:
+                    if pProps["type"] == "Rectangle":
+                        pProps["p"]["facecolor"] = color
+                    else:
+                        pProps["p"]["edgecolor"] = color
+    
+
 
     def updateBackgrounds(self):
         ""
@@ -123,13 +143,8 @@ class ICHistogram(ICChart):
     
     def updateQuickSelectItems(self, propsData = None):
         ""
-       # print("updaing")
         colorData = self.getQuickSelectData()
         dataIndex = self.getDataIndexOfQuickSelectSelection()
-        #dataIndexInClust = [idx for idx in dataIndex if idx in self.data["plotData"].index]
-        #idxPosition = [self.data["plotData"].index.get_loc(idx) + 0.5 for idx in dataIndexInClust]
-      #  if len(idxPosition) == 0:
-       #     return
         if not hasattr(self,"quickSelectScatter"):
             self.quickSelectScatter = dict()
         for ax in self.axisDict.values():

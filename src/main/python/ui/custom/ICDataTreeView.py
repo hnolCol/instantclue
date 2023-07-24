@@ -1628,14 +1628,20 @@ class DataTreeView(QWidget):
 
         self.showShortcuts = not self.showShortcuts
 
-    def addData(self,X : pd.Series, tooltipData : dict = {} ,dataID = None) -> None:
+    def addData(self, X : pd.Series, tooltipData : dict = {} ,dataID = None) -> None:
         "Add data to thre treeview. "
-        self.table.model().layoutAboutToBeChanged.emit()
-        self.table.model().setNewData(X)
-        self.table.model().setTooltipdata(tooltipData)
+        print(X)
         self.table.selectionModel().clear()
+        print("1")
+        self.table.model().layoutAboutToBeChanged.emit()
+        print("2")
+        self.table.model().setNewData(X)
+        print("3")
+        self.table.model().setTooltipdata(tooltipData)
+        print("4")
         self.table.model().layoutChanged.emit()
-
+        self.table.model().completeDataChanged()
+        print("5")
         if dataID is not None:
             self.setDataID(dataID)
 
@@ -1679,13 +1685,17 @@ class DataTreeModel(QAbstractTableModel):
         
 
     def initData(self,labels):
-
+        print("B1")
         self._labels = labels
         self._inputLabels = labels.copy()
+        print("B2")
         self.tooltipData = OrderedDict()
         self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
+        print("B3")
         self.resetGrouping()
-        self.setDefaultSize()
+        print("B4")
+        
+        print("B5")
         self.lastSearchType = None
 
     def rowCount(self, parent=QModelIndex()):
@@ -1908,7 +1918,7 @@ class DataTreeModel(QAbstractTableModel):
     def setNewData(self,labels):
         ""
         self.initData(labels)
-        self.completeDataChanged()
+        
 
     def setTooltipdata(self,tooltipData):
         ""
@@ -2827,9 +2837,9 @@ class DataTreeViewTable(QTableView):
                 if w.exec():
                     
                     withinGroupings = pd.Series([x for x in groupingNames if x != currentGrouping])
-                    withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values[0]
+                    withinGrouping = self.mC.askForItemSelection(items=withinGroupings,title = "Please select one within grouping.", singleSelection=True).values.flatten()[0]
                     if withinGrouping is None:return
-                    defaultKwargs["withinGroupingName"] = withinGrouping.values.flatten()
+                    defaultKwargs["withinGroupingName"] = withinGrouping
                     
             funcProps = {"key":fkey,"kwargs":defaultKwargs}
             self.mC.sendRequestToThread(funcProps)

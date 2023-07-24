@@ -220,7 +220,7 @@ class scatterPlot(object):
 			xMin, xMax = np.nanquantile(xaxisData, q=[0,1])
 			yMin, yMax = np.nanquantile(yaxisData, q=[0,1])
 		else:
-			with pd.option_context('mode.use_inf_as_null', True):
+			with pd.option_context('mode.use_inf_as_na', True):
 				nonNaNData = self.data[self.numericColumns].dropna()
 			xMin, yMin = nonNaNData[self.numericColumns].min()
 			xMax, yMax = nonNaNData[self.numericColumns].max()

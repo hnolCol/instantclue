@@ -97,8 +97,12 @@ class ICBoxenplot(ICChart):
                                 # Set the color gradation, first box will have color=hex_color
                     collection.set_array(np.array(np.linspace(1, 0, len(boxes))))
                     ax.add_collection(collection)
-                    l = Line2D(**r["medianLine"])
-                    ax.add_line(l)
+                    if "medianLine" in r and len(r["medianLine"]) > 0:
+                        l = Line2D(**r["medianLine"])
+                        ax.add_line(l)
+                    if "outlierProps" in r and len(r["outlierProps"]) > 0:
+                        l = Line2D(**r["outlierProps"])
+                        ax.add_line(l)
         
                         
     def _getCampForBoxes(self, hexColor):

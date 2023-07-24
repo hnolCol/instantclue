@@ -209,28 +209,29 @@ class Normalizer(object):
         withinGrouping  = self.sourceData.parent.grouping.getGrouping(withinGroupingName)
         data = self.sourceData.dfs[dataID]
         r = OrderedDict()
-        print(toGroups)
         for specGroup in toGroups:
             if specGroup in grouping:
                 specGroupColumnNames = grouping[specGroup]
-               
-                for group, groupColumnNames in grouping.items():
-                    if group != specGroup:
+                specGroupMean = data[specGroupColumnNames].mean(axis=1)
+                for _, groupColumnNames in grouping.items():
                        
                         if withinGrouping is not None:
                             for withinGroup, withGroupColumnNames in withinGrouping.items():
-                                withinGroupColumnNamesSubset = pd.Series(np.intersect1d(groupColumnNames.values,withGroupColumnNames.values))
-                                withinGroupColumnNamesSpecGroup = pd.Series(np.intersect1d(specGroupColumnNames.values,withGroupColumnNames.values))
+                                withinGroupColumnNamesSubset = pd.Series(np.intersect1d(groupColumnNames,withGroupColumnNames))
+                                withinGroupColumnNamesSpecGroup = pd.Series(np.intersect1d(specGroupColumnNames,withGroupColumnNames))
                                
-                                columnName = "{} - {} ({})".format(group,specGroup,withinGroup)
-                                r[columnName] = data[withinGroupColumnNamesSubset].mean(axis=1) - data[withinGroupColumnNamesSpecGroup].mean(axis=1)
+                                
+                                for colName in withinGroupColumnNamesSubset:
+                                    columnName = "{} - {} ({})".format(colName,specGroup,withinGroup)
+                                    r[columnName] = data[colName] - data[withinGroupColumnNamesSpecGroup].mean(axis=1)
+
                         else:
-                            columnName = "{} - {}".format(group,specGroup)
-                            r[columnName] = data[groupColumnNames].mean(axis=1) - data[specGroupColumnNames].mean(axis=1)
+                            for colName in groupColumnNames:
+                                transformedColumnName = "{} - {}".format(colName,specGroup)
+                                r[transformedColumnName] = data[colName] - specGroupMean
 
                         
         df = pd.DataFrame(r, index= data.index)
-        
         return self.sourceData.joinDataFrame(dataID,df)
             
 

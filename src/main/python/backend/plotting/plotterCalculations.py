@@ -411,10 +411,13 @@ class PlotterBrain(object):
         self.numericColumns = numericColumns
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
+        
         with threadpool_limits(limits=1, user_api='blas'): 
             
             graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
             graphData["plotType"] = plotType
+            graphData["dataID"] = dataID
+           #graphData["columnNamesByType"] = self.sourceData.dfsDataTypesAndColumnNames[dataID]
             return graphData
 
     def getCountplotProps(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
@@ -1411,8 +1414,12 @@ class PlotterBrain(object):
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             #get unique categories
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
-            colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
             nColorCats = colorCategories.size
+            if cnColorCats > 50:
+                return getMessageProps("Error..","Color Categories more than 50 which is not suitable for this plot type.")
+            
+            colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
+            
             colorGroups["color"] = colors.values()
             colorGroups["group"] = colorCategories
             colorGroups["internalID"] = [getRandomString() for n in range(nColorCats)]
@@ -1476,6 +1483,8 @@ class PlotterBrain(object):
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
 
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
+            if colorCategories.size > 50:
+                return getMessageProps("Error..","Color Categories more than 50 which is not suitable for this plot type.")
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
             nColorCats = colorCategories.size
             colorGroups["color"] = colors.values()
@@ -1534,16 +1543,20 @@ class PlotterBrain(object):
             axisPositions = getAxisPosition(nNumCols,maxCol=self.maxColumns)
 
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
+            if colorCategories.size > 50:
+                return getMessageProps("Error..","Color Categories more than 50 which is not suitable for this plot type.")
             colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
             nColorCats = colorCategories.size
             tickCats = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
+            if tickCats.size > 100:
+                return getMessageProps("Error..","Tick Categories more than 100 which is not suitable for this plot type.")
             colorGroups["color"] = colors.values()
             colorGroups["group"] = colorCategories
             colorGroups["internalID"] = [getRandomString() for n in range(nColorCats)]
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
-            if np.isnan(maxErrorValue):
-                maxErrorValue = 0.05*maxValue
+            if np.isnan(maxErrorValue) or maxErrorValue == 0:
+                maxErrorValue = 0.15*maxValue
         
             
            
@@ -1625,6 +1638,9 @@ class PlotterBrain(object):
             #second category is color coded
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             #number of numeric columns
+            for uniqueValues in [axisCategories,xAxisCategories,colorCategories]:
+                if uniqueValues.size > 50:
+                    return getMessageProps("Error..","A categorical columns contains more than 50 unique values which is not suitable for this plot type.")
             NNumCol = len(numericColumns)
             #create axis
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
@@ -1646,10 +1662,10 @@ class PlotterBrain(object):
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
             
-            if np.isnan(maxErrorValue):
+            if np.isnan(maxErrorValue) or maxErrorValue == 0:
                 maxErrorValue = 0.05*maxValue
         
-            xValues = dict([(catName,x) for x,catName in enumerate(tickCats)])
+            #xValues = dict([(catName,x) for x,catName in enumerate(tickCats)])
             nAxis = -1
             for numColumn in numericColumns:
 
@@ -1666,6 +1682,7 @@ class PlotterBrain(object):
                     else:
                         tickPos = np.arange(tickCats.size)
                         
+                    xValues = dict([(catName,tickPos[nCat]) for nCat,catName in enumerate(tickCats)])
                     tickPositions[nAxis] = tickPos
                     minX, maxX = np.min(tickPos), np.max(tickPos)
                     distance = np.sqrt(minX**2 + maxX**2) * 0.05

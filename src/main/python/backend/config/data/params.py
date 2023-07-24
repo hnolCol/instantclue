@@ -1923,7 +1923,7 @@ DEFAULT_PARAMETER = [
     },
     {
     "name"          :   "pca.add.current.grouping.only",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
