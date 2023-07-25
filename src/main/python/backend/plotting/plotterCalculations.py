@@ -563,8 +563,10 @@ class PlotterBrain(object):
 
         # color group file
         colorGroups = pd.DataFrame(columns = ["color","group","internalID"])
-
-        clusterLabels, data, model = self.sourceData.statCenter.runCluster(dataID,numericColumns,method,True)
+        try:
+            clusterLabels, data, model = self.sourceData.statCenter.runCluster(dataID,numericColumns,method,True)
+        except ValueError as e:
+            return getMessageProps("Error..", "Running the clustering resulted in error. (Check if you have more data rows than clusters.): " + str(e))
         clusterLabels = clusterLabels.sort_values("Labels")
         columnName = "C({})".format(method)
         dataMinValue, dataMaxValue = np.nanquantile(data.values.flatten(),q=[0,1])

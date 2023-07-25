@@ -73,8 +73,8 @@ class ICColorSizeTableBase(QWidget):
             self.table.model().isEditable = isEditable
             self.table.createMenu()
             self.table.model().initData(data)
-            self.table.model().completeDataChanged()
             self.table.model().layoutChanged.emit()
+            self.table.model().completeDataChanged()
             self.setWidgetHeight()
             
     def setWidgetHeight(self):
@@ -97,6 +97,7 @@ class ICColorSizeTableBase(QWidget):
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().resetView()
         self.table.model().layoutChanged.emit()
+        self.table.model().completeDataChanged()
         self.setWidgetHeight()
 
 
@@ -490,7 +491,7 @@ class ColorTableModel(QAbstractTableModel):
         ""
         self._labels = pd.Series(dtype="object")
         self._inputLabels = self._labels.copy()
-        self.completeDataChanged()
+        
 
     def getInitColor(self,dataIndex):
         ""

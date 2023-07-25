@@ -193,6 +193,7 @@ class QuickSelect(QWidget):
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
         self.table.model().layoutChanged.emit()
+        self.table.model().completeDataChanged()
 
 
     def setMaskMode(self,event=None):
@@ -994,7 +995,7 @@ class QuickSelectModel(QAbstractTableModel):
     def setNewData(self,labels):
         ""
         self.initData(labels)
-        self.completeDataChanged()
+        
 
 
     def search(self,searchString):

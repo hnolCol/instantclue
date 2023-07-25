@@ -2195,14 +2195,16 @@ class DataCollection(object):
 				copy = self.parent.config.getParam("outlier.copy.results")
 				if copy: 
 					cleanColumns = []
-					
-					numColumns = len(self.parent.grouping.getColumnNames())
-					for groupName, columnNames in grouping.items():
-						cleanColumns.append(["reO({}):{}".format(groupName,colName) for colName in columnNames.values])
+					groupingColumnNames = self.parent.grouping.getColumnNames()
+					numColumns = len(groupingColumnNames)
+					cleanColumns = [f"reO({colName})" for colName in groupingColumnNames]
 
-					cleanData = pd.DataFrame(np.zeros(shape=(self.dfs[dataID].index.size,numColumns)), index=self.dfs[dataID].index, columns = np.array(cleanColumns).flatten())
-			
+					cleanData = pd.DataFrame(
+						np.zeros(shape=(self.dfs[dataID].index.size,numColumns)), 
+			      				index=self.dfs[dataID].index, columns = cleanColumns).astype(bool)
+
 				for n, (groupName, columnNames) in enumerate(grouping.items()):
+					cleanGroupColumns = [f"reO({colName})" for colName in columnNames]
 					X = self.dfs[dataID][columnNames].values
 					Q = np.nanquantile(X,q=[0.25,0.5,0.75],axis=1)
 					Q1 = Q[0,:].reshape(X.shape[0],1)
@@ -2219,7 +2221,7 @@ class DataCollection(object):
 						
 					else:
 						X[outlierBool] = np.nan
-						cleanData[cleanColumns[n]] = X 
+						cleanData[cleanGroupColumns] = X 
 
 				if not copy:
 					return getMessageProps("Done ..","Outlier replaced with NaN.")
