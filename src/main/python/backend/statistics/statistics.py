@@ -1072,8 +1072,8 @@ class StatisticCenter(object):
         with Pool(1) as p:
             rs = p.starmap(calcUtest,[(data,boolIdxByCategory,numericColumn,minGroupDifference,minGroupSize,labelColumns,alternative) for numericColumn in columnNames.values])
             r = [x for r in rs for x in  r[1]]
-            
-        resultDF = resultDF.append(r,ignore_index=True)
+      
+        resultDF = pd.DataFrame(r)
         pValues = resultDF["p-value"].values.flatten()
 
         resultDF.loc[:,"-log10 p-value"] = (-1)*np.log10(pValues)

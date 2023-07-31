@@ -526,7 +526,7 @@ class DataCollection(object):
 		ColumnNames can only be numeric.
 		"""
 		if dataID in self.dfs:
-			requiredColumns = columnNames.append(pd.Series(groupbyColumn.values.flatten()),ignore_index=True)
+			requiredColumns =  pd.concat([columnNames,pd.Series(groupbyColumn.values.flatten())],ignore_index=True) 
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
 			if metric == "text-merge":
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()

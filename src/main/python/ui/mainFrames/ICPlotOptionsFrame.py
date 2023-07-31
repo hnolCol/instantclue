@@ -310,9 +310,8 @@ class PlotOptionFrame(QWidget):
         ""
         return self.typeManager.getDefaultType()
 
-    def getCurrentPlotType(self):
-        ""
-        
+    def getCurrentPlotType(self) -> str:
+        "Returns the current plot type"
         return self.currentPlotType
 
     def updatePlotTypeInFigure(self,*args,**kwargs):
