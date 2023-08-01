@@ -1684,7 +1684,6 @@ class DataTreeModel(QAbstractTableModel):
         self.tooltipData = OrderedDict()
         self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
         self.resetGrouping()
-        print("Grouping reset.")
         self.lastSearchType = None
 
     def rowCount(self, parent=QModelIndex()):

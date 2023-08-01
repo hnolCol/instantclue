@@ -384,6 +384,10 @@ class BlitingLiveGraph(QWidget):
     def setFreezeState(self,state : bool) -> None:
         ""
         setattr(self,"frozen",state)
+        if self.selectionIndex is not None:
+        
+            self.updateNumber(len(self.selectionIndex))
+            self.updateAxis()
 
     def getFreezeState(self) -> bool:
         ""
@@ -496,7 +500,7 @@ class BlitingLiveGraph(QWidget):
         ""
         
         self.hoverText.set_visible(True)
-        self.hoverText.set_text(f"n : {n}")
+        self.hoverText.set_text(f"n : {n}" if not self.frozen else f"n: {n} - frozen")
 
     def updateBarData(self,x,y):
         ""

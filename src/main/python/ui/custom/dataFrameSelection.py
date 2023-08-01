@@ -321,17 +321,13 @@ class CollapsableDataTreeView(QWidget):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
                     if isinstance(values,pd.Series):
-                        print("calling signal", headerName)
                         self.dataHeaders[headerName].updateData.emit(values, tooltipData) #addData(values, tooltipData) 
-                        print("calling header change signal")
                         self.frames.headerNameChanged.emit(headerName,"{} ({})".format(headerName,values.size))
                         #self.frames.setHeaderNameByFrameID(headerName,"{} ({})".format(headerName,values.size))
-                        print("header changed")
                         if values.size == 0:
                             self.frames.headerStateChange.emit(headerName)
                     else:
                         raise ValueError("Provided Data are not a pandas Series!") 
-        print("completed")
 
     def updateDataIDInTreeViews(self):
         "Update Data in Treeview:: settingData"
