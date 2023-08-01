@@ -1630,18 +1630,12 @@ class DataTreeView(QWidget):
 
     def addData(self, X : pd.Series, tooltipData : dict = {} ,dataID = None) -> None:
         "Add data to thre treeview. "
-        print(X)
         self.table.selectionModel().clear()
-        print("1")
         self.table.model().layoutAboutToBeChanged.emit()
-        print("2")
         self.table.model().setNewData(X)
-        print("3")
         self.table.model().setTooltipdata(tooltipData)
-        print("4")
         self.table.model().layoutChanged.emit()
         self.table.model().completeDataChanged()
-        print("5")
         if dataID is not None:
             self.setDataID(dataID)
 
@@ -1685,17 +1679,12 @@ class DataTreeModel(QAbstractTableModel):
         
 
     def initData(self,labels):
-        print("B1")
         self._labels = labels
         self._inputLabels = labels.copy()
-        print("B2")
         self.tooltipData = OrderedDict()
         self.columnInGraph = pd.Series(np.zeros(shape=labels.index.size), index=labels.index)
-        print("B3")
         self.resetGrouping()
-        print("B4")
-        
-        print("B5")
+        print("Grouping reset.")
         self.lastSearchType = None
 
     def rowCount(self, parent=QModelIndex()):
