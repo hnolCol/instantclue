@@ -2844,12 +2844,14 @@ class DataCollection(object):
 			leftDf = self.dfs[leftDataID][leftKeepColumnNames] #subset data by selection 
 			rightDf = self.dfs[rightDataID][rightKeepColumnNames] #subset data by selection 
 
-		
-			mergedDataFrames = leftDf.merge(rightDf,
+			try:
+				mergedDataFrames = leftDf.merge(rightDf,
 								how = how, 
 								left_on = leftMergeColumn, 
 								right_on = rightMergeColumn, 
 								indicator = indicator)
+			except Exception as e:
+				return getMessageProps("Error...","Calling merge resulted in an error. Please make sure to use the same datatype for key columns. " + str(e))
 			mergeIndicatorColumns = [colName for colName in mergedDataFrames.columns if "_merge" in colName]
 			if len(mergeIndicatorColumns) > 0:
 				mergedDataFrames[mergeIndicatorColumns] = mergedDataFrames[mergeIndicatorColumns].astype(str)

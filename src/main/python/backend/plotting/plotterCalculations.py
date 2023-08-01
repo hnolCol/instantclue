@@ -3994,8 +3994,8 @@ class PlotterBrain(object):
             else:
                 uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList))
             
-            uniqueValuesTotal = pd.Series([self.sourceData.replaceObjectNan]).append(
-                                uniqueValuesAsSeries, ignore_index=True).unique()
+            uniqueValuesTotal = pd.concat([pd.Series(self.sourceData.replaceObjectNan),uniqueValuesAsSeries], ignore_index=True).unique()
+                                
             factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
             #map color data to data
             colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
@@ -4081,7 +4081,9 @@ class PlotterBrain(object):
             repData[repData < quantiles] = np.nan
             sizeData = pd.DataFrame(repData,index=rawData.index)
         
-        return {"sizeData":sizeData}
+            return {"sizeData":sizeData}
+    
+        return getMessageProps("Error..","Only numeric floats are supported at the moment.")
 
 	
     def getColorGroupingForCorrmatrix(self, columnNames, grouping, groupingName, groupColorMapper):
