@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
-from PyQt6.QtGui import QFont, QFontDatabase
-from PyQt6.QtWidgets import QLabel, QComboBox, QLineEdit, QMenu
+from PyQt5.QtCore import *
+from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtWidgets import QLabel, QComboBox, QLineEdit, QMenu
 import os
 
 

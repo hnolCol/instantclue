@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import * 
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import * 
 from pandas.core.algorithms import isin 
 from backend.proteomics.ICSampleList import ICSampleListCreator
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton, ResetButton, LabelLikeButton

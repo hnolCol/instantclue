@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import * 
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import * 
 
 from ..delegates.ICQuickSelect import DelegateColor, DelegateSize
 from .Widgets.ICButtonDesgins import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
@@ -143,7 +143,7 @@ class QuickSelect(QWidget):
         dfg = QuickSelectDialog(mainController=self.mC)
 
         try: 
-            eventPoint = self.mapToGlobal(event.position())
+            eventPoint = self.mapToGlobal(event.pos())
             dfg.setGeometry(QRect(int(eventPoint.x()-50),int(eventPoint.y()),100,100))
             if dfg.exec():
                 props = dfg.getProps()

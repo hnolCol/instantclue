@@ -1,5 +1,5 @@
 
-from PyQt6.QtCore import QRunnable, pyqtSlot
+from PyQt5.QtCore import QRunnable, pyqtSlot
 from .workerSignal import WorkerSignals
 
 import traceback

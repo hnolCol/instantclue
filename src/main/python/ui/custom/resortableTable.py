@@ -1,8 +1,8 @@
 import sys
 
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import * 
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import * 
 from ..utils import createLabel, createTitleLabel, getHoverColor
 import pandas as pd
 import numpy as np
@@ -119,15 +119,15 @@ class ResortTableWidget(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(int(event.position().y()))
-        column = self.columnAt(int(event.position().x()))
+        row = self.rowAt(int(event.pos().y()))
+        column = self.columnAt(int(event.pos().x()))
         return self.model().index(row,column)
 
     def mouseReleaseEvent(self,event):
         ""
         if self.rightClick:
             if self.menu is not None:
-                pos = self.mapToGlobal(event.position())
+                pos = self.mapToGlobal(event.pos())
                 self.menu.exec(QPoint(int(pos.x()),int(pos.y())))
 
     def mousePressEvent(self,event):

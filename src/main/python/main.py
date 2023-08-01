@@ -1,9 +1,9 @@
 
 import matplotlib
 matplotlib.use('Qt5Agg')
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 
 from pynndescent import NNDescent, PyNNDescentTransformer #try to remove error got with pyinstaller.
@@ -237,7 +237,7 @@ class InstantClue(QMainWindow):
 
         self.setCentralWidget(_widget)
         self._setupStyle()
-        print("aa")
+    
         self._getMainFrames()
         self._setPlotter()
         self._addMenu()
@@ -245,7 +245,7 @@ class InstantClue(QMainWindow):
         self.threadpool = QThreadPool()
         
         self.mainFrames["sliceMarks"].threadWidget.setMaxThreadNumber(self.threadpool.maxThreadCount())
-        print("a")
+ 
         self._connectSignals()
         
         self.quickSelectTrigger.connect(self.mainFrames["data"].qS.updateDataSelection)
@@ -283,7 +283,7 @@ class InstantClue(QMainWindow):
     def _setupFontStyle(self):
         ""
         
-        self.config.setParamRange("label.font.family",QFontDatabase.families())
+        self.config.setParamRange("label.font.family",QFontDatabase().families())
         from ui import utils
         utils.standardFontSize = self.config.getParam("label.font.size")
         fontFamily = self.config.getParam("label.font.family") 

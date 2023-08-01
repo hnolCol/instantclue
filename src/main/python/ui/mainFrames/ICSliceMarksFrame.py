@@ -1,6 +1,6 @@
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 # internal imports
 from ui.custom.Widgets.ICButtonDesgins import LabelButton, TooltipButton, SizeButton, ColorButton, FilterButton, SelectButton , MarkerButton, SubsetDataButton

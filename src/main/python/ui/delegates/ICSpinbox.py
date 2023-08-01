@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import QStyledItemDelegate, QSpinBox
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import QStyledItemDelegate, QSpinBox
 import numpy as np
 
 class SpinBoxDelegate(QStyledItemDelegate):

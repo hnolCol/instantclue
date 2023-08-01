@@ -1,6 +1,6 @@
 from cgi import test
-from PyQt6.QtCore import QObject, pyqtSignal, QPoint
-from PyQt6.QtGui import QCursor
+from PyQt5.QtCore import QObject, pyqtSignal, QPoint
+from PyQt5.QtGui import QCursor
 
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D

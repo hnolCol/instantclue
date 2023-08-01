@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
-from PyQt6.QtGui import *
-from PyQt6.QtWidgets import * 
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont, BuddyLabel
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit, getStdTextColor
