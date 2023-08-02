@@ -218,7 +218,6 @@ class InstantClue(QMainWindow):
         #setup normalizer
         self._setupNormalizer()
         self._setupTransformer()
-        print("aaa")
         #plotter brain (calculates props for plos)
         self.plotterBrain = PlotterBrain(sourceData = self.data)
         #split widget
@@ -934,23 +933,19 @@ class MainWindowSplitter(QWidget):
 
 def main():
     "Start the main window."
-    print("aaa22")
     if '_PYIBoot_SPLASH' in os.environ and importlib.util.find_spec("pyi_splash") and isWindows():
         import pyi_splash
         if pyi_splash.is_alive():
             pyi_splash.update_text('UI Loaded ...')
             pyi_splash.close()
-    print("aaa2")
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     #QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
     app = QApplication(sys.argv)
-    print("aaa223")
     app.setStyle("Windows") # set Fusion Style
     iconPath = os.path.join("..","icons","base","32.png")
     if os.path.exists(iconPath):
         app.setWindowIcon(QIcon(iconPath))
     win = InstantClue() # Inherits QMainWindow
-    print("aaa222")
     screenGeom = app.primaryScreen().geometry()
     win.setGeometry(10,10,screenGeom.width()-100,screenGeom.height()-140)
     #win.showMaximized()
