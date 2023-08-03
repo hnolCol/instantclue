@@ -93,7 +93,7 @@ if __name__ == "__main__":
     batchCorrection.setPeptideSequences(["ADVTPADFSEWSK"])#,"GAGSSEPVTGLDAK"
     data = pd.read_csv("testData.txt", sep="\t")
     intensityColumns = [col for col in data.columns if "Col" in col]
-    #print(data.columns.values.tolist())
+    #print(data.columns.to_list())
     batchCorrection.setData(data,intensityColumns=intensityColumns)
     batchCorrection.fitLowess()
 

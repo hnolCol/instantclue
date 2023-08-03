@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 
 from ..utils import clearLayout, getStandardFont, BuddyLabel
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit, getStdTextColor
-
+from .ICTableBase import ICTableBase, ItemDelegate, ICModelBase
 from ...delegates.ICQuickSelect import DelegateColor#, ItemDelegate #borrow delegate
 from ...dialogs.ICDataInputDialog import ICDataInput
 import pandas as pd
@@ -13,124 +13,8 @@ import os
 
 
 
-class ItemDelegate(QStyledItemDelegate):
-    def __init__(self,parent):
-        super(ItemDelegate,self).__init__(parent)
-    
-    def paint(self, painter, option, index):
-        painter.setFont(getStandardFont())
-        rect = option.rect
-        if self.parent().mouseOverItem is not None and index.row() == self.parent().mouseOverItem:
-            b = QBrush(QColor(getHoverColor()))
-            painter.setBrush(b)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRect(option.rect)
-            self.addText(index,painter,rect)
-        
-        else:
-            self.addText(index,painter,rect)
-    
-    def addText(self,index,painter,rect):
-        ""
-        painter.setPen(QPen(QColor(getStdTextColor())))
-        rect.adjust(9,0,0,0)
-        painter.drawText(rect,   Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
-       
-    def setEditorData(self,editor,index):
-        editor.setFont(getStandardFont())
-        editor.setAutoFillBackground(True)
-        editor.setText(self.parent().model().data(index,Qt.ItemDataRole.DisplayRole))
 
-class ICColorSizeTableBase(QWidget):
-    selectionChanged = pyqtSignal()
-
-    def __init__(self, mainController, *args,**kwargs):
-
-        super(ICColorSizeTableBase,self).__init__(*args,**kwargs)
-        self.mC = mainController
-        self.title = ""
-        self.encodedColumnNames = []
-
-        self.setMaximumHeight(0)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-
-    def setTitle(self,title):
-        ""
-        if isinstance(title,str):
-            self.titleLabel.setText(title)
-            self.title = title
-
-    def setEncodedColumnNames(self,encoedColumnNames : pd.Series):
-        ""
-        self.encodedColumnNames = encoedColumnNames
-    
-    def setData(self,data, title=None, isEditable = True, encodedColumnNames = None):
-        "" 
-        if isinstance(data,pd.DataFrame):
-            self.setTitle(title)
-            self.setEncodedColumnNames(encodedColumnNames)
-            self.table.model().layoutAboutToBeChanged.emit()
-            self.table.model().isEditable = isEditable
-            self.table.createMenu()
-            self.table.model().initData(data)
-            self.table.model().layoutChanged.emit()
-            self.table.model().completeDataChanged()
-            self.setWidgetHeight()
-            
-    def setWidgetHeight(self):
-        ""
-        if "\n" in self.title:
-            linesTakenByTitle = self.title.count("\n")
-        else:
-            linesTakenByTitle = 1 
-        
-        rowCount = self.table.model().rowCount()
-        if rowCount == 0:
-            maxHeight = 0
-        else:
-            maxHeight = int(rowCount * (self.table.rowHeight+2) + linesTakenByTitle * 25 + 55) #header + title
-     
-        self.setMaximumHeight(maxHeight)
-    
-    def reset(self):
-        ""
-        self.table.model().layoutAboutToBeChanged.emit()
-        self.table.model().resetView()
-        self.table.model().layoutChanged.emit()
-        self.table.model().completeDataChanged()
-        self.setWidgetHeight()
-
-
-    def subsetSelection(self):
-        ""
-        rowIndex = self.table.rightClickedRowIndex
-        internalID = self.table.model().getInternalIDByRowIndex(rowIndex)
-        groupName = self.table.model().getGroupByInternalID(internalID)
-        exists, graph =  self.mC.getGraph()
-        if exists and groupName is not None:
-            graph.subsetDataOnInternalID(internalID,groupName)
-           
-    def leaveEvent(self, event = None):
-        ""
-        if hasattr(self,"table"):
-            self.table.mouseOverItem = None
-        if hasattr(self,"highlightColorGroup"):
-            self.highlightColorGroup(reset=True)
-
-    def saveModelDataToExcel(self):
-        "Allows export to excel file."
-        baseFilePath = os.path.join(self.mC.config.getParam("WorkingDirectory"),"ICExport")
-        fname,_ = QFileDialog.getSaveFileName(self, 'Save file', baseFilePath,
-                        "Excel files (*.xlsx)")
-                #if user cancels file selection, return function
-        if fname:
-            self.table.model()._labels.to_excel(fname,sheet_name="ICExport")
-    
-    def copyToClipboard(self):
-        "Pastes model data to clipboard."
-        self.table.model()._labels.to_clipboard()
-
-class ICColorTable(ICColorSizeTableBase):
+class ICColorTable(ICTableBase):
     clorMapChanged = pyqtSignal() 
     def __init__(self, *args,**kwargs):
 
@@ -225,7 +109,7 @@ class ICColorTable(ICColorSizeTableBase):
                     graph.highlightGroupByColor(colorGroupData,internalID)
                     self.currentHighLight = internalID
                
-
+    @pyqtSlot()
     def updateColorInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -280,7 +164,7 @@ class ICColorTable(ICColorSizeTableBase):
     
     
 
-class ColorTableModel(QAbstractTableModel):
+class ColorTableModel(ICModelBase):
     
     def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
         super(ColorTableModel, self).__init__(parent)
@@ -293,26 +177,9 @@ class ColorTableModel(QAbstractTableModel):
         self._inputLabels = labels.copy()
         self._inLegend = pd.Series(np.ones(shape = self._labels.index.size).astype(bool) ,index=self._labels.index)
 
-    def rowCount(self, parent=QModelIndex()):
-        
-        return self._labels.index.size
-
     def columnCount(self, parent=QModelIndex()):
         
         return 2
-    
-    def dataAvailable(self):
-        ""
-        return self._labels.index.size > 0 
-
-    def getDataIndex(self,row):
-        ""
-        if self.validDataIndex(row):
-            return self._labels.index[row]
-        
-    def getLabelsName(self):
-        ""
-        return self._labels.columns
 
     def updateGroupData(self,value,index):
         ""
@@ -320,10 +187,6 @@ class ColorTableModel(QAbstractTableModel):
         if dataIndex is not None:
             self._labels.loc[dataIndex,"group"] = value
             self._inputLabels = self._labels.copy()
-
-    def validDataIndex(self,row):
-        ""
-        return row <= self._labels.index.size - 1
 
     def deleteEntriesByIndexList(self,indexList):
         ""
@@ -345,28 +208,6 @@ class ColorTableModel(QAbstractTableModel):
         dataIndex = self.getDataIndex(tableIndex.row())
         return self._labels.loc[dataIndex,"color"]
 
-    def getLabels(self):
-        ""
-        return self._labels
-
-    def getSelectedData(self,indexList):
-        ""
-        dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
-        return self._labels.loc[dataIndices]
-
-    def getCurrentGroup(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-     
-        if mouseOverItem is not None:
-            
-            return self._labels.iloc[mouseOverItem].loc["group"]
-
-    def getCurrentInternalID(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-        if mouseOverItem is not None and "internalID" in self._labels.columns: 
-            return self._labels.iloc[mouseOverItem].loc["internalID"]
 
     def getGroupByInternalID(self,internalID):
         ""
@@ -468,31 +309,7 @@ class ColorTableModel(QAbstractTableModel):
             return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
         else:
             return Qt.ItemFlag.ItemIsEnabled 
-
-    def setNewData(self,labels):
-        ""
-        self.initData(labels)
-        self.completeDataChanged()
-
-    
-    def completeDataChanged(self):
-        ""
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
-
-    def rowRangeChange(self,row1, row2):
-        ""
-        self.dataChanged.emit(self.index(row1,0),self.index(row2,self.columnCount()-1))
-
-    def rowDataChanged(self, row):
-        ""
-        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
-
-    def resetView(self):
-        ""
-        self._labels = pd.Series(dtype="object")
-        self._inputLabels = self._labels.copy()
         
-
     def getInitColor(self,dataIndex):
         ""
         return self._inputLabels.loc[dataIndex,"color"]

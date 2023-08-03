@@ -200,7 +200,7 @@ class ICDMergeDataFrames(QDialog):
                 senderGeom = self.sender().geometry()
                 bottomRight = self.mapToGlobal(senderGeom.bottomRight())
                 h = dlg.getApparentHeight()
-                dlg.setGeometry(bottomRight.x() + 15,bottomRight.y()-int(h/2),185,h)
+                dlg.setGeometry(bottomRight.x() + 15,bottomRight.y()-int(h/2),190,h)
 
                 #handle result
                 if dlg.exec():

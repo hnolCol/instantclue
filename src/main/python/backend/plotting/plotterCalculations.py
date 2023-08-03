@@ -76,7 +76,7 @@ def lowessFit(X,it=None,frac=None,*args,**kwargs):
         Calculates lowess line from dataFrame input
         '''
         X.dropna(inplace=True)
-        data = X.sort_values(by = X.columns.values[0])
+        data = X.sort_values(by = X.columns.array[0])
         x = data.iloc[:,0].values
         y = data.iloc[:,1].values
 
@@ -1873,6 +1873,7 @@ class PlotterBrain(object):
         clusterColorMap = {}
         
         #display grouping setting
+        nanThreshold = self.sourceData.parent.config.getParam("min.required.valid.values")
         displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
         distanceBetweenClusterMapAndColor = self.sourceData.parent.config.getParam("hclust.color.axis.border.left")
         removeRowsWithNoStd = self.sourceData.parent.config.getParam("hclust.remove.rows.with.no.std")
@@ -1910,7 +1911,7 @@ class PlotterBrain(object):
                     return getMessageProps("Error..","Correlation matrix calculations resulted in a complete NaN matrix.")
             else:
                 if rowMetric == "nanEuclidean":
-                    nanThreshold = self.sourceData.parent.config.getParam("min.required.valid.values")
+                    
                     if nanThreshold > len(numericColumns):
                         nanThreshold = len(numericColumns)
                     data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna(thresh=nanThreshold)
@@ -1994,7 +1995,7 @@ class PlotterBrain(object):
                             width = 10, 
                             height = 1,
                             facecolor =  colorsByColumnNamesForGn[columnName] if columnName in  colorsByColumnNamesForGn else self.sourceData.colorManager.nanColor,
-                            alpha = 0.75) for n,columnName in enumerate(data.columns.values)]
+                            alpha = 0.75) for n,columnName in enumerate(data.columns.array)]
                     groupingRectangles.extend(groupingGNRectangles)
         except Exception as e:
             print(e)
@@ -2229,7 +2230,7 @@ class PlotterBrain(object):
                                     heightMain]		
         
         axisDict["axColormap"] =    [x0,
-                                    y1-0.15,
+                                    y1-0.16,
                                     0.02,
                                     0.1]	
         
@@ -2427,6 +2428,10 @@ class PlotterBrain(object):
                 uniqueValuesCat1 = data[categoricalColumns[0]].unique() 
                 numUniqueCat = uniqueValuesCat1.size 
                 
+                if numUniqueCat > 15:
+                    return getMessageProps(
+                        "Error..",
+                        f"The selected categorical columns {categoricalColumns[0]} has more than 15 ({numUniqueCat}) unique values, which would result in {numUniqueCat} scatter plots which is not supported.")
                
                 axisLabels = {}
                 firstAxisRow = True
@@ -2476,7 +2481,11 @@ class PlotterBrain(object):
                 elif len(categoricalColumns) == 2:
                     uniqueValuesCat2 = data[categoricalColumns[1]].unique() 
                     numUniqueCat2 = uniqueValuesCat2.size
-
+                    if numUniqueCat2 > 15:
+                        return getMessageProps(
+                            "Error..",
+                            f"The selected categorical columns {categoricalColumns[1]} has more than 15 ({numUniqueCat2}) unique values, which would result in {numUniqueCat2} scatter plots which is not supported.")
+               
                     numOfAxis = numUniqueCat * numUniqueCat2 * len(numericColumnPairs)
                     axisPositions = getAxisPosition(numOfAxis,maxCol=numUniqueCat)
                     requiredColumns = []

@@ -82,7 +82,7 @@ class MatplotlibFigure(QWidget):
             funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName()
 
             if plotType in ["hclust","corrmatrix"]  and self.mC.grouping.groupingExists() and self.mC.config.getParam("hclust.display.grouping") and self.mC.config.getParam("hclust.ask.for.groupings.to.display"):
-                funcKey = self.mC.askForGroupingSelection(funcKey)
+                funcKey = self.mC.askForGroupingSelection(funcKey, deleteFromFuncKeyIfDialogClosed = True)
 
                 # groupings = self.mC.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
                 # if len(groupings) > 0:
@@ -91,8 +91,8 @@ class MatplotlibFigure(QWidget):
                 #         selectedGrupings = dlg.getSelection().values.flatten()
                 #         if selectedGrupings.size > 0: #check
                 #             funcKey["kwargs"]["groupingName"] = selectedGrupings
-            if "groupingName" not in funcKey["kwargs"]:
-                funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName() 
+            #if "groupingName" not in funcKey["kwargs"]:
+            #    funcKey["kwargs"]["groupingName"] = self.mC.grouping.getCurrentGroupingName() 
                 #print(groupings)
             self.mC.sendRequestToThread(funcKey)
             

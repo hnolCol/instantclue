@@ -831,7 +831,7 @@ class scatterPlot(object):
 		'''
 		self.toolTipsActive = True
 		columnsNotInData = [x for x in toolTipData.columns if x not in self.data.columns]
-		self.annotationColumns = toolTipData.columns.values.tolist()
+		self.annotationColumns = toolTipData.columns.to_list()
 	
 		if len(columnsNotInData) != 0:
 			self.data = self.data.join(toolTipData[columnsNotInData])

@@ -1949,7 +1949,8 @@ class ICChart(QObject):
 		""
 		scatterSizes = []
 		scatterColors = []
-		#get index
+		#get index#
+	
 		intIDs = self.quickSelectScatterDataIdx[ax]["coords"]["intID"] 
 		colorMapper = dict([(intID,colorValue) for intID, colorValue in quickSelectGroup[["internalID","color"]].values])
 		sizeMapper = dict([(intID,sizeValue) for intID, sizeValue in quickSelectGroup[["internalID","size"]].values])
@@ -2219,7 +2220,7 @@ class ICChartToolTip(object):
 		diff = (xMin-xMax)*0.01
 		
 		if x + width > xMax - 0.1*xMax and x > sum(self.axProps['xlim'])/2:
-			 self.textProps['ha'] = 'right'
+				self.textProps['ha'] = 'right'
 		else:
 			self.textProps['ha'] = 'left'
 			diff *= -1

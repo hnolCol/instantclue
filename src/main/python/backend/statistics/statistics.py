@@ -461,7 +461,7 @@ class StatisticCenter(object):
         '''
         data = self.getData(dataID,columnNames)
         data.dropna(inplace=True)
-        data = data.sort_values(by = data.columns.values[0])
+        data = data.sort_values(by = data.columns.array[0])
         x = data.iloc[:,0].values
         y = data.iloc[:,1].values
 
@@ -687,10 +687,10 @@ class StatisticCenter(object):
             data = self.getData(dataID,columnNames).dropna()
             groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
             if data.index.size > 2:
-                Y =  np.array([groupFactors[colName] for colName in data.columns.values])
+                Y =  np.array([groupFactors[colName] for colName in data.columns.array])
                 X = data.values.T
                 if model == "Random Forest":
-                    #Y =  np.array([groupFactors[colName] for colName in data.columns.values])
+                    #Y =  np.array([groupFactors[colName] for colName in data.columns.array])
                     #X = data.values.T
                     nTrees = config.getParam("feature.randomforest.n_estimators")
                     min_samples_split = config.getParam("feature.randomforest.min_samples_split")
@@ -895,7 +895,7 @@ class StatisticCenter(object):
                     ####X = dataSubset.apply(lambda row : _calcIncrease(row,xValues,0), axis=1)
                    
                     X.index = dataSubset.index
-                    X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" and len(replicateGrouping) == 1 else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.values]
+                    X.columns = ["fit:({}):{}".format(groupNameComp,colName) if repID == "None" and len(replicateGrouping) == 1 else "fit:({}):{}_{}".format(groupNameComp,colName,repID) for colName in X.columns.array]
                     
                     if normalization != "None":
                         dataSubset.columns = ["norm:fitModel:{}".format(colName) for colName in dataSubset.columns]

@@ -4,11 +4,11 @@ from PyQt5.QtWidgets import *
 from pandas.core.indexes import multi 
 
 #ui utils
-from ...utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
-from .ICVSelectableTable import PandaTable, PandaModel, MultiColumnSelectablePandaModel
-from ..warnMessage import AskQuestionMessage
-from ..Widgets.ICButtonDesgins import ICStandardButton, ResetButton
-from ..ICTags import Tag, ICSearchWithTags
+from ..utils import TABLE_ODD_ROW_COLOR, WIDGET_HOVER_COLOR, createTitleLabel, getMessageProps, createLabel
+from ..custom.tableviews.ICVSelectableTable import PandaTable, PandaModel, MultiColumnSelectablePandaModel
+from ..custom.warnMessage import AskQuestionMessage
+from ..custom.Widgets.ICButtonDesgins import ICStandardButton, ResetButton
+from ..custom.ICTags import Tag, ICSearchWithTags
 #external imports
 import pandas as pd 
 import numpy as np
@@ -22,7 +22,6 @@ contextMenuData = OrderedDict([
             ("copyRows",{"label":"Copy Row(s)","fn":"copyRows"}),
             ("copyData",{"label":"Copy Data Frame","fn":"copyDf"})
         ])
-
 
 headercolors = sns.color_palette("Paired",8,desat=0.75).as_hex()
 
@@ -207,13 +206,11 @@ class PandaTableDialog(QDialog):
 
     def setSelectedRowsLabel(self, nRows = 0):
         ""
-        
         if isinstance(nRows,int):
             self.selectionLabel.setText("{} row(s) selected".format(nRows))
 
     def addData(self,X = pd.DataFrame()):
         ""
-       
         if isinstance(X,pd.DataFrame):
             self.table.model().layoutAboutToBeChanged.emit()
             self.table.model().updateDataFrame(X)

@@ -3,6 +3,8 @@ from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from collections import OrderedDict
 import numpy as np 
+
+
 class ICSwarmplot(ICChart):
     ""
     def __init__(self,*args,**kwargs):
@@ -97,16 +99,24 @@ class ICSwarmplot(ICChart):
 
     def updateQuickSelectItems(self,propsData):
         ""
+        
         if self.isQuickSelectActive():
             if self.isQuickSelectModeUnique():
-                dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+               
+                if len(self.quickSelectCategoryIndexMatch) == 1:
+                    dataIndex = np.array([idx for idx in self.quickSelectCategoryIndexMatch.values()]).flatten()
+                else:
+                    dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
             else:
-                dataIndex = self.getDataIndexOfQuickSelectSelection()
-
+                dataIndex = self.getDataIndexOfQuickSelectSelection()        
             for scatterPlot in self.scatterPlots.values():
                 if hasattr(scatterPlot,"quickSelectScatter"):
                     scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
                     self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+
+                   # scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
+               # self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+               # self.quickSelectScatterDataIdx[scatterPlot.ax] = {"idx":dataIndex,"coords":pd.DataFrame(intIDMatch,columns=["intID"])}
 
         self.updateFigure.emit()
 
@@ -117,9 +127,7 @@ class ICSwarmplot(ICChart):
             ax = scatterPlot.ax
             
             if self.isQuickSelectModeUnique():
-
-                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(quickSelectGroup)
-
+                scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
             else:
                 if ax in self.quickSelectScatterDataIdx:
                     dataIdx = self.quickSelectScatterDataIdx[ax]

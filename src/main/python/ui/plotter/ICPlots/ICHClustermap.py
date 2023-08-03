@@ -541,7 +541,7 @@ class ICClustermap(ICChart):
             "values":values,
             "colorValues": colorValues.tolist(),
             "rowLabels":rowLabels,
-            "colLabels":self.data["plotData"].columns.values.tolist(),
+            "colLabels":self.data["plotData"].columns.to_list(),
             "extraValues" : [],
             "extraColorValues" : None,
             "colLabelColors" : {}
@@ -782,7 +782,7 @@ class ICClustermap(ICChart):
         ""
         #print(colorData,colorMeshLimits)
         #print(colorData.loc[self.data["plotData"].index].values)
-        colorColumnNames = colorData.columns.values
+        colorColumnNames = colorData.columns.array
         colorFloats = colorData.loc[self.data["plotData"].index].astype(np.float64)# prevent integer error
         #resort color data by index (as identified by clustering)
         colorValues = colorFloats.values 

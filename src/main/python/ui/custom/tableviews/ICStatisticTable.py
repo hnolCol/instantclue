@@ -5,12 +5,12 @@ from PyQt5.QtWidgets import *
 from ..utils import clearLayout, getStandardFont
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
-from .ICColorTable import ICColorSizeTableBase
+from .ICTableBase import ICTableBase, ICModelBase
 from backend.utils.stringOperations import getReadableNumber
 import pandas as pd
 import numpy as np
 
-class ICStatisticTable(ICColorSizeTableBase):
+class ICStatisticTable(ICTableBase):
     
     def __init__(self,*args,**kwargs):
 
@@ -44,6 +44,7 @@ class ICStatisticTable(ICColorSizeTableBase):
             graph.setHoverObjectsInvisible()
             graph.resetSize()
         
+    @pyqtSlot()
     def updateStatsInGraph(self):
         ""
         
@@ -62,7 +63,7 @@ class ICStatisticTable(ICColorSizeTableBase):
         if exists:
             graph.removeStatsArtistsByInternalID(internalID)
 
-class StatisticTableModel(QAbstractTableModel):
+class StatisticTableModel(ICModelBase):
     
     def __init__(self, labels = pd.DataFrame(), parent=None):
         super(StatisticTableModel, self).__init__(parent)
@@ -72,18 +73,10 @@ class StatisticTableModel(QAbstractTableModel):
 
         self._labels = labels
         self._inputLabels = labels.copy()
-        
-    def rowCount(self, parent=QModelIndex()):
-        
-        return self._labels.index.size
 
     def columnCount(self, parent=QModelIndex()):
         
         return 5
-    
-    def dataAvailable(self):
-        ""
-        return self._labels.index.size > 0 
 
     def getDataIndex(self,row):
         ""
@@ -96,44 +89,6 @@ class StatisticTableModel(QAbstractTableModel):
         if dataIndex is not None:
             self._labels[dataIndex] = value
             self._inputLabels = self._labels.copy()
-
-    def validDataIndex(self,row):
-        ""
-        return row <= self._labels.index.size - 1
-
-    def getLabels(self):
-        ""
-        return self._labels
-
-    def getSelectedData(self,indexList):
-        ""
-        dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
-        return self._labels.loc[dataIndices]
-
-    def getCurrentGroup(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-     
-        if mouseOverItem is not None:
-            
-            return self._labels.iloc[mouseOverItem].loc["group"]
-
-    def getCurrentInternalID(self):
-        ""
-        if hasattr(self.parent(),"rightClickedRowIndex"):
-            rowIdx = self.parent().rightClickedRowIndex
-            return self._labels.iloc[rowIdx].loc["internalID"]
-
-        # mouseOverItem = self.parent().mouseOverItem
-        # print(self._labels.columns)
-        # print(mouseOverItem)
-        # if mouseOverItem is not None and "internalID" in self._labels.columns: 
-        #     return self._labels.iloc[mouseOverItem].loc["internalID"]
-
-    def getItemChangedInternalID(self):
-        ""
-        if self.parent().sizeChangedForItem is not None and "internalID" in self._labels.columns:
-            return self._labels.iloc[self.parent().sizeChangedForItem ].loc["internalID"]
             
     def setData(self,index,value,role):
         ""
@@ -200,25 +155,6 @@ class StatisticTableModel(QAbstractTableModel):
         
         self.initData(labels)
         self.completeDataChanged()
-
-    def completeDataChanged(self):
-        ""
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
-
-    def rowRangeChange(self,row1, row2):
-        ""
-        self.dataChanged.emit(self.index(row1,0),self.index(row2,self.columnCount()-1))
-
-    def rowDataChanged(self, row):
-        ""
-        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
-
-    def resetView(self):
-        ""
-        self._labels = pd.Series(dtype="object")
-        self._inputLabels = self._labels.copy()
-        self.completeDataChanged()
-
 
 
 class StatisticTable(QTableView):

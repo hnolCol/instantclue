@@ -2221,6 +2221,15 @@ DEFAULT_PARAMETER = [
     "description"   :   "If enabled, warnings given by the backend are shown in a new dialog window instead of a small notification window in the top right screen corner."
     }, 
     {
+    "name"          :   "melt.data.ignore.clipping",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Data Transformation",
+    "description"   :   "If enabled, the melt data transformation will not respect any clipping set by the quick select widget."
+    }, 
+    {
     "name"          :   "melt.data.add.column.names",
     "value"         :   False,
     "dtype"         :   bool,

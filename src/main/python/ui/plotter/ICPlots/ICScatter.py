@@ -326,7 +326,7 @@ class ICScatterPlot(ICChart):
         for scatterPlot in self.scatterPlots.values():
             if hasattr(scatterPlot,"quickSelectScatter"):
                 scatterPlot.setQuickSelectScatterData(dataIndex,propsData.loc[dataIndex])
-                self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
+               # self.quickSelectScatterDataIdx[scatterPlot.ax] = dataIndex
                 self.quickSelectScatterDataIdx[scatterPlot.ax] = {"idx":dataIndex,"coords":pd.DataFrame(intIDMatch,columns=["intID"])}
         self.updateFigure.emit()
             
@@ -335,6 +335,7 @@ class ICScatterPlot(ICChart):
         for scatterPlot in self.scatterPlots.values():
             ax = scatterPlot.ax
             if self.isQuickSelectModeUnique():
+               
                 scatterSizes, scatterColors, _ = self.getQuickSelectScatterProps(ax,quickSelectGroup)
             else:
                 if ax in self.quickSelectScatterDataIdx:

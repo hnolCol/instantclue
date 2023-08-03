@@ -13,7 +13,7 @@ from ..plotter.plotTypeManager import PlotTypeManager, plotTypeTooltips, gridPos
 from ..custom.Widgets.ICButtonDesgins import PlotTypeButton, MainFigureButton, SettingsButton, MultiScatterButton
 from ..custom.mainFigure import MainFigure, MainFigureRegistry
 from ..custom.warnMessage import WarningMessage
-from ..custom.tableviews.ICDataTable import PandaTableDialog
+from ..dialogs.ICDataTable import PandaTableDialog
 from ..dialogs.Config.ICConfiguration import ConfigDialog
 from ..dialogs.ICDataInputDialog import ICDataInput
 from ..utils import createSubMenu

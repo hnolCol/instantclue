@@ -2,12 +2,12 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 
-from ..utils import clearLayout, getStandardFont
-from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ..utils import getStandardFont
+from ...utils import getHoverColor, createSubMenu, createLabel, createTitleLabel
 
 from ...delegates.ICQuickSelect import DelegateColor
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
-from .ICColorTable import ICColorSizeTableBase
+from .ICTableBase import ICTableBase, ICModelBase
 
 import pandas as pd
 import numpy as np
@@ -15,8 +15,9 @@ import os
 
  
 
-class ICQuickSelectTable(ICColorSizeTableBase):
+class ICQuickSelectTable(ICTableBase):
     clorMapChanged = pyqtSignal() 
+    #selectionChanged signal defined in ICTableBase
     def __init__(self, *args,**kwargs):
 
         super(ICQuickSelectTable,self).__init__(*args,**kwargs)
@@ -67,6 +68,7 @@ class ICQuickSelectTable(ICColorSizeTableBase):
                 colorList = self.mC.colorManager.getNColorsByCurrentColorMap(N = self.model.rowCount())
                 self.model.updateColors(colorList)
     
+    @pyqtSlot()
     def updateColorAndSizeInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -99,7 +101,7 @@ class ICQuickSelectTable(ICColorSizeTableBase):
         self.reset()
     
 
-class QuickSelectTableModel(QAbstractTableModel):
+class QuickSelectTableModel(ICModelBase):
     
     def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
         super(QuickSelectTableModel, self).__init__(parent)
@@ -113,28 +115,14 @@ class QuickSelectTableModel(QAbstractTableModel):
         self._inputLabels = labels.copy()
         self.setDefaultSize()
         self.setRowHeights()
-        
-
-    def rowCount(self, parent=QModelIndex()):
-        
-        return self._labels.index.size
 
     def columnCount(self, parent=QModelIndex()):
         "Three Columns to show: color, size, label"
         return 3
     
-    def dataAvailable(self):
-        ""
-        return self._labels.index.size > 0 
-
     def setDefaultSize(self,size=50):
         ""
         self.defaultSize = size
-
-    def getDataIndex(self,row):
-        ""
-        if self.validDataIndex(row):
-            return self._labels.index[row]
 
     def updateData(self,value,index):
         ""
@@ -143,52 +131,29 @@ class QuickSelectTableModel(QAbstractTableModel):
             self._labels[dataIndex] = value
             self._inputLabels = self._labels.copy()
 
-    def validDataIndex(self,row):
-        ""
-        return row <= self._labels.index.size - 1
-
     def deleteEntriesByIndexList(self,indexList):
         ""
         dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
+        self.layoutAboutToBeChanged.emit()
         self._labels = self._labels.drop(dataIndices)
         self._inputLabels = self._labels.copy()
+        self.layoutChanged.emit()
         self.completeDataChanged()
 
     def deleteEntry(self,tableIndex):
         ""
         dataIndex = self.getDataIndex(tableIndex.row())
         if dataIndex in self._inputLabels.index:
+            self.layoutAboutToBeChanged.emit()
             self._labels = self._labels.drop(dataIndex)
             self._inputLabels = self._labels
+            self.layoutChanged.emit()
             self.completeDataChanged()
 
     def getColor(self, tableIndex):
         ""
         dataIndex = self.getDataIndex(tableIndex.row())
         return self._labels.loc[dataIndex,"color"]
-
-    def getLabels(self):
-        ""
-        return self._labels
-
-    def getSelectedData(self,indexList):
-        ""
-        dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
-        return self._labels.loc[dataIndices]
-
-    def getCurrentGroup(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-     
-        if mouseOverItem is not None:
-            
-            return self._labels.iloc[mouseOverItem].loc["group"]
-
-    def getCurrentInternalID(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-        if mouseOverItem is not None and "internalID" in self._labels.columns: 
-            return self._labels.iloc[mouseOverItem].loc["internalID"]
 
     def getGroupByInternalID(self,internalID):
         ""
@@ -307,39 +272,18 @@ class QuickSelectTableModel(QAbstractTableModel):
         else:
             return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
-    def setNewData(self,labels):
-        ""
-        self.initData(labels)
-        self.completeDataChanged()
 
     def search(self,searchString):
         ""
         if self._inputLabels.size == 0:
             return
+        self.layoutAboutToBeChanged.emit()
         if len(searchString) > 0:
-      
             boolMask = self._labels.str.contains(searchString,case=False,regex=False)
             self._labels = self._labels.loc[boolMask]
         else:
             self._labels = self._inputLabels
-        self.completeDataChanged()
-
-    def completeDataChanged(self):
-        ""
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
-
-    def rowRangeChange(self,row1, row2):
-        ""
-        self.dataChanged.emit(self.index(row1,0),self.index(row2,self.columnCount()-1))
-
-    def rowDataChanged(self, row):
-        ""
-        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
-
-    def resetView(self):
-        ""
-        self._labels = pd.Series(dtype="object")
-        self._inputLabels = self._labels.copy()
+        self.layoutChanged.emit()
         self.completeDataChanged()
 
     def getInitColor(self,dataIndex):
@@ -404,7 +348,7 @@ class QuickSelectTable(QTableView):
         p.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
         self.setPalette(p)
 
-        self.setStyleSheet("""QTableView {background-color: #F6F6F6;border:None};""")
+        self.setStyleSheet("""QTableView {border:None};""")
 
     def colorChangedFromMenu(self,event=None, hexColor = ""):
         ""

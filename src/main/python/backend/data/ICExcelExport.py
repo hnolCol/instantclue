@@ -58,9 +58,9 @@ class ICDataExcelExporter(object):
             
             for n, data in enumerate(self.data):
                 sheetName = self.sheetNames[n]
-                writeRow, rowOffset, columnOffset = self.addGroupingToWorkSheets(self.worksheets[sheetName],workbook,data.columns.values.tolist())
-                self.addHeader(workbook,self.worksheets[sheetName],data.columns.values,writeRow,columnOffset)
-                self.addDataValues(data.columns.values, self.worksheets[sheetName],data,writeRow,columnOffset)
+                writeRow, rowOffset, columnOffset = self.addGroupingToWorkSheets(self.worksheets[sheetName],workbook,data.columns.to_list())
+                self.addHeader(workbook,self.worksheets[sheetName],data.columns.array,writeRow,columnOffset)
+                self.addDataValues(data.columns.array, self.worksheets[sheetName],data,writeRow,columnOffset)
     
     def addDataValues(self, columnHeaders, worksheet, data, writeRow, columnOffset):
         ""

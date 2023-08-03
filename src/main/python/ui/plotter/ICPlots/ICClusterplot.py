@@ -5,7 +5,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import to_hex
 import numpy as np 
 import pandas as pd
-from ...custom.tableviews.ICDataTable import PandaTableDialog
+from ...dialogs.ICDataTable import PandaTableDialog
 
 
 class ICClusterplot(ICChart):

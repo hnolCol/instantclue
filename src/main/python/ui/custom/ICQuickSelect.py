@@ -1023,7 +1023,7 @@ class QuickSelectModel(QAbstractTableModel):
             return
         #merge with colors to facilitate sorting by this
         sortData = pd.concat([self.checkedColors,self.checkedSizes,self._labels],axis=1)
-        columnNames = sortData.columns.values.flatten().tolist()
+        columnNames = sortData.columns.array.flatten().tolist()
 
         if self.lastSearchType is None or self.lastSearchType != how:
             

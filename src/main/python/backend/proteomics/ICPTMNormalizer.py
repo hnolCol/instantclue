@@ -157,7 +157,7 @@ class PTMProteinNormalizer(object):
         
         for idx in self.ptmData.loc[~matchedCasesBoolIdx].index:
             proteinID  = self.ptmData.loc[idx,self.identifierColumnPTM]
-            r = pd.Series(index = firstPass.columns.values, name=idx, dtype="object")
+            r = pd.Series(index = firstPass.columns.array, name=idx, dtype="object")
             r.loc["filtered.by.nan.thresh"] = False
             r.loc["match.found"] = True
             r.loc["ID_ptm"] = proteinID

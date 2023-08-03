@@ -81,7 +81,7 @@ class CategoricalFilter(object):
         ""
         return self.sourceData.dfs[dataID][columnName].astype("str").str.findall(regExp, flags = flag).astype(str)	
 
-    def getUniqueCategories(self, dataID, columnName, splitString = None):
+    def getUniqueCategories(self, dataID : str, columnName : str, splitString : bool = None):
         ""
             #if no splitString is given, take init param
         if splitString is None:

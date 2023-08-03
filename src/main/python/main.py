@@ -508,8 +508,10 @@ class InstantClue(QMainWindow):
                 if selectedItems.size > 0: #check
                     return selectedItems
 
-    def askForGroupingSelection(self, funcKey, numericColumnsInKwargs = True, title = "Groupings to display in h. clustering.", kwargName = "groupingName", **kwargs):
-        ""
+    def askForGroupingSelection(self, funcKey, numericColumnsInKwargs = True, title = "Groupings to display in h. clustering.", kwargName = "groupingName", deleteFromFuncKeyIfDialogClosed : bool = False, **kwargs):
+        """
+        
+        """
         if numericColumnsInKwargs:
             groupings = self.grouping.getGroupingsByColumnNames(columnNames=funcKey["kwargs"]["numericColumns"])
         else:
@@ -520,6 +522,9 @@ class InstantClue(QMainWindow):
                 selectedGrupings = dlg.getSelection().values.flatten()
                 if selectedGrupings.size > 0: #check
                     funcKey["kwargs"][kwargName] = selectedGrupings
+            else:
+                if kwargName in funcKey["kwargs"] and deleteFromFuncKeyIfDialogClosed:
+                   del funcKey["kwargs"][kwargName]
         return funcKey
 
     def sendRequest(self,funcProps):

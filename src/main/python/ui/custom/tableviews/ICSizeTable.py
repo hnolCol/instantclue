@@ -5,11 +5,11 @@ from PyQt5.QtWidgets import *
 from ..utils import clearLayout, getStandardFont
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
-from .ICColorTable import ICColorSizeTableBase, ItemDelegate
+from .ICTableBase import ICTableBase, ItemDelegate, ICModelBase
 import pandas as pd
 import numpy as np
 
-class ICSizeTable(ICColorSizeTableBase):
+class ICSizeTable(ICTableBase):
     
     def __init__(self,*args,**kwargs):
 
@@ -49,7 +49,7 @@ class ICSizeTable(ICColorSizeTableBase):
             graph.setHoverObjectsInvisible()
             graph.resetSize()
         
-
+    @pyqtSlot()
     def updateSizeInGraph(self):
         ""
         exists, graph =  self.mC.getGraph()
@@ -73,7 +73,7 @@ class ICSizeTable(ICColorSizeTableBase):
             self.model.completeDataChanged()
 
 
-class SizeTableModel(QAbstractTableModel):
+class SizeTableModel(ICModelBase):
     
     def __init__(self, labels = pd.DataFrame(), parent=None, isEditable = False):
         super(SizeTableModel, self).__init__(parent)
@@ -88,28 +88,14 @@ class SizeTableModel(QAbstractTableModel):
         self.setDefaultSize()
         self.maxSize = None
         self.setRowHeights()
-        
-
-    def rowCount(self, parent=QModelIndex()):
-        
-        return self._labels.index.size
 
     def columnCount(self, parent=QModelIndex()):
         
         return 2
-    
-    def dataAvailable(self):
-        ""
-        return self._labels.index.size > 0 
 
     def setDefaultSize(self,size=50):
         ""
         self.defaultSize = size
-
-    def getDataIndex(self,row):
-        ""
-        if self.validDataIndex(row):
-            return self._labels.index[row]
 
     def updateGroupData(self,value,index):
         ""
@@ -117,33 +103,6 @@ class SizeTableModel(QAbstractTableModel):
         if dataIndex is not None:
             self._labels.loc[dataIndex,"group"] = value
             self._inputLabels = self._labels.copy()
-
-    def validDataIndex(self,row):
-        ""
-        return row <= self._labels.index.size - 1
-
-    def getLabels(self):
-        ""
-        return self._labels
-
-    def getSelectedData(self,indexList):
-        ""
-        dataIndices = [self.getDataIndex(tableIndex.row()) for tableIndex in indexList]
-        return self._labels.loc[dataIndices]
-
-    def getCurrentGroup(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-     
-        if mouseOverItem is not None:
-            
-            return self._labels.iloc[mouseOverItem].loc["group"]
-
-    def getCurrentInternalID(self):
-        ""
-        mouseOverItem = self.parent().mouseOverItem
-        if mouseOverItem is not None and "internalID" in self._labels.columns: 
-            return self._labels.iloc[mouseOverItem].loc["internalID"]
 
     def getInternalIDByRowIndex(self,row):
         ""
@@ -185,6 +144,7 @@ class SizeTableModel(QAbstractTableModel):
                     self.setRowHeights()
                 elif v < self.minSize:
                     self.setRowHeights()
+                    #horrible code
                 self.parent().sizeChangedForItem = index.row()
                 self.parent().parent().selectionChanged.emit()
 
@@ -262,29 +222,6 @@ class SizeTableModel(QAbstractTableModel):
         else:
             return Qt.ItemFlag.ItemIsEnabled 
 
-    def setNewData(self,labels):
-        ""
-        self.initData(labels)
-        self.completeDataChanged()
-
-    def completeDataChanged(self):
-        ""
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
-
-    def rowRangeChange(self,row1, row2):
-        ""
-        self.dataChanged.emit(self.index(row1,0),self.index(row2,self.columnCount()-1))
-
-    def rowDataChanged(self, row):
-        ""
-        self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1))
-
-    def resetView(self):
-        ""
-        self._labels = pd.Series(dtype="object")
-        self._inputLabels = self._labels.copy()
-        self.completeDataChanged()
-
     def toggleInLegend(self,*args,**kwargs):
         ""
 
@@ -293,7 +230,6 @@ class SizeTableModel(QAbstractTableModel):
         if mouseOverItem is not None:
             self._inLegend.iloc[mouseOverItem] = not self._inLegend.iloc[mouseOverItem] 
        
-
 
 class SizeTable(QTableView):
 
@@ -377,10 +313,8 @@ class SizeTable(QTableView):
                 return
             tableIndexCol = tableIndex.column()
             if tableIndexCol == 0:
-                #dataIndex = self.model().getDataIndex(tableIndex.row())
                 if not self.rightClick:
                     return
-                    #stdSize = self.parent().mC.config.getParam("scatterSize")
                 else:
                     return
 

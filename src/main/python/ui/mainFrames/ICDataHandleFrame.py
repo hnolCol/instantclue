@@ -11,7 +11,7 @@ from ..custom.Widgets.ICButtonDesgins import CollapsButton
 from ..custom.ICQuickSelect import QuickSelect
 from ..custom.dataFrameSelection import CollapsableDataTreeView
 from ..custom.Widgets.ICButtonDesgins import BigArrowButton, BigPlusButton, ViewDataButton
-from ..custom.tableviews.ICDataTable import PandaTableDialog
+from ..dialogs.ICDataTable import PandaTableDialog
 from ..custom.ICLiveGraph import LiveGraph
 from ..custom.analysisSelection import AnalysisSelection
 from ..utils import removeFileExtension, areFilesSuitableToLoad, getHoverColor, getCollapsableButtonBG

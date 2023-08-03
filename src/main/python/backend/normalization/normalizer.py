@@ -264,42 +264,5 @@ class Normalizer(object):
         
         return self._addToSourceData(dataID,columnNames,transformedValues)
 
-
-       # lowessLine = lowess(y,x, it=it, frac=frac)
-
-# def transform_data(self,columnNameList,transformation):
-# 		'''
-# 		Calculates data transformation and adds these to the data frame.
-# 		'''	
-# 		newColumnNames = [self.evaluate_column_name('{}_{}'.format(transformation,columnName)) \
-# 		for columnName in columnNameList]
-		
-# 		if transformation == 'Z-Score_row':
-# 			transformation = 'Z-Score'
-# 			axis_ = 1
-# 		elif transformation == 'Z-Score_col':
-# 			transformation = 'Z-Score' 
-# 			axis_ = 0 
-# 		else:
-# 			axis_ = 0 
-		
-# 		if 'Z-Score' in transformation:
-# 			transformedDataFrame = pd.DataFrame(scale(self.df[columnNameList].values, axis = axis_),
-# 				columns = newColumnNames, index = self.df.index)
-# 		else:
-# 			transformedDataFrame = pd.DataFrame(
-# 							calculations[transformation](self.df[columnNameList].values),
-# 							columns = newColumnNames,
-# 							index = self.df.index)
-			
-# 		if transformation != 'Z-Score':
-# 			transformedDataFrame[~np.isfinite(transformedDataFrame)] = np.nan
-		
-# 		self.df[newColumnNames] = transformedDataFrame
-# 		self.update_columns_of_current_data()
-		
-# 		return newColumnNames
-
-
     
 

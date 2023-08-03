@@ -124,7 +124,7 @@ class choordCoordinates(object):
     self.interactionCoords = OrderedDict()
     self.choords = OrderedDict()
 
-   #to = self.data.columns.values.tolist()
+   #to = self.data.columns.to_list()
     n = 1
     for startName in self.data.columns:
       x1Start, x2Start = self.sectors[startName]

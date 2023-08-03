@@ -79,6 +79,7 @@ from numba import prange, jit
 from numba.core.decorators import njit
 from numba.np.ufunc import parallel
 
+from typing import List, Tuple, Iterable, Dict
 
 
 FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer","None"]
@@ -143,21 +144,6 @@ def pearsonByRowsTwoArray(X,Y,NProcesses = 8):
 		rs.sort(key=lambda x: x[0]) 
 		A = np.concatenate([r[1] for r in rs],axis=0)
 	return A
-	
-	
-
-# def pearsonByRowsTwoArrayN(X,Y):
-# 	r = 0
-# 	nRows = X.shape[0] * Y.shape[0]
-# 	A = np.zeros(shape=(nRows,1))
-# 	for n in range(X.shape[0]):
-# 		x = X[n,:].flatten()
-# 		for m in range(Y.shape[0]):
-# 			y = Y[m,:].flatten()
-
-# 			A[r] = _pearson(x,y)
-# 			r+=1
-# 	return A 
 
 
 def corr2_coeff(A, B):
@@ -228,11 +214,11 @@ class DataCollection(object):
 		self.Plotter = None
 	
 
-	def setPlotter(self,plotter):
+	def setPlotter(self,plotter) -> None:
 		""
 		self.Plotter = plotter
 
-	def addAnnotationColumnByIndex(self,dataID, indices, columnName):
+	def addAnnotationColumnByIndex(self,dataID : str, indices : pd.Index, columnName : str) -> dict:
 		""
 		if dataID in self.dfs:
 			columnName = self.evaluateColumnName(columnName,dataID=dataID)
@@ -269,7 +255,7 @@ class DataCollection(object):
 		funcProps["tooltipData"] = self.getTooltipdata(dataID)
 		return funcProps
 
-	def addIndexColumn(self,dataID,*args,**kwargs):
+	def addIndexColumn(self,dataID : str) -> dict:
 		""
 		if dataID in self.dfs:
 			dfShape, rowIdx = self.getDataFrameShape(dataID)
@@ -280,7 +266,7 @@ class DataCollection(object):
 		else:
 			return errorMessage
 	
-	def addGroupIndexColumn(self,dataID,columnNames,*args,**kwargs):
+	def addGroupIndexColumn(self,dataID : str, columnNames : pd.Series):
 		""
 		if dataID in self.dfs:
 			#dfShape, rowIdx = self.getDataFrameShape(dataID)
@@ -330,13 +316,14 @@ class DataCollection(object):
 				return rKwargs
 			elif isinstance(df,pd.DataFrame):
 				return self.addDataFrame(df,fileName=fileName, cleanObjectColumns = True)
-	def areAllColumnsInData(self,dataID,columnNames):
+			
+	def areAllColumnsInData(self,dataID : str,columnNames : pd.Series) -> bool:
 		""
 		if dataID in self.dfs:
-			return columnNames.isin(self.dfs[dataID].columns.values).all()
+			return columnNames.isin(self.dfs[dataID].columns.array).all()
 		return False
 
-	def readExcelFile(self,pathToFiles):
+	def readExcelFile(self,pathToFiles : str) -> dict:
 		""
 		if hasattr(self,"excelFileIO"):
 			self.excelFileIO = OrderedDict()
@@ -411,13 +398,13 @@ class DataCollection(object):
 		return funcProps
 
 
-	def addDataFrame(self,dataFrame, dataID = None, fileName = '', 
-							cleanObjectColumns = False):
+	def addDataFrame(self,dataFrame : pd.DataFrame, dataID = None, fileName : str = '', 
+							cleanObjectColumns : bool = False) -> dict:
 		'''
 		Adds new dataFrame to collection.
 		'''
 		if dataID is None:
-			dataID  = self.get_next_available_id()
+			dataID  = self.getNextDataFrameID()
 		dataFrame = self.checkForInternallyUsedColumnNames(dataFrame)
 		self.dfs[dataID] = dataFrame
 		self.tooltipData[dataID] = dict()
@@ -440,11 +427,11 @@ class DataCollection(object):
 				"dfs":self.fileNameByID
 			}
 
-	def addDataFrames(self,fileNameAndDataFrame,copyTypesFromDataID):
+	def addDataFrames(self,fileNameAndDataFrame : List[tuple], copyTypesFromDataID : str) -> int:
 		"Not used from outside (e.g. new data frame)"
 		if copyTypesFromDataID in self.dfsDataTypesAndColumnNames:
 			for fileName,dataFrame in fileNameAndDataFrame:
-				dataID  = self.get_next_available_id()
+				dataID  = self.getNextDataFrameID()
 				self.dfs[dataID] = dataFrame
 				self.saveFileName(dataID,fileName)
 				#takes longer, but otherwise there is no tooltip.
@@ -455,7 +442,7 @@ class DataCollection(object):
 			return len(fileNameAndDataFrame)
 		return 0 
 	
-	def checkForInternallyUsedColumnNames(self,dataFrame):
+	def checkForInternallyUsedColumnNames(self,dataFrame : pd.DataFrame) -> pd.DataFrame:
 		""
 		
 		columnNamesToChange = [colName for colName in dataFrame.columns if colName in FORBIDDEN_COLUMN_NAMES]
@@ -477,7 +464,7 @@ class DataCollection(object):
 			dataFrame = dataFrame.rename(columns=columnNameMapper)
 			return dataFrame
 
-	def getQuickSelectData(self,dataID,filterProps):
+	def getQuickSelectData(self, dataID : str,filterProps : dict) -> dict:
 		""
 		if dataID in self.dfs:
 			if all(filterProp in filterProps for filterProp in ["columnName","mode","sep"]):
@@ -489,6 +476,7 @@ class DataCollection(object):
 					#getUniqueCategroies returns a data frame, therefore index column 
 					#to get a pandas Series (QuickSelect Model works with series)
 					data = self.categoricalFilter.getUniqueCategories(dataID,columnName,splitString=sep)
+					#returns a dict with error message if not successfull
 					if isinstance(data,dict):
 						return data
 					elif isinstance(data,pd.DataFrame):
@@ -509,7 +497,7 @@ class DataCollection(object):
 			
 		return errorMessage
 
-	def getDataFrameShape(self,dataID):
+	def getDataFrameShape(self, dataID : str) -> Tuple[int,int]:
 		"Returns the shape of the data frame, taking clipping into account."
 		if dataID in self.dfs:
 			if dataID in self.clippings:
@@ -520,7 +508,7 @@ class DataCollection(object):
 		else:
 			return (0,0)
 
-	def groupbyAndAggregate(self,dataID,columnNames,groupbyColumn,metric="mean"):
+	def groupbyAndAggregate(self,dataID : str, columnNames : pd.Series, groupbyColumn : str, metric : str ="mean"):
 		"""
 		Aggregates data by a specific groupbyColumn(s). 
 		ColumnNames can only be numeric.
@@ -533,13 +521,13 @@ class DataCollection(object):
 			else:
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False).aggregate(metric).reset_index()
 			#colnames that are not string, must be tuples - merge them to string.
-			columnNames = [colName if isinstance(colName,str) else "_".join(colName) for colName in aggregatedData.columns.values.tolist()]
+			columnNames = [colName if isinstance(colName,str) else "_".join(colName) for colName in aggregatedData.columns.to_list()]
 			aggregatedData.columns = columnNames
 			return self.addDataFrame(aggregatedData,fileName = "{}(groupAggregate({}:{})".format(metric,self.getFileNameByID(dataID),mergeListToString(groupbyColumn.values)))
 		else:
 			return errorMessage
 
-	def checkColumnNamesInDataByID(self,dataID,columnNames):
+	def checkColumnNamesInDataByID(self,dataID : str,columnNames : pd.Series) -> List[str]:
 		""
 		checkedColumnNames = []
 
@@ -554,7 +542,7 @@ class DataCollection(object):
 		
 		return checkedColumnNames
 
-	def loadDefaultReadFileProps(self):
+	def loadDefaultReadFileProps(self) -> dict:
 		""
 		config = self.parent.config 
 		props = {
@@ -567,7 +555,7 @@ class DataCollection(object):
 			"index_col":False}
 		return self.checkLoadProps(props)
 
-	def checkLoadProps(self,loadFileProps):
+	def checkLoadProps(self,loadFileProps) -> dict:
 		""
 		if loadFileProps is None:
 			return {"sep":"\t"}
@@ -588,7 +576,7 @@ class DataCollection(object):
 		return loadFileProps
 
 	
-	def columnRegExMatches(self,dataID,columnNames,searchString,splitString=";"):
+	def columnRegExMatches(self,dataID : str,columnNames : pd.Series, searchString : str, splitString : str =";"):
 		"""
 		Return data indeces that match a regular expression. The regular expression
 		is designed to match categories based on the provided serach string and split string
@@ -612,7 +600,7 @@ class DataCollection(object):
 
 		return data.index[boolIdx]
 
-	def copyDataFrameSelection(self,dataID,columnNames):
+	def copyDataFrameSelection(self,dataID : str, columnNames : pd.Series):
 		""
 		if dataID not in self.dfs:
 			return getMessageProps("Error ..","DataID unknown ..")
@@ -855,7 +843,7 @@ class DataCollection(object):
 						self.tooltipData[dataID][columnHeader] = "#unique values = {}".format(dfWithSpecificDataType[columnHeader].unique().size)
 			except ValueError:
 				dfWithSpecificDataType = pd.DataFrame() 		
-			columnHeaders = dfWithSpecificDataType.columns.values.tolist()
+			columnHeaders = dfWithSpecificDataType.columns.to_list()
 			dataTypeColumnRelationship[dTypeConv[dataType]] = pd.Series(columnHeaders, dtype=str)
 				
 		self.dfsDataTypesAndColumnNames[dataID] = dataTypeColumnRelationship	
@@ -888,7 +876,7 @@ class DataCollection(object):
 		""
 
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
-		clusterColumns = clusteredData.columns.values.tolist() 
+		clusterColumns = clusteredData.columns.to_list() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]
 		
 		columnHeaders = ["Cluster ID"] + clusterColumns + colorColumnNames + extraDataColumns
@@ -978,11 +966,11 @@ class DataCollection(object):
 			groupByObject = data.groupby(columnList,sort = sort,as_index=as_index)
 			return groupByObject
 
-	def getTooltipdata(self,dataID):
+	def getTooltipdata(self,dataID : str) -> dict:
 		""
 		return self.tooltipData[dataID] if dataID in self.tooltipData else {}
 
-	def getColumnNamesByDataID(self,dataID):
+	def getColumnNamesByDataID(self,dataID : str) -> dict:
 		"Returns Dict of Column Names per DataFrame and Column Type (float,int,string)"
 		
 		if dataID in self.dfsDataTypesAndColumnNames:
@@ -996,18 +984,18 @@ class DataCollection(object):
 		else:
 			return errorMessage
 	
-	def getPlainColumnNames(self,dataID):
+	def getPlainColumnNames(self,dataID) -> pd.Index:
 		""
 		if dataID in self.dfs:
 			return self.dfs[dataID].columns
 		else:
-			return []
+			return pd.Index
 
-	def getDataDescription(self,dataID,columnNames):
+	def getDataDescription(self,dataID : str,columnNames : List[str] | pd.Series | pd.Index):
 		""
 		return self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"].describe()
 
-	def getDataByColumnNames(self, dataID, columnNames, rowIdx = None, ignore_clipping = False):
+	def getDataByColumnNames(self, dataID : str, columnNames : List[str] | pd.Series | pd.Index, rowIdx = None, ignore_clipping : bool = False):
 		'''
 		Returns sliced self.df
 		row idx - boolean list/array like to slice data further.
@@ -1018,24 +1006,10 @@ class DataCollection(object):
 		fnComplete = {"fnName":"set_data","fnKwargs":{"data":self.getDataByDataID(dataID,rowIdx,ignore_clipping)[columnNames]}}
 		return fnComplete
 
-	def getDataByColumnNamesAndPlot(self, dataID, columnNames, activePlotter, rowIdx = None, ignore_clipping = False):
+	def getDataByDataID(self,dataID : str, rowIdx : None | pd.Series | pd.Index = None, ignoreClipping : bool = False) -> pd.DataFrame:
 		'''
-		Returns sliced self.df
-		row idx - boolean list/array like to slice data further.
-		'''
-		fnComplete = self.getDataByColumnNames(dataID,columnNames,rowIdx,ignore_clipping)
-		#activePlotter = self.Plotter.get_active_helper()
-		if activePlotter is not None and hasattr(activePlotter,fnComplete["fnName"]):
-			try:
-				getattr(activePlotter,fnComplete["fnName"])(**fnComplete["fnKwargs"])
-			except Exception as e:
-				print(e)
-		return {"newPlot":True,"fnName":"outsideThreadPlotting","fnKwargs":{}}
-
-
-	def getDataByDataID(self,dataID, rowIdx = None, ignoreClipping = False):
-		'''
-		Returns df by id that was given in function: addDf(self)..
+		Returns the dataframe as a pandas dataset.
+		If a clipping is defined (checked by ```hasClipping()```) it returns the clipped dataframe unless ``ìgnore Clipping``is set to True.
 		'''
 
 		if dataID not in self.dfs:
@@ -1050,21 +1024,27 @@ class DataCollection(object):
 		else:
 			return self.dfs[dataID].loc[rowIdx,:]
 
-	def getDataByColumnNameForWebApp(self,dataID,columnNames):
+	def getDataByColumnNameForWebApp(self,dataID : str, columnNames  : str | List[str] | pd.Series | pd.Index) -> dict:
 		""
 		if isinstance(columnNames,str):
 			columnNames = [columnNames]
+		if isinstance(columnNames,pd.Index):
+			columnNames = columnNames.to_numpy().tolist()
+		if isinstance(columnNames,pd.Series):
+			columnNames = columnNames.values.tolist() 
 
 		data = self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
 		#data = data.rename(columns={columnName:"text"})
 		data["idx"] = data.index
 		return data.to_json(orient="records")
 
-	def getNaNString(self):
+	def getNaNString(self) -> str:
 		""
+		if not hasattr(self,"replaceObjectNan"):
+			return "-"
 		return self.replaceObjectNan
 
-	def getNumberUniqueValues(self,dataID,columnNames):
+	def getNumberUniqueValues(self,dataID : str,columnNames : Iterable) -> Dict[str,int]:
 		"""
 		"""
 		resultDict = OrderedDict()
@@ -1075,7 +1055,7 @@ class DataCollection(object):
 		
 		return resultDict
 
-	def getUniqueValues(self, dataID, categoricalColumn, forceListOutput = False, *args,**kwargs):
+	def getUniqueValues(self, dataID : str, categoricalColumn : List[str] | str, forceListOutput : bool = False, *args,**kwargs) -> np.ndarray | List[str]:
 		'''
 		Return unique values of a categorical column. If multiple columns are
 		provided in form of a list. It returns a list of pandas series having all
@@ -1091,27 +1071,29 @@ class DataCollection(object):
 				for category in categoricalColumn:
 					collectUniqueSeries.append(X[category].unique())
 				return collectUniqueSeries
-		else:
+		elif isinstance(categoricalColumn,str):
 			uniqueCategories = self.getDataByDataID(dataID,*args,**kwargs)[categoricalColumn].unique()
+		else:
+			return np.array()
 
 		if forceListOutput:
 			return [uniqueCategories]
 		else:
 			return uniqueCategories
 
-	def hasClipping(self,dataID):
+	def hasClipping(self,dataID) -> bool:
 		""
 		return dataID in self.clippings
 
-	def hasData(self):
+	def hasData(self) -> bool:
 		""
 		return len(self.dfs) > 0
 
-	def hasTwoDataSets(self):
+	def hasTwoDataSets(self) -> bool:
 		""
 		return len(self.dfs) > 1
 
-	def renameColumns(self,dataID,columnNameMapper):
+	def renameColumns(self,dataID : str,columnNameMapper : Dict[str,str]) -> dict:
 		""
 		if dataID in self.dfs:
 			columnNameMapper = self.evaluateColumMapper(dataID,columnNameMapper)
@@ -1125,7 +1107,7 @@ class DataCollection(object):
 			return funcProps
 		return getMessageProps("Error..","DataID not found.")
 
-	def setClippingByFilter(self,dataID,columnName,filterProps, checkedLabels, checkedDataIndex = None):
+	def setClippingByFilter(self,dataID : str, columnName : str,filterProps : dict, checkedLabels, checkedDataIndex = None):
 		""
 		#ccheck if data id exists
 		if dataID in self.dfs:
@@ -1153,14 +1135,12 @@ class DataCollection(object):
 				return funcProps
 		
 		return getMessageProps("Error..","There was an error when clipping mask was established.")
-
-
 		
-	def evaluateColumnNameOfDf(self, df, dataID):
+	def evaluateColumnNameOfDf(self, df : pd.DataFrame, dataID : str):
 		'''
 		Checks each column name individually to avoid same naming and overriding.
 		'''
-		columns = df.columns.values.tolist() 
+		columns = df.columns.to_numpy()
 		evalColumns = []
 		#try:
 		for columnName in columns:
@@ -1168,10 +1148,7 @@ class DataCollection(object):
 			evalColumns.append(evalColumnName)
 		df.columns = evalColumns
 		return df
-		#except Exception as e:
-		#	print(e)
-
-
+	
 	def getColorDictsByFilter(self,dataID,columnName,filterProps, checkedLabels, checkedDataIndex = None, checkedSizes = None, userColors = None, useBlit = False):
 		"Color Data by Using the Quick Select Widget"
 		if dataID in self.dfs:
@@ -1234,9 +1211,8 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-	def getDataValue(self,dataID,columnName,dataIndex,splitString = None):
+	def getDataValue(self,dataID,columnName,dataIndex,splitString = None) :
 		""
-
 		if dataID in self.dfs and columnName in self.dfs[dataID].columns:
 			if not isinstance(dataIndex,pd.Series):
 				dataIndex = pd.Series(dataIndex)
@@ -1255,16 +1231,10 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-	# def getCategoricalColorMap(self, dataID, columnNames):
-	# 	""
-	# 	colorProps = self.colorManager.getCategoricalColorMap(dataID,categoricalColumn)
-	# 	funcProps = getMessageProps("Updated","Categorical column used for coloring")
-	# 	funcProps["fnName"] = "change_color_by_categorical_columns"
-	# 	funcProps["fnKwargs"] = colorProps 
-	# 	return funcProps 
-
-	def joinDataFrame(self,dataID,dataFrame):
-		""
+	def joinDataFrame(self,dataID : str,dataFrame : pd.DataFrame) -> dict:
+		"""
+		Join a dataframe to a data frame in the collection.
+		"""
 		if dataID in self.dfs:
 			dataFrame = self.evaluateColumnNameOfDf(dataFrame,dataID)
 			self.dfs[dataID] = self.dfs[dataID].join(dataFrame,rsuffix="_",lsuffix="")
@@ -1408,7 +1378,7 @@ class DataCollection(object):
 		if dataID in self.dfs:
 			if specificColumns is None: #replace in columnHeaders
 				newColumnNames  = None
-				savedColumns = self.dfs[dataID].columns.values.tolist() 
+				savedColumns = self.dfs[dataID].columns.to_list() 
 				for n,fS in enumerate(findStrings):
 					rS = replaceStrings[n] if len(replaceStrings) > 1 else replaceStrings[0]
 					if newColumnNames is None:
@@ -1632,7 +1602,7 @@ class DataCollection(object):
 				progressBar.update_progressbar_and_label(100,
 											'Done .. ')
 				progressBar.close()
-		id = self.get_next_available_id()
+		id = self.getNextDataFrameID()
 		fileName = 'Cat. Modules - {}'.format(categoricalColumn[0])
 		self.add_data_frame(df,id,fileName) 
 		
@@ -1838,8 +1808,8 @@ class DataCollection(object):
 			else:
 
 				cleanedDf = self.dfs[dataID][columnNames].dropna(how=how,axis="columns")
-				removedColumns = columnNames.loc[columnNames.isin(cleanedDf.columns.values)]
-				columnNames = [colName for colName in self.getPlainColumnNames(dataID) if colName not in columnNames.values] + cleanedDf.columns.values.tolist()
+				removedColumns = columnNames.loc[columnNames.isin(cleanedDf.columns.array)]
+				columnNames = [colName for colName in self.getPlainColumnNames(dataID) if colName not in columnNames.values] + cleanedDf.columns.to_list()
 				self.dfs[dataID] = self.dfs[dataID][columnNames]
 				#update columns names
 				self.extractDataTypeOfColumns(dataID)
@@ -1994,7 +1964,7 @@ class DataCollection(object):
 		'''
 		Checks each column name individually to avoid same naming and overriding.
 		'''
-		columns = df.columns.values.tolist() 
+		columns = df.columns.to_list() 
 		evalColumns = [self.evaluate_column_name(column,useExact=useExact) for column in columns]
 		df.columns = evalColumns
 		return df
@@ -2146,7 +2116,7 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-	def removeDuplicates(self,dataID,columnNames):
+	def removeDuplicates(self,dataID : str, columnNames : pd.Series):
 		""
 		if dataID in self.dfs:
 			df = self.dfs[dataID].drop_duplicates(subset=columnNames.values)
@@ -2155,7 +2125,7 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-	def replaceSelectionOutlierWithNaN(self,dataID,columnNames):
+	def replaceSelectionOutlierWithNaN(self,dataID : str,columnNames : pd.Series):
 		""
 		if dataID in self.dfs:
 			try:
@@ -2187,7 +2157,7 @@ class DataCollection(object):
 				print(e)
 				return getMessageProps("Error", "There was an error: "+str(e))
 
-	def replaceGroupOutlierWithNaN(self,dataID,grouping):
+	def replaceGroupOutlierWithNaN(self,dataID : str, grouping : dict):
 		""
 		if dataID in self.dfs:
 			
@@ -2293,72 +2263,8 @@ class DataCollection(object):
 				return self.joinDataFrame(dataID,df)
 		return errorMessage
 	
-	def fill_na_in_columnList(self,columnLabelList,id = None, naFill = None):
-		'''
-		Replaces nan in certain columns by value
-		'''
-		if naFill is None:
-			naFill = self.replaceObjectNan
-		if id is None:
-			id = self.currentDataFile
-		self.dfs[id][columnLabelList] = self.dfs[id][columnLabelList].fillna(naFill)
 	
-	
-	def fill_na_with_data_from_gauss_dist(self,columnLabelList,downshift,width,mode):
-		'''
-		Replaces nans with random samples from standard distribution. 
-		'''
-		means = self.df[columnLabelList].mean()
-		stdevs =  self.df[columnLabelList].std()
-		df = pd.DataFrame()
-		for n,numericColumn in enumerate(columnLabelList):
-			data = self.df[numericColumn].values
-			mu, sigma = means[n], stdevs[n]
-			newMu = mu - sigma * downshift
-			newSigma = sigma * width
-			mask = np.isnan(data)
-			data[mask] = np.random.normal(newMu, newSigma, size=mask.sum())
-			if mode in ['Replace','Replace & add indicator']:
-				self.df[numericColumn] = data
-				df['indicImp_{}'.format(numericColumn)] = mask
-			else:
-				df['imput_{}'.format(numericColumn)] = data
-		
-		if mode in ['Create new columns','Replace & add indicator']:
-			newColumns = self.join_df_to_currently_selected_df(df,exportColumns = True)
-			return newColumns
-		
-	def fit_transform(self,obj,columns,namePrefix = 'Scaled', dropnan=True, transpose=True):
-		'''
-		Fit and transform data using an object from the scikit library.
-		'''
-		newColumnNames = [self.evaluate_column_name('{}{}'.format(namePrefix,column), useExact = True)
-						 	for column in columns]
-		
-		df, idx = self.row_scaling(obj,columns,dropnan,transpose)
-		df_ = pd.DataFrame(df,index = idx, columns = newColumnNames)
-		newColumnNames = self.join_df_to_currently_selected_df(df_, exportColumns = True)
-		return newColumnNames
-	
-			
-	def row_scaling(self,obj,columnNames,dropnan, transpose):
-		"""
-		"""
-		if dropnan:
-			X = self.df[columnNames].dropna()
-		else:
-			X = self.df[columnNames]
-		idx = X.index
-		if transpose:
-			X = np.transpose(X.values)
-		
-		normX = getattr(obj,'fit_transform')(X)
-		if transpose:
-			return np.transpose(normX), idx
-		else:
-			return normX, idx
-	
-	def getCategoricalColumns(self,dataID):
+	def getCategoricalColumns(self,dataID : str) -> List[str]:
 		'''
 		Returns columns names that are objects.
 		Internal function.
@@ -2460,47 +2366,8 @@ class DataCollection(object):
 			return self.addDataFrame(subsetDf,fileName = subsetName)
 		else:
 			return errorMessage
-			
-	def get_data_as_list_of_tuples(self, columns, data = None):
-		'''
-		Returns data as list of tuples. Can be used for Lasso contains events.
-		'''
-		if len(columns) < 2:
-			return
-		if data is None:
-			data = self.df
-		tuples = list(zip(data[columns[0]], data[columns[1]]))
-		return tuples
 	
-						
-	def get_columns_data_type_relationship(self):
-		'''
-		Returns columns datatypes relationship
-		'''
-		
-		return self.dfsDataTypesAndColumnNames[self.currentDataFile]
-		
-	def get_columns_data_type_relationship_by_id(self, id):
-		'''
-		Returns columns datatypes relationship by ID
-		'''
-		return self.dfsDataTypesAndColumnNames[id]	
-	
-	
-	def get_data_types_for_list_of_columns(self,columnNameList):
-		'''
-		'''
-		dataTypeList = [self.df[column].dtype for column in columnNameList]
-		return dataTypeList
-			
-	def get_complete_data_collection(self):
-		'''
-		Returns an orderedDictionary with all added data.
-		'''
-		self.save_current_data()
-		return self.dfs 
-	
-	def getFileNames(self):
+	def getFileNames(self) -> List[str]:
 		'''
 		Returns the available file names
 		'''
@@ -2510,7 +2377,7 @@ class DataCollection(object):
 		""
 		return [dataID for n,dataID in enumerate(self.fileNameByID.keys()) if n in idx]
 
-	def setFileNameByID(self,dataID,fileName):
+	def setFileNameByID(self,dataID : str ,fileName : str) -> dict:
 		"Renames the dataframe for the user, id is unchanged"
 		if dataID in self.fileNameByID:
 			self.fileNameByID[dataID] = fileName	
@@ -2520,24 +2387,12 @@ class DataCollection(object):
 			return completeKwargs
 		return getMessageProps("Error..","DataID did not match any of the loaded data.")
 	
-	def getFileNameByID(self,dataID):
+	def getFileNameByID(self,dataID : str) -> str:
 		""
 		if dataID in self.fileNameByID:
 			return self.fileNameByID[dataID]
-			
-	def get_groups_by_column_list(self,columnList, sort = False):
-		'''
-		Returns gorupby object of selected columnList
-		'''
-		
-		if isinstance(columnList,list):
-			groupByObject = self.df.groupby(columnList,sort = sort)
-			
-			return groupByObject
-		else:
-			return
 	
-	def get_next_available_id(self):
+	def getNextDataFrameID(self):
 		'''
 		To provide consistent labeling, use this function to get the id the new df should be added
 		'''
@@ -2546,160 +2401,22 @@ class DataCollection(object):
 		
 		return idForNextDataFrame
 	
-	def getRowNumber(self,dataID):
+	def getRowNumber(self,dataID : str) -> int:
 		'''
 		Returns the number of rows.
 		'''
 		if dataID in self.dfs:
 			return self.dfs[dataID].index.size
-		else:
-			return 	np.nan
+		return 	0
 	
-	def getIndex(self,dataID):
+	def getIndex(self,dataID) -> pd.Index:
 		'''
 		Returns the number of rows.
 		'''
 		if dataID in self.dfs:
 			return self.dfs[dataID].index
-		else:
-			return 	np.nan
+		return 	pd.Index()
 	
-	def get_unique_values(self,categoricalColumn, forceListOutput = False):
-		'''
-		Return unique values of a categorical column. If multiple columns are
-		provided in form of a list. It returns a list of pandas series having all
-		unique values.
-		'''
-		if isinstance(categoricalColumn,list):
-			if len(categoricalColumn) == 1:
-				categoricalColumn = categoricalColumn[0]
-				uniqueCategories = self.df[categoricalColumn].unique()
-			else:
-				collectUniqueSeries = []
-				for category in categoricalColumn:
-					collectUniqueSeries.append(self.df[category].unique())
-				return collectUniqueSeries
-		else:
-			uniqueCategories = self.df[categoricalColumn].unique()
-		if forceListOutput:
-			return [uniqueCategories]
-		else:
-			return uniqueCategories
-
-	def get_number_of_unique_values(self,categoricalColumns, id=None):
-		"""
-		"""
-		if id is None:
-			id = self.currentDataFile
-			
-		resultDict = OrderedDict()
-		for categoricalColumn in categoricalColumns:
-			resultDict[categoricalColumn] = self.dfs[id][categoricalColumn].unique().size
-		
-		return resultDict
-
-	def get_positive_subsets(self,numericColumn,categoricalColumns,inputData):
-		'''
-		'''
-		data = pd.melt(inputData[numericColumn+categoricalColumns], 
-									categoricalColumns, var_name = 'Columns', 
-									value_name = 'Value')
-		dataCombined = pd.DataFrame()
-		complColumns = ['Complete']+categoricalColumns
-		for category in complColumns:
-			if category == 'Complete':
-				dataCombined.loc[:,category] = data['Value']
-			else:
-				subset = data[data[category] == '+']['Value']
-				dataCombined = pd.concat([dataCombined,subset],axis=1)
-		dataCombined.columns = complColumns
-		dataCombined.loc[:,'intIdxInstant'] = inputData.index	
-		return dataCombined, complColumns	
-							
-							
-		
-	
-	def insert_data_frame_at_index(self, dataFrame, columnList, indexStart, indexList = None):
-		'''
-		Inserts Data Frame at certain location
-		'''
-		if any(columnName in self.df_columns for columnName in columnList):		
-			return   
-			
-		for n,columnName in enumerate(columnList):
-			
-		
-			if indexList is None:
-				index = indexStart + 1 + n 
-			else:
-				index = indexList[n]
-			newColumnData = dataFrame[columnName]
-				
-			self.insert_column_at_index(index,columnName,newColumnData)
-		
-			
-			
-	def insert_column_at_index(self, index, columnName, newColumnData):
-		'''
-		Inserts data at given index in current df.
-		'''
-		self.df.insert(index,columnName,newColumnData) 
-		
-	def join_series_to_currently_selected_df(self,series):
-		'''
-		'''
-		self.df = self.df.join(series)
-		self.update_columns_of_current_data()
-		
-	def join_df_to_currently_selected_df(self,dfToAdd, exportColumns = False):
-		'''
-		Joins another dataframe onto the currently selected one
-		'''
-		dfToAdd = self.evaluate_columnNames_of_df(dfToAdd)
-		self.df = self.df.join(dfToAdd, rsuffix='_', lsuffix = '' ) 
-		self.update_columns_of_current_data()
-		
-		if exportColumns:
-			return dfToAdd.columns.values.tolist()
-		
-	def join_df_to_df_by_id(self,dfToAdd,id):
-		'''
-		Joins another data frame onto the df that is defined by id
-		'''
-		saveId = self.currentDataFile
-		# we need to change to have a suitable evaluation
-		self.set_current_data_by_id(id)
-		#df = self.dfs[id]
-		dfToAdd = self.evaluate_columnNames_of_df(dfToAdd)
-		self.df = self.df.join(dfToAdd,rsuffix='_', lsuffix = ''  ) 
-		self.save_current_data()
-		self.update_columns_of_current_data()
-		self.set_current_data_by_id(saveId)
-				
-		
-	def join_missing_columns_to_other_df(self, otherDf, id, definedColumnsList = []):
-		'''
-		'''
-
-		storedData = self.dfs[id]
-		columnsJoinDf = otherDf.columns
-		
-		if len(definedColumnsList) == 0:
-			columnsMissing = [columnName for columnName in storedData.columns  if columnName\
-			 not in columnsJoinDf]
-		else:
-			# check if data are not in tobe joined df but are in general in the df that the 
-			# values are taken from
-			columnsMissing = [columnName for columnName in definedColumnsList if columnName \
-			not in columnsJoinDf and columnName in storedData.columns]
-		
-		storedData.index = storedData.index.astype(otherDf.index.dtype)
-		if len(columnsMissing) != 0: 
-			resultDataFrame = otherDf.join(storedData[columnsMissing])
-			return resultDataFrame
-		else:
-			return otherDf
-		
 	def matchModSequenceToSites(self,dataID, proteinGroupColumn,modifiedPeptideColumn, fastaFilePath):
 		""
 		data = self.getDataByColumnNames(dataID=dataID,columnNames=[proteinGroupColumn,modifiedPeptideColumn])["fnKwargs"]["data"]
@@ -2713,19 +2430,26 @@ class DataCollection(object):
 		
 		#eturn getMessageProps("Done..","Modified peptides matched to sites.")
 		
-	def meltData(self,dataID,columnNames):
+	def meltData(self,dataID : str, columnNames : pd.Series) -> dict:
 		'''
 		Melts data frame.
 		'''
-		
 		if dataID in self.dfs:
 			addColumnNames = self.parent.config.getParam("melt.data.add.column.names")
+			ignoreClipping = self.parent.config.getParam("melt.data.ignore.clipping")
 			idVars = [column for column in self.dfs[dataID].columns if column not in columnNames.values] #all columns but the selected ones
 			potentialValueName = "melt_value" if not addColumnNames else 'melt_value:{}'.format(mergeListToString(columnNames)).replace("'",'')
 			potentialVariableName = "melt_variable" if not addColumnNames else 'melt_variable:{}'.format(mergeListToString(columnNames)).replace("'",'')
 			valueName = self.evaluateColumnName(columnName = potentialValueName, dataID = dataID)
 			variableName = self.evaluateColumnName(columnName=potentialVariableName, dataID = dataID)
-			meltedDataFrame = pd.melt(self.dfs[dataID], id_vars = idVars, value_vars = columnNames,
+
+			if self.hasClipping(dataID) and not ignoreClipping:
+				rowIdx = self.clippings[dataID]
+				df = self.dfs[dataID].loc[rowIdx,:]
+			else:
+				df = self.dfs[dataID]
+
+			meltedDataFrame = pd.melt(df, id_vars = idVars, value_vars = columnNames,
 									var_name = variableName,
 									value_name = valueName)
 			#add groupings
@@ -2734,8 +2458,6 @@ class DataCollection(object):
 				for groupingName in groupingNames:
 					mapper = self.parent.grouping.getGroupNameByColumn(groupingName)
 					meltedDataFrame.loc[:,groupingName] = meltedDataFrame[variableName].map(mapper).fillna(self.replaceObjectNan)
-
-				
 
 			## determine file name
 			baseFile = self.getFileNameByID(dataID)
@@ -2747,7 +2469,7 @@ class DataCollection(object):
 			return errorMessage
 
 
-	def correlateDfs(self,corrParams):
+	def correlateDfs(self,corrParams : dict) -> dict:
 		""
 		dataID1 = corrParams["dataID1"]
 		dataID2 = corrParams["dataID2"]
@@ -2790,8 +2512,7 @@ class DataCollection(object):
 			catData2 = self.getDataByColumnNames(dataID=dataID2,columnNames=catCol2)["fnKwargs"]["data"].loc[df2.index,:]
 
 			A = pearsonByRowsTwoArray(df1.values,df2.values)
-			
-			
+
 			catRep2 = np.repeat(catData1.values,df2.index.size,axis=0)
 			catRep1 = np.tile(catData2.values,(df1.index.size,1))
 			
@@ -2803,7 +2524,7 @@ class DataCollection(object):
 			resultDf.columns = columnNames 
 			return self.addDataFrame(resultDf,fileName="rowByRowCorr:{}:{}".format(self.getFileNameByID(dataID1),self.getFileNameByID(dataID2)))
 
-	def correlateFeaturesDfs(self,corrParams):
+	def correlateFeaturesDfs(self,corrParams : dict) -> dict:
 		""
 		dataID1,dataID2,columnNames1,columnNames2 = self._getCorrParamFromDict(corrParams)
 
@@ -2818,7 +2539,7 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
-	def mergeDfs(self,mergeParams, how = "left", indicator = True):
+	def mergeDfs(self, mergeParams : dict, how : str = "left", indicator : bool = True) -> dict:
 		""
 
 		leftDataID = mergeParams["left"]["dataID"]
@@ -2831,8 +2552,6 @@ class DataCollection(object):
 
 			return getMessageProps("Error ..","Merge column selection of different size.")
 		
-		
-
 		leftSelectedColumnNames = mergeParams["left"]["columnNames"] if mergeParams["left"]["selectedColumns"].empty else mergeParams["left"]["selectedColumns"]
 		rightSelectedColumnNames = mergeParams["right"]["columnNames"] if mergeParams["right"]["selectedColumns"].empty else mergeParams["right"]["selectedColumns"]
 
@@ -2865,42 +2584,6 @@ class DataCollection(object):
 		return errorMessage
 
 
-	def melt_data_by_groups(self,columnGroups, id = None):
-		'''
-		Melts multiple subsets of data to one df
-		'''
-		if id is not None:
-			self.set_current_data_by_id(id)
-			
-		meltedSubsets = []
-		columnNames = []
-		
-		groupColumns = []
-		# get columns that will be used for merging
-		[groupColumns.extend(columns) for columns in columnGroups.values()]
-		for n,(groupId, columnList) in enumerate(columnGroups.items()):
-			#almost impossible to occur from instant clue but rather check this
-			if any(column not in self.df.columns for column in columnList):
-				continue
-			if n == 0:
-				idVars = [column for column in self.df.columns if column not in groupColumns]
-			else:
-				idVars = None			
-			
-			meltDf = pd.melt(self.df, value_vars = columnList,
-							id_vars = idVars, 
-							value_name = 'Values_{}'.format(groupId),
-							var_name = 'Variable_{}'.format(groupId))
-			columnNames.extend(meltDf.columns.values.tolist())
-			meltedSubsets.append(meltDf)
-		
-		if len(meltedSubsets) > 1:
-			conDf = pd.concat(meltedSubsets,axis=1,ignore_index=True)
-			conDf.columns = columnNames
-			return conDf
-		else:
-			return None
-
 
 	def pivotTable(self,dataID, indexColumn, columnNames, findCommonString = True):
 		""
@@ -2910,7 +2593,7 @@ class DataCollection(object):
 			else:
 				commonString = ""
 			data = pd.pivot_table(data = self.dfs[dataID], columns=[columnNames], index=[indexColumn])
-			mergedColumns = ['_'.join(col).strip().replace(commonString,"") for col in data.columns.values]
+			mergedColumns = ['_'.join(col).strip().replace(commonString,"") for col in data.columns.array]
 			data.columns = mergedColumns
 			data = data.reset_index()
 			fileName = "PivotT({}):({})".format(columnNames,self.getFileNameByID(dataID))			
@@ -2949,7 +2632,7 @@ class DataCollection(object):
 		# 	completeKwargs = self.addDataFrame(unstackedDf, fileName = fileName)				
 		# 	return completeKwargs
 		
-	def transposeDataFrame(self,dataID, columnNames = None, columnLabel = None):
+	def transposeDataFrame(self,dataID : str, columnNames = None, columnLabel = None) -> dict:
 		""
 		if dataID in self.dfs:
 			df = self.dfs[dataID]
@@ -2964,7 +2647,7 @@ class DataCollection(object):
 				else:
 					requiredColumnNames = [colName for colName in df.columns if colName != columnLabel]
 			else:
-				requiredColumnNames = df.columns.values 
+				requiredColumnNames = df.columns.array 
 	
 			dataT = df[requiredColumnNames].T 
 			dataT.columns = newColumnNames
@@ -2974,42 +2657,9 @@ class DataCollection(object):
 			return self.addDataFrame(dataT,fileName="t:{}".format(self.getFileNameByID(dataID)))
 
 		return errorMessage
-
-	def transform_data(self,columnNameList,transformation):
-		'''
-		Calculates data transformation and adds these to the data frame.
-		'''	
-		newColumnNames = [self.evaluate_column_name('{}_{}'.format(transformation,columnName)) \
-		for columnName in columnNameList]
-		
-		if transformation == 'Z-Score_row':
-			transformation = 'Z-Score'
-			axis_ = 1
-		elif transformation == 'Z-Score_col':
-			transformation = 'Z-Score' 
-			axis_ = 0 
-		else:
-			axis_ = 0 
-		
-		if 'Z-Score' in transformation:
-			transformedDataFrame = pd.DataFrame(scale(self.df[columnNameList].values, axis = axis_),
-				columns = newColumnNames, index = self.df.index)
-		else:
-			transformedDataFrame = pd.DataFrame(
-							calculations[transformation](self.df[columnNameList].values),
-							columns = newColumnNames,
-							index = self.df.index)
-			
-		if transformation != 'Z-Score':
-			transformedDataFrame[~np.isfinite(transformedDataFrame)] = np.nan
-		
-		self.df[newColumnNames] = transformedDataFrame
-		self.update_columns_of_current_data()
-		
-		return newColumnNames
 	
 
-	def updateData(self,dataID,data):
+	def updateData(self,dataID : str, data : pd.DataFrame) -> dict:
 		'''
 		Updates dataframe, input: dataID and data
 		'''
@@ -3020,120 +2670,9 @@ class DataCollection(object):
 			return getMessageProps("Updated..","Data ({}) updated.".format(dataID))
 		else:
 			return errorMessage
-
-	def update_columns_of_current_data(self):
-		'''
-		Updates the variable: self.df_columns and renews the data type - column relationship.
-		'''	
-		#self.df_columns = self.df.columns.values.tolist() 
-		self.extract_data_type_of_columns(self.df,self.currentDataFile)	
-		self.save_current_data()
-
-	def replace_values_by_dict(self,replaceDict,id=None):
-		'''
-		Replaces values by dict. Dict must be nested in the form:
-		{ColumnName:{Value:NewValue}}
-		'''
-		if id is None:
-			pass
-		else:
-			self.set_current_data_by_id(id)
-		self.df.replace(replaceDict,inplace=True)
-		self.save_current_data()
-		
-
-	def resort_columns_in_current_data(self):
-		'''
-		Resorts columns alphabatically
-		'''
-		self.df.sort_index(axis = 1, inplace = True)
-		self.update_columns_of_current_data()
-		
-		
-	def remove_columns_with_low_variance(self,columns,thres = 0.5,copy=False):
-		'''
-		Calculates variance per columns. Remove columns bewlo threshold.
-		'''
-		data = self.df[columns]
-		try:
-			model = VarianceThreshold(thres).fit(data)
-		except:
-			return
-
-		boolIndicator = model.get_support()
-		newFeatures = list(compress(columns,boolIndicator))
-		if np.sum(boolIndicator) == len(columns):
-			return 'Same'
-		
-		if copy:
-			newFeatureNames = [self.evaluate_column_name('VarFilt_{}'.format(feature)) \
-						   for feature in newFeatures]
-			self.df[newFeatureNames] = self.df[newFeatures]
-			self.update_columns_of_current_data()	
-				
-			return newFeatureNames
-		else:
-			
-			toDelete = [feature for n,feature in enumerate(columns) if boolIndicator[n] == False]
-			self.delete_columns_by_label_list(toDelete)
-			return toDelete
-		
-		
-		
-				
-	def save_current_data(self):
-		'''
-		Save the current active df into the dictionary self.dfs
-		'''
-
-		self.dfs[self.currentDataFile] = self.df
-	
-	def set_current_data_by_id(self,id = None):
-		'''
-		Change current data by ID
-		'''
-		if id is None:
-			return
-		if id not in self.dfs:
-			return
-		
-		if self.currentDataFile != id:
-			if self.df.empty == False:
-		
-				self.save_current_data() 
-		
-			self.df = self.dfs[id]
-			self.df_columns = self.df.columns.values.tolist()
-			self.currentDataFile = id		
-				
-	def sort_columns_alphabetically(self):
-		'''
-		Sorts collumns alphabetically
-		'''
-		
-		self.df.reindex_axis(sorted(self.df_columns), axis=1, inplace=True)
-		self.update_columns_of_current_data()
-		
-	def sort_columns_by_string_length(self, columnName):
-		'''
-		Sort columns by string length. 
-		
-		'''
-		columnNameLen = 'stringLen{}'.format(columnName)
-		internalColumnNameForSorting = self.evaluate_column_name(columnNameLen)
-		if self.df[columnName].dtype in [np.int64,np.float64]:
-			self.df[internalColumnNameForSorting] = self.df[columnName].astype('str').str.len()
-		else:
-			self.df[internalColumnNameForSorting] = self.df[columnName].str.len()
-		
-		self.df.sort_values(internalColumnNameForSorting,kind='mergesort',inplace=True) 
-		
-		self.delete_columns_by_label_list([internalColumnNameForSorting])
-		
-		
 		
 			
-	def sortData(self, dataID, columnNames, kind = 'mergesort', ascending = True, na_position = 'last'):
+	def sortData(self, dataID : str, columnNames : pd.Series, kind : str= 'mergesort', ascending : bool = True, na_position : str = 'last') -> dict:
 		'''
 		Sort rows in one or multiple columns.
 		'''
@@ -3221,15 +2760,7 @@ class DataCollection(object):
 		'''
 		self.fileNameByID[dataID] = fileName
 						
-			
-	def rename_columnNames_in_current_data(self,replaceDict):
-		'''
-		Replaces column names in currently selected data frame.
-		'''
-		self.df.rename(str,columns=replaceDict,inplace=True)
-		
-		self.update_columns_of_current_data()		
-	
+
 	def aggregateNRows(self,dataID,columnNames, n, metric='mean'):
 		
 		if dataID in self.dfs:

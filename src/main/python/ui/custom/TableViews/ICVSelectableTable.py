@@ -356,7 +356,7 @@ class PandaModel(QAbstractTableModel):
             self.filters = self.filters.drop(tagID, axis="columns")
             self.updateFilter()
         
-    def getCurrentShape(self):
+    def getCurrentShape(self) -> tuple:
         ""
         return self.df.shape
     
@@ -369,7 +369,7 @@ class PandaModel(QAbstractTableModel):
         if columnIndex in self.highlightBackgroundHeaderColors:
             return self.highlightBackgroundHeaderColors[columnIndex]
 
-    def getNumberOfHighlightedBackgrounds(self):
+    def getNumberOfHighlightedBackgrounds(self) -> int:
         ""
         return len(self.highlightBackgroundHeaderColors)
     
@@ -377,17 +377,16 @@ class PandaModel(QAbstractTableModel):
         if columnIndex in self.highlightBackgroundHeaderColors:
             del self.highlightBackgroundHeaderColors[columnIndex]
 
-    def getCurrentData(self):
+    def getCurrentData(self) -> pd.DataFrame:
         "Returns data even if filtering is applied."
         return self.df.copy()
 
-
-    def getColumnNameByColumnIndex(self,columnIndex):
+    def getColumnNameByColumnIndex(self,columnIndex) -> str:
         ""
         if columnIndex < self.df.columns.size:
             return self.df.columns[columnIndex]
 
-    def getColumnNameByTableIndex(self,index):
+    def getColumnNameByTableIndex(self,index) -> str:
         ""
         columnName = self.df.columns[index.column()]
         return columnName
@@ -398,11 +397,11 @@ class PandaModel(QAbstractTableModel):
         if columnName is not None:
             return self.df[columnName].dtype
 
-    def getFont(self):
+    def getFont(self) -> QFont:
         ""
         return getStandardFont()
 
-    def getRowDataIndexByTableIndex(self,index):
+    def getRowDataIndexByTableIndex(self,index) -> pd.DataFrame:
         ""
         return self.df.index[index.row()]
 
@@ -430,16 +429,15 @@ class PandaModel(QAbstractTableModel):
 
         self.df.iloc[index.row(),index.column()] = v
 
-    def getSelectedRows(self,selectedRows="all"):
+    def getSelectedRows(self,selectedRows : str ="all") -> pd.DataFrame:
         ""
-        
         if isinstance(selectedRows,list):
             return self.df.iloc[selectedRows,:]
         elif isinstance(selectedRows,str):
             if selectedRows == "all":
                 return self.df
 
-    def dropRows(self,selectedRows):
+    def dropRows(self,selectedRows : list) -> pd.DataFrame:
         ""
         if isinstance(selectedRows,list):
             dataIndex = [self.getRowDataIndexByTableIndex(idx) for idx in selectedRows]
@@ -447,20 +445,20 @@ class PandaModel(QAbstractTableModel):
         else:
             raise ValueError("selected rows must be a list!")
 
-    def completeDataChanged(self):
+    def completeDataChanged(self) -> None:
         ""
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount()-1, self.columnCount()-1))
 
-    def completeHeaderDataChanged(self):
+    def completeHeaderDataChanged(self) -> None:
         ""
         self.headerDataChanged.emit(Qt.Orientation.Vertical,0,self.rowCount()-1)
     
-    def updateDataFrame(self,df):
+    def updateDataFrame(self,df : pd.DataFrame) -> None:
         ""
         self.layoutAboutToBeChanged.emit()
         self.initData(df)
-        self.completeDataChanged()
         self.layoutChanged.emit()
+        self.completeDataChanged()
 
     def flags(self, index):
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable  | Qt.ItemFlag.ItemIsSelectable
