@@ -1820,178 +1820,6 @@ class DataCollection(object):
 				return funcProps
 		else:
 			return errorMessage
-
-
-
-
-	def drop_rows_with_nan(self,columnLabelList,how,thresh=None):
-		'''
-		Drops rows with NaN
-		'''
-		if isinstance(columnLabelList,list):
-			pass
-		elif isinstance(columnLabelList,str):
-			columnLabelList = [columnLabelList]
-		#import time 
-		#t1 = time.time() 
-		if len(columnLabelList) == 1:
-			bool = np.invert(np.isnan(self.df[columnLabelList].values)) 
-			dfnoNaN = self.df[bool.tolist()]
-		
-		else:
-		
-			dfnoNaN = self.df.dropna(how = how,subset=columnLabelList, thresh=thresh)
-		
-		if len(self.df.index) > 10000:
-		
-			idxNaN_txt = '\nDf to big to save. Cannot be undone.\n'
-		
-		else:
-			boolIn = np.isin(self.df.index,dfnoNaN.index)
-			idxNaN = self.df.index[boolIn == False]
-			idxNaN_txt = np.sum(boolIn == False)
-			self.save_dropped_rows(self.currentDataFile,idxNaN)
-		
-		self.df = self.dfs[id] = dfnoNaN
-		self.update_columns_of_current_data()
-		
-		return idxNaN_txt
-				
-			
-	def save_dropped_rows(self,id=None,rowIdx=None,reverse=False):
-		'''
-		Saves rows that were removed from the data set.
-		'''
-		if id != self.currentDataFile:
-			self.set_current_data_by_id(id)
-		
-		if reverse and id in self.droppedRows:
-			
-			dfToAdd = self.droppedRows[id][-1]
-			del self.droppedRows[id][-1]
-			if len(self.droppedRows[id]) == 0:
-				del self.droppedRows[id]
-				
-			self.df = self.df.append(dfToAdd)
-			self.dfs[id] = self.df			
-			
-			
-		else:
-		
-			if id not in self.droppedRows:
-		
-				self.droppedRows[id] = [self.df.loc[rowIdx,:]]
-			else:
-				self.droppedRows[id].append(self.df.loc[rowIdx,:])
-					
-		
-	def duplicate_columns(self,columnLabelList):
-		'''
-		Duplicates a list of columns and inserts the column at the position + 1
-		of the original column. 
-		'''
-		columnLabelListDuplicate = ['cc_'+col for col in columnLabelList]
-		columnIndexRaw = [self.df_columns.index(col)  for col in self.df_columns if col in columnLabelList]
-		
-		for i,columnIndex in enumerate(columnIndexRaw):
-			columnIndex = columnIndex + 1 + i
-			columnColumn = columnLabelListDuplicate[i]
-			columnLabel = columnLabelList[i]
-			newColumnData = self.df[columnLabel]
-			self.insert_column_at_index(columnIndex, columnColumn, newColumnData)
-			
-		self.update_columns_of_current_data()
-		return columnLabelListDuplicate	
-	
-	def substract_columns_by_column(self,columnLabelList, divColumn):
-		'''
-		
-		'''
-		columnNames = []
-		if isinstance(divColumn,str):
-		
-				for column in columnLabelList:
-					
-					if divColumn in self.df.columns:
-						columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
-						self.df[columnName] = self.df[column] - self.df[divColumn]
-						columnNames.append(columnName)
-						
-		elif isinstance(divColumn,list):
-			
-				if len(divColumn) != len(columnLabelList):
-					return
-				
-				for column, divColumn in zip(columnLabelList,divColumn):
-					columnName = self.evaluate_column_name('{}-{}'.format(column,divColumn))
-					self.df[columnName] = self.df[column] - self.df[divColumn]
-					columnNames.append(columnName)
-				
-		self.update_columns_of_current_data()
-		return columnNames
-
-	def divide_columns_by_column(self,columnLabelList, divColumn):
-		'''
-		
-		'''
-		
-		columnNames = []
-		if isinstance(divColumn,str):
-		
-				for column in columnLabelList:
-					
-					if divColumn in self.df.columns:
-						columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
-						self.df[columnName] = self.df[column] / self.df[divColumn]
-						columnNames.append(columnName)
-						
-		elif isinstance(divColumn,list):
-			
-				if len(divColumn) != len(columnLabelList):
-					return
-				
-				for column, divColumn in zip(columnLabelList,divColumn):
-					columnName = self.evaluate_column_name('{}/{}'.format(column,divColumn))
-					self.df[columnName] = self.df[column] / self.df[divColumn]
-					columnNames.append(columnName)
-				
-		self.update_columns_of_current_data()
-		return columnNames
-			
-			
-		
-	def evaluate_columnNames_of_df(self, df, useExact = True):
-		'''
-		Checks each column name individually to avoid same naming and overriding.
-		'''
-		columns = df.columns.to_list() 
-		evalColumns = [self.evaluate_column_name(column,useExact=useExact) for column in columns]
-		df.columns = evalColumns
-		return df
-		
-			
-	def evaluate_column_name(self,columnName,columnList = None, useExact = False, maxLength = 80):
-		'''
-		Check if the column name already exists and how often. Adds a suffix.
-		'''
-		if columnList is None:
-			columnList = self.df_columns 
-		
-		if len(columnName) > maxLength-10:
-			columnName = columnName[:maxLength-30]+'__'+columnName[-30:]
-			
-		if useExact:
-			columnNameExists = [col for col in columnList if columnName == col]
-		else:
-			columnNameExists = [col for col in columnList if columnName in col]
-		
-		numberColumnNameExists = len(columnNameExists)
-		if numberColumnNameExists > 0:
-			newColumnName = columnName+'_'+str(numberColumnNameExists)
-		else:
-			newColumnName = columnName		
-		
-		return newColumnName
 	
 		
 	def exportData(self,dataID,path = 'exportData.txt', columnOrder = None,fileFormat = "txt"):
@@ -2073,48 +1901,60 @@ class DataCollection(object):
 
 	def fillNaNBySmartReplace(self,dataID,columnNames,grouping,**kwargs):
 		""
-		if dataID in self.dfs:
-			try:
-				nNaNForDownShift = self.parent.config.getParam("fill.NaN.smart.repl.number.NaN.for.downshift")
-				minValidValues = self.parent.config.getParam("fill.NaN.smart.repl.min.number.valid.values")
-				downShift = self.parent.config.getParam("fill.NaN.gaussian.downshift")
-				widthGaussian = self.parent.config.getParam("fill.NaN.gaussian.width")
-				if all(x is not None for x in [nNaNForDownShift,minValidValues,downShift,widthGaussian]):
-					smartRrep = ICSmartReplace(
-							nNaNForDownshift=nNaNForDownShift,
-							minValidvalues=minValidValues,
-							grouping=grouping,
-							downshift=downShift,
-							scaledWidth=widthGaussian)
-							
-					data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
-					X = smartRrep.fitTransform(data)
-				
-					self.dfs[dataID].loc[X.index,X.columns] = X
-					return getMessageProps("Done ..","Replacement done.")
+		if dataID not in self.dfs : return errorMessage 
+		try:
+			nNaNForDownShift = self.parent.config.getParam("fill.NaN.smart.repl.number.NaN.for.downshift")
+			minValidValues = self.parent.config.getParam("fill.NaN.smart.repl.min.number.valid.values")
+			downShift = self.parent.config.getParam("fill.NaN.gaussian.downshift")
+			widthGaussian = self.parent.config.getParam("fill.NaN.gaussian.width")
+			if all(x is not None for x in [nNaNForDownShift,minValidValues,downShift,widthGaussian]):
+				smartRrep = ICSmartReplace(
+						nNaNForDownshift=nNaNForDownShift,
+						minValidvalues=minValidValues,
+						grouping=grouping,
+						downshift=downShift,
+						scaledWidth=widthGaussian)
+						
+				data = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+				X = smartRrep.fitTransform(data)
+			
+				self.dfs[dataID].loc[X.index,X.columns] = X
+				return getMessageProps("Done ..","Replacement done.")
 
-			except Exception as e:
-				
-				return getMessageProps("Error ..","There was an error: "+str(e))
-		
-		return errorMessage
+		except Exception as e:
+			
+			return getMessageProps("Error ..","There was an error: "+str(e))
 
+	def formatStringColumn(self, dataID : str, columnNames : pd.Index | pd.Series, formatFn : str) -> dict:
+		""""""
+		if dataID not in self.dfs : return errorMessage 
+		X = self.getDataByColumnNames(dataID,columnNames,ignore_clipping=True)["fnKwargs"]["data"]
+		newColumnNames = [f"({formatFn}){colName}" for colName in columnNames]
+		Y = pd.DataFrame(columns=newColumnNames, index=X.index)
+		for n, colName in enumerate(columnNames):
+			newColumnName  = newColumnNames[n]
+			if formatFn == "upper":
+				Y.loc[X.index,newColumnName] = X[colName].str.upper() 
+			elif formatFn == "lower":
+				Y.loc[X.index,newColumnName] = X[colName].str.lower() 
+			elif formatFn == "capitilize":
+				Y.loc[X.index,newColumnName] = X[colName].str.capitalize() 
+		return self.joinDataFrame(dataID,Y)
 
 	def summarizeGroups(self,dataID,grouping,metric,**kwargs):
 		""
-		if dataID in self.dfs:
-			for groupName, columnNames in grouping.items():
+		if dataID not in self.dfs : return errorMessage 
+		for groupName, columnNames in grouping.items():
 
-				data = self.transformer.summarizeTransformation(dataID,columnNames,metric=metric,justValues = True)
-				columnName = "s:{}({})".format(metric,groupName)
-				self.addColumnData(dataID,columnName,data)
+			data = self.transformer.summarizeTransformation(dataID,columnNames,metric=metric,justValues = True)
+			columnName = "s:{}({})".format(metric,groupName)
+			self.addColumnData(dataID,columnName,data)
 
-			completeKwargs = getMessageProps("Done..","Groups summarized. Columns added.")
-			completeKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
-			completeKwargs["tooltipData"] = self.getTooltipdata(dataID)
-			return completeKwargs
-		else:
-			return errorMessage
+		completeKwargs = getMessageProps("Done..","Groups summarized. Columns added.")
+		completeKwargs["columnNamesByType"] = self.dfsDataTypesAndColumnNames[dataID]
+		completeKwargs["tooltipData"] = self.getTooltipdata(dataID)
+		return completeKwargs
+		
 
 	def removeDuplicates(self,dataID : str, columnNames : pd.Series):
 		""

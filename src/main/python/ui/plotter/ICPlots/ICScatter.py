@@ -186,8 +186,7 @@ class ICScatterPlot(ICChart):
         if "axisLabels" in self.data:
             self.setAxisLabels(self.axisDict,self.data["axisLabels"])
 
-        if "axisTitles" in self.data:
-            self.addTitles(data["axisTitles"])
+        self.addTitles()
 
         if self.getParam("scatter.equal.axis.limits"):
             self.alignLimitsOfAllAxes(updateFigure=False)

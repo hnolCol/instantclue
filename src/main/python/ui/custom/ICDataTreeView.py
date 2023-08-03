@@ -86,7 +86,7 @@ dataTypeSubMenu = {
             "Export Data"]), #
         ("Column operation ..", ["Change data type to ..","String operation"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
-        ("String operation",["Split on .."]),
+        ("String operation",["Split on ..","Format"]),
         ("Filter",["Subset Shortcuts","To QuickSelect .."]),
         ("Subset Shortcuts",["Keep","Remove"]),
         # ("(Prote-)omics-toolkit", ["Annotations"]),
@@ -1199,6 +1199,27 @@ menuBarItems = [
                       }
     },
     {
+        "subM":"Format",
+        "name":"UPPER",
+        "funcKey": "data::formatString",
+        "dataType": "Categories",
+        "fnKwargs": {"formatFn":"upper"}
+    },
+    {
+        "subM":"Format",
+        "name":"lower",
+        "funcKey": "data::formatString",
+        "dataType": "Categories",
+        "fnKwargs": {"formatFn":"lower"}
+    },
+    {
+        "subM":"Format",
+        "name":"Capitilize",
+        "funcKey": "data::formatString",
+        "dataType": "Categories",
+        "fnKwargs": {"formatFn":"capitilize"}
+    },
+    {
         "subM":"To QuickSelect ..",
         "name":"Raw values",
         "funcKey": "sendSelectionToQuickSelect",
@@ -1561,11 +1582,11 @@ class DataTreeView(QWidget):
         self.layout().setContentsMargins(0,0,0,0)
         self.layout().addWidget(self.table)
         
-    def getData(self):
+    def getData(self) -> pd.DataFrame:
         ""
         return self.table.model().getLabels()
 
-    def getDataID(self):
+    def getDataID(self) -> str:
         ""
         return self.dataID
 
@@ -1590,7 +1611,6 @@ class DataTreeView(QWidget):
 
     def sortLabels(self):
         "Sorts label, first ascending, then descending, then raw order"
-        #how = "ascending"
         if hasattr(self.table.model(),"lastSearchType"):
             lastSerachType = getattr(self.table.model(),"lastSearchType")
             if lastSerachType is None:
@@ -1604,12 +1624,9 @@ class DataTreeView(QWidget):
         self.table.model().sort(how=how)
         columnDict = self.mC.mainFrames["data"].dataTreeView.getColumns("all")
        
-        #funKwargs = {"key":","fnKwargs":}
         funcProps = {"key":"data::sortColumns",
                     "kwargs":{"sortedColumnDict":columnDict,"dataID":self.mC.getDataID()}}
         self.mC.sendRequestToThread(funcProps)
-
-
 
     def customSortLabels(self):
         ""
@@ -1643,9 +1660,8 @@ class DataTreeView(QWidget):
         ""
         self.table.model().setColumnStateByData(columnNames,newState)
 
-    def setGrouping(self,grouping,groupingName):
+    def setGrouping(self,grouping : dict,groupingName : str) -> None:
         ""        
-        
         if isinstance(grouping,dict):
             self.groupingName = groupingName
             groupColors = self.mC.grouping.getGroupColors()
@@ -1659,8 +1675,6 @@ class DataTreeView(QWidget):
                 self.model.setGroupNameByDataIndex(modelDataIndex,groupName)
                 
             self.table.model().completeDataChanged()
-
-        
 
     def setCurrentGrouping(self):
         ""

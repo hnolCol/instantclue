@@ -325,11 +325,19 @@ class ICClustermap(ICChart):
     def adjustColorMapLimits(self):
         ""
         limitProps = self.mC.config.getParam("colorMapLimits")
-
+        centerAroundZeroIfSpansZero = self.mC.config.getParam("center.colormap.on.span.zero")
         if limitProps == "raw values":
-
-            self.meshGridKwargs["vmin"] = np.nanmin(self.data["plotData"].values)
-            self.meshGridKwargs["vmax"] = np.nanmax(self.data["plotData"].values)
+            if not centerAroundZeroIfSpansZero:
+                self.meshGridKwargs["vmin"] = np.nanmin(self.data["plotData"].values)
+                self.meshGridKwargs["vmax"] = np.nanmax(self.data["plotData"].values)
+            else:
+                min = np.nanmin(self.data["plotData"].values)
+                max = np.nanmax(self.data["plotData"].values)
+                if min < 0 and max > 0:
+                    limits = np.array(min,max)
+                    maxValue = np.max(np.abs(limits))
+                    self.meshGridKwargs["vmin"] = -maxValue 
+                    self.meshGridKwargs["vmax"] = maxValue
 
         elif limitProps == "center 0":
 

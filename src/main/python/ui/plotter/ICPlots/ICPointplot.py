@@ -53,6 +53,7 @@ class ICPointplot(ICChart):
                         data["tickLabels"],
                         rotation=90)
             self.setAxisLabels(self.axisDict,self.data["axisLabels"])
+            self.addTitles(data["axisTitles"])
             self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
             #hoverGroupItems = self.reorderBoxplotItemsForHover()
             #self.setHoverItemGroups(hoverGroupItems)
@@ -182,5 +183,6 @@ class ICPointplot(ICChart):
                         onlyForID= axisID,
                         rotation=90)
         self.initPointplots(axisID,targetAx)
+        self.addTitles(onlyForID=axisID,targetAx=targetAx)
        
                 

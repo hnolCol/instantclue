@@ -1726,7 +1726,16 @@ DEFAULT_PARAMETER = [
     "parentType"    :   "Cluster (HClust)",
     "description"   :   "Method how to calculate color map limits.",
     },
-        {
+    {
+    "name"          :   "center.colormap.on.span.zero",
+    "value"         :   True,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "intern",
+    "parentType"    :   "Cluster (HClust)",
+    "description"   :   "If enable, the colormap will be centered around zero even if 'raw values' is defined for the colorMapLimits.",
+    },
+    {
     "name"          :   "colorMapLimits.min",
     "value"         :   0.0,
     "dtype"         :   float,

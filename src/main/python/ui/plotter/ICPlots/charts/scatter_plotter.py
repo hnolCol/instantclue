@@ -222,9 +222,15 @@ class scatterPlot(object):
 		else:
 			with pd.option_context('mode.use_inf_as_na', True):
 				nonNaNData = self.data[self.numericColumns].dropna()
-			xMin, yMin = nonNaNData[self.numericColumns].min()
-			xMax, yMax = nonNaNData[self.numericColumns].max()
-		
+			if nonNaNData.index.size == 0:
+				return 
+			if nonNaNData.index.size == 1: #if only single data point, min and max would be the same.
+				x, y = nonNaNData[self.numericColumns].min()
+				xMin,xMax = x - 0.5, x+0.5
+				yMin, yMax = y - 0.5, y+0.5
+			else:
+				xMin, yMin = nonNaNData[self.numericColumns].min()
+				xMax, yMax = nonNaNData[self.numericColumns].max()
 		
 		xAdd = np.sqrt(xMax**2 - xMin**2) * 0.05
 		yAdd = np.sqrt(yMax**2 - yMin**2) * 0.05

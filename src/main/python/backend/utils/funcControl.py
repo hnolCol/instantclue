@@ -475,7 +475,11 @@ funcPropControl = {
             "completedRequest":
                     [sendMessageProps]
         },
-
+    "data::formatString":
+        {
+            "threadRequest":{"obj":"data","fn":"formatStringColumn","requiredKwargs":["dataID","columnNames","formatFn"]},
+            "completedRequest":refreshColumnView
+        },
     "data::splitColumnsByString":
         {
             "threadRequest":{"obj":"data","fn":"splitColumnsByString","requiredKwargs":["dataID","columnNames","splitString"]},
