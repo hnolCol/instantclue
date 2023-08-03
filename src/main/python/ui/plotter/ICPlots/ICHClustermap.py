@@ -249,7 +249,8 @@ class ICClustermap(ICChart):
     def addGroupingRectangles(self):
         if "axColumnGrouping" in self.axisDict:
             for rect in self.data["groupingRectangles"]:
-                self.axisDict["axColumnGrouping"].add_patch(rect)
+                r = patches.Rectangle(**rect)
+                self.axisDict["axColumnGrouping"].add_patch(r)
 
     def addTicksToRowDendro(self):
         ""

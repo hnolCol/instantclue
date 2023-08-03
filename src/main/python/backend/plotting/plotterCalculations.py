@@ -1990,7 +1990,7 @@ class PlotterBrain(object):
             if groupingName is not None and displayGrouping and len(colorsByColumnNamesFiltered) > 0:
                 for ii, (gN, colorsByColumnNamesForGn) in enumerate(colorsByColumnNamesFiltered.items()):
                     groupingGNRectangles = [
-                        Rectangle(
+                        dict(
                             xy = (0+10*n,-0.5+ii),
                             width = 10, 
                             height = 1,
