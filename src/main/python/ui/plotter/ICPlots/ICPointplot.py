@@ -13,6 +13,11 @@ class ICPointplot(ICChart):
 
         self.pointplotItems = dict() 
 
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Pointplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Pointplot"))
+
     def initPointplots(self, onlyForID = None, targetAx = None):
         ""
         try:

@@ -17,7 +17,6 @@ class ICClustermap(ICChart):
     def __init__(self,*args,**kwargs):
         ""
         super(ICClustermap,self).__init__(*args,**kwargs)
-
         self.meshGridKwargs = dict()
         self.axisTextLabels = dict()
         self.movingMaxDLine = False
@@ -37,36 +36,40 @@ class ICClustermap(ICChart):
             print(e)
 
 
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
-        if "clusterRectangles" in self.data and len(self.data["clusterRectangles"]) != 0 and len(self.clusterRectangles) >0 and self.clusterRectangles[0].get_visible():
-            menus["main"].addAction("Remove Clusters", self.setClusterInvisible)
-        elif "clusterRectangles" in self.data:
-            menus["main"].addAction("Show Clusters", self.setClusterVisible)
-        if hasattr(self, "labelData"):
-            menus["main"].addAction("Show Labels", self.showLabels)
-        for cMap in colorParameterRange:
-            menus["Color Map (Cluster)"].addAction(cMap,self.updateColorMapOfClusterMesh)
-            if self.plotType == "hclust":
-                menus["Color Map (Color column)"].addAction(cMap,self.updateColorMapOfColorColumns)
-        if self.groupingExists():
-            menus["main"].addAction("Add Grouping Legend", self.addGroupingLegend)
-        isFrozen = self.mC.getLiveGraph().getFreezeState()
-        menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            if "clusterRectangles" in self.data and len(self.data["clusterRectangles"]) != 0 and len(self.clusterRectangles) >0 and self.clusterRectangles[0].get_visible():
+                menus["main"].addAction("Remove Clusters", self.setClusterInvisible)
+            elif "clusterRectangles" in self.data:
+                menus["main"].addAction("Show Clusters", self.setClusterVisible)
+            
+            menus["main"].addAction("Heatmap Style",lambda : self.mC.openSettings(specificSettingsTab ="Hierarchical Clustering (Heatmap)"))
 
-        menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
-        if self.plotType == "hclust":
-            menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
-            #menus["main"].addAction("Share graph", self.shareGraph)
+            if hasattr(self, "labelData"):
+                menus["main"].addAction("Show Labels", self.showLabels)
+            for cMap in colorParameterRange:
+                menus["Color Map (Cluster)"].addAction(cMap,self.updateColorMapOfClusterMesh)
+                if self.plotType == "hclust":
+                    menus["Color Map (Color column)"].addAction(cMap,self.updateColorMapOfColorColumns)
+            if self.groupingExists():
+                menus["main"].addAction("Add Grouping Legend", self.addGroupingLegend)
+            isFrozen = self.mC.getLiveGraph().getFreezeState()
+            menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
+
+            menus["main"].addAction("Export cluster ID", self.mC.mainFrames["right"].addClusterLabel)
+            if self.plotType == "hclust":
+                menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
+                #menus["main"].addAction("Share graph", self.shareGraph)
        
-    def toggleFreezeStateInLiveGraph(self, isFrozen):
+    def toggleFreezeStateInLiveGraph(self, isFrozen) -> None:
         ""
         self.mC.getLiveGraph().setFreezeState(not isFrozen)
 
-    def groupingExists(self):
+    def groupingExists(self) -> bool:
         return "axColumnGrouping" in self.axisDict
 
-    def addGroupingLegend(self):
+    def addGroupingLegend(self) -> None:
         ""
        # print(self.data)
         if self.groupingExists():
@@ -77,12 +80,12 @@ class ICClustermap(ICChart):
         legendData = self.mC.grouping.getDataForLegend(groupingNames,columnNames)
         self.addGroupingLegendToGraph(legendData,ax, legendKwargs={"loc":"lower left", "bbox_to_anchor":(0.00, 1.02), "ncol":len(legendData)})
 
-    def addTooltip(self, tooltipColumnNames,dataID):
+    def addTooltip(self, tooltipColumnNames : pd.Series | pd.Index,dataID : str):
         ""
-        self.annotationColumns = tooltipColumnNames.values.tolist()
+        self.annotationColumns = tooltipColumnNames.to_list()
         self.tooltipData = self.mC.data.getDataByColumnNames(dataID,tooltipColumnNames)["fnKwargs"]["data"]
         labelData = pd.DataFrame()    
-        labelData["columnName"] = tooltipColumnNames.values.tolist()
+        labelData["columnName"] = self.annotationColumns
         self.setDataInTooltipTable(labelData,title="Tooltip Data")
         self.tooltipActive = True
         self.updateBackgrounds()
@@ -93,7 +96,7 @@ class ICClustermap(ICChart):
         else:
             return False
 
-    def disconnectAnnotations(self):
+    def disconnectAnnotations(self) -> None:
         ""
         if hasattr(self,"labelData"):
             del self.labelData
@@ -105,11 +108,11 @@ class ICClustermap(ICChart):
             self.tooltipActive = False
             self.tooltip.set_visible(False)
 
-    def removeColumnNameFromTooltip(self,columnName):
+    def removeColumnNameFromTooltip(self,columnName : str):
         ""
         self.annotationColumns = [x for x in self.annotationColumns if x != columnName]
 
-    def showLabels(self):
+    def showLabels(self) -> bool:
         ""
         if hasattr(self,"labelData"):
             self.forceLabels = True
@@ -156,7 +159,6 @@ class ICClustermap(ICChart):
 					edgecolor = 'k')
         else:
             colorMeshLineKwargs = {}
-
         
         if colorMeshLimits is not None:
             if isinstance(colorMeshLimits,dict) and "vmin" in colorMeshLimits and "vmax" in colorMeshLimits and len(colorMeshLimits) == 2:
@@ -358,7 +360,7 @@ class ICClustermap(ICChart):
             self.meshGridKwargs["vmax"] = maxValue
         
 
-    def onDataLoad(self, data):
+    def onDataLoad(self, data : dict):
         ""
         self.data = data
     
@@ -462,13 +464,6 @@ class ICClustermap(ICChart):
                 if self.mC.getPlotType() == "corrmatrix" and self.getParam("corrmatrix.show.tooltip"):
                     self.tooltipActive = True
 
-            # if self.mC.groupingActive() and self.mC.getPlotType() == "corrmatrix":
-            #     colorData = self.mC.plotterBrain.getColorGroupingForCorrmatrix(
-            #                     self.data["plotData"].columns,
-            #                     self.mC.grouping.getCurrentGrouping(),
-            #                     self.mC.grouping.getCurrentGroupingName(),
-            #                     self.mC.grouping.getCurrentCmap())
-            #     self.updateHclustColor(colorMaPParamName= "colorMap", **colorData)
                 self.checkForQuickSelectDataAndUpdateFigure()
         except Exception as e:
             print(e)
@@ -512,9 +507,8 @@ class ICClustermap(ICChart):
         "Return facecolors"
         return self.colorMesh.get_facecolors()
    
-    def getClusteredData(self, reverseRows = True):
+    def getClusteredData(self, reverseRows : bool = True) -> pd.DataFrame:
         ""
-       
         return self.data["plotData"]
 
     def getClusterLabelsAndColor(self):

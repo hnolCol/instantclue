@@ -32,7 +32,7 @@ WIKI_LINKGS = {
     "Barplot" : "Plot-Types#barplot",
     "Clusterplot":"Cluster-plot",
     "Lineplot" : "Plot-Types#lineplot",
-    "Cluster (HClust)": "Heatmap---Hierarchical-Clustering",
+    "Hierarchical Clustering (Heatmap)": "Heatmap---Hierarchical-Clustering",
     "Matplotlib" : "Chart-Appearance-Settings-(Font-size,-ticks,-grids..)",
     "Load Data" : "Load-files",
     "Groups" : "Groupings"
@@ -1507,7 +1507,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"], #"nanCorrelation"
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean and nanCorrelation can handle nans and is significantly slower.",
     },
     {
@@ -1516,7 +1516,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Define metric used for column dendrogram. If None, no dendrogram will be shown. Only nanEuclidean can handle nans and is significantly slower.",
     },
     {
@@ -1525,7 +1525,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [1,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Data with nan might be clustered using the nanEuclidean distance metric. This parameter defines the minimum number of valid values that must exist.",
     },
     {
@@ -1534,7 +1534,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, rows that with a standard deviation of zero will be removed (e.g. the same value). Only applied if rowMethod or rowMetric are not None.",
     },
     {
@@ -1543,7 +1543,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average","median","ward","weighted"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Define method used for row dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -1552,7 +1552,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["complete","average","median","ward","weighted"],
     "parent"        :   "statCenter",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Define method used for column dendrogram. If None, no dendrogra will be shown.",
     },
     {
@@ -1561,7 +1561,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, upon zoom the x-axis will remain at fixed limits.",
     },
     {
@@ -1570,7 +1570,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled you will be asked before plotting a hierarchical clustering which groups you would like to display.",
     },
     {
@@ -1579,7 +1579,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled the currently selected grouping will be displayed (if the grouping contains\ncolumns used for hierarchical clustering.\nMissing values will be display by the nanColor (see Color Settings).",
     },
     {
@@ -1588,7 +1588,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Width of columns in pixel. If the number of columns times the width is bigger than the available space the column width will be adjusted.",
     },
     {
@@ -1597,7 +1597,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, rectangles of heatmap will be adjusted to be squared if possible.",
     },
     {
@@ -1606,7 +1606,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [80,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Top border in pixel.",
     },
     {
@@ -1615,7 +1615,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Top border in pixel.",
     },
     {
@@ -1624,7 +1624,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Bottom border, increase if labels are not visible. If the border is higher than the pixel, the margin defaults to 15% of the figure height.",
     },
     {
@@ -1633,7 +1633,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [5,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Border on the left side of the categorical color map in pixels. If the border is bigger than 50% of the figure, it defaults back to 15%.",
     },
     {
@@ -1642,7 +1642,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["top","bottom"],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Position of the labeling of the color column map on the x-axis.",
     },
     {
@@ -1651,7 +1651,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled column name of the color column is added at the desired position.",
     },
     {
@@ -1660,7 +1660,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, detected unique categories will be sorted before colors are assigned.",
     },
     {
@@ -1669,7 +1669,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Defines the sorting for color categorical values.",
     },
     {
@@ -1678,7 +1678,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, columns of Integer type will be considered as categories (color columns) E.g. each value gets a unique color assigned.",
     },
     {
@@ -1687,7 +1687,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled identical categorical values of different categorical columns such as '+' will get the same color in the plot.",
     },
     {
@@ -1696,7 +1696,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled and multiple numeric columns are used for color encoding, one color scale is calculated. If disabled, each column is assigned a individual color to.",
     },
     {
@@ -1705,7 +1705,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Color map to be used to encode categorical data.",
     },
     {
@@ -1714,7 +1714,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Color map to be used to encode numerical data.",
     }, 
     {
@@ -1723,7 +1723,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["raw values","center 0","min = -1, max = 1","custom"],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Method how to calculate color map limits.",
     },
     {
@@ -1732,7 +1732,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enable, the colormap will be centered around zero even if 'raw values' is defined for the colorMapLimits.",
     },
     {
@@ -1741,7 +1741,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Enabled if colorMapLimits is set to custom. Minimal value.",
     },
     {
@@ -1750,7 +1750,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   float,
     "range"         :   [-np.inf,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Enabled if colorMapLimits is set to custom. Maximal value.",
     },
     {
@@ -1759,7 +1759,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   ["pearson","kendall","spearman"],
     "parent"        :   "plotterBrain",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Method how to calculate color map limits.",
     },
     {
@@ -1768,7 +1768,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If less than given value of rows are visible in cluster, label will be added to the top right axis.",
     },
     {
@@ -1777,7 +1777,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If less than given value of rows are visible in cluster, lines will be drawn around rectangles.",
     },
     {
@@ -1786,7 +1786,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   int,
     "range"         :   [0,np.inf],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If less than given value of columns are visible in cluster. Lines will be drawn around rectangles.",
     },
     {
@@ -1795,7 +1795,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "If enabled, a tooltip will be automatically initiated for a correlation matrix showing the column names and the correlation coefficient.",
     },
     {
@@ -2050,7 +2050,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "colorManager",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Colormap for cluster rectangles."
     }, 
     {
@@ -2059,7 +2059,7 @@ DEFAULT_PARAMETER = [
     "dtype"         :   str,
     "range"         :   colorParameterRange,
     "parent"        :   "intern",
-    "parentType"    :   "Cluster (HClust)",
+    "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Colormap for color labeling."
     }, 
    
@@ -2780,7 +2780,7 @@ DEFAULT_PARAMETER = [
     }, 
     {
     "name"          :   "pointplot.edgecolor.as.line",
-    "value"         :   True,
+    "value"         :   False,
     "dtype"         :   bool,
     "range"         :   [True,False],
     "parent"        :   "intern",

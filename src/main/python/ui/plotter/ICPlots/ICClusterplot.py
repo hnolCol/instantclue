@@ -1,10 +1,13 @@
  
-from .ICChart import ICChart
+
 from collections import OrderedDict
 from matplotlib.collections import LineCollection
 from matplotlib.colors import to_hex
+from typing import Tuple, Iterable
 import numpy as np 
 import pandas as pd
+
+from .ICChart import ICChart
 from ...dialogs.ICDataTable import PandaTableDialog
 
 
@@ -15,9 +18,12 @@ class ICClusterplot(ICChart):
         super(ICClusterplot,self).__init__(*args,**kwargs)
         self.boxplotItems = {} 
     
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
-        menus["main"].addAction("Show data in cluster", self.displayClusterSpecificData)
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Clusterplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Clusterplot"))
+            menus["main"].addAction("Show data in cluster", self.displayClusterSpecificData)
+        
     
     def initClusters(self,onlyForID = None, targetAx = None, plotType = "boxplot"):
         ""
@@ -109,7 +115,7 @@ class ICClusterplot(ICChart):
             dlg = PandaTableDialog(mainController = self.mC ,df = dataFrame, parent=self.mC, ignoreChanges=True)
             dlg.exec()
             
-    def getClusterIDsByDataIndex(self):
+    def getClusterIDsByDataIndex(self) -> Tuple[pd.Series,str]:
         ""
         return self.data["clusterLabels"], self.data["dataID"]
     
@@ -121,7 +127,7 @@ class ICClusterplot(ICChart):
             self.groupColor = dict() 
             self.setFacecolors(colorGroupData)
 
-    def setFacecolors(self, colorGroupData = None, onlyForID = None):
+    def setFacecolors(self, colorGroupData : pd.DataFrame|None = None, onlyForID : int|str|None = None):
         ""
         if onlyForID is not None and hasattr(self,"targetBoxplotItems"):
             for n, boxprops in self.targetBoxplotItems.items():
@@ -142,7 +148,7 @@ class ICClusterplot(ICChart):
                             self.groupColor[intID] = fc
 
 
-    def updateGroupColors(self,colorGroup,changedCategory=None):
+    def updateGroupColors(self, colorGroup : pd.DataFrame,changedCategory : str|None = None) -> None:
         ""
         
         for color, _ , intID in colorGroup.values:
@@ -161,7 +167,7 @@ class ICClusterplot(ICChart):
         self.updateFigure.emit()
 
  
-    def updateQuickSelectItems(self,propsData=None):
+    def updateQuickSelectItems(self, propsData : pd.DataFrame) -> None:
                
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
@@ -194,7 +200,7 @@ class ICClusterplot(ICChart):
                 print(e)
 
     
-    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+    def updateQuickSelectData(self,quickSelectGroup : pd.DataFrame ,changedCategory : str|None = None):
         ""
         for ax in self.axisDict.values():
             if self.isQuickSelectModeUnique():
@@ -223,7 +229,7 @@ class ICClusterplot(ICChart):
         for ax in self.axisDict.values():
             self.backgrounds[ax] = self.p.f.canvas.copy_from_bbox(ax.bbox)
 
-    def setHoverData(self,dataIndex):
+    def setHoverData(self,dataIndex : Iterable):
         ""
         if hasattr(self,"backgrounds"):
             for n, ax in self.axisDict.items():

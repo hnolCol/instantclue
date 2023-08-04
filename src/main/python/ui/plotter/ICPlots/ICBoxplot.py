@@ -13,9 +13,10 @@ class ICBoxplot(ICChart):
 
         self.boxplotItems = dict() 
     
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
         menus["main"].addAction("Boxplot data", self.displaySummaryData)
+        menus["main"].addAction("Boxplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Boxplot"))
         #menus["main"].addAction("Show number of data points", self.showNumberOfDatapoints)
 
     def displaySummaryData(self,*args,**kwargs):

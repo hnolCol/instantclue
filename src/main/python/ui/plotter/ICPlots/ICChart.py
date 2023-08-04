@@ -320,7 +320,7 @@ class ICChart(QObject):
 		menus["main"].addSeparator()
 		self.addGraphSpecActions(menus)
 		menus["main"].addSeparator()
-		menus["main"].addAction("Figure/Chart Style",lambda : self.mC.mainFrames["right"].openConfig(specificSettingsTab ="Matplotlib"))
+		menus["main"].addAction("Figure/Chart Style",lambda : self.mC.openSettings(specificSettingsTab ="Matplotlib"))
 		menus["main"].addAction("Copy Figure to Clipboard",self.handleClipboardRequest)
 		pos = QCursor.pos()
 		pos += QPoint(3,3)
@@ -676,7 +676,7 @@ class ICChart(QObject):
 			leg.remove() #remove from graph
 			self.updateFigure.emit()
 
-	def addGraphSpecActions(self,menus):
+	def addGraphSpecActions(self,menus : dict) -> None:
 		""
 
 	def addHoverScatter(self, ax):

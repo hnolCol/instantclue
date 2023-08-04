@@ -5,7 +5,7 @@ from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from matplotlib.font_manager import FontProperties
-
+from typing import Iterable
 import numpy as np
 
 class ICCountplot(ICChart):
@@ -14,7 +14,7 @@ class ICCountplot(ICChart):
         ""
         super(ICCountplot,self).__init__(*args,**kwargs)
 
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
         menus["main"].addAction("Show subset", self.openSubsetDataInDialog)
         menus["main"].addAction("Annotate subset.", self.annotateSubsetInData)
@@ -276,7 +276,7 @@ class ICCountplot(ICChart):
         ax.draw_artist(hoverRectangle)
         self.p.f.canvas.blit(ax.bbox)
 
-    def setHoverData(self,dataIndex, showText = False):
+    def setHoverData(self,dataIndex : Iterable, showText = False):
         ""
         idxHover = []
 

@@ -78,10 +78,12 @@ import numba as nb
 from numba import prange, jit
 from numba.core.decorators import njit
 from numba.np.ufunc import parallel
-
+import warnings
 from typing import List, Tuple, Iterable, Dict
 
+warnings.filterwarnings("ignore", 'This pattern has match groups')
 
+#define columsn that are internally used.
 FORBIDDEN_COLUMN_NAMES = ["color","size","idx","layer","None"]
 
 def fasta_iter(fasta_name):
@@ -576,7 +578,7 @@ class DataCollection(object):
 		return loadFileProps
 
 	
-	def columnRegExMatches(self,dataID : str,columnNames : pd.Series, searchString : str, splitString : str =";"):
+	def columnRegExMatches(self,dataID : str,columnNames : pd.Series, searchString : str, splitString : str =";") -> np.ndarray:
 		"""
 		Return data indeces that match a regular expression. The regular expression
 		is designed to match categories based on the provided serach string and split string

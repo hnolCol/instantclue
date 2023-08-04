@@ -19,9 +19,11 @@ class ICXYPlot(ICChart):
 
         self.xyplotItems = dict() 
 
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
-        menus["main"].addAction("Area under curve", self.openAUCCalcDialog)
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Area under curve", self.openAUCCalcDialog)
+            menus["main"].addAction("XYPlot Style",lambda : self.mC.openSettings(specificSettingsTab ="XYPlot"))   
 
     def initXYPlot(self, onlyForID = None, targetAx = None):
         ""

@@ -11,6 +11,10 @@ class ICBarplot(ICChart):
 
         self.barplotItems = dict() 
 
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Barplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Barplot"))
     
     def initBarplots(self, onlyForID = None, targetAx = None):
         ""

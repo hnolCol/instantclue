@@ -5,6 +5,7 @@ from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle, Polygon
 import numpy as np
+from typing import Iterable
 
 class ICHistogram(ICChart):
     ""
@@ -14,6 +15,10 @@ class ICHistogram(ICChart):
         self.histogramPatches = dict() 
         self.histogramKey = dict()
 
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Histogram Style",lambda : self.mC.openSettings(specificSettingsTab ="Histogram (Density)"))
        
     def addPatches(self, onlyForID = None, targetAx = None):
         ""
@@ -118,7 +123,7 @@ class ICHistogram(ICChart):
             for hoverScatter in self.hoverScatter.values():
                 hoverScatter.set_visible(False)
 
-    def setHoverData(self,dataIndex):
+    def setHoverData(self,dataIndex : Iterable):
         ""
         dataIndex = np.array(dataIndex)
         #print(dataIndex)

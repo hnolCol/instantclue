@@ -5,6 +5,8 @@ from collections import OrderedDict
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 import numpy as np
+import pandas as pd 
+from typing import Iterable
 
 class ICLineplot(ICChart):
     ""
@@ -15,6 +17,11 @@ class ICLineplot(ICChart):
         self.quickSelectLineKwargs = {}
         self.quickSelectPolygonKwargs = {}
         self.quickSelectPolygon = {}
+    
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Lineplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Lineplot"))
 
     def addHoverLine(self):
         ""
@@ -147,10 +154,8 @@ class ICLineplot(ICChart):
             print(e)
         
 
-    def setHoverData(self,dataIndex, showText = False):
+    def setHoverData(self,dataIndex : Iterable, showText : bool = False):
         ""
-        
-        #dataIndex = dataIndex[0]
         for axB in self.axBackground.keys():
             self.p.f.canvas.restore_region(self.axBackground[axB])
 
@@ -195,14 +200,14 @@ class ICLineplot(ICChart):
             for area in self.hoverAreas.values():
                 area.set_visible(False)
 
-    def getInternalIDByColor(self, color):
+    def getInternalIDByColor(self, color : str):
         ""
         colorGroupData = self.data["dataColorGroups"]
         boolIdx = colorGroupData["color"].values ==  color
         if np.any(boolIdx):
             return colorGroupData.loc[boolIdx,"internalID"].values[0]
 
-    def updateGroupColors(self,colorGroup,changedCategory=None):
+    def updateGroupColors(self,colorGroup : pd.DataFrame,changedCategory : str|None = None):
         "changed category is encoded in a internalID"
       
         if self.colorCategoryIndexMatch is not None:
@@ -242,7 +247,7 @@ class ICLineplot(ICChart):
     def updateQuickSelectItems(self,propsData=None):
         "Saves lines by idx id"
 
-        colorData = self.getQuickSelectData()
+       # colorData = self.getQuickSelectData()
         
         if not hasattr(self,"quickSelectLines"):
             self.quickSelectLines = dict() 
@@ -250,13 +255,13 @@ class ICLineplot(ICChart):
         if not hasattr(self,"quickSelectAreas"):
             self.quickSelectAreas = dict() 
 
-        if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
+        # if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
 
-            dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
+        #     dataIndex = np.concatenate([idx for idx in self.quickSelectCategoryIndexMatch.values()])
 
-        else:
+        # else:
 
-            dataIndex = self.getDataIndexOfQuickSelectSelection() 
+        #     dataIndex = self.getDataIndexOfQuickSelectSelection() 
 
         for intID, indics in self.quickSelectCategoryIndexMatch.items():
             for n,ax in self.axisDict.items():

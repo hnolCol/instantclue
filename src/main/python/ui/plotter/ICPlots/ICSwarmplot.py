@@ -12,6 +12,13 @@ class ICSwarmplot(ICChart):
         super(ICSwarmplot,self).__init__(*args,**kwargs)
 
         self.scatterPlots = dict() 
+    
+    
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Swarmplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Swarmplot"))
+
 
     def addTooltip(self, tooltipColumnNames,dataID):
         "Tooltips in scatter plots use the natural hover bindings (no need to disconnect)."

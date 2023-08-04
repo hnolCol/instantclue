@@ -1,5 +1,6 @@
 #
 from matplotlib.pyplot import axis, scatter
+from matplotlib.axes import Axes
 from .ICChart import ICChart
 from .charts.scatter_plotter import scatterPlot
 from .ICScatterAnnotations import ICScatterAnnotations
@@ -74,17 +75,19 @@ class ICScatterPlot(ICChart):
         ""
         return []
 
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
-        #menus["main"].addAction("Share graph", self.shareGraph)
-        menus["main"].addAction("Enable volcano plot style",self.enableVolcanoPlotStyling)
-        if self.preventQuickSelectCapture:
-            menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
-        else:
-            menus["main"].addAction("Stop QuickSelect Capture", self.stopQuickSelectCapture)
-        isFrozen = self.mC.getLiveGraph().getFreezeState()
-        menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
-        menus["main"].addAction("Connect nearest neighbors",self.getNearestNeighborLines)
+        if "main" in menus and hasattr(menus["main"],"addAction"): 
+            #menus["main"].addAction("Share graph", self.shareGraph)
+            menus["main"].addAction("Scatter Style",lambda : self.mC.openSettings(specificSettingsTab ="Scatter"))
+            menus["main"].addAction("Enable volcano plot style",self.enableVolcanoPlotStyling)
+            if self.preventQuickSelectCapture:
+                menus["main"].addAction("Enable QuickSelect Capture", self.startQuickSelectCapture)
+            else:
+                menus["main"].addAction("Stop QuickSelect Capture", self.stopQuickSelectCapture)
+            isFrozen = self.mC.getLiveGraph().getFreezeState()
+            menus["main"].addAction("Freeze Live Graph" if not isFrozen else "Release Live Graph", lambda : self.toggleFreezeStateInLiveGraph(isFrozen))
+            menus["main"].addAction("Connect nearest neighbors",self.getNearestNeighborLines)
 
     def toggleFreezeStateInLiveGraph(self, isFrozen):
         ""
@@ -136,7 +139,7 @@ class ICScatterPlot(ICChart):
 
     
         
-    def initScatterPlots(self, onlyForID = None, targetAx = None, scaleFactor = None):
+    def initScatterPlots(self, onlyForID : int|str|None = None, targetAx : Axes|None = None, scaleFactor = None):
         ""
         if onlyForID is None:
             #clear saved scatters
@@ -173,9 +176,8 @@ class ICScatterPlot(ICChart):
                         )
         
         
-    def onDataLoad(self, data):
-        ""
-    
+    def onDataLoad(self, data : dict) -> None:
+        "Handles plotting when data are loadded"
         if not all(kwarg in data for kwarg in self.requiredKwargs):
             return
             
@@ -222,7 +224,7 @@ class ICScatterPlot(ICChart):
             scatterPlot.setMask(dataIndex)
         #self.p.redraw()
 
-    def setResizeTrigger(self,resize=True):
+    def setResizeTrigger(self,resize : bool =True):
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.setResizeTrigger(resize)
@@ -243,12 +245,12 @@ class ICScatterPlot(ICChart):
 
         self.setDataInColorTable(data, title = "Scatter Points")
 
-    def updateBackgrounds(self, redraw = False):
+    def updateBackgrounds(self, redraw : bool = False):
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.updateBackground(redraw=redraw)
     
-    def updateGroupSizes(self,sizeGroup,changedCategory=None):
+    def updateGroupSizes(self,sizeGroup : pd.DataFrame, changedCategory : str | None = None):
         ""
         
         if len(sizeGroup.index) == 1 and sizeGroup.iloc[0,1] == "":
@@ -268,7 +270,7 @@ class ICScatterPlot(ICChart):
                 self.updateFigure.emit()
 
             
-    def updateGroupColors(self,colorGroup, changedCategory = None):
+    def updateGroupColors(self,colorGroup : pd.DataFrame, changedCategory : str | None = None):
         ""
                 
         if len(colorGroup.index) == 1 and colorGroup.iloc[0,1] == "":
@@ -310,7 +312,7 @@ class ICScatterPlot(ICChart):
                 
             self.updateFigure.emit()
 
-    def updateQuickSelectItems(self,propsData):
+    def updateQuickSelectItems(self,propsData : pd.DataFrame) -> None:
         ""
         if self.isQuickSelectModeUnique() and hasattr(self,"quickSelectCategoryIndexMatch"):
             if len(self.quickSelectCategoryIndexMatch) == 0:
@@ -329,7 +331,7 @@ class ICScatterPlot(ICChart):
                 self.quickSelectScatterDataIdx[scatterPlot.ax] = {"idx":dataIndex,"coords":pd.DataFrame(intIDMatch,columns=["intID"])}
         self.updateFigure.emit()
             
-    def updateQuickSelectData(self,quickSelectGroup,changedCategory=None):
+    def updateQuickSelectData(self,quickSelectGroup : pd.DataFrame,changedCategory : str | None = None):
         ""
         for scatterPlot in self.scatterPlots.values():
             ax = scatterPlot.ax
@@ -351,7 +353,7 @@ class ICScatterPlot(ICChart):
             scatterPlot.setQuickSelectScatterInivisible()
        
 
-    def mirrorQuickSelectArtists(self,axisID,targetAx):
+    def mirrorQuickSelectArtists(self,axisID : int|str, targetAx : Axes|None):
         ""
         if axisID in self.axisDict:
             sourceAx = self.axisDict[axisID]
@@ -367,19 +369,19 @@ class ICScatterPlot(ICChart):
                     targetAx.scatter(x = coords[:,0], y = coords[:,1], **kwargs)
 
             
-    def setHoverObjectsInvisible(self):
+    def setHoverObjectsInvisible(self) -> None:
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.setHoverObjectsInvisible(update=False)
 
-    def resetSize(self): 
+    def resetSize(self) -> None: 
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.updateSizeData(self.getParam("scatterSize"))
         self.setDataInSizeTable(self.data["dataSizeGroups"],title="Scatter Points")
         self.updateFigure.emit()
 
-    def setNaNColor(self):
+    def setNaNColor(self) -> None:
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.setNaNColorToCollection()
@@ -387,14 +389,14 @@ class ICScatterPlot(ICChart):
         self.updateFigure.emit()
             
 
-    def removeTooltip(self):
+    def removeTooltip(self) -> None:
         ""
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.removeTooltip()
         self.setDataInLabelTable()
 
 
-    def mirrorAxisContent(self,axisID,targetAx,*args,**kwargs):
+    def mirrorAxisContent(self,axisID : int|str, targetAx : axis,*args,**kwargs):
         ""
 
         self.initScatterPlots(axisID,targetAx,*args,**kwargs)
@@ -408,13 +410,13 @@ class ICScatterPlot(ICChart):
         ""
         self.mC.config.toggleParam("annotate.in.all.plots")
 
-    def annotateInAllPlots(self,idx,sender):
+    def annotateInAllPlots(self,idx,sender : tuple[str,str]):
         ""
         for annotation in self.annotations.values():
             if annotation != sender:
                 annotation.addAnnotations(idx)
 
-    def annotateInAxByDataIndex(self,axisID,idx):
+    def annotateInAxByDataIndex(self, axisID : int|str, idx : int):
         ""
         if hasattr(self,"selectedLabels"):
         #axisID = self.getAxisID(ax) 

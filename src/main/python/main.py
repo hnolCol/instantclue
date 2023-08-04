@@ -480,6 +480,9 @@ class InstantClue(QMainWindow):
         if hasattr(self.mainFrames["sliceMarks"],tableName):
             return getattr(self.mainFrames["sliceMarks"],tableName)
 
+    def openSettings(self, specificSettingsTab : str | None):
+        ""
+        self.mainFrames["right"].openConfig(specificSettingsTab = specificSettingsTab)
 
     def openAppValidationDialog(self,*args,**kwargs):
         ""

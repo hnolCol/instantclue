@@ -17,9 +17,10 @@ class ICBoxenplot(ICChart):
         self.groupColor = dict()
         self.boxplotItems = dict() 
     
-    def addGraphSpecActions(self,menus):
+    def addGraphSpecActions(self,menus : dict) -> None:
         ""
-        # menus["main"].addAction("Show summary data", self.displaySummaryData)
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Boxenplot Style",lambda : self.mC.openSettings(specificSettingsTab ="Boxenplot"))
 
     def addMeans(self, onlyForID=None, targetAx=None):
 

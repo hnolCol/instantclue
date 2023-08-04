@@ -11,7 +11,11 @@ class ICViolinplot(ICChart):
         super(ICViolinplot,self).__init__(*args,**kwargs)
 
         self.violinItems = dict() 
-        
+
+    def addGraphSpecActions(self,menus : dict) -> None:
+        ""
+        if "main" in menus and hasattr(menus["main"],"addAction"):
+            menus["main"].addAction("Violin Style",lambda : self.mC.openSettings(specificSettingsTab ="Violinplot"))     
     
     def addMedianScatter(self, onlyForID = None, targetAx = None):
         ""
