@@ -79,7 +79,7 @@ from numba import prange, jit
 from numba.core.decorators import njit
 from numba.np.ufunc import parallel
 import warnings
-from typing import List, Tuple, Iterable, Dict
+from typing import List, Tuple, Iterable, Dict, Any
 
 warnings.filterwarnings("ignore", 'This pattern has match groups')
 
@@ -191,21 +191,19 @@ class DataCollection(object):
 
 	def __init__(self, parent=None):
 		self.parent = parent
-		self.currentDataFile = None
-		self.df = pd.DataFrame()
-		self.df_columns = []
 		self.dataFrameId = 0
+
+		self.df = pd.DataFrame()
 		self.dfs = OrderedDict()
 		self.tooltipData = OrderedDict()
-		self.dfShapes = OrderedDict()
 		self.dfsDataTypesAndColumnNames = OrderedDict() 
 		self.fileNameByID = OrderedDict() 
 		self.excelFileIO = OrderedDict()
 		self.rememberSorting = dict()
-		self.replaceObjectNan = '-'
 		self.clippings = dict()
 		self.droppedRows = dict() 
 
+		self.replaceObjectNan = '-'
 
 		self.categoricalFilter = CategoricalFilter(self)
 		self.numericFilter = NumericFilter(self)
@@ -215,6 +213,10 @@ class DataCollection(object):
 		self.transformer = Transformer(self)
 		self.Plotter = None
 	
+
+	def _getParam(self, paramName : str) -> Any:
+		""
+		return self.parent.config.getParam(paramName)
 
 	def setPlotter(self,plotter) -> None:
 		""
@@ -280,7 +282,7 @@ class DataCollection(object):
 			return self.joinDataFrame(dataID,idxData)
 		
 
-	def addDataFrameFromTxtFile(self,pathToFile,fileName,loadFileProps = None, returnPlainDf = False):
+	def addDataFrameFromTxtFile(self,pathToFile : str, fileName : str,loadFileProps : dict|None = None, returnPlainDf : bool = False):
 		"Load Data frame from txt file"
 		try:
 			if loadFileProps is None:
@@ -288,8 +290,7 @@ class DataCollection(object):
 			loadFileProps = self.checkLoadProps(loadFileProps)
 			df = pd.read_csv(pathToFile,**loadFileProps)
 		except Exception as e:
-			print(e)
-			return errorMessage
+			return getMessageProps("Error","Adding data from txt file resulted in an error: "+str(e))
 		if returnPlainDf:
 			return df
 		else:
@@ -302,8 +303,7 @@ class DataCollection(object):
 
 			df = pd.read_excel(pathToFile,**loadFileProps)
 		except Exception as e:
-			print(e)
-			return errorMessage
+			return getMessageProps("Error","Adding data from excel file resulted in an error: "+str(e))
 		if returnPlainDf:
 			return df
 		else:
@@ -320,7 +320,7 @@ class DataCollection(object):
 				return self.addDataFrame(df,fileName=fileName, cleanObjectColumns = True)
 			
 	def areAllColumnsInData(self,dataID : str,columnNames : pd.Series) -> bool:
-		""
+		"check if all column names are present in a data set given by dataID"
 		if dataID in self.dfs:
 			return columnNames.isin(self.dfs[dataID].columns.array).all()
 		return False
@@ -557,7 +557,7 @@ class DataCollection(object):
 			"index_col":False}
 		return self.checkLoadProps(props)
 
-	def checkLoadProps(self,loadFileProps) -> dict:
+	def checkLoadProps(self,loadFileProps : dict|None) -> dict:
 		""
 		if loadFileProps is None:
 			return {"sep":"\t"}
@@ -610,7 +610,7 @@ class DataCollection(object):
 		return self.copyDataFrameToClipboard(data = self.dfs[dataID].loc[:,checkedColNames])
 
 
-	def joinAndCopyDataForQuickSelect(self,dataID,columnName,selectionData,splitString):
+	def joinAndCopyDataForQuickSelect(self,dataID : str,columnName : str,selectionData : pd.DataFrame, splitString : str) -> dict:
 		""
 		dataToConcat = []
 		for checkedValue,checkedColor,userDefinedColors,checkSizes in selectionData.values:
@@ -628,12 +628,12 @@ class DataCollection(object):
 			dataToConcat.append(valueSubset)
 
 		data = pd.concat(dataToConcat,ignore_index=True)
-		data.to_clipboard(sep=self.parent.config.getParam("export.file.clipboard.separator"))
+		data.to_clipboard(sep=self._getParam("export.file.clipboard.separator"))
 		return getMessageProps("Done ..","Quick Select data copied to clipboard. Data might contain duplicated rows.")
 
-	def copyDataFrameToClipboard(self,dataID=None,data=None,attachDataToMain = None):
+	def copyDataFrameToClipboard(self,dataID : str|None = None,data : pd.DataFrame|None = None, attachDataToMain : pd.DataFrame|None= None):
 		""
-		sepForExport=self.parent.config.getParam("export.file.clipboard.separator")
+		sepForExport=self._getParam("export.file.clipboard.separator")
 		if dataID is None and data is None:
 			return {"messageProps":{"title":"Error",
 								"message":"Neither id nor data specified.."}
@@ -665,13 +665,12 @@ class DataCollection(object):
 			data = pd.read_clipboard(**self.loadDefaultReadFileProps(), low_memory=False)
 		except Exception as e:
 			return getMessageProps("Error ..","There was an error loading the file from clipboard." + str(e))
-
+		#add time to have kind of unique name
 		localTime = time.localtime()
 		current_time = time.strftime("%H_%M_%S", localTime)
-
 		return self.addDataFrame(data, fileName = "pastedData({})".format(current_time),cleanObjectColumns = True)
 
-	def rowWiseCalculations(self,dataID,calculationProps,operation = "subtract"):
+	def rowWiseCalculations(self,dataID : str, calculationProps : dict, operation : str = "subtract") -> dict:
 		""
 		funcKeyMatch = {"Mean":np.nanmean,"Sum":np.nansum,"Median":np.nanmedian}
 		operationKeys = {"subtract":np.subtract,"divide":np.divide,"multiply":np.multiply,"addition":np.add}
@@ -697,12 +696,12 @@ class DataCollection(object):
 		return self.joinDataFrame(dataID,collectResults)
 
 
-	def randomSelection(self, dataID, N,*args,**kwargs):
+	def randomSelection(self, dataID : str, N : int) -> dict:
 		""
 		sampleIdx = self.getDataByDataID(dataID).sample(n=N).index
 		return self.addAnnotationColumnByIndex(dataID,sampleIdx,"RandomSelection(N={})".format(N))
 
-	def sortColumns(self,dataID,sortedColumnDict):
+	def sortColumns(self,dataID : str,sortedColumnDict : dict) -> dict:
 		""
 		sortedColumns = []
 		for v in sortedColumnDict.values():
@@ -710,7 +709,7 @@ class DataCollection(object):
 		self.dfs[dataID] = self.dfs[dataID][sortedColumns]
 		return getMessageProps("Done..","Columns resorted")
 
-	def dropColumns(self,dataID,columnNames):
+	def dropColumns(self,dataID : str, columnNames : pd.Index|pd.Series|List|np.ndarray):
 		""
 		if dataID in self.dfs:
 			self.dfs[dataID] = self.dfs[dataID].drop(columns = columnNames, errors = "ignore")
@@ -725,7 +724,7 @@ class DataCollection(object):
 			return 
 
 				
-	def deleteData(self,dataID):
+	def deleteData(self,dataID : str) -> dict:
 		'''
 		Deletes DataFile by id.
 		'''	
@@ -745,17 +744,17 @@ class DataCollection(object):
 			
 			taskCompleteKwargs["dfs"] = self.fileNameByID
 			return taskCompleteKwargs
-		else:
-			taskCompleteKwargs["columnNamesByType"] = self.getEmptyDataType()
-			taskCompleteKwargs["dfs"] = dict()
-			return taskCompleteKwargs
+
+		taskCompleteKwargs["columnNamesByType"] = self.getEmptyDataType()
+		taskCompleteKwargs["dfs"] = dict()
+		return taskCompleteKwargs
 		
-	def getEmptyDataType(self):
+	def getEmptyDataType(self) -> dict:
 
 		return {"Numeric Floats":pd.Series(),"Categories":pd.Series(),"Integers":pd.Series()}
 		
 
-	def evaluateColumnsForPlot(self,columnNames, dataID, dataType, numUniqueValues = None):
+	def evaluateColumnsForPlot(self,columnNames, dataID : str, dataType, numUniqueValues = None) -> dict:
 		""
 
 		evaluatedColumns = {"Numeric Floats": [], "Categories": []}
@@ -804,8 +803,8 @@ class DataCollection(object):
 	
 		return evalColumnName
 
-	def evaluateColumMapper(self,dataID,columnNameMapper):
-		""
+	def evaluateColumMapper(self,dataID : str, columnNameMapper : dict) -> dict:
+		"""Returns the evaluate column mapper for renmaing."""
 		evalMapper = {}
 		savedNewNames = []
 		restColumnNames = [columnName for columnName in self.dfs[dataID] if columnName not in columnNameMapper]
@@ -818,7 +817,7 @@ class DataCollection(object):
 		return evalMapper
 	
 
-	def extractDataTypeOfColumns(self,dataID):
+	def extractDataTypeOfColumns(self,dataID : str):
 		'''
 		Saves the columns name per data type. In InstantClue there is no difference between
 		objects and others non float, int, bool like columns.
@@ -874,7 +873,7 @@ class DataCollection(object):
 							groupings=None,
 							colorData = None,
 							colorDataArray = None,
-							colorColumnNames = []):
+							colorColumnNames = []) -> dict:
 		""
 
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
@@ -899,13 +898,13 @@ class DataCollection(object):
 		
 		return getMessageProps("Saved ..","Cluster map saved: {}".format(pathToExcel))
 
-	def explodeDataByColumn(self,dataID,columnNames,splitString=None):
+	def explodeDataByColumn(self,dataID : str, columnNames : pd.Series|pd.Index, splitString : str|None = None) -> dict:
 		"Splits rows by splitString into lists and then applies explode on that particular column"
 		if dataID in self.dfs:
 			columnName = columnNames.values[0]
 			data = self.dfs[dataID].copy()
 			if splitString is None:
-				splitString = self.parent.config.getParam("explode.split.string")
+				splitString = self._getParam("explode.split.string")
 			data[columnName] = data[columnName].str.split(splitString,expand=False)
 			explodedData = data.explode(columnName, ignore_index=True)
 			fileName = self.getFileNameByID(dataID)
@@ -931,8 +930,8 @@ class DataCollection(object):
 		dirname = os.path.dirname(fastaFile)
 		filteredFastFile = "{}_filtered({}).fasta".format(fastaBaseFile,columnNames.values[0])
 		filteredFastaPath = os.path.join(dirname,filteredFastFile)
-		regExpStr = self.parent.config.getParam("reg.exp.fasta.filter")
-		escape = self.parent.config.getParam("reg.exp.escape")
+		regExpStr = self._getParam("reg.exp.fasta.filter")
+		escape = self._getParam("reg.exp.escape")
 		if escape:
 			regExpStr = re.escape(regExpStr)
 		nMatches  = 0 
@@ -1524,178 +1523,6 @@ class DataCollection(object):
 		else:
 			return errorMessage 
 
-
-		
-	def create_clipping(self, dataID, rowIdxBool):
-		'''
-		data ID - ID that was given data frame when added to this class
-		rowIdx - rows to be temporariley kept.
-		'''
- 	
-		self.clippings[dataID] = rowIdxBool	
-
-
-	def create_categorical_modules(self, categoricalColumn, aggregate = 'median', 
-									sepString =';', id = None, progressBar = None):
-		'''
-		Input
-		Parameter 
-		=============
-		- categoricalColumn
-		- aggregate - method to aggregate 
-		- sepString - split string to find unique categories 
-		- progressBar - progressBar object to put information out to the user.
-		
-		Output 
-		=============
-		'''
-		if id is not None:
-			self.set_current_data_by_id(id)
-		
-		if aggregate not in ['mean','median','sum']:
-			return None, None
-		
-		if isinstance(categoricalColumn,str):	
-			
-			categoricalColumn = [categoricalColumn]
-			
-		if progressBar is None:
-			progressBar.update_progressbar_and_label(0,'Find unique categories ..')
-						
-		splitData = self.df[categoricalColumn[0]].astype('str').str.split(sepString).values
-		flatSplitData = list(set(chain.from_iterable(splitData)))
-				
-				
-		numericColumns = self.dfsDataTypesAndColumnNames[self.currentDataFile]['float64']
-		df = pd.DataFrame() 
-		collData = []
-		
-		if progressBar is not None:
-			nUniqueCats = len(flatSplitData)
-			progressBar.update_progressbar_and_label(0,'Found {} categories ..'.format(nUniqueCats))
-		
-		for n,category in enumerate(flatSplitData):
-			
-			regExp = categoricalFilter.build_regex('',
-												[category],
-												splitString = sepString)
-			
-			boolIndicator = self.df[categoricalColumn[0]].str.contains(regExp)
-			dfSubset = self.df.loc[boolIndicator,:]
-			
-			if aggregate == 'median':
-				aggData = dfSubset[numericColumns].median(axis=0)
-			elif aggregate == 'mean':
-				aggData = dfSubset[numericColumns].mean(axis=0)
-			elif aggregate == 'sum':
-				aggData = dfSubset[numericColumns].sum(axis=0)
-
-			
-			if progressBar is not None and n % 30 == 0:
-				progressBar.update_progressbar_and_label(n/nUniqueCats * 100,
-											'Found {} categories .. {}/{}'.format(nUniqueCats,n,nUniqueCats))
-			
-			collData.append(pd.Series(np.append(aggData,np.array(category))))
-				
-		df = df.append(collData,ignore_index=True)
-		df.columns = numericColumns + categoricalColumn
-		df[numericColumns] = df[numericColumns].astype(np.float64)
-		if progressBar is not None:
-				progressBar.update_progressbar_and_label(100,
-											'Done .. ')
-				progressBar.close()
-		id = self.getNextDataFrameID()
-		fileName = 'Cat. Modules - {}'.format(categoricalColumn[0])
-		self.add_data_frame(df,id,fileName) 
-		
-		return id, fileName			
-	
-	
-	def subset_data_on_category(self,columnNameList,id=None):
-		'''
-		'''
-		if id is None:
-			id = self.currentDataFile
-			
-		if all(x in self.dfs[id].columns for x in columnNameList):
-			dataDict = OrderedDict()
-			for columnName in columnNameList:
-				uniqueValues = self.dfs[id][columnName].unique() 
-				for uniqV in uniqueValues:
-					if uniqV != "-":
-						dataDict['{}({})'.format(uniqV,columnName)] = self.dfs[id][self.dfs[id][columnName] == uniqV]
-			return dataDict	
-		
-				
-
-	def reset_clipping(self,dataID):
-		'''
-		Removes all clippings made
-		'''
-		if dataID in self.clippings:
-			del self.clippings[dataID]
-		
-	def count_valid_values(self, numericColumnList):
-		'''
-		Input
-		Parameter 
-		===========
-		numericColumnList - list of numeric columns. 
-		
-		Output 
-		===========
-		Evaluated Column name
-		'''
-		columnName = get_elements_from_list_as_string(numericColumnList, addString =  'valid_values: ')
-		columnNameEval = self.evaluate_column_name(columnName)
-		validValues = self.df[numericColumnList].count(axis='columns')
-		self.df[columnNameEval] = validValues
-		self.update_columns_of_current_data()
-		return columnNameEval
-		
-	def delete_rows_by_index(self, index):
-		'''
-		Delete rows by index
-		'''
-		self.df.drop(index, inplace=True)
-		self.save_current_data()
-			
-		
-	def delete_column_by_index(self, index):
-		'''
-		Deletes columns of current df by index
-		'''
-		colname = self.df_columns[index]
-		self.df.drop([colname], axis=1, inplace=True) 
-		self.update_columns_of_current_data()
-		return
-		
-
-	def divide_columns_by_value(self,columnAndValues,baseString):
-		'''
-		columnAndValues - dict - keys = columns, values = value
-		'''
-		newColumnNames = []
-		for column, correctionValue in columnAndValues.items():
-			name = '{} {}'.format(baseString,column)
-			newColumnName = self.evaluate_column_name(name)
-			self.df[name] = self.df[column] / correctionValue
-			newColumnNames.append(newColumnName) 
-		self.update_columns_of_current_data()
-		return newColumnNames
-	
-	def substract_columns_by_value(self,columnAndValues,baseString):
-		'''
-		columnAndValues - dict - keys = columns, values = value
-		'''
-		newColumnNames = []
-		for column, correctionValue in columnAndValues.items():
-			name = '{} {}'.format(baseString,column)
-			newColumnName = self.evaluate_column_name(name)
-			self.df[name] = self.df[column] - correctionValue
-			newColumnNames.append(newColumnName) 
-		self.update_columns_of_current_data()
-		return newColumnNames
 		
 	def countQuantProfiles(self,dataID,columnNames):
 		"Counts the number of full profiles (e.g. no nans over column names)"
@@ -1838,7 +1665,7 @@ class DataCollection(object):
 			elif fileFormat == "xlsx":
 				self.dfs[dataID].to_excel(path, index=False, sheet_name = "ICExport")
 			elif fileFormat == "json":
-				self.dfs[dataID].to_json(path, orient = self.parent.config.getParam("json.export.orient"), indent = 2)
+				self.dfs[dataID].to_json(path, orient = self._getParam("json.export.orient"), indent = 2)
 			elif fileFormat == "md":
 				self.dfs[dataID].to_markdown(path, tablefmt="grid")
 			else:
@@ -1905,10 +1732,10 @@ class DataCollection(object):
 		""
 		if dataID not in self.dfs : return errorMessage 
 		try:
-			nNaNForDownShift = self.parent.config.getParam("fill.NaN.smart.repl.number.NaN.for.downshift")
-			minValidValues = self.parent.config.getParam("fill.NaN.smart.repl.min.number.valid.values")
-			downShift = self.parent.config.getParam("fill.NaN.gaussian.downshift")
-			widthGaussian = self.parent.config.getParam("fill.NaN.gaussian.width")
+			nNaNForDownShift = self._getParam("fill.NaN.smart.repl.number.NaN.for.downshift")
+			minValidValues = self._getParam("fill.NaN.smart.repl.min.number.valid.values")
+			downShift = self._getParam("fill.NaN.gaussian.downshift")
+			widthGaussian = self._getParam("fill.NaN.gaussian.width")
 			if all(x is not None for x in [nNaNForDownShift,minValidValues,downShift,widthGaussian]):
 				smartRrep = ICSmartReplace(
 						nNaNForDownshift=nNaNForDownShift,
@@ -1971,8 +1798,8 @@ class DataCollection(object):
 		""
 		if dataID in self.dfs:
 			try:
-				m = self.parent.config.getParam("outlier.iqr.multiply")
-				copy = self.parent.config.getParam("outlier.copy.results")
+				m = self._getParam("outlier.iqr.multiply")
+				copy = self._getParam("outlier.copy.results")
 				if copy:
 					cleanColumns = ["reO:{}".format(colName) for colName in columnNames.values]
 					cleanData = pd.DataFrame(np.zeros(shape=(self.dfs[dataID].index.size,columnNames.size)), 
@@ -2003,8 +1830,8 @@ class DataCollection(object):
 		""
 		if dataID in self.dfs:
 			
-				m = self.parent.config.getParam("outlier.iqr.multiply")
-				copy = self.parent.config.getParam("outlier.copy.results")
+				m = self._getParam("outlier.iqr.multiply")
+				copy = self._getParam("outlier.copy.results")
 				if copy: 
 					cleanColumns = []
 					groupingColumnNames = self.parent.grouping.getColumnNames()
@@ -2065,8 +1892,8 @@ class DataCollection(object):
 			elif fillBy == "Column mean":
 				self.dfs[dataID].loc[X.index,X.columns] = X.fillna(X.mean()) 
 			elif fillBy == "Gaussian distribution":
-				downShift = self.parent.config.getParam("fill.NaN.gaussian.downshift")
-				widthGaussian = self.parent.config.getParam("fill.NaN.gaussian.width")
+				downShift = self._getParam("fill.NaN.gaussian.downshift")
+				widthGaussian = self._getParam("fill.NaN.gaussian.width")
 				boolIdx = X.isna()
 				for columnName in columnNames:
 					columnBoolIdx = boolIdx[columnName].values.flatten()
@@ -2277,8 +2104,8 @@ class DataCollection(object):
 		Melts data frame.
 		'''
 		if dataID in self.dfs:
-			addColumnNames = self.parent.config.getParam("melt.data.add.column.names")
-			ignoreClipping = self.parent.config.getParam("melt.data.ignore.clipping")
+			addColumnNames = self._getParam("melt.data.add.column.names")
+			ignoreClipping = self._getParam("melt.data.ignore.clipping")
 			idVars = [column for column in self.dfs[dataID].columns if column not in columnNames.values] #all columns but the selected ones
 			potentialValueName = "melt_value" if not addColumnNames else 'melt_value:{}'.format(mergeListToString(columnNames)).replace("'",'')
 			potentialVariableName = "melt_variable" if not addColumnNames else 'melt_variable:{}'.format(mergeListToString(columnNames)).replace("'",'')
