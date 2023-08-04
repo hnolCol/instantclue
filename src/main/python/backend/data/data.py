@@ -986,17 +986,23 @@ class DataCollection(object):
 			return errorMessage
 	
 	def getPlainColumnNames(self,dataID) -> pd.Index:
-		""
+		"""
+		Returns the column names of a dataframe by dataID.
+		getColumnNames returns a dict that is suited for using 
+		the standard thread -> mainThread communication. 
+		"""
 		if dataID in self.dfs:
 			return self.dfs[dataID].columns
 		else:
 			return pd.Index
 
-	def getDataDescription(self,dataID : str,columnNames : List[str] | pd.Series | pd.Index):
-		""
+	def getDataDescription(self,dataID : str,columnNames : List[str] | pd.Series | pd.Index) -> pd.DataFrame:
+		"""
+		Returns pandas describe data frame containing quantile nan counts etc.
+		"""
 		return self.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"].describe()
 
-	def getDataByColumnNames(self, dataID : str, columnNames : List[str] | pd.Series | pd.Index, rowIdx = None, ignore_clipping : bool = False):
+	def getDataByColumnNames(self, dataID : str, columnNames : List[str] | pd.Series | pd.Index, rowIdx = None, ignore_clipping : bool = False) -> dict:
 		'''
 		Returns sliced self.df
 		row idx - boolean list/array like to slice data further.
