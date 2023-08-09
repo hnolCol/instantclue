@@ -77,7 +77,7 @@ def performTest(X : np.ndarray,Y : np.ndarray, s0 : float, sort : bool = True, a
     else: 
         return D
 @jit(nopython = True)
-def exponentialDecay(x : np.ndarray|float, N : float, g : float) -> float:
+def exponentialDecay(x : np.ndarray, N : float, g : float) -> float:
     """
     Exponential decay fit
     """
@@ -89,7 +89,7 @@ class StatisticalTest(ABC):
     def __init__(self, 
                  dataID : str,
                  data : pd.DataFrame, 
-                 groupingName : str|List[str], 
+                 groupingName : str, 
                  grouping  : dict,
                  name : str = None
                  ):
@@ -163,7 +163,7 @@ class SAMStatistic(StatisticalTest):
     def __init__(self, 
                  dataID: str, 
                  data: pd.DataFrame, 
-                 groupingName: str | List[str], 
+                 groupingName: str, 
                  grouping: dict, 
                  leftGroup : str,
                  rightGroup : str,
