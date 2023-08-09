@@ -2,8 +2,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 from ...custom.Widgets.ICButtonDesgins import ICStandardButton
-from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getBoolFromCheckState, getCheckStateFromBool
-
+from ...utils import createTitleLabel, createLabel, createLineEdit, createCombobox, getBoolFromCheckState, getCheckStateFromBool, createValueLineEdit
+import numpy as np 
 
 
 
@@ -31,14 +31,38 @@ class ICCompareGroups(QDialog):
         #     self.groupCombo2 = createCombobox(self,self.mC.grouping.getGroupings())
         #     self.groupCombo2.setCurrentText("Select ..")
 
+        if self.test == "SAM":
+
+            fdr = self.mC.config.getParam("sam.statistic.fdr")
+            s0 = self.mC.config.getParam("sam.statistic.s0")
+            validInGroup = self.mC.config.getParam("sam.min.valid.in.group")
+            
+            
+            self.validInGroupLabel = createLabel("#validInGroup",tooltipText="The number of values are valid (e.g. not NaN in each group).")
+            self.validInGroupEdit = createValueLineEdit("#valid","The number of valid values in each group. Must be at least two.",2,np.inf)
+            self.validInGroupEdit.setText(str(validInGroup))
+
+            self.s0Label = createLabel("s0",tooltipText="Fudge factor (s0) t = (fc) / (s0 + s). If s0 = 0.0 it is a normal t-test statistic.")
+            self.s0Edit = createValueLineEdit("s0","The smaller the s0 level, the less important the fold change becomes in calculating the FDR/test statistics.",0,np.inf)
+            
+            self.s0Edit.setText(str(s0))
+            self.FDRLabel = createLabel("FDR",tooltipText="The False discovery rate. The Q-value will be returned and allows setting it after the test.")
+            self.FDREdit = createValueLineEdit("FDR level",
+                                               "Set the FDR (True positiveis / False positives) level to assign the significant columns, however the q-values will also be reported and allow for filtering on a different FDR level. The max is 0.5 /50%.",
+                                               0.000000001,0.5)
+            self.FDREdit.setText(str(fdr))
+            
+        else: #remove and log all?
+            self.logPValuesCB = QCheckBox("-log10 p-value")
+            self.logPValuesCB.setTristate(False)
+            self.logPValuesCB.setCheckState(getCheckStateFromBool(True))
+            self.logPValuesCB.setChecked(True)
+
         if self.test not in ["1W-ANOVA"]:
             self.refLabel = createLabel("Reference:","Groups will be compared against this reference only. Set None if you want to have all combinations.")
             self.referenceGroupCombo =  createCombobox(self,["None"] + self.mC.grouping.getCurrentGroupNames())
         
-        self.logPValuesCB = QCheckBox("-log10 p-value")
-        self.logPValuesCB.setTristate(False)
-        self.logPValuesCB.setCheckState(getCheckStateFromBool(True))
-        self.logPValuesCB.setChecked(True)
+        
         
         self.okayButton = ICStandardButton("Okay")
         self.cancelButton = ICStandardButton("Cancel")
@@ -59,7 +83,20 @@ class ICCompareGroups(QDialog):
             groupGrid.addWidget(self.grouplabel2,2,0, Qt.AlignmentFlag.AlignRight)
             groupGrid.addWidget(self.groupCombo2,2,1)
 
-        groupGrid.addWidget(self.logPValuesCB)
+        if self.test == "SAM":
+
+            groupGrid.addWidget(self.validInGroupLabel,3,0, Qt.AlignmentFlag.AlignRight)
+            groupGrid.addWidget(self.validInGroupEdit,3,1)
+
+            groupGrid.addWidget(self.FDRLabel,4,0, Qt.AlignmentFlag.AlignRight)
+            groupGrid.addWidget(self.FDREdit,4,1)
+            groupGrid.addWidget(self.s0Label,5,0, Qt.AlignmentFlag.AlignRight)
+            groupGrid.addWidget(self.s0Edit,5,1)
+
+
+        else:
+            groupGrid.addWidget(self.logPValuesCB)
+        
         groupGrid.setColumnStretch(0,0)
         groupGrid.setColumnStretch(1,1)
         groupGrid.setHorizontalSpacing(2)
@@ -111,10 +148,14 @@ class ICCompareGroups(QDialog):
                       "kwargs":
                       {
                       "dataID":self.mC.getDataID(),
-                      "grouping":groupingName,
+                      "groupingName":groupingName,
                       "test":self.test,
                       "referenceGroup": referenceGroup,
-                      "logPValues" : self.logPValuesCB.isChecked()
+                      "statParams" : {
+                                    "fdr" : float(self.FDREdit.text()), 
+                                    "s0" : float(self.s0Edit.text()), 
+                                    "minValidInGroup" : int(float(self.validInGroupEdit.text()))} if self.test == "SAM" else None,
+                      "logPValues" : self.logPValuesCB.isChecked() if hasattr(self,"logPValuesCB") else False
                       }
                     }
         

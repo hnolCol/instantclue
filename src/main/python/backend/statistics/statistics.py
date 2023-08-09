@@ -60,6 +60,8 @@ except:
 
 from lmfit import Model
 
+from .comparisons.SAM import SAMStatistic
+
 
 
 def calculateUMAP(metric,nN,min_dist,n_components, X):
@@ -337,6 +339,13 @@ class StatisticCenter(object):
 
         self.corrCoeffName = {"pearson":"r","spearman":"rho","kendall":"rho"}
 
+    def _getParam(self,paramName : str):
+        """
+        Returns param from config
+        """
+        
+        return self.sourceData.parent.config.getParam(paramName)
+
     def calculateAUCFromGraph(self,dataID,numericColumnPairs,chartData, replicateColumn = "None", addAsDataFrame = True):
         ""
         R = pd.DataFrame(columns=["xColumn","yColumn","AUC"])
@@ -531,9 +540,9 @@ class StatisticCenter(object):
 
     def runTSNE(self,X,*args,**kwargs):
         ""
-        nComp = self.sourceData.parent.config.getParam("tsne.n.components")
-        perplexity = self.sourceData.parent.config.getParam("tsne.perplexity")
-        early_exaggeration = self.sourceData.parent.config.getParam("tsne.early_exaggeration")
+        nComp = self._getParam("tsne.n.components")
+        perplexity = self._getParam("tsne.perplexity")
+        early_exaggeration = self._getParam("tsne.early_exaggeration")
         self.calcTSNE = TSNE(n_components=nComp,
                                 perplexity=perplexity,
                                 early_exaggeration = early_exaggeration,
@@ -770,9 +779,9 @@ class StatisticCenter(object):
         ""
         data = self.getData(dataID,columnNames).dropna()
         model = hdbscan.HDBSCAN(
-                min_cluster_size=self.sourceData.parent.config.getParam("hdbscan.min.cluster.size"), 
-                min_samples=self.sourceData.parent.config.getParam("hdbscan.min.samples"),
-                cluster_selection_epsilon=self.sourceData.parent.config.getParam("hdbscan.cluster.selection.epsilon"))
+                min_cluster_size=self._getParam("hdbscan.min.cluster.size"), 
+                min_samples=self._getParam("hdbscan.min.samples"),
+                cluster_selection_epsilon=self._getParam("hdbscan.cluster.selection.epsilon"))
         clusterLabels = model.fit_predict(data.values)
         
         df = pd.DataFrame(["C({})".format(x) for x in clusterLabels], columns = ["HDBSCAN"], index = data.index)
@@ -784,7 +793,7 @@ class StatisticCenter(object):
 
     def fitPulseSILACCompartmentModel(self,dataID,timeGroupingName,compartments = 2):
         ""
-        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        NProcesses = self._getParam("n.processes.multiprocessing")
         columnNames = self.sourceData.parent.grouping.getColumnNames(timeGroupingName)
         if columnNames.size < 4:
             return getMessageProps("Error..","Time data below 4. No fit possible.")
@@ -886,7 +895,7 @@ class StatisticCenter(object):
                         dataSubset = dataSubset[list(timeValueColumns.keys())].divide(2 ** firstTimePointMedian, axis="rows")
 
                     #dataSubset[list(timeValueColumns.keys())] = np.log(dataSubset[list(timeValueColumns.keys())])
-                    nNaNInFit = self.sourceData.parent.config.getParam("fit.model.min.non.nan")
+                    nNaNInFit = self._getParam("fit.model.min.non.nan")
                     dataSubset = dataSubset.dropna(thresh=nNaNInFit)
                     #corrK = 0.0303 if groupNameComp == "C" else 0
                     addt12 = model == "First Order Kinetic"
@@ -916,9 +925,9 @@ class StatisticCenter(object):
         ""
        
         groupedByData = data.groupby(by=categoricalColumn)
-        minGroupSize = self.sourceData.parent.config.getParam("categorical.enrichment.min.group.size")
-        adjPvalueCutoff = self.sourceData.parent.config.getParam("categorical.enrichment.adj.pvalue.cutoff")
-        adjPvalueMethod = self.sourceData.parent.config.getParam("categorical.enrichment.multipletest.method")
+        minGroupSize = self._getParam("categorical.enrichment.min.group.size")
+        adjPvalueCutoff = self._getParam("categorical.enrichment.adj.pvalue.cutoff")
+        adjPvalueMethod = self._getParam("categorical.enrichment.multipletest.method")
         
         results = pd.DataFrame(columns=["categoricalColumn",
                                         "testColumn",
@@ -1033,8 +1042,8 @@ class StatisticCenter(object):
         combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist() + labelColumns
         data = self.getData(dataID,combinedColumnnames)
         data = data.dropna(subset=columnNames,how="all")
-        minGroupSize = self.sourceData.parent.config.getParam("1D.enrichment.min.category.group.size")
-        minGroupDifference = self.sourceData.parent.config.getParam("1D.enrichment.min.abs.group.difference")
+        minGroupSize = self._getParam("1D.enrichment.min.category.group.size")
+        minGroupDifference = self._getParam("1D.enrichment.min.abs.group.difference")
         boolIdxByCategory = dict()
         for categoricalColumn in categoricalColumns:
 
@@ -1080,7 +1089,7 @@ class StatisticCenter(object):
         boolIdx, adjPValue, _, _  = multipletests(pValues,method="fdr_tsbh")
         resultDF.loc[:,"adj. p-value"] = adjPValue
         #filter results
-        adjPCutoff = self.sourceData.parent.config.getParam("1D.enrichment.adj.p.value.cutoff")
+        adjPCutoff = self._getParam("1D.enrichment.adj.p.value.cutoff")
         if adjPCutoff < 1:
             boolIdx = resultDF.loc[:,"adj. p-value"] < adjPCutoff
             resultDF = resultDF.loc[boolIdx,:]
@@ -1103,14 +1112,13 @@ class StatisticCenter(object):
             return self.sourceData.addDataFrame(df,fileName="KMeansElbow::{}".format(baseFileName))
             #return getMessageProps("Error")
 
-
     def runKMeans(self,dataID,columnNames,k):
         ""
         with threadpool_limits(limits=1, user_api='blas'): #require to prevent crash (np.dot not thread safe)
             data = self.getData(dataID,columnNames).dropna()
             km = KMeans(n_clusters=k).fit(data.values)
             Y = km.transform(data.values)
-            if self.sourceData.parent.config.getParam("report.distance.space"):
+            if self._getParam("report.distance.space"):
                 df = pd.DataFrame(Y,index=data.index,columns = ["kM(k={}):CDist({})".format(k,n) for n in range(k)])
             else:
                 df = pd.DataFrame()
@@ -1145,7 +1153,7 @@ class StatisticCenter(object):
 
     def runNWayANOVA(self,dataID,groupings):
         ""
-        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        NProcesses = self._getParam("n.processes.multiprocessing")
         grouping = self.sourceData.parent.grouping
         columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings]
         
@@ -1241,9 +1249,42 @@ class StatisticCenter(object):
         return self.sourceData.joinDataFrame(dataID,r)
        # return getMessageProps("Done","Mixed two way anova performed.")
 
-    def runComparison(self,dataID,grouping,test,referenceGroup=None, logPValues = True):
+
+    def runSAMStatistic(self,dataID : str, groupingName : str, referenceGroup : str|None = None, fdr : float = 0.05, s0 : float = 0.1, minValidInGroup : int = 3) -> dict:
+        """
+        """
+        
+        permutations = self._getParam("sam.statistic.n.permutations")
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        groupComps = self.sourceData.parent.grouping.getGroupPairs(groupingName,referenceGroup)
+        #get data
+        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames(groupingName))
+        samResults = []
+        for rightGroup, leftGroup in groupComps:
+            stat = SAMStatistic(dataID = dataID,
+                                data=data,
+                                permutations=permutations,
+                                groupingName=groupingName,
+                                fdrCutoff=fdr,
+                                s0=s0,
+                                minValidInGroup=minValidInGroup,
+                                grouping={groupingName : grouping},
+                                leftGroup=leftGroup,
+                                rightGroup=rightGroup)
+            stat.fit()
+            samResults.append(stat.result)
+
+        resultConcentated = pd.concat(samResults,axis=1)
+        return self.sourceData.joinDataFrame(dataID,resultConcentated)
+
+        return getMessageProps("Done..",f"SAM Statistic calculated for {groupingName}...")
+
+    def runComparison(self,dataID,groupingName,test,referenceGroup=None, logPValues : bool = True, statParams :dict = {}):
         """Compare groups."""
         
+        if test == "SAM":
+            return self.runSAMStatistic(dataID,groupingName,**statParams)
+
         if test == "2W-ANOVA":
             return self.runANOVA(dataID, logPValues = logPValues, **grouping)
             
@@ -1251,7 +1292,6 @@ class StatisticCenter(object):
         #print(test)
         colNameStart = {"euclidean":"eclD:","t-test":"tt:","Welch-test":"wt"}
        
-        groupingName = grouping 
         grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
         groupComps = self.sourceData.parent.grouping.getGroupPairs(groupingName,referenceGroup)
         #groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
@@ -1327,13 +1367,13 @@ class StatisticCenter(object):
         try:
             X = data[0].values.flatten()
             if kind == "One-sample t-test":
-                popmean = self.sourceData.parent.config.getParam("one.sample.t.test.popmean")
-                alternative = self.sourceData.parent.config.getParam("one.sample.t.test.alternative")
+                popmean = self._getParam("one.sample.t.test.popmean")
+                alternative = self._getParam("one.sample.t.test.alternative")
                 return ttest_1samp(X,popmean,alternative=alternative,nan_policy="omit")
             elif kind == "Wilcoxon signed-rank test":
-                alternative = self.sourceData.parent.config.getParam("one.sample.wilcoxon.alternative")
-                correction = self.sourceData.parent.config.getParam("one.sample.wilcoxon.correction")
-                zero_method = self.sourceData.parent.config.getParam("one.sample.wilcoxon.zero_method")
+                alternative = self._getParam("one.sample.wilcoxon.alternative")
+                correction = self._getParam("one.sample.wilcoxon.correction")
+                zero_method = self._getParam("one.sample.wilcoxon.zero_method")
                 return wilcoxon(X,alternative=alternative,correction=correction,zero_method=zero_method)
         except:
             return [None,None]
@@ -1358,7 +1398,7 @@ class StatisticCenter(object):
         ""
         if methodName=="kmeans":
             return {
-                "n_clusters":self.sourceData.parent.config.getParam("kmeans.default.number.clusters")
+                "n_clusters":self._getParam("kmeans.default.number.clusters")
                 }
         return {}
 
@@ -1394,7 +1434,7 @@ class StatisticCenter(object):
             if manifoldName in manifoldFnName:
 
                 embed = getattr(self,manifoldFnName[manifoldName])(X)
-                if self.sourceData.parent.config.getParam("add.column.names.in.emb.name"):
+                if self._getParam("add.column.names.in.emb.name"):
                     compNames  = ["E({}):({}):_{}".format(manifoldName,mergeListToString(columnNames.values,","),n) for n in range(embed.shape[1])]  
                 else:
                     compNames  = ["E({}):_{}".format(manifoldName,n) for n in range(embed.shape[1])]  
@@ -1453,7 +1493,7 @@ class StatisticCenter(object):
     def runExponentialFit(self,dataID,fitType,timeGrouping,replicateGrouping = None,comparisonGrouping = None):
         ""
         groupings = [timeGrouping,replicateGrouping,comparisonGrouping]
-        NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
+        NProcesses = self._getParam("n.processes.multiprocessing")
         grouping = self.sourceData.parent.grouping
         timeGroupsByColumns = grouping.getGrouping(timeGrouping)
         columnNamesForGroupings  = [grouping.getColumnNames(groupingName = groupingName) for groupingName in groupings if groupingName is not None and groupingName != "None"]

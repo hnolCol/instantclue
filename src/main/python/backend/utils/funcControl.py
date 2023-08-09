@@ -828,7 +828,7 @@ funcPropControl = {
 
     "stats::compareGroups": 
         {
-            "threadRequest":{"obj":"statCenter","fn":"runComparison","requiredKwargs":["dataID","grouping","test"]},
+            "threadRequest":{"obj":"statCenter","fn":"runComparison","requiredKwargs":["dataID","groupingName","test"]},
             "completedRequest":
                     refreshColumnView          
         },

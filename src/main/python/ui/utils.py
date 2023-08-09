@@ -1,5 +1,5 @@
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5.QtGui import QFont, QFontDatabase, QDoubleValidator
 from PyQt5.QtWidgets import QLabel, QComboBox, QLineEdit, QMenu
 import os
 
@@ -168,11 +168,22 @@ def createTitleLabel(text, fontSize = 18, *args, **kwargs):
     #style
     colorString = getStdTitleTextColor()
     w.setStyleSheet("QLabel {color : "+colorString+"; }")
-    
-    
-    
-    
     return w
+
+
+def createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue):
+    validator = QDoubleValidator()
+    validator.setRange(minValue,maxValue,12)
+    validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+    validator.setLocale(QLocale("en_US"))
+    validator.setDecimals(20)
+    #self.alphaLineEdit.setValidator(validator)
+    
+    valueEdit = QLineEdit(placeholderText = placeholderText, toolTip = tooltipStr)
+    valueEdit.setStyleSheet("background: white")
+    
+    valueEdit.setValidator(validator)
+    return valueEdit
 
 def createLineEdit(placeHolderText="",tooltipText="",*args,**kwargs):
     """

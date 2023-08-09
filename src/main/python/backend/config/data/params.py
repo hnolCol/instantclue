@@ -40,6 +40,42 @@ WIKI_LINKGS = {
 
 DEFAULT_PARAMETER = [
     {
+    "name"          :   "sam.statistic.fdr",
+    "value"         :   0.05,
+    "dtype"         :   float,
+    "range"         :   [0.000001,1],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (SAM)",
+    "description"   :   "False discovery rate of the SAM (statistical anaylsis of microarray) comparison."
+    },
+    {
+    "name"          :   "sam.statistic.s0",
+    "value"         :   0.1,
+    "dtype"         :   float,
+    "range"         :   [0.0,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (SAM)",
+    "description"   :   "Fudge factor s0 of the sam statistics t = foldChange / (s + s0). The higer, the more important the fold change becomes in the fdr estimation."
+    },
+    {
+    "name"          :   "sam.min.valid.in.group",
+    "value"         :   2,
+    "dtype"         :   int,
+    "range"         :   [2,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (SAM)",
+    "description"   :   "Number of valid datapoints in a group. Filters out NaN values."
+    },
+    {
+    "name"          :   "sam.statistic.n.permutations",
+    "value"         :   500,
+    "dtype"         :   int,
+    "range"         :   [50,np.inf],
+    "parent"        :   "intern",
+    "parentType"    :   "Statistics (SAM)",
+    "description"   :   "Number of permutations (shuffeling of column groupings) to estimate FDR. If the total number is not possible due to low sample number, all permutations are calculated."
+    },
+    {
     "name"          :   "one.sample.t.test.popmean",
     "value"         :   0.0,
     "dtype"         :   float,

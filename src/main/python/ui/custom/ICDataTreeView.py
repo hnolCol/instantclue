@@ -104,6 +104,13 @@ menuBarItems = [
     },
     {
         "subM":"Pairwise Tests",
+        "name":"SAM",
+        "funcKey": "compareGroups",
+        "dataType": "Numeric Floats",
+        "fnKwargs":{"test":"SAM"}
+    },
+    {
+        "subM":"Pairwise Tests",
         "name":"Welch-test",
         "funcKey": "compareGroups",
         "dataType": "Numeric Floats",
@@ -2325,6 +2332,15 @@ class DataTreeViewTable(QTableView):
         else:
             self.mC.mainFrames["data"].exportData(txtFileFormat)
    
+    def samStatistics(self,event):
+        ""
+        if not self.mC.grouping.groupingExists():
+            w = WarningMessage(infoText="No Grouping found. Please annotate Groups first.",iconDir = self.mC.mainPath)
+            w.exec()
+            return
+        
+        
+
 
     def compareGroups(self, event=None, test = None, *args, **kwargs):
         ""

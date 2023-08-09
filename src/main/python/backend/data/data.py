@@ -1018,7 +1018,6 @@ class DataCollection(object):
 		Returns the dataframe as a pandas dataset.
 		If a clipping is defined (checked by ```hasClipping()```) it returns the clipped dataframe unless ``ìgnore Clipping``is set to True.
 		'''
-
 		if dataID not in self.dfs:
 			return pd.DataFrame()
 

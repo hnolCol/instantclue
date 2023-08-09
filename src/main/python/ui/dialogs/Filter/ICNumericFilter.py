@@ -3,7 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import * 
 from backend.transformations.transformer import summarizeMetric
-from ...utils import createLabel, createLineEdit, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, getCheckStateFromBool, getBoolFromCheckState
+from ...utils import createLabel, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, getCheckStateFromBool, getBoolFromCheckState, createValueLineEdit
 from ...custom.Widgets.ICButtonDesgins import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton
 from ...custom.warnMessage import WarningMessage
 from ..Selections.ICDSelectItems import ICDSelectItems
@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np 
 from collections import OrderedDict 
 import webbrowser
+
 LINE_EDIT_STATUS = {"Greater than":(True,False),
                     "Greater Equal than":(True,False),
                     "Between":(False,False),
@@ -29,19 +30,6 @@ CB_TOOLTIPS = ["Create a new column indicating by '+' if numeric filter matched.
                "Based on the numeric filtering in given columns, set nan in other numeric floats columns."]
 filterTypes = ["Greater than","Greater Equal than","Smaller than","Smaller Equal than","Between", "Not between","n largest","n smallest"]
 
-def createValueLineEdit(placeholderText,tooltipStr, minValue, maxValue):
-    validator = QDoubleValidator()
-    validator.setRange(minValue,maxValue,12)
-    validator.setNotation(QDoubleValidator.Notation.StandardNotation)
-    validator.setLocale(QLocale("en_US"))
-    validator.setDecimals(20)
-    #self.alphaLineEdit.setValidator(validator)
-    
-    valueEdit = QLineEdit(placeholderText = placeholderText, toolTip = tooltipStr)
-    valueEdit.setStyleSheet("background: white")
-    
-    valueEdit.setValidator(validator)
-    return valueEdit
 
 class ICNumericFilterForSelection(QDialog):
     """
