@@ -10,7 +10,7 @@ import numpy as np
 class ICCompareGroups(QDialog):
     def __init__(self, test, mainController, *args, **kwargs):
         super(ICCompareGroups, self).__init__(*args, **kwargs)
-
+        self.setWindowTitle("Pairwise group comparison.")
         self.test = test
         self.mC = mainController
 

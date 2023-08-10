@@ -239,9 +239,14 @@ class SAMStatistic(StatisticalTest):
         return (leftColumnNames,rightColumnNames)
     
     def _getColumnNameSuffix(self, colName : str) -> str:
-        ""
+        """
+        Adds information to result column names including the group and s0 paramater
+        """
+        if colName in ["log2FC","-log10 p-value"]:
+            return f"{colName} ({self._leftGroup}_{self._rightGroup})"
+        
         return f"{colName} ({self._leftGroup}_{self._rightGroup})_s0({self._s0})"
-
+    
     def _getGroupData(self, leftColNames : List[str], rightColNames : List[str]):
         """
         Filters data based on min non nan threshold and returns the group data.
@@ -294,7 +299,11 @@ class SAMStatistic(StatisticalTest):
         absTestStatsRealData = np.abs(testStatisticRealData)
         pValuesForQValueFit = -np.log10(stats.t.sf(absTestStatsRealData, df=degreeFreedomData)*2)
         Q = exponentialDecay(pValuesForQValueFit,*expoDecayFitParms) 
-        
+        #correct fit errors, happens with low N and missing values
+        maxQValue = np.max(Q)
+        if maxQValue > 1:
+            Q = Q - (maxQValue - 1)
+        Q[Q < 0] = 0.0
         return Q, minD
     
     def countFalsePositives(self, permutationStats : np.ndarray, minD : float) -> float:
