@@ -339,7 +339,6 @@ class ReceiverBox(QFrame):
                 del self.items[itemName]
                 update = True
 
-        print(update,items,self.items)
         if update:
             if reportStateToTreeView:
                 self.reportItemRemovalToTreeView(items)

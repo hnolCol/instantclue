@@ -1343,7 +1343,7 @@ class DataCollection(object):
 			kdeData = np.array([hist[-1] if idx == hist.size else hist[idx] for idx in np.digitize(X,bin_edges,right=True)])
 			
 			return kdeData, data.index
-			print(kdeData)
+			#print(kdeData)
 			kde = KernelDensity(bandwidth=bandwidth,
                         kernel=kernel, algorithm='ball_tree')
 			kde.fit(data) 

@@ -38,7 +38,7 @@ class ICCompareGroups(QDialog):
             validInGroup = self.mC.config.getParam("sam.min.valid.in.group")
             
             
-            self.validInGroupLabel = createLabel("#validInGroup",tooltipText="The number of values are valid (e.g. not NaN in each group).")
+            self.validInGroupLabel = createLabel("#valid in each group",tooltipText="The number of values are valid (e.g. not NaN in each group).")
             self.validInGroupEdit = createValueLineEdit("#valid","The number of valid values in each group. Must be at least two.",2,np.inf)
             self.validInGroupEdit.setText(str(validInGroup))
 

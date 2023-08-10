@@ -77,7 +77,7 @@ def performTest(X : np.ndarray,Y : np.ndarray, s0 : float, sort : bool = True, a
     else: 
         return D
 @jit(nopython = True)
-def exponentialDecay(x : np.ndarray, N : float, g : float) -> float:
+def exponentialDecay(x : np.ndarray|float, N : float, g : float) -> float:
     """
     Exponential decay fit
     """
@@ -89,7 +89,7 @@ class StatisticalTest(ABC):
     def __init__(self, 
                  dataID : str,
                  data : pd.DataFrame, 
-                 groupingName : str, 
+                 groupingName : str|List[str], 
                  grouping  : dict,
                  name : str = None
                  ):
@@ -163,7 +163,7 @@ class SAMStatistic(StatisticalTest):
     def __init__(self, 
                  dataID: str, 
                  data: pd.DataFrame, 
-                 groupingName: str, 
+                 groupingName: str | List[str], 
                  grouping: dict, 
                  leftGroup : str,
                  rightGroup : str,
@@ -189,7 +189,8 @@ class SAMStatistic(StatisticalTest):
                           rightGroupData  : np.ndarray,
                           qValues  : np.ndarray,
                           testStatisticRealData : np.ndarray,
-                          testStatisticPermutatedData  : np.ndarray) -> None:
+                          testStatisticPermutatedData  : np.ndarray,
+                          degreeFreedomData : np.ndarray) -> None:
         ""
         self._result = pd.DataFrame(index = dataIndex)
         qValueName = self._getColumnNameSuffix("q-value")
@@ -201,8 +202,7 @@ class SAMStatistic(StatisticalTest):
 
         #caculate regular t-test for volcano plot visualization
         self._result.loc[:,self._getColumnNameSuffix("t-test stat")] = performTest(leftGroupData,rightGroupData,s0=0,sort=False)
-        degreeFreedom = np.sum(~np.isnan(leftGroupData),axis=1) + np.sum(~np.isnan(rightGroupData),axis=1) - 2
-        self._result.loc[:,self._getColumnNameSuffix("-log10 p-value")] = -np.log10(stats.t.sf(self._result[self._getColumnNameSuffix("t-test stat")].abs().values, df=degreeFreedom)*2)
+        self._result.loc[:,self._getColumnNameSuffix("-log10 p-value")] = -np.log10(stats.t.sf(self._result[self._getColumnNameSuffix("t-test stat")].abs().values, df= degreeFreedomData)*2)
 
         #add expected sam statistic values
         self._result = self._result.sort_values(by=samStatColumnName)
@@ -253,7 +253,8 @@ class SAMStatistic(StatisticalTest):
                         absoluteSortedTestStatistic : np.ndarray, 
                         testStatisticPermutatedData : np.ndarray, 
                         absoluteStatsPermutations : np.ndarray, 
-                        pi0 : float):
+                        pi0 : float,
+                        degreeFreedomData : np.ndarray):
         """
         Caclulates QValues
         """
@@ -280,18 +281,20 @@ class SAMStatistic(StatisticalTest):
                 break
         #combine results
         deltasDf = pd.concat(deltas,axis=1).T.drop_duplicates(subset=["minD"])
-
-        expoDecayFitParms, _ = curve_fit(exponentialDecay,deltasDf["minD"].values,deltasDf["FDR"].values)
+        pvaluesForFit = -np.log10(stats.t.sf(deltasDf["minD"].values, df=6)*2)
+       
+        expoDecayFitParms, _ = curve_fit(exponentialDecay, pvaluesForFit,deltasDf["FDR"].values)
         #get param from fit
         N, g = expoDecayFitParms
         #calculate the minimum d value
         minD = -np.log(self._fdrCutoff/N)/g
-        deltasDf["qvalue"] = exponentialDecay(deltasDf["minD"].values,*expoDecayFitParms)
+        deltasDf["pvalue"] = pvaluesForFit
+        deltasDf["qvalue"] = exponentialDecay(pvaluesForFit,*expoDecayFitParms)
         #estimate q values using a expontential fit
-
         absTestStatsRealData = np.abs(testStatisticRealData)
-        Q = exponentialDecay(absTestStatsRealData,*expoDecayFitParms) 
-
+        pValuesForQValueFit = -np.log10(stats.t.sf(absTestStatsRealData, df=degreeFreedomData)*2)
+        Q = exponentialDecay(pValuesForQValueFit,*expoDecayFitParms) 
+        
         return Q, minD
     
     def countFalsePositives(self, permutationStats : np.ndarray, minD : float) -> float:
@@ -383,6 +386,7 @@ class SAMStatistic(StatisticalTest):
         numLeftColNames, numRightColNames = len(leftColNames), len(rightColNames)
         totalNumColumns = numLeftColNames + numRightColNames
         leftGroupData, rightGroupData, completeData, dataIndex = self._getGroupData(leftColNames,rightColNames)
+        degreeFreedomData = np.sum(~np.isnan(leftGroupData),axis=1) + np.sum(~np.isnan(rightGroupData),axis=1) - 2
 
         testStatisticRealData = performTest(leftGroupData,rightGroupData,s0=self._s0,sort=False)
         #sortedTestStatisticReal = np.sort(testStatisticRealData)
@@ -404,9 +408,9 @@ class SAMStatistic(StatisticalTest):
         qValues, minD = self.calculateQValue(testStatisticRealData,
                                        absoluteSortedTestStatistic,
                                        testStatisticPermutatedData,
-                                       absoluteStatsPermutations,pi0)
+                                       absoluteStatsPermutations,pi0,degreeFreedomData)
         #add resuls to data frame (extra function?)
-        self._addDataToResults(dataIndex,leftGroupData,rightGroupData,qValues,testStatisticRealData,testStatisticPermutatedData)
+        self._addDataToResults(dataIndex,leftGroupData,rightGroupData,qValues,testStatisticRealData,testStatisticPermutatedData,degreeFreedomData)
         self.estimateFDRLine(minD, numColumns=totalNumColumns)
 
     def generatePermutations(self, idces : np.ndarray) -> np.ndarray: 

@@ -316,7 +316,7 @@ class CollapsableDataTreeView(QWidget):
 
     def updateDataInTreeView(self,columnNamesByType, tooltipData = {}):
         """Add data to the data treeview"""
-        print("updating data -- debug")
+        #print("updating data -- debug")
         if isinstance(columnNamesByType,dict):
             for headerName, values in columnNamesByType.items():
                 if headerName in self.dataHeaders:
