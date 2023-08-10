@@ -32,7 +32,7 @@ plotTypeGraph = {
                 "x-ys-plot"     :       ICXYPlot,
                 #"dim-red-plot"  :       ICBarplot,      
                # "forestplot"    :       ICForestplot,
-                "wordcloud"     :       ICWordCloud,
+                #"wordcloud"     :       ICWordCloud,
                 "clusterplot"   :       ICClusterplot
                 }
 

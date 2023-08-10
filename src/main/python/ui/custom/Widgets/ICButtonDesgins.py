@@ -1931,7 +1931,8 @@ class PlotTypeButton(PushHoverButton):
                             "dim-red-plot"  :   self.drawDimRed,
                             "forestplot"    :   self.drawForestplot,
                             "clusterplot"   :   self.drawClusterplot,
-                            "wordcloud"     :   self.drawWordcloud}
+                          #  "wordcloud"     :   self.drawWordcloud
+                            }
 
     def paintEvent(self,event, noAxis = False):
         ""

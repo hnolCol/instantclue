@@ -43,7 +43,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.stats import truncnorm
 from sklearn.model_selection import GridSearchCV
 from numba import jit, njit, prange
-from wordcloud import WordCloud
+#from wordcloud import WordCloud
 import io
 import re
 import pickle
@@ -335,7 +335,7 @@ plotFnDict = {
     "x-ys-plot":"getXYPlotProps",
     "dim-red-plot":"getDimRedProps",
     "forestplot" : "getForestplotProps",
-    "wordcloud"  : "getWordCloud",
+   # "wordcloud"  : "getWordCloud",
     "clusterplot" : "getClusterProps",
     "mulitscatter" : "getScatterCorrMatrix",
     "proteinpeptideplot" : "getProteinPeptideProps"
@@ -4163,40 +4163,40 @@ class PlotterBrain(object):
         
         return completeKwargs
 
-    def getWordCloud(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
-        ""
+    # def getWordCloud(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
+    #     ""
         
-        axisPostions = getAxisPosition(1)
-        rawData = self.sourceData.getDataByColumnNames(dataID,categoricalColumns)["fnKwargs"]["data"]
-        config =  self.sourceData.parent.config
-        splitString = config.getParam("word.cloud.split_string")
-        cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
+    #     axisPostions = getAxisPosition(1)
+    #     rawData = self.sourceData.getDataByColumnNames(dataID,categoricalColumns)["fnKwargs"]["data"]
+    #     config =  self.sourceData.parent.config
+    #     splitString = config.getParam("word.cloud.split_string")
+    #     cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
         
-        wc = WordCloud(
-            font_path = "Arial",
-            max_font_size = config.getParam("word.cloud.max_font_size"),
-            min_font_size = config.getParam("word.cloud.min_font_size"),
-            normalize_plurals = config.getParam("word.cloud.normalize_plurals"),
-            max_words = config.getParam("word.cloud.max_words"),
-            colormap = cmap, 
-            include_numbers = config.getParam("word.cloud.include_numbers"),
-            background_color = config.getParam("word.cloud.background_color"),
-            width = 1600, 
-            height = 800)
+    #     wc = WordCloud(
+    #         font_path = "Arial",
+    #         max_font_size = config.getParam("word.cloud.max_font_size"),
+    #         min_font_size = config.getParam("word.cloud.min_font_size"),
+    #         normalize_plurals = config.getParam("word.cloud.normalize_plurals"),
+    #         max_words = config.getParam("word.cloud.max_words"),
+    #         colormap = cmap, 
+    #         include_numbers = config.getParam("word.cloud.include_numbers"),
+    #         background_color = config.getParam("word.cloud.background_color"),
+    #         width = 1600, 
+    #         height = 800)
 
-        if config.getParam("word.cloud.categories_to_frequencies"):
+    #     if config.getParam("word.cloud.categories_to_frequencies"):
             
-            splitData = rawData[categoricalColumns[0]].astype("str").str.split(splitString, expand=True).values.flatten()
-            countedValues = pd.Series(splitData).value_counts(normalize=True).to_dict()
-            wordcloud = wc.generate_from_frequencies(countedValues)
-        else:
-            textInput = " ".join(rawData[categoricalColumns].values.flatten().astype(str))
-            wordcloud = wc.generate(textInput)
+    #         splitData = rawData[categoricalColumns[0]].astype("str").str.split(splitString, expand=True).values.flatten()
+    #         countedValues = pd.Series(splitData).value_counts(normalize=True).to_dict()
+    #         wordcloud = wc.generate_from_frequencies(countedValues)
+    #     else:
+    #         textInput = " ".join(rawData[categoricalColumns].values.flatten().astype(str))
+    #         wordcloud = wc.generate(textInput)
 
-        return {"data":{
-                "cloud":wordcloud,
-                "axisPositions":axisPostions}
-                }
+    #     return {"data":{
+    #             "cloud":wordcloud,
+    #             "axisPositions":axisPostions}
+    #             }
 
     def getXYPlotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         "Returns plot properties for a XY plot"
