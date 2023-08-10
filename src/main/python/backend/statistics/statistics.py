@@ -1,9 +1,4 @@
 import itertools
-from tokenize import group
-from unittest import result
-from pandas.core.accessor import delegate_names
-from pandas.core.reshape.melt import melt
-from pingouin.correlation import corr
 from scipy.sparse import data
 from .dimensionalReduction.ICPCA import ICPCA
 from .featureSelection.ICFeatureSelection import ICFeatureSelection
@@ -11,7 +6,8 @@ from ..utils.stringOperations import getMessageProps, getRandomString, mergeList
 from backend.utils.stringOperations import getNumberFromTimeString
 from backend.utils.misc import getKeyMatchInValuesFromDict
 from backend.filter.utils import buildRegex
-from backend.statistics.permutationFDR import calculatePermutationBasedFDR
+
+
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 
@@ -1349,17 +1345,9 @@ class StatisticCenter(object):
                     padjusted = pd.Series(p_adj,index=filteredPValues.index,name = "adj. p-value (fdr_bh) {}".format(resultColumnNames[n]))
                     sigBool = pd.Series(boolIdx, index = filteredPValues.index, name= "Significant {}".format(resultColumnNames[n])).map({True:"+",False:"-"})
                     results = results.join([padjusted,sigBool])
-                    #q, samStat = self.performPermutationFDREstimation(X,Y,data[columnNames1.values.tolist()+columnNames2.values.tolist()].values)
-                   # print(q)
-                    #results["q-value:({})".format(resultColumnNames[n])] = q
-                    #results["sam-stat:({})".format(resultColumnNames[n])] = samStat
 
         return self.sourceData.joinDataFrame(dataID,results)
 
-    def performPermutationFDREstimation(self,X,Y,PP,P=200,s0=0.1):
-        ""
-        
-        return calculatePermutationBasedFDR(X,Y,PP,P,s0)
 
     def performOneSampleTest(self,data, kind= "One-sample t-test"):
         ""
