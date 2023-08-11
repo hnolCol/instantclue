@@ -2,7 +2,7 @@
 
 ## permuations based statistics
 from typing import Any
-from numba import jit, njit
+from numba import jit, njit, prange
 import numpy as np
 from scipy.stats import ttest_ind
 import pandas as pd 
@@ -17,65 +17,9 @@ from scipy.interpolate import UnivariateSpline
 from typing import List, Tuple
 from abc import ABC, abstractmethod, abstractproperty
 import time
-
-@jit(nopython = True)
-def mean(X : np.ndarray) -> float:
-    "Calculates the mean of array x"
-    a = 0
-    N = X.size
-    for x in X:
-        a += x 
-    return a/N 
-
-@jit(nopython = True)
-def squareSum(X : np.ndarray, meanValue : float) -> float:
-    a = 0 
-    for x in X:
-        a += (x-meanValue)**2 
-    return a 
-
-@jit(nopython=True)
-def countValueAboveminD(X : np.ndarray, minD : float) -> int:
-    N = 0 
-    XX = X.flatten()
-    ii = XX.size
-    for i in range(ii):
-            if XX[i] >= minD:
-                N += 1 
-    return N
-
-@jit(nopython = True)
-def sstat(X : np.ndarray,Y : np.ndarray, s0 : float):
-    J = X.size
-    K = Y.size
-    if J == 0 or K == 0: return 0 
-    meanX = mean(X)
-    meanY = mean(Y)
-    SSX = squareSum(X,meanX)
-    SSY = squareSum(Y,meanY)
-    p = (1/J + 1/K) / (J + K - 2)
-    s = (p * (SSX + SSY))**0.5
-    d = (meanX - meanY) / (s + s0)
-    return d
-
-@jit(nopython = True)
-def performTest(X : np.ndarray,Y : np.ndarray, s0 : float, sort : bool = True, abs : bool = False) -> np.ndarray:
-    """
-    Performs the statistical sam test for each row.
-    """
-    D = np.zeros(shape=X.shape[0])
-    boolX = np.isnan(X)
-    boolY = np.isnan(Y)
-    for n in np.arange(D.size):
-        XX = X[n,~boolX[n]]
-        YY = Y[n,~boolY[n]]
-        D[n] = sstat(XX,YY,s0)
-    if sort:
-        if abs:
-            return np.sort(np.abs(D))
-        return np.sort(D) 
-    else: 
-        return D
+from ..utils.tests import performFTest, performSAMTest
+from ..utils.base import countValuesAboveThresh
+    
 @jit(nopython = True)
 def exponentialDecay(x : np.ndarray|float, N : float, g : float) -> float:
     """
@@ -83,8 +27,12 @@ def exponentialDecay(x : np.ndarray|float, N : float, g : float) -> float:
     """
     return N*np.exp(-x*g)
 
+# inititate functions once to get speed up on first execution in InstnatCLue gui 
+d = np.array([[2.4,2.5,2.5,2.8],[5.4,7.6,5.4,6.4]]).reshape(2,1,4)
+performFTest(d)
+performSAMTest(np.array([[2.3,2.5,2.6]]).reshape(1,3),np.array([[2.3,2.5,2.5]]).reshape(1,3),0.1)
 
-class StatisticalTest(ABC):
+class StatisticalTestABC(ABC):
 
     def __init__(self, 
                  dataID : str,
@@ -113,6 +61,33 @@ class StatisticalTest(ABC):
         self._name = name
         self._filteredData = pd.DataFrame()
 
+    @abstractmethod
+    def filterData(self,*args : Any, **kwargs : Any) -> pd.DataFrame:
+        """
+        Abstract method to filter the self._data data frame
+        based on specific critera such as nan values.
+        """
+
+    @abstractmethod
+    def fit(self,*args,**kwargs) -> Any:
+        """
+        Fits the data (e.g. calculates the statistical test)
+        """
+
+    @abstractmethod
+    def getPlotNames(self) -> List[str]:
+        """
+        Returns the names of the test specific plots
+        """
+        return []
+    
+
+class StatisticalTest(StatisticalTestABC):
+    """
+    """
+    def __init__(self, dataID: str, data: pd.DataFrame, groupingName: str | List[str], grouping: dict, name: str = None):
+        super().__init__(dataID, data, groupingName, grouping, name)
+    
     @property
     def ID(self) -> str:
         """
@@ -135,30 +110,82 @@ class StatisticalTest(ABC):
         """
         return self._result
 
-    @abstractmethod
-    def filterData(self,*args : Any, **kwargs : Any) -> pd.DataFrame:
-        """
-        Abstract method to filter the self._data data frame
-        based on specific critera such as nan values.
-        """
 
-
-    @abstractmethod
-    def fit(self,*args,**kwargs) -> Any:
-        """
-        Fits the data (e.g. calculates the statistical test)
-        """
-
-    @abstractmethod
-    def getPlotNames(self) -> List[str]:
-        """
-        Returns the names of the test specific plots
-        """
-        return []
     
 
+class PermutationBasedTest(StatisticalTest):
+    """
+    """
+    def __init__(self, dataID: str, data: pd.DataFrame, groupingName: str | List[str], grouping: dict, name: str = None):
+        super().__init__(dataID, data, groupingName, grouping, name)
 
-class SAMStatistic(StatisticalTest):
+    def generatePermutations(self, idces : np.ndarray) -> np.ndarray: 
+        """
+        Generate permutations without replacement based on the 
+        column indices.
+        """
+        maxPerms = math.factorial(idces.size) - 1
+        if maxPerms < self._permutations : self._permutations = maxPerms
+        ll = np.empty(shape=(self._permutations,idces.size), dtype=int)
+        ii = 0
+        while ii < self._permutations:
+            permIdces = self._rng.permutation(idces)
+            if np.all(permIdces == idces):
+                continue
+            if np.any(np.sum(ll == permIdces, axis=1) == idces.size):
+                continue
+            else:
+                ll[ii,:] = permIdces
+                ii += 1 
+            
+        return ll 
+    
+
+class ANOVAStatistic(PermutationBasedTest):
+    ""
+    def __init__(self, dataID: str, data: pd.DataFrame, groupingName: str | List[str], grouping: dict, name: str = None, minValidInGroup : int = 3):
+        super().__init__(dataID, data, groupingName, grouping, name)
+
+        self._minValidInGroup = minValidInGroup
+        self._groupColumns = [v for v in grouping[groupingName].values()]
+
+
+    def filterData(self, groupColumns : List[List[str]]) -> pd.DataFrame:
+        """
+        Filters out data based on the min valid group (non NaN)
+        """
+        df = self._data
+        for groupColumn in groupColumns:
+            df = df.dropna(subset=groupColumn, thresh=self._minValidInGroup)
+
+        self._filteredData = df 
+
+
+    def fit(self) -> pd.DataFrame:
+        """
+        """
+        self.filterData(self._groupColumns) #create self._filteredData object
+        X = np.array([self._filteredData[groupColumn].values for groupColumn in self._groupColumns])
+        #shape groups x features x replicates
+        print(X)
+        t1 = time.time()
+        f = performFTest(X)
+        print(time.time()-t1)
+        print(f)
+        t1 = time.time()
+        f,p = stats.f_oneway(*X,axis=1)
+        print(time.time()-t1)
+
+
+        print(f)
+
+    def getPlotNames(self) -> List[str]:
+        return ["Heatmap"]
+
+
+
+
+class SAMStatistic(PermutationBasedTest):
 
     def __init__(self, 
                  dataID: str, 
@@ -201,7 +228,7 @@ class SAMStatistic(StatisticalTest):
         self._result.loc[:,samStatColumnName] = testStatisticRealData
 
         #caculate regular t-test for volcano plot visualization
-        self._result.loc[:,self._getColumnNameSuffix("t-test stat")] = performTest(leftGroupData,rightGroupData,s0=0,sort=False)
+        self._result.loc[:,self._getColumnNameSuffix("t-test stat")] = performSAMTest(leftGroupData,rightGroupData,s0=0,sort=False)
         self._result.loc[:,self._getColumnNameSuffix("-log10 p-value")] = -np.log10(stats.t.sf(self._result[self._getColumnNameSuffix("t-test stat")].abs().values, df= degreeFreedomData)*2)
 
         #add expected sam statistic values
@@ -259,7 +286,8 @@ class SAMStatistic(StatisticalTest):
                         testStatisticPermutatedData : np.ndarray, 
                         absoluteStatsPermutations : np.ndarray, 
                         pi0 : float,
-                        degreeFreedomData : np.ndarray):
+                        degreeFreedomData : np.ndarray,
+                        degreeFreedomPermutatedData  : np.ndarray):
         """
         Caclulates QValues
         """
@@ -273,7 +301,7 @@ class SAMStatistic(StatisticalTest):
             boolIdx = diff > delta
             if np.any(boolIdx):
                 minD = np.min(absoluteSortedTestStatistic[diff > delta])
-                TP =  countValueAboveminD(absoluteSortedTestStatistic,minD) 
+                TP =  countValuesAboveThresh(absoluteSortedTestStatistic,minD) 
                 FP = self.countFalsePositives(absoluteStatsPermutations,minD)
                 #FP = calculateFP(absoluteStatsPermutations,t_cut)
                 FDR = pi0 * FP/TP
@@ -286,7 +314,7 @@ class SAMStatistic(StatisticalTest):
                 break
         #combine results
         deltasDf = pd.concat(deltas,axis=1).T.drop_duplicates(subset=["minD"])
-        pvaluesForFit = -np.log10(stats.t.sf(deltasDf["minD"].values, df=6)*2)
+        pvaluesForFit = -np.log10(stats.t.sf(deltasDf["minD"].values, df=np.max(degreeFreedomData))*2)
        
         expoDecayFitParms, _ = curve_fit(exponentialDecay, pvaluesForFit,deltasDf["FDR"].values)
         #get param from fit
@@ -300,6 +328,17 @@ class SAMStatistic(StatisticalTest):
         pValuesForQValueFit = -np.log10(stats.t.sf(absTestStatsRealData, df=degreeFreedomData)*2)
         Q = exponentialDecay(pValuesForQValueFit,*expoDecayFitParms) 
         #correct fit errors, happens with low N and missing values
+
+    #     pvaluesPerm = stats.t.sf(testStatisticPermutatedData.abs().values.flatten(),degreeFreedomPermutatedData.values.flatten())*2
+    #     pvaluesRealData = stats.t.sf(absTestStatsRealData, df=degreeFreedomData)*2
+    #     print(pvaluesPerm, pvaluesRealData)
+    #     #pvaluesAvgPerm = stats.t.sf(averagedSorotedTestStatisticPerm, df = 6)*2
+    #     Qs = calculateQValue(pvaluesRealData,pvaluesPerm, self._permutations)
+
+    #    # Qs = np.array([countValuesBelowThresh(pValuesPerm,pvalue) / countValuesBelowThresh(pValuesRealData,pvalue) / self._permutations for pvalue in pValuesPerm])
+     
+    #     print(Qs)
+
         maxQValue = np.max(Q)
         if maxQValue > 1:
             Q = Q - (maxQValue - 1)
@@ -311,7 +350,7 @@ class SAMStatistic(StatisticalTest):
         Counts the number of False Positives. permutationsStats of shape (n_features x permutations)
         there the total number of values above minD is devided by the number of permutations.
         """
-        FPs = countValueAboveminD(permutationStats,minD)
+        FPs = countValuesAboveThresh(permutationStats,minD)
         numColumns = permutationStats.shape[1]
         return FPs/numColumns
     
@@ -397,51 +436,34 @@ class SAMStatistic(StatisticalTest):
         leftGroupData, rightGroupData, completeData, dataIndex = self._getGroupData(leftColNames,rightColNames)
         degreeFreedomData = np.sum(~np.isnan(leftGroupData),axis=1) + np.sum(~np.isnan(rightGroupData),axis=1) - 2
 
-        testStatisticRealData = performTest(leftGroupData,rightGroupData,s0=self._s0,sort=False)
+        testStatisticRealData = performSAMTest(leftGroupData,rightGroupData,s0=self._s0,sort=False)
         #sortedTestStatisticReal = np.sort(testStatisticRealData)
         absoluteSortedTestStatistic = np.sort(np.abs(testStatisticRealData))
 
         #generate permutated column idcs based on the total number of columns
         permutatedColumnIdcs = self.generatePermutations(np.arange(totalNumColumns))
         #calculate test statistic on permutated data
-        testStatisticPermutatedData = pd.DataFrame(
-            self.performPermutationTests(
+        permStats, permDf = self.performPermutationTests(
                         completeData,
                         perms=permutatedColumnIdcs,
                         s0=self._s0,
-                        columnSizes=(numLeftColNames,numRightColNames)).reshape(-1,self._permutations)
-                        )
+                        columnSizes=(numLeftColNames,numRightColNames))
         
+        testStatisticPermutatedData = pd.DataFrame(permStats.reshape(-1,self._permutations))
+        degreeFreedomPermutatedData = pd.DataFrame(permDf.reshape(-1,self._permutations))
+
         absoluteStatsPermutations = testStatisticPermutatedData.abs().values
         pi0 = self.estimatePi0(stats=testStatisticRealData, permutationStats=absoluteStatsPermutations)
         qValues, minD = self.calculateQValue(testStatisticRealData,
                                        absoluteSortedTestStatistic,
                                        testStatisticPermutatedData,
-                                       absoluteStatsPermutations,pi0,degreeFreedomData)
+                                       absoluteStatsPermutations,pi0,
+                                       degreeFreedomData,
+                                       degreeFreedomPermutatedData
+                                       )
         #add resuls to data frame (extra function?)
         self._addDataToResults(dataIndex,leftGroupData,rightGroupData,qValues,testStatisticRealData,testStatisticPermutatedData,degreeFreedomData)
         self.estimateFDRLine(minD, numColumns=totalNumColumns)
-
-    def generatePermutations(self, idces : np.ndarray) -> np.ndarray: 
-        """
-        Generate permutations without replacement based on the 
-        column indices.
-        """
-        maxPerms = math.factorial(idces.size) - 1
-        if maxPerms < self._permutations : self._permutations = maxPerms
-        ll = np.empty(shape=(self._permutations,idces.size), dtype=int)
-        ii = 0
-        while ii < self._permutations:
-            permIdces = self._rng.permutation(idces)
-            if np.all(permIdces == idces):
-                continue
-            if np.any(np.sum(ll == permIdces, axis=1) == idces.size):
-                continue
-            else:
-                ll[ii,:] = permIdces
-                ii += 1 
-            
-        return ll 
 
     def getPlotNames(self) -> List[str]:
         """
@@ -454,12 +476,13 @@ class SAMStatistic(StatisticalTest):
         Performs the statistical sam test across the permutations.
         """
         permStats = np.zeros(shape=(completeData.shape[0],self._permutations))
+        permDfs = np.zeros(shape=(completeData.shape[0],self._permutations))
         for n,p in enumerate(perms):
             X = completeData[:,p[:columnSizes[0]]]
             Y = completeData[:,p[columnSizes[0]:]]
-            permStats[:,n] = performTest(X,Y,s0,True,False)
-
-        return permStats
+            permStats[:,n] = performSAMTest(X,Y,s0,True,False)
+            permDfs[:,n] = np.sum(~np.isnan(X),axis=1) + np.sum(~np.isnan(Y),axis=1) - 2
+        return permStats, permDfs
 
 
 # df = pd.read_csv("test-fdr.txt",sep="\t")

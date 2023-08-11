@@ -55,8 +55,77 @@ except:
     useStatsmodelLoess = True
 
 from lmfit import Model
+from numba import jit, prange 
+from .comparisons.SAM import SAMStatistic, ANOVAStatistic
+from .utils.cluster import nanCorrelationCluster, nanEuclideanCluster
 
-from .comparisons.SAM import SAMStatistic
+# @jit(nopython=True)
+# def euclidean(p : np.ndarray, q:np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
+#     """
+#     """
+#     d = 0
+#     for i in range(p.size):
+#         if not nanp[i] and not nanq[i]:
+#             d += (p[i] - q[i])**2 
+        
+#     return d**0.5 
+
+# @jit(nopython=True, parallel = True)
+# def nanEuclideanCluster(X : np.ndarray) -> np.ndarray:
+#     """
+#     """
+#     nan = np.isnan(X)
+#     i,j = X.shape 
+#     e = np.zeros(shape=(i,i))
+    
+#     for i in prange(i):
+#         for j in prange(i):
+#             if i != j:
+#                 d = euclidean(X[i],X[j], nan[i], nan[j])
+#                 e[i,j] = d
+#                 e[j,i] = d 
+
+#     return e 
+
+# @jit(nopython=True)
+# def pearson(p : np.ndarray, q : np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
+#     """
+#     """
+#     psize = p.size
+#     nan = nanp + nanq > 0     
+#     pmean = mean(p[~nan])
+#     qmean = mean(q[~nan])
+#     SSP = squareSum(p,pmean)
+#     SSQ = squareSum(q,qmean)
+#     ri = 0
+#     for i in range(psize):
+#         ri+= (p[i]-pmean) * (q[i]-qmean)
+#     rd = (SSP * SSQ)**0.5
+#     return 1 - ri / rd 
+
+
+# @jit(nopython=True,parallel = True)
+# def nanCorrelationCluster(X : np.ndarray) -> np.ndarray:
+#     nan = np.isnan(X)
+#     i,j = X.shape 
+#     e = np.zeros(shape=(i,i))
+    
+#     for i in prange(i):
+#         for j in prange(i):
+#             if i != j:
+#                 d = pearson(X[i],X[j], nan[i], nan[j])
+#                 e[i,j] = d
+#                 e[j,i] = d 
+
+#     return e 
+
+
+X = np.array([[1.2,2.2,3.5,2.6],[1.4,3.2,5.5,2.6]]).reshape(2,4)
+print(X)
+print(nanEuclideanCluster(X))
+print(np.corrcoef(X[0],X[1]))
+print(nanCorrelationCluster(X))
+print("======X====")
 
 
 
@@ -1273,14 +1342,22 @@ class StatisticCenter(object):
         resultConcentated = pd.concat(samResults,axis=1)
         return self.sourceData.joinDataFrame(dataID,resultConcentated)
 
-        return getMessageProps("Done..",f"SAM Statistic calculated for {groupingName}...")
+    def runANOVAFDR(self,dataID,groupingName):
+        ""
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames(groupingName))
+        print(grouping)
+        stat = ANOVAStatistic(data=data, dataID = dataID, grouping= {groupingName : grouping}, groupingName=groupingName)
+        stat.fit()
+        return getMessageProps("Done,","ANOVA done")
 
     def runComparison(self,dataID,groupingName,test,referenceGroup=None, logPValues : bool = True, statParams :dict = {}):
         """Compare groups."""
         
         if test == "SAM":
             return self.runSAMStatistic(dataID,groupingName,**statParams)
-
+        if test == "1W-FDR":
+            return self.runANOVAFDR(dataID,groupingName)
         if test == "2W-ANOVA":
             return self.runANOVA(dataID, logPValues = logPValues, **grouping)
             
@@ -1546,13 +1623,16 @@ class StatisticCenter(object):
                 linkage = fastcluster.linkage(data, method = method, metric = metric)   
             
             elif metric == "nanEuclidean":
-                i = data
-                j = np.nansum((i - i[:, None]) ** 2, axis=2) ** .5
-                linkage = fastcluster.linkage(j,method = method)
+                #super speed up (more than 20 fold to old implementation.)
+                j = nanEuclideanCluster(data)
+                linkage = fastcluster.linkage(j ,method = method)
+            
             elif metric == "nanCorrelation":
-                i = data
-                j = np.nansum((i - i[:, None]) ** 2, axis=2) ** .5
-                linkage = fastcluster.linkage(j,method = method)
+                
+                j = nanCorrelationCluster(data)
+                print(j)
+                linkage = fastcluster.linkage(j ,method = method)
+
             else:
                 distanceMatrix = scd.pdist(data, metric = metric)
                 linkage = sch.linkage(distanceMatrix,method = method)

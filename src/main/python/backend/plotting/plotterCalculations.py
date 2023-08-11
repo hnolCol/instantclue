@@ -1914,17 +1914,16 @@ class PlotterBrain(object):
                 if data.dropna().empty:
                     return getMessageProps("Error..","Correlation matrix calculations resulted in a complete NaN matrix.")
             else:
-                if rowMetric == "nanEuclidean":
+                if rowMetric in ["nanEuclidean","nanCorrelation"]:
                     
                     if nanThreshold > len(numericColumns):
                         nanThreshold = len(numericColumns)
                     data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna(thresh=nanThreshold)
                     #remove no deviation data (Same value)
                     if removeRowsWithNoStd:
-                        data = data.loc[data.std(axis=1) != 0,:]
-                    rowMetric = "nanEuclidean" 
+                        data = data.loc[data.std(axis=1) != 0,:] 
                     if columnMetric != "None":
-                        columnMetric = "nanEuclidean"                   
+                        columnMetric = rowMetric                   
                 else:
                     if (rowMetric != "None" and rowMethod != "None") or  (columnMetric != "None" and columnMethod != "None"):
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"].dropna()
@@ -2039,7 +2038,7 @@ class PlotterBrain(object):
                     ("rowMethod",rowMethod),
                     ("columnMetric",columnMetric),
                     ("columnMethod",columnMethod),
-                    ("nanFilter","all NaNs filtered" if rowMetric != "nanEuclidean" else "minValidValues = {}".format(nanThreshold))]
+                    ("nanFilter","all NaNs filtered" if rowMetric not in ["nanEuclidean","nanCorrelation"] else "minValidValues = {}".format(nanThreshold))]
                     }
                 }
     

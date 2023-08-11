@@ -1541,7 +1541,7 @@ DEFAULT_PARAMETER = [
     "name"          :   "rowMetric",
     "value"         :   "euclidean",
     "dtype"         :   str,
-    "range"         :   ["None","euclidean","nanEuclidean","correlation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"], #"nanCorrelation"
+    "range"         :   ["None","euclidean","nanEuclidean","correlation","nanCorrelation","seuclidean","minkowski","cosine","correlation","cityblock","canberra","braycurtis"], #"nanCorrelation"
     "parent"        :   "statCenter",
     "parentType"    :   "Hierarchical Clustering (Heatmap)",
     "description"   :   "Define metric used for row dendrogram.If None, no dendrogram will be shown. Only nanEuclidean and nanCorrelation can handle nans and is significantly slower.",
