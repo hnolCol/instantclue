@@ -1,6 +1,7 @@
 from numba import jit, prange 
 import numpy as np 
 from .base import mean, squareSum
+
 @jit(nopython=True)
 def euclidean(p : np.ndarray, q:np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
     """
@@ -17,7 +18,7 @@ def nanEuclideanCluster(X : np.ndarray) -> np.ndarray:
     """
     """
     nan = np.isnan(X)
-    i,j = X.shape 
+    i,ii = X.shape 
     e = np.zeros(shape=(i,i))
     
     for i in prange(i):
@@ -32,6 +33,7 @@ def nanEuclideanCluster(X : np.ndarray) -> np.ndarray:
 @jit(nopython=True)
 def pearson(p : np.ndarray, q : np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
     """
+    Distance pearson implementation  (1-r). 
     """
     nan = nanp + nanq > 0   
     p = p[~nan]
@@ -54,8 +56,11 @@ def pearson(p : np.ndarray, q : np.ndarray, nanp : np.ndarray, nanq : np.ndarray
 
 @jit(nopython=True,parallel = True)
 def nanCorrelationCluster(X : np.ndarray) -> np.ndarray:
+    """
+    Wrapper function to apply pearson to an array X.
+    """
     nan = np.isnan(X)
-    i,j = X.shape 
+    i,ii = X.shape 
     e = np.zeros(shape=(i,i))
     
     for i in prange(i):
@@ -64,5 +69,4 @@ def nanCorrelationCluster(X : np.ndarray) -> np.ndarray:
                 d = pearson(X[i],X[j], nan[i], nan[j])
                 e[i,j] = d
                 e[j,i] = d 
-
     return e 

@@ -9,6 +9,13 @@ def mean(X : np.ndarray|List[float]) -> float:
     s = sum(X)
     return s/N 
 
+
+@jit(nopython=True)
+def sd(X : np.ndarray, mean : float , N : int) -> float:
+    """Calculates the standard deviation with known average/mean and N"""
+    return np.sqrt(squareSum(X,mean)/(N-1))
+
+
 @jit(nopython=True)
 def sum(X : np.ndarray|List[float]) ->float:
     "Calculates the sum"

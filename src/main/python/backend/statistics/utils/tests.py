@@ -1,5 +1,5 @@
 from numba import jit, prange
-from .base import sum, squareSum, mean, countValuesBelowThresh
+from .base import sum, squareSum, mean, countValuesBelowThresh, sd
 import numpy as np 
 
 @jit(nopython=True)
@@ -21,6 +21,18 @@ def calculateQValue(pvaluesRealData : np.ndarray, pvaluesPerm : np.ndarray, perm
             Q[idx] = q
 
     return Q 
+
+
+
+@jit(nopython = True)
+def oneSampleSStat(X : np.ndarray, s0 : float, testValue  : float = 0.0) -> np.ndarray:
+    """Calculates the one sample test statistic"""
+    N = X.size
+    if N < 2: return 0
+    meanX = mean(X)
+    stdev = sd(X,meanX,N)
+    return (meanX - testValue) / ( (stdev / np.sqrt(N)) + s0)
+    
 
 @jit(nopython = True)
 def sstat(X : np.ndarray,Y : np.ndarray, s0 : float):
@@ -76,6 +88,24 @@ def performFTest(X : np.ndarray) -> np.ndarray:
 
     return F
 
+
+@jit(nopython = True, parallel=True)
+def performOneSampleSAMTest(X : np.ndarray,testValue : float, s0 : float, sort : bool = True, abs : bool = False) -> np.ndarray:
+    """
+    Performs the statistical sam test for each row.
+    """
+    D = np.zeros(shape=X.shape[0])
+    boolX = np.isnan(X)
+    for n in prange(D.size):
+        XX = X[n,~boolX[n]]
+        D[n] = oneSampleSStat(XX,s0,testValue)
+    if sort:
+        if abs:
+            return np.sort(np.abs(D))
+        return np.sort(D) 
+    else: 
+        return D
+    
 @jit(nopython = True,parallel=True)
 def performSAMTest(X : np.ndarray,Y : np.ndarray, s0 : float, sort : bool = True, abs : bool = False) -> np.ndarray:
     """

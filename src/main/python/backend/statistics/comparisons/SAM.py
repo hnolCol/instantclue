@@ -17,7 +17,7 @@ from scipy.interpolate import UnivariateSpline
 from typing import List, Tuple
 from abc import ABC, abstractmethod, abstractproperty
 import time
-from ..utils.tests import performFTest, performSAMTest
+from ..utils.tests import performFTest, performSAMTest, performOneSampleSAMTest
 from ..utils.base import countValuesAboveThresh
     
 @jit(nopython = True)
@@ -31,7 +31,8 @@ def exponentialDecay(x : np.ndarray|float, N : float, g : float) -> float:
 d = np.array([[2.4,2.5,2.5,2.8],[5.4,7.6,5.4,6.4]]).reshape(2,1,4)
 performFTest(d)
 performSAMTest(np.array([[2.3,2.5,2.6]]).reshape(1,3),np.array([[2.3,2.5,2.5]]).reshape(1,3),0.1)
-
+d = performOneSampleSAMTest(np.array([[2.3,2.5,2.6],[2.3,2.5,2.6],[2.3,2.5,2.6]]).reshape(3,3),0,0.1)
+print(d)
 class StatisticalTestABC(ABC):
 
     def __init__(self, 
@@ -183,9 +184,56 @@ class ANOVAStatistic(PermutationBasedTest):
         return ["Heatmap"]
 
 
+class SAMStatisticBase(PermutationBasedTest):
+    ""
+    def __init__(self, dataID: str, data: pd.DataFrame, groupingName: str | List[str], grouping: dict, name: str = None):
+        super().__init__(dataID, data, groupingName, grouping, name)
+
+    def filterData(self, *args: Any, **kwargs: Any) -> pd.DataFrame:
+        """Filter data"""
+        raise NotImplementedError("Implement in statistc class..")
+
+    def countFalsePositives(self, permutationStats : np.ndarray, minD : float) -> float:
+        """
+        Counts the number of False Positives. permutationsStats of shape (n_features x permutations)
+        there the total number of values above minD is devided by the number of permutations.
+        """
+        FPs = countValuesAboveThresh(permutationStats,minD)
+        numColumns = permutationStats.shape[1]
+        return FPs/numColumns
 
 
-class SAMStatistic(PermutationBasedTest):
+
+class OneSampleSAMStatistic(SAMStatisticBase):
+    """
+    """
+    def __init__(self, 
+                 dataID: str, 
+                 data: pd.DataFrame, 
+                 groupingName: str | List[str], 
+                 grouping: dict, 
+                 name: str = "SAM-Statistics (one - sample)",
+                 minValidInGroup : int = 2,
+                 permutations : int = 500,
+                 s0 : float = 0.1,
+                 fdrCutoff : float = 0.05):
+        super().__init__(dataID, data, groupingName, grouping, name)
+
+        self._fdrCutoff = fdrCutoff
+        self._minValidInGroup = minValidInGroup
+        self._s0 = s0
+        self._permutations = permutations
+        self._rng = default_rng()
+
+
+    def filterData(self, *args: Any, **kwargs: Any) -> pd.DataFrame:
+        """"""
+
+    def fit(self) -> None:
+        """"""
+
+
+class SAMStatistic(SAMStatisticBase):
 
     def __init__(self, 
                  dataID: str, 
@@ -345,14 +393,7 @@ class SAMStatistic(PermutationBasedTest):
         Q[Q < 0] = 0.0
         return Q, minD
     
-    def countFalsePositives(self, permutationStats : np.ndarray, minD : float) -> float:
-        """
-        Counts the number of False Positives. permutationsStats of shape (n_features x permutations)
-        there the total number of values above minD is devided by the number of permutations.
-        """
-        FPs = countValuesAboveThresh(permutationStats,minD)
-        numColumns = permutationStats.shape[1]
-        return FPs/numColumns
+
     
     def estimatePi0(self, stats : np.ndarray, permutationStats : np.ndarray) -> float:
         """
@@ -362,7 +403,6 @@ class SAMStatistic(PermutationBasedTest):
         N = stats.shape[0]
         absoluteStats = np.abs(stats)
         q25StatPerm, q75StatPerm = np.nanquantile(permutationStats, q=[0.25,0.75])
-
         statsInQRange = np.logical_and(absoluteStats >= q25StatPerm, absoluteStats <= q75StatPerm)
         nInRange = np.sum(statsInQRange)
         pi0 = nInRange / (0.5 * N) 
@@ -418,7 +458,7 @@ class SAMStatistic(PermutationBasedTest):
         df = df.dropna(subset=rightColNames, thresh = self._minValidInGroup)
         self._filteredData = df
 
-    def fit(self):
+    def fit(self) -> None:
         """
         Fitting function of the SAM statistics. 
         a) calculate sam stat (d) on real data

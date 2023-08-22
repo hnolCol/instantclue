@@ -121,11 +121,11 @@ from .utils.cluster import nanCorrelationCluster, nanEuclideanCluster
 
 
 X = np.array([[1.2,2.2,3.5,2.6],[1.4,3.2,5.5,2.6]]).reshape(2,4)
-print(X)
-print(nanEuclideanCluster(X))
-print(np.corrcoef(X[0],X[1]))
-print(nanCorrelationCluster(X))
-print("======X====")
+# print(X)
+nanEuclideanCluster(X)
+# print(np.corrcoef(X[0],X[1]))
+nanCorrelationCluster(X)
+# print("======X====")
 
 
 
