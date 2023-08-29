@@ -491,6 +491,15 @@ DEFAULT_PARAMETER = [
     "isColor"       :   True
     },
     {
+    "name"          :   "savefig.transparent",
+    "value"         :   False,
+    "dtype"         :   bool,
+    "range"         :   [True,False],
+    "parent"        :   "matplotlib",
+    "parentType"    :   "Matplotlib",
+    "description"   :   "Enable/disable transparent background export.",
+    },
+    {
     "name"          :   "axes.spines.left",
     "value"         :   True,
     "dtype"         :   bool,
