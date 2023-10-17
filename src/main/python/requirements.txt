@@ -53,7 +53,7 @@ threadpoolctl==3.1.0
 tqdm==4.64.1
 umap-learn==0.5.3
 uncertainties==3.1.7
-urllib3==1.26.12
+urllib3==1.26.18
 wordcloud==1.9.2
 xarray==2022.6.0
 XlsxWriter==3.0.3
