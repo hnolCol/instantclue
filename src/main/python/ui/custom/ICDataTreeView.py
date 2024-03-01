@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 
 
@@ -59,7 +59,7 @@ dataTypeSubMenu = {
                 "Groupings",
                 "Export Data" 
                 ]),
-        ("Value Transformation",["Logarithmic","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
+        ("Value Transformation",["Logarithmic","Multiply","Normalization (row)","Normalization (column)","Smoothing","Density Estimation","Dimensional Reduction","Summarize","Multiple testing corrections"]),
         ("Data Format Transformation",["Group by and Aggregate .."]),
         ("Filter",["NaN Filter (rows)","NaN Filter (columns)","Outlier","Set NaN if..","Consecutive .."]),
         ("Clustering",["k-means"]),
@@ -124,6 +124,24 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"test":"welch-test"}
     },
+        {
+        "subM":"Groupings",
+        "name":"Row-wise between groups correlation",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"groupings:runRowWiseGroupCorrelation",
+                    "selectFromGroupings": "all",
+                    }
+    },
+    {
+        "subM":"Groupings",
+        "name":"Correlate row against all other in group",
+        "funcKey": "getUserInput",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"funcKey":"groupings:correlateToRowWithinGroups",
+                    "selectFromGroupings": "all",
+                    }
+    },   
     {
         "subM":"Groupings",
         "name":"Within/Between correlation",
@@ -195,6 +213,13 @@ menuBarItems = [
         "subM":"(Prote-)omics-toolkit",
         "name":"Match mod. pept. sequence to sites",
         "funcKey": "matchModPeptideSequenceToSites",
+        "dataType": "Categories",
+    },
+        {
+        "subM":"(Prote-)omics-toolkit",
+        "name":"Match pept. sequence to sites",
+        "funcKey": "matchModPeptideSequenceToSites",
+        "fnKwargs" : {"key" : "proteomics::matchPeptideToFasta","peptideColumnName" : "peptideColumn"},
         "dataType": "Categories",
     },
     # {
@@ -317,7 +342,13 @@ menuBarItems = [
         "dataType": "Numeric Floats",
         "fnKwargs":{"metric":"var"}
     },
-
+    {
+        "subM" : "Multiply",
+        "name" : "-1",
+        "funcKey" : "transformer::transformData",
+        "dataType" : "Numeric Floats",
+        "fnKwargs" : {"transformKey" : "multiply", "value" : -1}
+    },
     {
         "subM":"Logarithmic",
         "name":"ln",
@@ -509,6 +540,18 @@ menuBarItems = [
     },  
     {
         "subM":"Data Format Transformation",
+        "name":"Stack Grouping",
+        "funcKey": "getUserInput",
+        "dataType" : "All",
+        "fnKwargs": {"funcKey":"data::stackGrouping",
+                    "selectFromGroupings": "all",
+                    "addColumns" : True
+                    }
+    }, 
+    
+    
+    {
+        "subM":"Data Format Transformation",
         "name":"Row Correlation Matrix",
         "dataType": "Numeric Floats",
         "funcKey": "getUserInput",
@@ -527,6 +570,19 @@ menuBarItems = [
                     "addColumns" : True,
                     "otherKwargs": {"metric":"mean"}}
     },
+      {
+        "subM":"Data Format Transformation",
+        "name":"Groupby and transform",
+        "dataType": "Numeric Floats",
+        "funcKey": "getUserInput",
+        "fnKwargs": {"funcKey":"data::groupbyAndTransform",
+                    "requireMultipleColumns" : "groupbyColumn",
+                    "title" : "Please select columns to be used for grouping",
+                    "addColumns" : True,
+                    "otherKwargs": {}}
+    },  
+    
+    
     {
         "subM":"Group by and Aggregate ..",
         "name":"mean & stdev",
@@ -751,6 +807,13 @@ menuBarItems = [
         "subM":"Normalization (row)",
         "name":"Scale (0 - 1)",
         "funcKey": "normalizer::normalizeData",
+        "dataType": "Numeric Floats",
+        "fnKwargs": {"normKey": "Scale (0 - 1)"}
+    },
+        {
+        "subM":"Normalization (row)",
+        "name":"Scale (0 - 1) Grouping",
+        "funcKey": "normalizer::normalizeGroupData",
         "dataType": "Numeric Floats",
         "fnKwargs": {"normKey": "Scale (0 - 1)"}
     },
@@ -2084,7 +2147,7 @@ class DataTreeViewTable(QTableView):
         
         if self.rightClick and not self.rightClickMove and tableColumn == 0:
             if hasattr(self,"menu"):
-                self.menu.exec(self.mapToGlobal(e.pos()))
+                self.menu.exec(self.mapToGlobal(QPoint(int(e.position().x()),int(e.position().y()))))
         
         elif tableColumn == 0 and not self.rightClick:
             if not shiftPressed and not ctrlPressed:
@@ -2289,9 +2352,9 @@ class DataTreeViewTable(QTableView):
             self.rightClickMove = True
     
         else:
-            self.focusRow = self.rowAt(event.pos().y())
+            self.focusRow = self.rowAt(int(event.position().y()))
             index = self.model().index(self.focusRow,0)
-            self.focusColumn = self.columnAt(event.pos().x())
+            self.focusColumn = self.columnAt(int(event.position().x()))
             self.model().setData(index,self.focusRow,Qt.ItemDataRole.UserRole)
 
     def removeSelection(self,e):
@@ -2392,8 +2455,8 @@ class DataTreeViewTable(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
-        column = self.columnAt(event.pos().x())
+        row = self.rowAt(int(event.position().y()))
+        column = self.columnAt(int(event.position().x()))
         return self.model().index(row,column)
 
     def renameColumn(self,columnNameMapper):
@@ -2908,16 +2971,17 @@ class DataTreeViewTable(QTableView):
         if isinstance(link,str):
             webbrowser.open(link)
 
-    def matchModPeptideSequenceToSites(self,*args,**kwargs):
+    def matchModPeptideSequenceToSites(self, key = "proteomics::matchModSequenceToSites", peptideColumnName : str = "modifiedPeptideColumn", *args,**kwargs):
         ""
+        print(key)
         dataID = self.mC.getDataID()
         categoricalColumns = self.mC.data.getCategoricalColumns(dataID).values.tolist()
         selectedColumn = [colName for colName in self.getSelectedData() if colName in categoricalColumns]
 
         selDiag = SelectionDialog(
-                ["proteinGroupColumn","modifiedPeptideColumn"],
-                {"proteinGroupColumn":categoricalColumns,"modifiedPeptideColumn":categoricalColumns},
-                {"proteinGroupColumn":"","modifiedPeptideColumn":""},
+                ["proteinGroupColumn",peptideColumnName],
+                {"proteinGroupColumn":categoricalColumns,peptideColumnName:categoricalColumns},
+                {"proteinGroupColumn":"",peptideColumnName:""},
                 title="Select the column that contains the modified sequence and protein group (for example uniprot)\nMust match the fasta reg ex (Settings).")
         if selDiag.exec():
             fnKwargs = selDiag.savedSelection
@@ -2925,7 +2989,7 @@ class DataTreeViewTable(QTableView):
             if dlg.exec():
                 fnKwargs["fastaFilePath"] = dlg.state 
                 fnKwargs["dataID"] = dataID
-                funcProps = {"key":"proteomics::matchModSequenceToSites","kwargs":fnKwargs}
+                funcProps = {"key":key,"kwargs":fnKwargs}
                 self.mC.sendRequestToThread(funcProps)
                # print(fnKwargs)
 

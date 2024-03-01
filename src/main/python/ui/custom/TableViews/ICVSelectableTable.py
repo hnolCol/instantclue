@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 
 #ui utils
@@ -65,7 +65,7 @@ class PandaTable(QTableView):
             fn = getattr(self,v["fn"])
             action.triggered.connect(fn)
 
-        menu.exec(QCursor.pos()+QPoint(3,3))
+        menu.exec(QPoint(int(QCursor.pos().x()),int(QCursor.pos().y()))+QPoint(3,3))
 
     def handleHeaderRightClick(self, point):
         ""
@@ -175,8 +175,8 @@ class PandaTable(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
-        column = self.columnAt(event.pos().x())
+        row = self.rowAt(int(event.position().y()))
+        column = self.columnAt(int(event.position().x()))
         return self.model().index(row,column)
 
     def leaveEvent(self,event):

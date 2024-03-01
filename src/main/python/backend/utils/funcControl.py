@@ -265,7 +265,11 @@ funcPropControl = {
             "threadRequest":{"obj":"data","fn":"groupbyAndAggregate","requiredKwargs":["dataID","columnNames","groupbyColumn"]},
             "completedRequest": addDataAndRefresh  
         },
-
+    "data::groupbyAndTransform":
+        {
+            "threadRequest":{"obj":"data","fn":"groupbyAndTransform","requiredKwargs":["dataID","columnNames","groupbyColumn"]},
+            "completedRequest": refreshColumnView 
+        },
         
     "receiverBox:addItems":
         {
@@ -328,6 +332,14 @@ funcPropControl = {
             "completedRequest":
                     addDataAndRefresh
         },
+    "data::stackGrouping":
+        {
+            "threadRequest":{"obj":"data","fn":"stackGrouping","requiredKwargs":["dataID","groupingNames"]},
+            "completedRequest":
+                    addDataAndRefresh
+        }, 
+        
+        
     "data::unstackColumn":
         {
             "threadRequest":{"obj":"data","fn":"unstackColumn","requiredKwargs":["dataID","columnNames"]},
@@ -707,6 +719,15 @@ funcPropControl = {
                 sendMessageProps]
                     
         },
+    "normalizer::normalizeGroupData":
+        {
+            "threadRequest":{"obj":"normalizer","fn":"normalizeGroupData","requiredKwargs":["dataID","normKey"]},
+            "completedRequest": [
+                updateTreeView,
+                sendMessageProps]
+                    
+        },    
+    
 
     "normalize::toSpecificGroup":
         {
@@ -846,6 +867,13 @@ funcPropControl = {
             "completedRequest":
                     refreshColumnView        
         },
+      "proteomics::matchPeptideToFasta": 
+        {
+            "threadRequest":{"obj":"data","fn":"matchPeptideToFasta","requiredKwargs":["dataID","fastaFilePath","proteinGroupColumn","peptideColumn"]},
+            "completedRequest":
+                    refreshColumnView        
+        },  
+    
     
     
     "transform::TSNE": 
@@ -1063,7 +1091,18 @@ funcPropControl = {
             "completedRequest":
                     addDataAndRefresh
         },
-        
+    "groupings:runRowWiseGroupCorrelation":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"runRowWiseGroupCorrelation","requiredKwargs":["dataID","groupingNames"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },  
+    "groupings:correlateToRowWithinGroups":
+        {
+            "threadRequest":{"obj":"statCenter","fn":"correlateToRowWithinGroups","requiredKwargs":["dataID","groupingNames"]},
+            "completedRequest":
+                    addDataAndRefresh
+        },  
     "webApp::getChartData":
         {
             "threadRequest":{"obj":"webAppComm","fn":"getChartData","requiredKwargs":["graphID"]},

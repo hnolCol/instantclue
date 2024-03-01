@@ -1,7 +1,7 @@
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from backend.transformations.transformer import summarizeMetric
 from ...utils import createLabel, createTitleLabel, createMenu, WIDGET_HOVER_COLOR, INSTANT_CLUE_BLUE, createCombobox, getCheckStateFromBool, getBoolFromCheckState, createValueLineEdit
 from ...custom.Widgets.ICButtonDesgins import  ResetButton, BigPlusButton, LabelLikeButton, ICStandardButton, HelpButton

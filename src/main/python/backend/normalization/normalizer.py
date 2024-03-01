@@ -157,6 +157,17 @@ class Normalizer(object):
             transformedValues[normColumnNames] = X[groupColumns].subtract(distToGroupMedian, axis="columns")
 
         return self._addToSourceData(dataID,columnNames,transformedValues)
+    
+    def normalizeGroupData(self,dataID,normKey,**kwargs):
+        if not self.sourceData.parent.grouping.groupingExists():
+            return getMessageProps("No Grouping","No Grouping set.")
+        groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
+        grouping = self.sourceData.parent.grouping.getCurrentGrouping() 
+        columnNames = self.sourceData.parent.grouping.getColumnNames(groupingName)
+        for groupName, groupColumns in grouping.items():
+            rr = self.normalizeData(dataID,normKey,columnNames=groupColumns)
+            
+        return rr 
 
     def normalizeGroupQuantile(self,dataID,**kwargs):
         "Normalize Group Quantiles (e.g. adjusting within groups)"

@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 from backend.color.colorHelper import ColorHelper
 from ...utils import createLabel, createLineEdit, createTitleLabel, WIDGET_HOVER_COLOR, getCheckStateFromBool
 from ...custom.Widgets.ICButtonDesgins import ResetButton

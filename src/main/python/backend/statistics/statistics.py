@@ -57,7 +57,7 @@ except:
 from lmfit import Model
 from numba import jit, prange 
 from .comparisons.SAM import SAMStatistic, ANOVAStatistic
-from .utils.cluster import nanCorrelationCluster, nanEuclideanCluster
+from .utils.cluster import nanCorrelationCluster, nanEuclideanCluster, correlateRowWise
 
 # @jit(nopython=True)
 # def euclidean(p : np.ndarray, q:np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
@@ -127,6 +127,15 @@ nanEuclideanCluster(X)
 nanCorrelationCluster(X)
 # print("======X====")
 
+print(correlateRowWise(X,X))
+
+
+def corr2_coeff_rowwise2(A,B):
+    A_mA = A - A.mean(1)[:,None]
+    B_mB = B - B.mean(1)[:,None]
+    ssA = np.einsum('ij,ij->i',A_mA,A_mA)
+    ssB = np.einsum('ij,ij->i',B_mB,B_mB)
+    return np.einsum('ij,ij->i',A_mA,B_mB)/np.sqrt(ssA*ssB)
 
 
 def calculateUMAP(metric,nN,min_dist,n_components, X):
@@ -1653,6 +1662,62 @@ class StatisticCenter(object):
         ""
         return [(x,y) for x in a for y in b]
         
+        
+    def runRowWiseGroupCorrelation(self,dataID, groupingNames = []):
+        """_summary_
+
+        Parameters
+        ----------
+        dataID : _type_
+            _description_
+        groupingNames : list, optional
+            _description_, by default []
+        """
+       
+       
+        
+       # grouping = self.sourceData.parent.grouping.getGrouping(groupingNames[0])
+        #for groupPair in self.sourceData.parent.grouping.getGroupPairs(groupingName=groupingNames[0]):
+        groupingName = groupingNames[0]
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        groupComps = self.sourceData.parent.grouping.getGroupPairs(groupingName,None)
+        #get data
+        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames(groupingName))
+        r = []
+        for leftGroup, rightGroup in groupComps:
+            columnNames1 = grouping[leftGroup]
+            columnNames2 = grouping[rightGroup]
+            X = data[columnNames1].values
+            Y = data[columnNames2].values
+            try:
+                corr_result = pd.DataFrame(correlateRowWise(X,Y),columns=[f"corr({leftGroup}x{rightGroup})"], index=data.index)
+                r.append(corr_result)
+            except:
+                print(leftGroup,rightGroup,"error")
+            
+        return self.sourceData.joinDataFrame(dataID,pd.concat(r,axis=1))
+
+
+    def correlateToRowWithinGroups(self,dataID, idx = 0, groupingNames = []):
+       
+       
+        groupingName = groupingNames[0]
+        grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
+        #get data
+        data = self.getData(dataID,self.sourceData.parent.grouping.getColumnNames(groupingName))
+        r = []
+        for groupName, columnNames in grouping.items():
+            X = data[columnNames].values
+            Y = data[columnNames].iloc[idx].values.flatten()
+            YY = np.broadcast_to(Y,(X.shape[0], columnNames.index.size))
+           
+            try:
+                corr_result = pd.DataFrame(correlateRowWise(X,YY),columns=[f"corr({groupName}x-row{idx})"], index=data.index)
+                r.append(corr_result)
+            except Exception as e:
+                print(e)
+            
+        return self.sourceData.joinDataFrame(dataID,pd.concat(r,axis=1))
 
     def runGroupCorrelations(self,dataID,groupingNames=[]):
         ""

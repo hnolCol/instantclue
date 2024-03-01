@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..delegates.ICQuickSelect import DelegateColor, DelegateSize
 from .Widgets.ICButtonDesgins import ArrowButton, ResetButton, CheckButton, MaskButton, AnnotateButton, SaveButton, BigArrowButton, SmallColorButton
@@ -143,7 +143,7 @@ class QuickSelect(QWidget):
         dfg = QuickSelectDialog(mainController=self.mC)
 
         try: 
-            eventPoint = self.mapToGlobal(event.pos())
+            eventPoint = QCursor.pos()
             dfg.setGeometry(QRect(int(eventPoint.x()-50),int(eventPoint.y()),100,100))
             if dfg.exec():
                 props = dfg.getProps()
@@ -800,7 +800,7 @@ class QuickSelectModel(QAbstractTableModel):
 
     def setCheckStateByDataIndex(self,dataIndex,update=True):
         ""
-        if isinstance(dataIndex,pd.Int64Index) or isinstance(dataIndex,pd.Series):
+        if isinstance(dataIndex,pd.Int64Dtype) or isinstance(dataIndex,pd.Series):
             self.setCheckStateByMultipleIndx(dataIndex,update)
         else:
             if dataIndex in self.checkedLabels.index:
@@ -899,7 +899,8 @@ class QuickSelectModel(QAbstractTableModel):
                 boolMatch = self._inputLabels.isin(checkedData.values)
             if np.any(boolMatch.values):
                 dataMatched = self._inputLabels[boolMatch]
-                for index, value in  dataMatched.iteritems():
+                for index in  dataMatched.index:
+                    value = dataMatched.loc[index]
                     if caseSensitive:
                         lowerValue = lowerStrLabels.loc[index]
                         findSavedIndex = lowerStrSelectionData[lowerStrSelectionData.values == lowerValue].index.values[0]
@@ -1261,7 +1262,7 @@ class QuickSelectTableView(QTableView):
                 menus["main"].addAction("Annotate selection in scatter plot", self.annotateSelection)
                 
                 menus["main"].addAction("Uncheck all", self.uncheckSelection)
-                menus["main"].exec(self.mapToGlobal(e.pos()))
+                menus["main"].exec(self.mapToGlobal(QPoint(int(e.position().x()),int(e.position().y()))))
                     
             except Exception as e:
                 print(e)
@@ -1299,7 +1300,7 @@ class QuickSelectTableView(QTableView):
         ""
         if not self.model().dataAvailable():
             return
-        rowAtEvent = self.rowAt(event.pos().y())
+        rowAtEvent = self.rowAt(int(event.position().y()))
         if rowAtEvent == -1:
             return
         self.mouseOverItem = rowAtEvent
@@ -1310,9 +1311,9 @@ class QuickSelectTableView(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
+        row = self.rowAt(int(event.position().y()))
         if row != -1:
-            column = self.columnAt(event.pos().x())
+            column = self.columnAt(int(event.position().x()))
             return self.model().index(row,column)
     
     def getCurrentHighlightLabel(self):

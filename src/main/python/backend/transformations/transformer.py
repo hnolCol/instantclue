@@ -9,8 +9,8 @@ from ..utils.stringOperations import getMessageProps, mergeListToString, findCom
 
 from sklearn.preprocessing import scale
 
-
 funcKeys = {
+        "multiply" : "multiplyTransformation",
         "logarithmic" : "logarithmicTransformation",
         "rolling": "rollingWindowTransformation",
         "absolute" : "absoluteTransformation",
@@ -72,6 +72,17 @@ class Transformer(object):
 
         return self._addToSourceData(dataID,columnNames,transformedData)
 
+    def multiplyTransformation(self,dataID, columnNames, value = -1):
+        """Multiplies the values in a column by a constant value"""
+        transformedColumnNames = ['m{}:{}'.format(value,columnName) for columnName in columnNames.values] 
+        transformedValues = self.sourceData.dfs[dataID][columnNames].values * value
+        transformedData = pd.DataFrame(
+                    transformedValues,
+                    columns=transformedColumnNames,
+                    index=self.sourceData.dfs[dataID].index)
+
+        return self._addToSourceData(dataID,columnNames,transformedData)
+    
 
     def logarithmicTransformation(self,dataID, columnNames, base):
         ""
@@ -90,7 +101,6 @@ class Transformer(object):
             
     def rollingWindowTransformation(self,dataID,columnNames,windowSize,metric):
         ""
-
         transformedColumnNames = ['t({}:w{}):{}'.format(metric,windowSize,columnName) for columnName in columnNames.values] 
         rollingWindow = self.sourceData.dfs[dataID][columnNames].rolling(window=windowSize)
         if hasattr(rollingWindow,metric):

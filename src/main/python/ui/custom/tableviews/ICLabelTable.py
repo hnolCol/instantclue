@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
@@ -259,8 +259,8 @@ class LabelTable(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
-        column = self.columnAt(event.pos().x())
+        row = self.rowAt(int(event.position().y()))
+        column = self.columnAt(int(event.position().x()))
         return self.model().index(row,column)
     
     def mousePressEvent(self,e):
@@ -309,7 +309,7 @@ class LabelTable(QTableView):
         ""
         if not self.model().dataAvailable():
             return
-        rowAtEvent = self.rowAt(event.pos().y())
+        rowAtEvent = self.rowAt(int(event.position().y()))
 
         if rowAtEvent == -1:
             self.mouseOverItem = None

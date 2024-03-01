@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
 from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
@@ -207,8 +207,8 @@ class StatisticTable(QTableView):
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
-        row = self.rowAt(event.pos().y())
-        column = self.columnAt(event.pos().x())
+        row = self.rowAt(int(event.position().y()))
+        column = self.columnAt(int(event.position().x()))
         return self.model().index(row,column)
     
     def mousePressEvent(self,e):
@@ -251,7 +251,7 @@ class StatisticTable(QTableView):
             elif self.rightClick:
                 #idx = self.model().index(0,0)
                 self.rightClickedRowIndex = tableIndex.row()
-                self.menu.exec(QCursor.pos() + QPoint(4,4))
+                self.menu.exec(QPoint(int(QCursor.pos().x()),int(QCursor.pos().y())) + QPoint(4,4))
                 
                 self.rightClick = False
             else:
@@ -265,7 +265,7 @@ class StatisticTable(QTableView):
         ""
         if not self.model().dataAvailable():
             return
-        rowAtEvent = self.rowAt(event.pos().y())
+        rowAtEvent = self.rowAt(int(event.position().y()))
         
         if rowAtEvent == -1:
             self.mouseOverItem = None

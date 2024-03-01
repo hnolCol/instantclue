@@ -294,6 +294,7 @@ class ICGrouping(object):
         else:
             return getMessageProps("Error","No Grouping found.")
 
+
     def getGroupPairs(self,groupingName=None,referenceGroup = None):
         ""
         if groupingName is None:

@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -356,12 +356,12 @@ class BlitingLiveGraph(QWidget):
             self.background =  self.figure.canvas.copy_from_bbox(self.ax.bbox)
                 
         self.figure.canvas.restore_region(self.background)
-        if self.plotType == "Line":
+        if self.plotType == "Line" and hasattr(self,"hoverLine"):
             self.ax.draw_artist(self.hoverLine[0])	
-        elif self.plotType == "Bar":
+        elif self.plotType == "Bar" and hasattr(self,"hoverBars"):
             for bar in self.hoverBars:
                 self.ax.draw_artist(bar)
-        elif self.plotType == "Boxplot":
+        elif self.plotType == "Boxplot" and hasattr(self,"hoverBoxplotLines"):
             for l in self.hoverBoxplotLines:
                 self.ax.draw_artist(l)
             for box in self.hoverBoxplots:

@@ -70,7 +70,7 @@ from ..color.colorManager import ColorManager
 from ..statistics.statistics import StatisticCenter
 from ..normalization.normalizer import Normalizer
 from ..transformations.transformer import Transformer
-from ..proteomics.ICModifications import ICModPeptidePositionFinder
+from ..proteomics.ICModifications import ICModPeptidePositionFinder,ICPeptidePositionFinder
 from .ICExcelExport import ICDataExcelExporter, ICHClustExporter
 from .ICSmartReplace import ICSmartReplace
 
@@ -510,7 +510,41 @@ class DataCollection(object):
 		else:
 			return (0,0)
 
-	def groupbyAndAggregate(self,dataID : str, columnNames : pd.Series, groupbyColumn : str, metric : str ="mean"):
+	def groupbyAndTransform(self,dataID : str, columnNames : pd.Series, groupbyColumn : pd.Series, min_size : int = 4):
+		"""_summary_
+
+		Parameters
+		----------
+		dataID : str
+			_description_
+		columnNames : pd.Series
+			_description_
+		groupbyColumn : str
+			_description_
+		transformColumn : str
+			_description_
+		"""
+		if dataID in self.dfs:
+			requiredColumns =  pd.concat([columnNames,pd.Series(groupbyColumn.values.flatten())],ignore_index=True) 
+			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
+			grouped = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)
+			r = []
+			for groupName, groupData in grouped:
+				if groupData.index.size > min_size:
+        
+					groupData.loc[:,columnNames] = scale(groupData[columnNames].values)
+					
+					r.append(groupData.loc[:,columnNames])
+    
+			rr = pd.concat(r)
+			return self.joinDataFrame(dataID,rr)
+
+
+   
+		
+        
+        
+	def groupbyAndAggregate(self,dataID : str, columnNames : pd.Series, groupbyColumn : pd.Series, metric : str ="mean"):
 		"""
 		Aggregates data by a specific groupbyColumn(s). 
 		ColumnNames can only be numeric.
@@ -529,14 +563,20 @@ class DataCollection(object):
 		else:
 			return errorMessage
 
+
 	def checkColumnNamesInDataByID(self,dataID : str,columnNames : pd.Series) -> List[str]:
 		""
 		checkedColumnNames = []
 
 		if isinstance(columnNames,str):
 			columnNames = [columnNames]
+		elif isinstance(columnNames, pd.Series | pd.Index):
+			columnNames = columnNames.values.tolist()
+		elif isinstance(columnNames, np.ndarray):
+			columnNames = columnNames.tolist() 
 
 		if not isinstance(columnNames,list):
+			print(columnNames)
 			raise ValueError("Provide either list or string")
 		
 		if dataID in self.dfs:
@@ -1009,8 +1049,10 @@ class DataCollection(object):
 		'''
 		if isinstance(columnNames,pd.Series):
 			columnNames = columnNames.values.tolist()
-	
-		fnComplete = {"fnName":"set_data","fnKwargs":{"data":self.getDataByDataID(dataID,rowIdx,ignore_clipping)[columnNames]}}
+
+		checkedColumnNames = self.checkColumnNamesInDataByID(dataID,columnNames)
+
+		fnComplete = {"fnName":"set_data","fnKwargs":{"data":self.getDataByDataID(dataID,rowIdx,ignore_clipping)[checkedColumnNames]}}
 		return fnComplete
 
 	def getDataByDataID(self,dataID : str, rowIdx : None | pd.Series | pd.Index = None, ignoreClipping : bool = False) -> pd.DataFrame:
@@ -1789,6 +1831,12 @@ class DataCollection(object):
 		completeKwargs["tooltipData"] = self.getTooltipdata(dataID)
 		return completeKwargs
 		
+  
+	def normalizeGroups(self,dataID, grouping, metric,**kwargs):
+		if dataID not in self.dfs : return errorMessage 
+		for groupName, columnNames in grouping.items():
+			self.transformer.zs
+  
 
 	def removeDuplicates(self,dataID : str, columnNames : pd.Series):
 		""
@@ -2091,6 +2139,18 @@ class DataCollection(object):
 			return self.dfs[dataID].index
 		return 	pd.Index()
 	
+ 
+	def matchPeptideToFasta(self,dataID,proteinGroupColumn,peptideColumn,fastaFilePath):
+		""
+		data = self.getDataByColumnNames(dataID=dataID,columnNames=[proteinGroupColumn,peptideColumn])["fnKwargs"]["data"]
+		peptideSequence = data[peptideColumn].values
+		proteinGroups = data[proteinGroupColumn].values
+		posFinder = ICPeptidePositionFinder(None, None)
+		posFinder.loadFasta(fastaFilePath)
+		X = posFinder.matchPeptides(proteinGroups,peptideSequence,data.index)
+		return self.joinDataFrame(dataID,X)
+  
+ 
 	def matchModSequenceToSites(self,dataID, proteinGroupColumn,modifiedPeptideColumn, fastaFilePath):
 		""
 		data = self.getDataByColumnNames(dataID=dataID,columnNames=[proteinGroupColumn,modifiedPeptideColumn])["fnKwargs"]["data"]
@@ -2141,6 +2201,34 @@ class DataCollection(object):
 			return self.addDataFrame(meltedDataFrame, fileName=fileName)					
 		else:
 			return errorMessage
+
+
+	def stackGrouping(self,dataID : str, groupingNames = [], transposedColumnName = "Gene names"):
+		""
+		if not self.parent.grouping.groupingExists(): return getMessageProps("Error..","No groupings found.")
+		if dataID in self.dfs:
+			columnNames = self.parent.grouping.getUniqueGroupItemsByGroupingList(groupingNames).tolist()
+			data = self.getDataByColumnNames(dataID=dataID,columnNames=columnNames+[transposedColumnName])["fnKwargs"]["data"]
+			groupingName = groupingNames[0]
+			groupingNameStack = groupingNames[1]
+			mapper = self.parent.grouping.getGroupNameByColumn(groupingName)
+			stackMapper = self.parent.grouping.getGroupNameByColumn(groupingNameStack)
+			grouping = self.parent.grouping.getGrouping(groupingName)
+			stackGrouping = self.parent.grouping.getGrouping(groupingNameStack)
+			
+			index = pd.MultiIndex.from_tuples([(mapper[columnName],stackMapper[columnName]) for columnName in columnNames])
+			
+			values = data.loc[:,columnNames].values.T
+			
+			X = pd.DataFrame(values, index = index, columns = data.index).unstack(0)
+			groupValues = X.columns.get_level_values(1).unique()
+			stackedColumnNames = [f"{rowValue}-{groupColumnName}" for rowValue in data.loc[:,transposedColumnName].values for groupColumnName in groupValues]
+			X = X.reset_index(names=groupingName)
+			X.columns = stackedColumnNames
+   
+			return self.addDataFrame(X,fileName="UnstackedDataFrame")
+		return errorMessage
+
 
 
 	def correlateDfs(self,corrParams : dict) -> dict:

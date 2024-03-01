@@ -31,3 +31,4 @@ src/main/python/signMacApps
 src/main/python/main.spec
 src/main/python/backend/statistics/.DS_Store
 src/main/python/backend/.DS_Store
+*.ic

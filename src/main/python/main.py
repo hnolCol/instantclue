@@ -1,9 +1,9 @@
 
 import matplotlib
 matplotlib.use('Qt5Agg')
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import *
 
 
 from pynndescent import NNDescent, PyNNDescentTransformer #try to remove error got with pyinstaller.
@@ -282,7 +282,7 @@ class InstantClue(QMainWindow):
     def _setupFontStyle(self):
         ""
         
-        self.config.setParamRange("label.font.family",QFontDatabase().families())
+        self.config.setParamRange("label.font.family",QFontDatabase.families())
         from ui import utils
         utils.standardFontSize = self.config.getParam("label.font.size")
         fontFamily = self.config.getParam("label.font.family") 

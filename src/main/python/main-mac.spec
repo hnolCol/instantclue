@@ -66,7 +66,7 @@ app = BUNDLE(coll,
                 }
             )
 
-
-shutil.copyfile("/Users/hnolte/Documents/GitHub/instantclue/src/main/python/dist/stopwords","/Users/hnolte/Documents/GitHub/instantclue/src/main/python/dist/InstantClue.app/Contents/MacOS/wordcloud/stopwords")
+for a in ["examples","annotations","conf","icons"]:
+   shutil.copytree("/Users/hnolte/Documents/GitHub/instantclue/src/main/python/"+a,"/Users/hnolte/Documents/GitHub/instantclue/src/main/python/dist/InstantClue.app/Contents/MacOS/"+a)
 
 

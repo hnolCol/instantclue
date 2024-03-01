@@ -33,6 +33,7 @@ performFTest(d)
 performSAMTest(np.array([[2.3,2.5,2.6]]).reshape(1,3),np.array([[2.3,2.5,2.5]]).reshape(1,3),0.1)
 d = performOneSampleSAMTest(np.array([[2.3,2.5,2.6],[2.3,2.5,2.6],[2.3,2.5,2.6]]).reshape(3,3),0,0.1)
 print(d)
+
 class StatisticalTestABC(ABC):
 
     def __init__(self, 

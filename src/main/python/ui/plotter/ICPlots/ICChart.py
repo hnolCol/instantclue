@@ -1,6 +1,6 @@
 from cgi import test
-from PyQt5.QtCore import QObject, pyqtSignal, QPoint
-from PyQt5.QtGui import QCursor
+from PyQt6.QtCore import QObject, pyqtSignal, QPoint
+from PyQt6.QtGui import QCursor
 
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
@@ -10,11 +10,13 @@ from matplotlib.pyplot import scatter
 from matplotlib.text import Text
 from matplotlib.offsetbox import AnchoredText
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+
+from typing import Tuple
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
-from matplotlib.font_manager import FontProperties
+
 
 #external imports
 from backend.utils.stringOperations import getRandomString
@@ -112,7 +114,7 @@ class ICChart(QObject):
 		self.addHorizontalLine(yCrossCoord)
 
 	
-	def addVerticalLine(self,xCoord):
+	def addVerticalLine(self,xCoord : float):
 		""
 		lKwags = self.getBasicLineKwargs()
 		for n,ax in self.axisDict.items():
@@ -123,7 +125,7 @@ class ICChart(QObject):
 			
 			self.saveLine(xLine,ax,lKwargsToSave,"VLine({}-{})".format(n,xCoord))
 	
-	def addHorizontalLine(self,yCoord):
+	def addHorizontalLine(self, yCoord : float):
 		""
 		lKwags = self.getBasicLineKwargs()
 		for n,ax in self.axisDict.items():
@@ -168,25 +170,25 @@ class ICChart(QObject):
 					"lineCollectionKwargs":lineCollectionKwargs}
 
 
-	def addHoverBinding(self):
+	def addHoverBinding(self) -> None:
 		""
 		if self.interactive:
 			self.onHoverEvent = self.p.f.canvas.mpl_connect('motion_notify_event', self.onHover)
 
-	def addPressBinding(self):
+	def addPressBinding(self) -> None:
 		""
 		if self.interactive:
 			self.onPressEvent = self.p.f.canvas.mpl_connect('button_release_event', self.onPress)
 
 
-	def addText(self,ax,axisTransform  = False, stdTextFont = True,  *args,**kwargs):
+	def addText(self,ax,axisTransform  = False, stdTextFont = True,  *args,**kwargs) -> None:
 		""
 		kwargs["transform"] = ax.transAxes if axisTransform else None
 		if stdTextFont:
 			kwargs["fontproperties"] = self.getStdFontProps()#"fontproperties"
 		ax.text(*args,**kwargs)
 
-	def addTexts(self,texts, axisTransform = True, onlyForID = None, targetAx = None):
+	def addTexts(self,texts, axisTransform = True, onlyForID = None, targetAx = None) -> None:
 		""
 		for n, textKwargs in texts.items():
 			if onlyForID is not None and n != onlyForID:
@@ -336,7 +338,7 @@ class ICChart(QObject):
 
 		return self.mC.mainFrames["middle"].getToolbarState() 
 
-	def saveStatData(self,axisID,ydata,xdata, data,dataIdx, groupName):
+	def saveStatData(self,axisID,ydata,xdata, data, dataIdx, groupName):
 		"Saves data for statistical tests"
 
 		testType = self.getTestType() 
@@ -366,7 +368,7 @@ class ICChart(QObject):
 			self.statData.clear() 
 			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			
-		elif "idx" in self.statData and self.statData["idx"] == dataIdx:
+		elif "idx" in self.statData and self.statData["idx"][0] == dataIdx:
 			self.statData.clear() 
 			self.setStatIndicatorIvisible(self.axisDict[axisID])
 			self.updateFigure.emit()
@@ -380,6 +382,7 @@ class ICChart(QObject):
 			self.statData["y"].append(ydata)
 			self.statData["x"].append(xdata)
 			self.statData["groupName"].append(groupName)
+
 			if self.checkDublicateTests():
 				stat, p, testType = self.performStatTest()
 				if p is not None:
@@ -419,10 +422,10 @@ class ICChart(QObject):
 			return False
 		return True
 	
-	def saveStatResults(self,statValue, pValue, testType):
+	def saveStatResults(self,statValue : float, pValue : float, testType : str) -> Tuple[str,str]:
 		"saves data to statCollection"
 		if not hasattr(self,"statCollection"):
-			self.statCollection = pd.DataFrame() 
+			self.statCollection = pd.DataFrame(columns=["Test","Group1","Group2","p-value","test-statistic","internalID","visible"]) 
 		internalID = getRandomString()
 		dataToAppend = {
 						"Test":testType,
@@ -433,7 +436,9 @@ class ICChart(QObject):
 						"internalID":internalID,
 						"visible" : True
 						}
-		self.statCollection = self.statCollection.append(dataToAppend, ignore_index = True)
+  		
+		self.statCollection = pd.concat([self.statCollection,pd.DataFrame(dataToAppend,index=[internalID])], ignore_index=True) #self.statCollection.append(dataToAppend, ignore_index = True)
+  		
 		return testType, internalID
 
 	def getTestType(self):

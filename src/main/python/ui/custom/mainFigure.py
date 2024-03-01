@@ -1,6 +1,6 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import * 
+from PyQt6.QtCore import *
+from PyQt6.QtGui import *
+from PyQt6.QtWidgets import * 
 
 from ..utils import createMenu, createTitleLabel, createLabel, createSubMenu, createMenus
 from .Widgets.ICButtonDesgins import BigPlusButton, ResetButton, RefreshButton
@@ -636,7 +636,7 @@ class MainFigure(QDialog):
         if event.inaxes is not None and event.button != 1:
             self.createMenu()
             self.inaxes = event.inaxes
-            self.menu.exec(QCursor.pos())
+            self.menu.exec(QPoint(int(QCursor.pos().x()),int(QCursor.pos().y())))
 
         self.inaxes = None
 
