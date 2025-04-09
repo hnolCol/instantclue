@@ -34,7 +34,7 @@ d = np.array([[2.4,2.5,2.5,2.8],[5.4,7.6,5.4,6.4]]).reshape(2,1,4)
 performFTest(d,s0=0.1)
 performSAMTest(np.array([[2.3,2.5,2.6]]).reshape(1,3),np.array([[2.3,2.5,2.5]]).reshape(1,3),0.1)
 d = performOneSampleSAMTest(np.array([[2.3,2.5,2.6],[2.3,2.5,2.6],[2.3,2.5,2.6]]).reshape(3,3),0,0.1)
-print(d)
+
 
 class StatisticalTestABC(ABC):
 

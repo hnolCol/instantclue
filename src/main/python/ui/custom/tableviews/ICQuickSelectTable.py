@@ -178,12 +178,11 @@ class QuickSelectTableModel(ICModelBase):
         if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        elif role == Qt.EditRole:
-            
+        elif role == Qt.ItemDataRole.EditRole:
             if not self.isEditable:
                 return False
             if index.column() > 1:

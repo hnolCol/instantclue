@@ -2313,7 +2313,8 @@ class PlotterBrain(object):
         displayGrouping = self._getParam("hclust.display.grouping")
         distanceBetweenClusterMapAndColor = self._getParam("hclust.color.axis.border.left")
         removeRowsWithNoStd = self._getParam("hclust.remove.rows.with.no.std")
-        
+        rowDistanceMatrix = pd.DataFrame()
+        columnDistanceMatrix = pd.DataFrame()
         colorsByColumnNames = OrderedDict()
         colorsByColumnNamesFiltered = OrderedDict()
 
@@ -2391,8 +2392,10 @@ class PlotterBrain(object):
             
             #perform clustering on rows.
             if data.shape[0] > 1 and rowMetric != "None" and rowMethod != "None":
-                rowLinkage, rowMaxD = self.sourceData.statCenter.clusterData(data,rowMetric,rowMethod)
-
+                
+                rowLinkage, rowMaxD, rowDistanceMatrix = self.sourceData.statCenter.clusterData(data,rowMetric,rowMethod)
+                
+                rowDistanceMatrix = pd.DataFrame(rowDistanceMatrix, index=data.index, columns=data.index)
                 Z_row = sch.dendrogram(rowLinkage, orientation='left', color_threshold= rowMaxD, 
                                     leaf_rotation=90, ax = None, no_plot=True)
                 
@@ -2408,8 +2411,8 @@ class PlotterBrain(object):
 
             #perform clustering on columns
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
-                columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
-
+                columnLinkage, colMaxD, columnDistanceMatrix = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
+                columnDistanceMatrix = pd.DataFrame(columnDistanceMatrix,index=numericColumns, columns=numericColumns)
                 Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
                                     leaf_rotation=90, ax = None, no_plot=True)
                 
@@ -2448,6 +2451,8 @@ class PlotterBrain(object):
                 "clusterColorMap" : clusterColorMap,
                 "rowLinkage" : rowLinkage,
                 "Z_row": Z_row,
+                "rowDistanceMatrix": rowDistanceMatrix,
+                "columnDistanceMatrix": columnDistanceMatrix,
                 "dendrograms":{
                     "row":rowLineCollection,
                     "col":colLineCollection
@@ -3259,7 +3264,7 @@ class PlotterBrain(object):
                 numericColumns = columnsFoundInGrouping + [colName for colName in numericColumns if colName not in columnsFoundInGrouping]
                 groupColorDict = self.sourceData.parent.grouping.getColorsForGroupMembers(groupingName)
             if columnSorting == "Hierarch. Clustering":
-                columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data[numericColumns].dropna(axis=0).values))
+                columnLinkage, colMaxD, distanceMatrix = self.sourceData.statCenter.clusterData(np.transpose(data[numericColumns].dropna(axis=0).values))
                 if columnLinkage is None:
                     return getMessageProps("Error..","There was an error in clustering columns.")
                 Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
@@ -3625,15 +3630,12 @@ class PlotterBrain(object):
             for k, l in it:
                 categoricalGroups[k] = list(l)
            
-            # upCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] == sigUpString]
-            # downCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
-            # nonSigCategoris = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
-            #customPalette = False, customPaletteKwargs 
             colorsUp, layerMapUp = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigUpString], 
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
                                                             as_hex=True,
                                                             customPalette = True,
                                                             customPaletteKwargs = {"palette" : f"light:{colorForUpReg}_r","n_colors" : len(categoricalGroups[sigUpString])+1})
+            
             colorsDown, layerMapDown = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigDownString], 
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
                                                             as_hex=True,

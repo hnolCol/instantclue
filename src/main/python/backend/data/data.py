@@ -551,11 +551,13 @@ class DataCollection(object):
 		"""
 		if dataID in self.dfs:
 			requiredColumns =  pd.concat([columnNames,pd.Series(groupbyColumn.values.flatten())],ignore_index=True) 
+			print(requiredColumns)
 			data = self.getDataByColumnNames(dataID,requiredColumns)["fnKwargs"]["data"]
 			if metric == "text-merge":
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False)[columnNames].agg(lambda x: ";".join(list(x))).reset_index()
 			else:
 				aggregatedData = data.groupby(by=groupbyColumn.values.flatten().tolist(),sort=False).aggregate(metric).reset_index()
+			print(aggregatedData)
 			#colnames that are not string, must be tuples - merge them to string.
 			columnNames = [colName if isinstance(colName,str) else "_".join(colName) for colName in aggregatedData.columns.to_list()]
 			aggregatedData.columns = columnNames

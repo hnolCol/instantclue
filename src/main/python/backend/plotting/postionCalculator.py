@@ -140,7 +140,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         colors,_ = sourceData.colorManager.createColorMapDict(uniqueCategories, as_hex=True)
         flatUniqueValues = ["Complete"] + [uniqueValue for sublist in uniqueValuesForCatColumns for uniqueValue in sublist]
         #drop "-"
-        totalNumUniqueValues = np.array(uniqueValuesForCatColumns).flatten().size
+        totalNumUniqueValues = len(flatUniqueValues) - 1
         
         widthBox = 1/(totalNumUniqueValues + 1)
         border = widthBox/10

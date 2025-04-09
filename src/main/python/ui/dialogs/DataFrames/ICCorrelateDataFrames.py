@@ -248,7 +248,6 @@ class ICCorrelateFeatures(ICCorrelateDataFrames):
 
     def addParameters(self):
         ""
-        grid = QGridLayout() 
         self.label = createLabel("Correlate selected columns to all other selected columns in the other df. The number of rows must match between the data frames.")
         self.label.setWordWrap(True)
 

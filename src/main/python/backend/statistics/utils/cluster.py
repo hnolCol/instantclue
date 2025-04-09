@@ -2,6 +2,11 @@ from numba import jit, prange
 import numpy as np 
 from .base import mean, squareSum
 
+
+
+
+
+
 @jit(nopython=True)
 def euclidean(p : np.ndarray, q:np.ndarray, nanp : np.ndarray, nanq : np.ndarray) -> float:
     """
@@ -24,11 +29,16 @@ def nanEuclideanCluster(X : np.ndarray) -> np.ndarray:
     for i in prange(i):
         for j in prange(i):
             if i != j:
-                d = euclidean(X[i],X[j], nan[i], nan[j])
+                d = euclidean(X[i], X[j], nan[i], nan[j])
                 e[i,j] = d
                 e[j,i] = d 
 
     return e 
+
+
+
+
+
 
 @jit(nopython=True)
 def pearson(p : np.ndarray, q : np.ndarray, nanp : np.ndarray, nanq : np.ndarray, reverse : bool = True) -> float:

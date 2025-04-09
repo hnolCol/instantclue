@@ -146,7 +146,7 @@ class ICChart(QObject):
 	def addExtraLines(self,axisDict,extraLines,onlyForID = None, targetAx = None):
 		""
 		for n,ax in axisDict.items():
-			if onlyForID is not None and targetAx is not None and n in extraLines:
+			if onlyForID is not None and onlyForID == n and n in extraLines:
 				line = Line2D(**extraLines[n])
 				targetAx.add_line(line)
 			elif n in extraLines:

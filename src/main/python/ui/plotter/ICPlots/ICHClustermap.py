@@ -61,6 +61,22 @@ class ICClustermap(ICChart):
             if self.plotType == "hclust":
                 menus["main"].addAction("To Excel File", self.mC.mainFrames["right"].exportHClustToExcel)
                 #menus["main"].addAction("Share graph", self.shareGraph)
+            menus["main"].addAction("Distance (row) matrix", self.viewDistanceData)
+            menus["main"].addAction("Distance (column) matrix", self.viewDistanceData)
+       
+    def viewDistanceData(self, row = True):
+        ""
+        dataFrame = None
+        if row and "rowDistanceMatrix" in self.data:
+            dataFrame = self.data["rowDistanceMatrix"]
+        elif "columnDistanceMatrix" in self.data and not row:
+            dataFrame = self.data["rowDistanceMatrix"]
+        if dataFrame is not None:
+            self.mC.mainFrames["data"].openDataFrameinDialog(dataFrame, 
+                                    ignoreChanges=True, 
+                                    headerLabel="Distance Matrix", 
+                                    tableKwargs={"forwardSelectionToGraph":False})
+            
        
     def toggleFreezeStateInLiveGraph(self, isFrozen) -> None:
         ""
@@ -471,7 +487,7 @@ class ICClustermap(ICChart):
         
     def getClusterIDsByDataIndex(self):
         "Returns data frame with data orginal index to export to source data."
-        if "rawIndex" in self.data and "rowClustNumber" in self.data:  
+        if "rawIndex" in self.data and "rowClustNumber" in self.data and isinstance(self.data["rowClustNumber"],list):  
             fillNaN = self.getParam("Object Replace String")
             clustLabels = ["C ({})".format(x) if not np.isnan(x) else fillNaN for x in self.data["rowClustNumber"]]
             df = pd.DataFrame(clustLabels,

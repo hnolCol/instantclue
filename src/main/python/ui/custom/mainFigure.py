@@ -714,9 +714,9 @@ class MainFigure(QDialog):
         if self.inaxes is not None:
             ax = self.inaxes
             legend = self.checkForLegend(ax)
-            if legend is not None:
+            if legend is not None and hasattr(legend,"remove"):
                 legend.remove()
-                self.redraw()
+                self.updateFigure.emit()
        
     def resetAxisProps(self):
         ""

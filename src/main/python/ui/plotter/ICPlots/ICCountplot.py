@@ -279,13 +279,16 @@ class ICCountplot(ICChart):
     def setHoverData(self,dataIndex : Iterable, showText = False):
         ""
         idxHover = []
-
+        if not 1 in self.axisDict:
+            return 
         ax = self.axisDict[1]
         if ax in self.axBackground:
             idxHover = [idx for idx,data in self.data["hoverData"].items() if any(x in data for x in dataIndex)]
             if len(idxHover) > 0:
                 self.updateHoverLineData(ax,idxHover[0])
 
+        if not 0 in self.axisDict:
+            return 
         ax = self.axisDict[0]
         
         if ax in self.axBackground:

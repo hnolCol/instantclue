@@ -127,8 +127,6 @@ nanEuclideanCluster(X)
 nanCorrelationCluster(X)
 # print("======X====")
 
-print(correlateRowWise(X,X))
-
 
 def corr2_coeff_rowwise2(A,B):
     A_mA = A - A.mean(1)[:,None]
@@ -1177,7 +1175,7 @@ class StatisticCenter(object):
         with threadpool_limits(limits=1, user_api='blas'): #useless? 
             data = self.getData(dataID,columnNames).dropna()
             ks = list(range(1,kMax+1))
-            SSE = [KMeans(n_clusters=k).fit(data.values).inertia_ for k in ks]
+            SSE = [KMeans(n_clusters=k, random_state=12313412).fit(data.values).inertia_ for k in ks]
             
             df = pd.DataFrame()
             df["k"] = ks
@@ -1623,35 +1621,36 @@ class StatisticCenter(object):
         '''
         
         try:
+            distanceMatrix = pd.DataFrame()
             if not isinstance(data, np.ndarray):
                 if isinstance(data, pd.DataFrame):
                     data = data.values
                 else:
-                    return None, None
+                    return None, None, distanceMatrix
             
             if  metric in  ['euclidean','correlation','ward','cosine']:   
+                
                 linkage = fastcluster.linkage(data, method = method, metric = metric)   
             
             elif metric == "nanEuclidean":
                 #super speed up (more than 20 fold to old implementation.)
-                j = nanEuclideanCluster(data)
-                linkage = fastcluster.linkage(j ,method = method)
+                distanceMatrix = nanEuclideanCluster(data)
+                linkage = fastcluster.linkage(distanceMatrix ,method = method)
             
             elif metric == "nanCorrelation":
                 
-                j = nanCorrelationCluster(data)
-                print(j)
-                linkage = fastcluster.linkage(j ,method = method)
+                distanceMatrix = nanCorrelationCluster(data)
+                linkage = fastcluster.linkage(distanceMatrix ,method = method)
 
             else:
                 distanceMatrix = scd.pdist(data, metric = metric)
                 linkage = sch.linkage(distanceMatrix,method = method)
                         
         except:
-                return None, None
+                return None, None, distanceMatrix
 
         maxD = 0.7*max(linkage[:,2])
-        return linkage, maxD 
+        return linkage, maxD, distanceMatrix
 
 
     def setNJobs(self,n):
