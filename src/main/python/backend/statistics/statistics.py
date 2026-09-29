@@ -41,7 +41,7 @@ from collections import OrderedDict
 #pycombat import
 try:
     from combat.pycombat import pycombat
-except:
+except Exception:
     print("PyCombat not found.")
 from itertools import chain
 
@@ -54,7 +54,7 @@ warnings.filterwarnings("ignore", 'This pattern has match groups')
 try:
     from skmisc.loess import loess
     useStatsmodelLoess = False
-except:
+except Exception:
     from statsmodels.nonparametric.smoothers_lowess import lowess as loess
     useStatsmodelLoess = True
 
@@ -241,7 +241,7 @@ def fitExponentialToChunk(fitType,xdata,Y,chunkIdx):
         for ydata in Y:
             try:
                 fitResult = curve_fit(expDecrease,xdata[~np.isnan(ydata)],ydata[~np.isnan(ydata)], bounds=(0, [1., 1., 0.01])) 
-            except:
+            except Exception:
                 fitResult = (np.array([np.nan,np.nan,np.nan]), None)
             fits.append(fitResult)
         
@@ -252,7 +252,7 @@ def fitExponentialToChunk(fitType,xdata,Y,chunkIdx):
         for ydata in Y:
             try:
                 fitResult = curve_fit(expIncrease,xdata[~np.isnan(ydata)],ydata[~np.isnan(ydata)], bounds=(0, [1., 1., 0.01]))
-            except:
+            except Exception:
                 fitResult = (None,None)
             fits.append(fitResult)
         
@@ -270,7 +270,7 @@ def p_anova(data,dv,grouping,idx):
         aov = anova(data=data,dv=dv,between=grouping)
         if "p-unc" in aov.columns:
             return ((idx,aov["p-unc"].values.flatten()), aov["Source"])
-    except:
+    except Exception:
         return 
 
 def loess_fit(x, y, span=0.75):
@@ -472,10 +472,16 @@ class StatisticCenter(object):
         lowessLine[:,3] = ymax
         return lowessLine 
 
-    def runANOVA(self,dataID,betweenGroupings = [] ,withinGroupings = [], logPValues = True, subjectGrouping = []):
+    def runANOVA(self,dataID,betweenGroupings = None ,withinGroupings = None, logPValues = True, subjectGrouping = None):
         ""
        # print(dataID)
 
+        if betweenGroupings is None:
+            betweenGroupings = []
+        if withinGroupings is None:
+            withinGroupings = []
+        if subjectGrouping is None:
+            subjectGrouping = []
         if len(betweenGroupings) == 0 and len(withinGroupings) == 0:
             return getMessageProps("Error..","No grouping found.")
         
@@ -625,12 +631,14 @@ class StatisticCenter(object):
                 
             return getMessageProps("Error ..",errMsg)
 
-    def runRowCorrelation(self,dataID,columnNames, indexColumn = ["Gene names"]):
+    def runRowCorrelation(self,dataID,columnNames, indexColumn = None):
         """
         Calculates correlation between all rows.
         Correlation coefficients will be filterd for NaN and threshold specified by
         the class attribute absCorrCoeff.
         """
+        if indexColumn is None:
+            indexColumn = ["Gene names"]
         if columnNames.size < 3:
             return getMessageProps("Error..","Requires at least three columns.")
         #check index column
@@ -1019,8 +1027,10 @@ class StatisticCenter(object):
         
         return self.sourceData.addDataFrame(XCorrected,fileName = "combat({})".format(fileName))
 
-    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, labelColumns = ["Genes"] ,splitString = ";" , alternative="two-sided"):
+    def runOneDEnrichment(self,dataID,columnNames,categoricalColumns, labelColumns = None ,splitString = ";" , alternative="two-sided"):
         ""
+        if labelColumns is None:
+            labelColumns = ["Genes"]
         combinedColumnnames = columnNames.values.tolist() + categoricalColumns.tolist() + labelColumns
         data = self.getData(dataID,combinedColumnnames)
         data = data.dropna(subset=columnNames,how="all")
@@ -1224,7 +1234,7 @@ class StatisticCenter(object):
                         r = pd.DataFrame(index=dataFrame.index.values, columns = columnNames)
                     r.loc[index,columnNames] = aov["p-unc"].values.flatten()
                     
-                except:
+                except Exception:
                     continue
         if r is None:
             return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")
@@ -1240,7 +1250,7 @@ class StatisticCenter(object):
             
         #print(grouping)
         #print(test)
-        colNameStart = {"euclidean":"eclD:","t-test":"tt:","Welch-test":"wt"}
+        colNameStart = {"euclidean":"eclD:","t-test":"tt:","Welch-test":"wt:"} #item 58 (B1): "wt" lacked the colon the other prefixes have
        
         groupingName = grouping 
         grouping = self.sourceData.parent.grouping.getGrouping(groupingName)
@@ -1256,7 +1266,10 @@ class StatisticCenter(object):
             if logPValues:
                 pValueColumn = "-log10-p-1WANOVA({})".format(groupingName)
                 results[pValueColumn] = np.log10(p) * (-1)
-                results[pValueColumn] = results[pValueColumn].replace(1.0,np.nan)
+                #item 58 (B2): same defect as item 49 (report 1.3), second copy in
+                #the 1W-ANOVA branch. -log10(p) == 1.0 means p == 0.1; p == 1.0
+                #maps to -0.0, so 0.0 is the value to blank.
+                results[pValueColumn] = results[pValueColumn].replace(0.0,np.nan)
             else:
                 results["p-1WANOVA({})".format(groupingName)] = p
         
@@ -1286,7 +1299,12 @@ class StatisticCenter(object):
                     if logPValues:
                         pValueColumnLog = "-log10-p-value:({})".format(resultColumnNames[n])
                         results[pValueColumnLog] = np.log10(p) * (-1)
-                        results[pValueColumnLog] = results[pValueColumnLog].replace(1.0,np.nan)
+                        #Bug fix (item 49 / report 1.3): this used to replace 1.0,
+                        #but the column holds -log10(p), and -log10(p) == 1.0 means
+                        #p == 0.1 - so features at exactly p=0.1 were blanked while
+                        #the intended p == 1.0 ones survived as -0.0. p == 1.0 maps
+                        #to -log10(p) == -0.0, so 0.0 is the correct target here.
+                        results[pValueColumnLog] = results[pValueColumnLog].replace(0.0,np.nan)
                     #add non log transformed p values
                     pValueColumn = "p-value:({})".format(resultColumnNames[n])
                     results[pValueColumn] = p 
@@ -1326,11 +1344,13 @@ class StatisticCenter(object):
                 correction = self.sourceData.parent.config.getParam("one.sample.wilcoxon.correction")
                 zero_method = self.sourceData.parent.config.getParam("one.sample.wilcoxon.zero_method")
                 return wilcoxon(X,alternative=alternative,correction=correction,zero_method=zero_method)
-        except:
+        except Exception:
             return [None,None]
 
 
-    def performPairwiseTest(self,XY,kind = "t-test", props = {}):
+    def performPairwiseTest(self,XY,kind = "t-test", props = None):
+        if props is None:
+            props = {}
         X,Y = XY
         if X.values.size < 2 or Y.values.size < 3:
             return "Error, less than 2 values."
@@ -1520,7 +1540,7 @@ class StatisticCenter(object):
                 distanceMatrix = scd.pdist(data, metric = metric)
                 linkage = sch.linkage(distanceMatrix,method = method)
                         
-        except:
+        except Exception:
                 return None, None
 
         maxD = 0.7*max(linkage[:,2])
@@ -1537,8 +1557,10 @@ class StatisticCenter(object):
         return [(x,y) for x in a for y in b]
         
 
-    def runGroupCorrelations(self,dataID,groupingNames=[]):
+    def runGroupCorrelations(self,dataID,groupingNames=None):
         ""
+        if groupingNames is None:
+            groupingNames = []
         corrMethod = "pearson"
         columnNames = self.sourceData.parent.grouping.getUniqueGroupItemsByGroupingList(groupingNames)
         

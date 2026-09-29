@@ -8,6 +8,7 @@ from collections import OrderedDict
 from numpy import array
 from numpy import mean
 from numpy import cov
+from numpy.linalg import eig
 
 
 class ICPCA(object):

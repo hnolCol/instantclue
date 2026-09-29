@@ -251,7 +251,7 @@ class DataHeaderButton(CollapsButton):
 class PushHoverButton(QPushButton):
     def __init__(self,parent = None, 
                       acceptDrops = True,
-                      acceptedDragTypes = ["Categories"], 
+                      acceptedDragTypes = None, 
                       getDragType = None,
                       funcKey = None, 
                       text = None,
@@ -262,6 +262,8 @@ class PushHoverButton(QPushButton):
                       menuKeyWord = "General",
                       menuFn = None,
                       *args,**kwargs):
+        if acceptedDragTypes is None:
+            acceptedDragTypes = ["Categories"]
         super(PushHoverButton,self).__init__(parent,*args,**kwargs)
 
         self.mouseOver = False

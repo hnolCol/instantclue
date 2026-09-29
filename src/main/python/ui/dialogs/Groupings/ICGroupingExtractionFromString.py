@@ -7,7 +7,9 @@ from ...utils import createLabel, createTitleLabel
 from ..Selections.ICSelectionDialog import SelectionDialog
 
 class ICGroupingSelection(SelectionDialog):
-    def __init__(self, selectionNames, selectionOptions, selectionDefaultIndex, title="Selection", selectionEditable=[], previewString = "", *args, **kwargs):
+    def __init__(self, selectionNames, selectionOptions, selectionDefaultIndex, title="Selection", selectionEditable=None, previewString = "", *args, **kwargs):
+        if selectionEditable is None:
+            selectionEditable = []
         super().__init__(selectionNames, selectionOptions, selectionDefaultIndex, title, selectionEditable, *args, **kwargs)
         self.__connectEventsForPreview()
         self.previewString = previewString 
@@ -51,7 +53,7 @@ class ICGroupingSelection(SelectionDialog):
                     prevLabel = self.previewString.split(splitString,maxsplit=maxSplit)[index][:len(self.previewString)-removeN]
 
                 self.previewLabel.setText(prevLabel)
-            except:
+            except Exception:
                 self.previewLabel.setText("Error in extracting params for preview.")
 
     

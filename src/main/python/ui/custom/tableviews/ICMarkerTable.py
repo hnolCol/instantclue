@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createLabel, createTitleLabel
 from .ICColorTable import ICColorSizeTableBase
 
 from ...delegates.ICQuickSelect import DelegateColor #borrow delegate
@@ -53,8 +53,10 @@ class ICMarkerTable(ICColorSizeTableBase):
         except Exception as e:
             print(e) 
 
-    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
+    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = None):
         ""
+        if legendKwargs is None:
+            legendKwargs = {}
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()
@@ -207,11 +209,11 @@ class MarkerTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        elif role == Qt.EditRole:
+        elif role == Qt.ItemDataRole.EditRole:
             if not self.isEditable:
                 return False
             if index.column() != 0:

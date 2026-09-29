@@ -7,7 +7,6 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 import matplotlib.pyplot as plt 
 from loess.loess_1d import loess_1d 
 from numba import jit 
-import numpy as np
 import time
 import math
 from skmisc.loess import loess
@@ -34,8 +33,10 @@ def loess_fit(x, y, span=0.75):
 
 class ICPeptideBatchCorrection(object):
 
-    def __init__(self, peptideSequenceColumn = "Stripped.Sequence", intensityColumns = []) -> None:
+    def __init__(self, peptideSequenceColumn = "Stripped.Sequence", intensityColumns = None) -> None:
         ""
+        if intensityColumns is None:
+            intensityColumns = []
         self.peptideSequences = []
         self.longFormat = False 
         self.peptideSequenceColumn = peptideSequenceColumn

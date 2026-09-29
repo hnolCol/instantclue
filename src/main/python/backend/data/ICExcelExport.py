@@ -125,12 +125,16 @@ class ICHClustExporter(object):
             extraData,
             clusterLabels,
             clusterColors,
-            hclustParams = [],
+            hclustParams = None,
             groupings=None,
             colorData = None,
             colorDataArray=None,
-            colorColumnNames=[]):
+            colorColumnNames=None):
         ""
+        if hclustParams is None:
+            hclustParams = []
+        if colorColumnNames is None:
+            colorColumnNames = []
         self.pathToExcel = pathToExcel
         self.clusteredData = clusteredData
         self.columnHeaders = columnHeaders

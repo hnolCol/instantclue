@@ -38,7 +38,7 @@ class PTMProteinNormalizer(object):
     def __init__(self, 
                 ptmData, 
                 proteinData, 
-                itensityColumns = [], #can be list or dict
+                itensityColumns = None, #can be list or dict
                 identifierColumnPTM = "UniprotID",
                 identifierColumnProtein = "UniprotID",
                 preferExactMatches = True,
@@ -84,6 +84,8 @@ class PTMProteinNormalizer(object):
                                            This will retain the abundance information compared to other p-peptides
 
         """
+        if itensityColumns is None:
+            itensityColumns = []
         self.checked = False
         self.ptmData = ptmData
         self.proteinData = proteinData

@@ -10,10 +10,15 @@ from matplotlib.pyplot import scatter
 from matplotlib.text import Text
 from matplotlib.offsetbox import AnchoredText
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.transforms import Bbox
+import matplotlib.image as mpimg
+import traceback
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 import pandas as pd
 import numpy as np
+import os
+import io
 from matplotlib.font_manager import FontProperties
 
 #external imports
@@ -288,6 +293,22 @@ class ICChart(QObject):
 					nearestIdx = find_nearest_index(self.data["plotData"][axisID]["positions"],event.xdata)
 					xdata = self.data["plotData"][axisID]["positions"][nearestIdx]
 					data = self.data["hoverData"][axisID]["x"][nearestIdx]
+				elif self.isSwarmplot():
+					#item 46 fix: swarm plots store one shared flat scatter table, not
+					#boxplot-style per-axis "positions"/"x" lists, so the backend
+					#(getSwarmplotProps) now separately builds and returns
+					#"boxPositions"/"groupNames"/"groupValueArrays", index-aligned per
+					#axisID, specifically for this click-to-stats lookup. Some swarm
+					#configurations (e.g. "split by category" disabled with >1
+					#categorical column) don't populate these yet - guard instead of
+					#raising, matching the previous (inert) behaviour for those cases.
+					if "boxPositions" not in self.data or axisID not in self.data["boxPositions"] or not self.data["boxPositions"][axisID]:
+						return
+					nearestIdx = find_nearest_index(self.data["boxPositions"][axisID],event.xdata)
+					xdata = self.data["boxPositions"][axisID][nearestIdx]
+					data = self.data["groupValueArrays"][axisID][nearestIdx]
+				else:
+					return
 
 				groupName = self.data["groupNames"][axisID][nearestIdx]
 
@@ -602,7 +623,15 @@ class ICChart(QObject):
 		if self.plotType not in ["corrmatrix","hclust"]:
 			return ["To main figure","Axis limits .."]
 		else:
-			return []
+			# "Axis limits .." does not apply to a multi-axis clustered heatmap
+			# (row/col dendrograms + main mesh + annotation tracks + colorbar all
+			# have different, linked coordinate systems - there is no single
+			# "the axis limits" to set). "To main figure" DOES now work for these
+			# plot types via the mirrorAxisContentAsImage() raster fallback in
+			# mirrorAxis(), so it must stay offered here - excluding it entirely
+			# (the previous behavior) hid the feature completely instead of just
+			# leaving it non-functional.
+			return ["To main figure"]
 	def addMainFigActions(self,menu):
 		""
 		try:
@@ -761,8 +790,10 @@ class ICChart(QObject):
 			"ax":ax,
 			"lkwargs":lKwargs}
 
-	def addGroupingLegendToGraph(self, groupData, ax, title =  "",update=True, export = False, legendKwargs = {}):
+	def addGroupingLegendToGraph(self, groupData, ax, title =  "",update=True, export = False, legendKwargs = None):
 		""
+		if legendKwargs is None:
+		    legendKwargs = {}
 		try:
 			if len(groupData) > 200:
 				w = WarningMessage(title="To many items for grouping legend.",
@@ -809,8 +840,10 @@ class ICChart(QObject):
 			print(e)
 
 
-	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
+	def addColorLegendToGraph(self, colorData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = None):
 		""
+		if legendKwargs is None:
+		    legendKwargs = {}
 		try:
 			if colorData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
@@ -862,8 +895,10 @@ class ICChart(QObject):
 		except Exception as e:
 			print(e)
 
-	def addQuickSelectLegendToGraph(self, colorSizeData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
+	def addQuickSelectLegendToGraph(self, colorSizeData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = None):
 		""
+		if legendKwargs is None:
+		    legendKwargs = {}
 		try:
 			if colorSizeData.index.size > 200:
 				w = WarningMessage(title="To many items for legend.",
@@ -916,9 +951,11 @@ class ICChart(QObject):
 		except Exception as e:
 			print(e)
 	
-	def addMarkerLegend(self,markerData, title = "", update=True, ax = None, export = False, legendKwargs = {}):
+	def addMarkerLegend(self,markerData, title = "", update=True, ax = None, export = False, legendKwargs = None):
 		""
 
+		if legendKwargs is None:
+		    legendKwargs = {}
 		if self.plotType in ["scatter","swarmplot"]:
 			scatterKwargs = self.getScatterKwargForLegend()
 
@@ -1008,8 +1045,10 @@ class ICChart(QObject):
 		self.updateFigure.emit()
 
 
-	def addSizeLegendToGraph(self, sizeData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = {}):
+	def addSizeLegendToGraph(self, sizeData, ignoreNaN = False,title =  None ,update=True, ax = None, export = False, legendKwargs = None):
 		""
+		if legendKwargs is None:
+		    legendKwargs = {}
 		try:
 			#if ignoreNaN:
 			#	idx = colorData["size"] != self.getParam("minScatterSize")
@@ -1438,40 +1477,70 @@ class ICChart(QObject):
 				scaleFactor = (areaSource - areaTarget) / areaSource
 			else:
 				scaleFactor = 1
+
+			# Chart types made of several linked axes (e.g. clustered heatmaps with
+			# dendrograms/colorbars/annotation tracks, count plots with rank/total
+			# side panels) cannot be reproduced onto a single target axis by copying
+			# individual artists, so their ICChart subclass never overrides
+			# mirrorAxisContent and it silently no-ops (target axis cleared, nothing
+			# drawn). Detect that case here and fall back to embedding a rasterized
+			# image of the full composite instead of doing nothing.
+			usingImageFallback = type(self).mirrorAxisContent == ICChart.mirrorAxisContent
+
+			if usingImageFallback:
+				self.mirrorAxisContentAsImage(axisID,targetAx,figID=figID)
+			else:
+				self.mirrorScale(sourceAx,targetAx) #must run before mirrorAxisContent, see mirrorScale docstring
+				self.mirrorAxisContent(axisID,targetAx, scaleFactor = scaleFactor)
 				
-			self.mirrorAxisContent(axisID,targetAx, scaleFactor = scaleFactor)
-			
-			if hasattr(self,"colorLegendKwargs"):
-				#color legend presentd
-				colorLegend = self.addColorLegendToGraph(**self.colorLegendKwargs,ax=targetAx)
-			if hasattr(self,"sizeLegendKwargs"):
-				sizeLegend = self.addSizeLegendToGraph(**self.sizeLegendKwargs,ax=targetAx)
-				if colorLegend is not None and not hasattr(self,"markerLegendKwargs"):
-					targetAx.add_artist(colorLegend)
-			if hasattr(self,"markerLegendKwargs"):
-				markerLegend = self.addMarkerLegend(**self.markerLegendKwargs, ax=targetAx)
-				if colorLegend is not None:
-					targetAx.add_artist(colorLegend)
-				if sizeLegend is not None:
-					targetAx.add_artist(sizeLegend)
+				if hasattr(self,"colorLegendKwargs"):
+					#color legend presentd
+					colorLegend = self.addColorLegendToGraph(**self.colorLegendKwargs,ax=targetAx)
+				if hasattr(self,"sizeLegendKwargs"):
+					sizeLegend = self.addSizeLegendToGraph(**self.sizeLegendKwargs,ax=targetAx)
+					if colorLegend is not None and not hasattr(self,"markerLegendKwargs"):
+						targetAx.add_artist(colorLegend)
+				if hasattr(self,"markerLegendKwargs"):
+					markerLegend = self.addMarkerLegend(**self.markerLegendKwargs, ax=targetAx)
+					if colorLegend is not None:
+						targetAx.add_artist(colorLegend)
+					if sizeLegend is not None:
+						targetAx.add_artist(sizeLegend)
 
-			if hasattr(self,"quickSelectLegendKwargs"):
-				quickSelectLegend  = self.addQuickSelectLegendToGraph(**self.quickSelectLegendKwargs, ax = targetAx)
-				if colorLegend is not None:
-					targetAx.add_artist(colorLegend)
-				if sizeLegend is not None:
-					targetAx.add_artist(sizeLegend)
-				if markerLegend is not None:
-					targetAx.add_artist(markerLegend)
+				if hasattr(self,"quickSelectLegendKwargs"):
+					quickSelectLegend  = self.addQuickSelectLegendToGraph(**self.quickSelectLegendKwargs, ax = targetAx)
+					if colorLegend is not None:
+						targetAx.add_artist(colorLegend)
+					if sizeLegend is not None:
+						targetAx.add_artist(sizeLegend)
+					if markerLegend is not None:
+						targetAx.add_artist(markerLegend)
 
-			self.mirrorExtraLines(sourceAx,targetAx)
-			self.mirrorQuickSelectArtists(axisID,targetAx)
-			self.mirrorLimits(sourceAx,targetAx) #deal with user zoom
+				self.mirrorExtraLines(sourceAx,targetAx)
+				self.mirrorQuickSelectArtists(axisID,targetAx)
+				self.mirrorLimits(sourceAx,targetAx) #deal with user zoom
+
 			self.mC.mainFrames["right"].mainFigureRegistry.replotLabel(figID,exportAxisID)
 			self.mC.mainFrames["right"].mainFigureRegistry.updateFigure(figID)
 
 		except Exception as e:
+			#Item 53: this handler used to be just "print(e)". The windowed build
+			#runs with console=False, so sys.stdout is None and print() is silently
+			#dropped - any failure part-way through mirroring an axis into a main
+			#figure left a partially drawn panel with no error anywhere. Route it to
+			#the error log written by main.py's writeErrorLog() (item 50) instead,
+			#with the full traceback. Guarded with hasattr/try so an older or
+			#differently wired controller can never turn a plotting error into a
+			#crash here; print() is kept for console builds.
 			print(e)
+			try:
+				if hasattr(self.mC,"writeErrorLog"):
+					self.mC.writeErrorLog(
+						"Error while mirroring axis into main figure "
+						"(figID={}, axisID={}):\n{}".format(
+							figID, locals().get("axisID"), traceback.format_exc()))
+			except Exception:
+				pass
 
 	def mirrorExtraLines(self,sourceAx,targetAx):
 		""
@@ -1501,11 +1570,97 @@ class ICChart(QObject):
 	def mirrorAxisContent(self,axisID,targetAx,*args,**kwargs):
 		""
 
+	def mirrorAxisContentAsImage(self,axisID,targetAx,figID=None,dpi=300):
+		"""
+		Fallback used by mirrorAxis() for chart types that are composed of
+		several linked axes (clustered heatmaps with dendrograms/colorbars/
+		annotation tracks, count plots with rank/total side panels) and
+		therefore have no working mirrorAxisContent() override - copying
+		artists one-by-one onto a single target axis cannot reproduce a
+		multi-axis layout. Instead, rasterize the union of all axes this
+		chart owns (self.axisDict) at high DPI and display that image in
+		the target axis, so "To main figure" always produces something
+		instead of silently clearing the panel.
+		"""
+		try:
+			axesToCapture = [ax for ax in self.axisDict.values() if ax is not None]
+			if len(axesToCapture) == 0:
+				return
+			fig = self.p.f
+			renderer = fig.canvas.get_renderer()
+			bboxes = [ax.get_tightbbox(renderer) for ax in axesToCapture]
+			unionBboxDisplay = Bbox.union(bboxes)
+			unionBboxInches = unionBboxDisplay.transformed(fig.dpi_scale_trans.inverted())
+
+			buf = io.BytesIO()
+			fig.savefig(buf, format = "png", dpi = dpi, bbox_inches = unionBboxInches)
+			buf.seek(0)
+			img = mpimg.imread(buf)
+
+			targetAx.clear()
+			# aspect = "equal" preserves the raster's own pixel aspect ratio (so
+			# circular data points stay circular). aspect = "auto" - used in the
+			# original version of this fix - stretches the image to fill the
+			# target panel's box regardless of its native ratio, which is what
+			# distorted round markers into ellipses. "equal" instead letterboxes
+			# (leaves empty margin on the tighter dimension) rather than distort.
+			targetAx.imshow(img, aspect = "equal")
+			targetAx.set_xticks([])
+			targetAx.set_yticks([])
+			for spine in targetAx.spines.values():
+				spine.set_visible(False)
+
+			if figID is not None and hasattr(self.mC,"mainPath"):
+				imgDir = os.path.join(self.mC.mainPath,"conf","mainFigureImages")
+				os.makedirs(imgDir, exist_ok = True)
+				imagePath = os.path.join(imgDir,"{}_{}.png".format(figID,axisID))
+				with open(imagePath,"wb") as f:
+					f.write(buf.getvalue())
+				if hasattr(self.mC,"mainFrames"):
+					self.mC.mainFrames["right"].mainFigureRegistry.store_image_export(axisID,figID,imagePath)
+		except Exception as e:
+			print(e)
+
+	def mirrorScale(self,sourceAx,targetAx):
+		"""
+		Copies log/linear scale from the source plot's axis onto the
+		main-figure target axis.
+
+		Must run BEFORE mirrorAxisContent(), not after. matplotlib's
+		set_xscale/set_yscale always resets the axis's tick locator and
+		formatter to the scale's default (e.g. AutoLocator/ScalarFormatter
+		for linear), even when the new scale equals the current one. Several
+		chart types (e.g. ICLineplot) install custom fixed tick positions/
+		labels (category names) inside mirrorAxisContent() via
+		setXTicksForAxes()/set_xticklabels(). Calling set_xscale/set_yscale
+		any time after that silently wipes those custom tick labels back to
+		plain numeric ticks - which is exactly the "x-axis label lost,
+		replaced by plain numbers" bug this split fixes. Limits/labels/title
+		are unaffected by scale changes and stay in mirrorLimits(), which
+		still runs last.
+		"""
+		targetAx.set_xscale(sourceAx.get_xscale())
+		targetAx.set_yscale(sourceAx.get_yscale())
+
 	def mirrorLimits(self,sourceAx,targetAx):
-		""
-		
+		"""
+		Copies live axis state from the source plot's axis onto the
+		main-figure target axis: limits, then label text and title.
+		(Scale is copied separately and earlier - see mirrorScale.)
+
+		This reads straight from the matplotlib Axes (sourceAx), not from
+		self.data - deliberately, the same way the pre-existing xlim/ylim
+		copy below already did. Axis title/label text are most often
+		changed via the standard matplotlib navigation toolbar's "Edit
+		axis" dialog, which sets these directly on the live Axes object
+		and never touches self.data, so reading self.data here would
+		still be stale.
+		"""
 		targetAx.set_ylim(sourceAx.get_ylim())
 		targetAx.set_xlim(sourceAx.get_xlim())
+		targetAx.set_xlabel(sourceAx.get_xlabel())
+		targetAx.set_ylabel(sourceAx.get_ylabel())
+		targetAx.set_title(sourceAx.get_title())
 
 		
 	def onDataLoad(self,data):
@@ -1639,7 +1794,11 @@ class ICChart(QObject):
 
 	def isChartCompatibleWithInteractiveStats(self):
 		""
-		return self.plotType in ["boxplot","violinplot","barplot","boxenplot"]
+		#item 46 fix: swarm plots were never included here, so statTestEnabled +
+		#isChartCompatibleWithInteractiveStats() at the top of onPress()'s click
+		#gate silently short-circuited before any click handling ran - dragging a
+		#"Compare two groups" test onto a swarm plot did nothing, with no error.
+		return self.plotType in ["boxplot","violinplot","barplot","boxenplot","swarmplot"]
 	
 	def isBoxplot(self):
 		""
@@ -1661,6 +1820,10 @@ class ICChart(QObject):
 		""
 		return self.plotType == "violinplot"
 
+	def isSwarmplot(self):
+		""
+		return self.plotType == "swarmplot"
+
 	def hasScatters(self):
 		""
 		return hasattr(self,"scatterPlots") and len(self.scatterPlots) > 0
@@ -1673,8 +1836,10 @@ class ICChart(QObject):
 	def resetMask(self):
 		"Reset any mask::overload function"
 
-	def setHoverItemGroups(self,itemGroups = []):
+	def setHoverItemGroups(self,itemGroups = None):
 		"Each group is a group of matplotlib items"
+		if itemGroups is None:
+		    itemGroups = []
 		self.hoverGroupItems = itemGroups
 		self.addTooltips()
 		self.addHoverBinding()
@@ -1734,8 +1899,10 @@ class ICChart(QObject):
 		""
 		ax.set_title(title,*args,**kwargs)		
 
-	def setData(self,data={}):
+	def setData(self,data=None):
 		""
+		if data is None:
+		    data = {}
 		self.dataLoaded.emit(data)
 	
 
@@ -1865,8 +2032,10 @@ class ICChart(QObject):
 		ax.set_xticks(ticks)
 		ax.set_xticklabels(labels,**kwargs)
 
-	def setYTicks(self,ax,ticks,labels,tickwargs = {},**kwargs,):
+	def setYTicks(self,ax,ticks,labels,tickwargs = None,**kwargs,):
 		""
+		if tickwargs is None:
+		    tickwargs = {}
 		ax.set_yticks(ticks,**tickwargs)
 		ax.set_yticklabels(labels,**kwargs)
 

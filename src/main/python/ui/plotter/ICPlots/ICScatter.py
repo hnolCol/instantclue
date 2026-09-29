@@ -151,12 +151,18 @@ class ICScatterPlot(ICChart):
                                         )
         else:
             columnPair = self.data["columnPairs"][onlyForID]
-            if scaleFactor is not None and "size" in self.scatterPlots[columnPair].data:
-                self.scatterPlots[columnPair].data["size"] = scaleFactor * self.scatterPlots[columnPair].data["size"]
-                
+            exportData = self.scatterPlots[columnPair].data
+            if scaleFactor is not None and "size" in exportData:
+                # Scale a COPY for the exported/mirrored axis only. Mutating
+                # self.scatterPlots[columnPair].data in place (the previous
+                # behavior) permanently shrank the source plot's own stored
+                # sizes, so repeated exports compounded the scaling on top of
+                # an already-scaled value instead of the original size.
+                exportData = exportData.copy()
+                exportData["size"] = scaleFactor * exportData["size"]
 
             scatterPlot(self,
-                        data = self.scatterPlots[columnPair].data,
+                        data = exportData,
                         plotter = self.p,
                         ax = targetAx,
                         numericColumns = list(columnPair),
@@ -335,6 +341,10 @@ class ICScatterPlot(ICChart):
                     dataIdx = self.quickSelectScatterDataIdx[ax]["idx"]
                     scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
                     scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+                else:
+                    #item 60 (B6): a panel without quick-selected points used to reuse the
+                    #previous panel's colours/sizes (or raise UnboundLocalError if first)
+                    continue
             scatterPlot.updateQuickSelectScatter(scatterColors,scatterSizes)
 
         self.updateFigure.emit()
@@ -378,6 +388,21 @@ class ICScatterPlot(ICChart):
         for scatterPlot in self.scatterPlots.values():
             scatterPlot.setNaNColorToCollection()
         self.setDataInColorTable(self.data["dataColorGroups"], title = "Scatter Points")
+        # "Remove Color Encoding" only clears the drawn points above; it never
+        # invalidated the cached colorLegendKwargs/colorLegend from the last time
+        # a categorical color legend was added. mirrorAxis() unconditionally
+        # re-adds a legend from colorLegendKwargs on every "To main figure" export
+        # if the attribute exists, so without clearing it here the exported panel's
+        # legend kept showing the original (pre-removal) category colors even
+        # though the exported points themselves were correctly reset.
+        if hasattr(self,"colorLegend"):
+            try:
+                self.colorLegend.remove()
+            except Exception as e:
+                print(e)
+            del self.colorLegend
+        if hasattr(self,"colorLegendKwargs"):
+            del self.colorLegendKwargs
         self.updateFigure.emit()
             
 

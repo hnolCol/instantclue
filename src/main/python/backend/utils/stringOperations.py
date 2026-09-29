@@ -56,7 +56,7 @@ def getNumberFromTimeString(timeString):
     if np.isnan(t):
         try:
             t = float(timeString)
-        except:
+        except Exception:
             pass
     return t 
 

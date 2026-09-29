@@ -64,7 +64,9 @@ class LoadButton(BigArrowButton):
 
 class DropButton(QPushButton):
     ""
-    def __init__(self,parent=None, callback = None, acceptedDragTypes = ["Categories"], toolTipStr = None, *args,**kwargs):
+    def __init__(self,parent=None, callback = None, acceptedDragTypes = None, toolTipStr = None, *args,**kwargs):
+        if acceptedDragTypes is None:
+            acceptedDragTypes = ["Categories"]
         super(DropButton,self).__init__(parent=parent,*args,**kwargs)
         self.callback = callback
         self.acceptDrop = False
@@ -210,11 +212,19 @@ class DataHandleFrame(QFrame):
 
     def askForFile(self):
         "Get File Names"
+        settings = QSettings("InstantClue","InstantClue")
+        lastDir = settings.value("lastOpenDir",os.path.expanduser("~"))
+        if not isinstance(lastDir,str) or not os.path.isdir(lastDir):
+            lastDir = os.path.expanduser("~")
+
         dlg = QFileDialog(caption="Select File",filter = "ICLoad Files (*.txt *.csv *tsv *xlsx);;Text files (*.txt *.csv *tsv);;Excel files (*.xlsx)")
         dlg.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        dlg.setDirectory(lastDir)
 
         if dlg.exec():
             filenames = dlg.selectedFiles()
+            if len(filenames) > 0:
+                settings.setValue("lastOpenDir",os.path.dirname(filenames[0]))
             self.openDialog(filenames)
 
     def copyToClipboard(self,event=None):
@@ -257,8 +267,10 @@ class DataHandleFrame(QFrame):
         ""
         return self.dataTreeView.getDataID()
 
-    def openDialog(self, selectedFiles = []):
+    def openDialog(self, selectedFiles = None):
         ""
+        if selectedFiles is None:
+            selectedFiles = []
         try:
             if any(f.endswith(".txt") | f.endswith(".csv") | f.endswith(".tsv") for f in selectedFiles):
                 d = PlainTextImporter(mainController = self.mC) 
@@ -429,8 +441,10 @@ class DataHandleFrame(QFrame):
         ""
         self.dlg.updateModelDataByBool(boolIndicator,resetData)
 
-    def updateDataInTreeView(self,columnNamesByType, tooltipData = {}, dataID = None):
+    def updateDataInTreeView(self,columnNamesByType, tooltipData = None, dataID = None):
         "Updating data in treeview (Numeric Floats, Integers, Categories)"
+        if tooltipData is None:
+            tooltipData = {}
         if dataID is not None:
             if not self.dataTreeView.getDataID() == dataID:
                 return

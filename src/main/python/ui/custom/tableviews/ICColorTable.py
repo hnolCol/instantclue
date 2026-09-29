@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont, BuddyLabel
-from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel, createLineEdit, getStdTextColor
+from ...utils import getHoverColor, createSubMenu, createLabel, createTitleLabel, createLineEdit, getStdTextColor
 
 from ...delegates.ICQuickSelect import DelegateColor#, ItemDelegate #borrow delegate
 from ...dialogs.ICDataInputDialog import ICDataInput
@@ -235,8 +235,10 @@ class ICColorTable(ICColorSizeTableBase):
         except Exception as e:
             print(e) 
 
-    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
+    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = None):
         "Adds color legend to graph."
+        if legendKwargs is None:
+            legendKwargs = {}
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()

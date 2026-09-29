@@ -8,7 +8,9 @@ from ...custom.Widgets.ICButtonDesgins import ICStandardButton
 from collections import OrderedDict 
 
 class SelectionDialog(QDialog):
-    def __init__(self,selectionNames, selectionOptions, selectionDefaultIndex, title ="Selection", selectionEditable = [], *args, **kwargs):
+    def __init__(self,selectionNames, selectionOptions, selectionDefaultIndex, title ="Selection", selectionEditable = None, *args, **kwargs):
+        if selectionEditable is None:
+            selectionEditable = []
         super(SelectionDialog,self).__init__(*args, **kwargs)
         self.title = title
         self.savedSelection = OrderedDict()
@@ -86,7 +88,7 @@ class SelectionDialog(QDialog):
 
     def keyPressEvent(self,e):
         """Handle key press event"""
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape: #item 57 (A1): PyQt5 name Qt.Key_Escape crashed on any key press
             self.reject()
         
     def saveAndClose(self,event=None):

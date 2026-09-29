@@ -55,7 +55,7 @@ class ResortableTable(QDialog):
         if not isinstance(inputLabels,pd.Series):
             try:
                 inputLabels = pd.Series(inputLabels)
-            except:
+            except Exception:
                 print("Could not build pandas Series from input.")
                 return False
 
@@ -113,9 +113,12 @@ class ResortTableWidget(QTableView):
 
     def resetDragEvent(self):
         ""
-        del self.draggedRows
-        del self.dragStartIndex
-        #self.model().resetDragEvent()
+        if hasattr(self,"draggedRows"):
+            del self.draggedRows
+        if hasattr(self,"dragStartIndex"):
+            del self.dragStartIndex
+        self.model().resetDragEvent()
+        self.selectionModel().clearSelection()
 
     def mouseEventToIndex(self,event):
         "Converts mouse event on table to tableIndex"
@@ -135,6 +138,24 @@ class ResortTableWidget(QTableView):
         if event.buttons() == Qt.MouseButton.RightButton:
             self.rightClick = True
         elif event.buttons() == Qt.MouseButton.LeftButton:
+            index = self.indexAt(event.position().toPoint())
+            if index.isValid() and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+                # Force the pressed row to be the (sole) selection immediately.
+                # Qt's default QAbstractItemView.mousePressEvent defers narrowing
+                # an existing multi-row selection to mouseReleaseEvent when the
+                # pressed row is already part of that selection (so that a plain
+                # click doesn't collapse a drag-candidate selection before a drag
+                # even starts). Drops here land on a DIFFERENT widget (the group
+                # box), so mouseReleaseEvent never fires on this table and that
+                # deferral never resolves - hideDragLabels() below would then
+                # capture whatever row(s) were selected from a PREVIOUS drag
+                # instead of the row just pressed. Selecting explicitly here
+                # removes that ambiguity so the dragged row always matches the
+                # row the user actually pressed.
+                self.selectionModel().select(
+                    index,
+                    QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows
+                )
             super(QTableView,self).mousePressEvent(event)
             self.rightClick = False
         else:
@@ -222,7 +243,7 @@ class ResortTableModel(QAbstractTableModel):
         elif role == Qt.ItemDataRole.DisplayRole:
             try:
                 return str(self._labels.iloc[index.row()])
-            except:
+            except Exception:
                 return ""
         elif role == Qt.ItemDataRole.BackgroundRole:
             return QBrush(QColor("white"))#TABLE_ODD_ROW_COLOR
@@ -294,7 +315,7 @@ class ResortTableModel(QAbstractTableModel):
         ""
         diffLabels = labelsToHide.loc[labelsToHide.index.difference(self.hiddenLabels.index)]
 
-        self.hiddenLabels = pd.concat([self.hiddenLabels.copy(),diffLabels], ignore_index=True)
+        self.hiddenLabels = pd.concat([self.hiddenLabels.copy(),diffLabels])
 
         self._labels = self._inputLabels.loc[~self._inputLabels.index.isin(self.hiddenLabels.index)]
         self._dragLabels = self._labels.copy() 

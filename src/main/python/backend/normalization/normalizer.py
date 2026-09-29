@@ -3,7 +3,6 @@
 
 
 from typing import OrderedDict
-from numpy.lib.function_base import diff
 import pandas as pd 
 import numpy as np 
 
@@ -44,8 +43,10 @@ class Normalizer(object):
         return self.sourceData.parent.config.getParam("perform.transformation.in.place")
 
 
-    def normalizeData(self, dataID, normKey, columnNames = [], **kwargs):
+    def normalizeData(self, dataID, normKey, columnNames = None, **kwargs):
         ""
+        if columnNames is None:
+            columnNames = []
         if dataID in self.sourceData.dfs:
             if normKey in funcKeys and hasattr(self,funcKeys[normKey]):
                 return getattr(self,funcKeys[normKey])(dataID,columnNames, **kwargs)

@@ -11,7 +11,13 @@ import numpy as np
 
 class ICDataInput(QDialog):
 
-    def __init__(self, mainController, title = " ", valueNames = [], defaultValues = {}, valueTypes = {}, *args,**kwargs):
+    def __init__(self, mainController, title = " ", valueNames = None, defaultValues = None, valueTypes = None, *args,**kwargs):
+        if valueNames is None:
+            valueNames = []
+        if defaultValues is None:
+            defaultValues = {}
+        if valueTypes is None:
+            valueTypes = {}
         super(ICDataInput,self).__init__(*args,**kwargs)
 
         self.title = title
@@ -104,12 +110,12 @@ class ICDataInput(QDialog):
             elif dtype == float:
                 try:
                     return float(value)
-                except:
+                except Exception:
                     return None
             elif dtype == int:
                 try:
                     return int(float(value))
-                except:
+                except Exception:
                     return None
 
 

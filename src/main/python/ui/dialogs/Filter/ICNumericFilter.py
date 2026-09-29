@@ -210,7 +210,7 @@ class ICNumericFilterForSelection(QDialog):
         #check user input
         try:
             filterProps = self.getFilterProps()
-        except:
+        except Exception:
             self.mC.sendToWarningDialog(infoText = "Could not convert min/max value to floating number.",parent=self)
             return
         if filterProps["min"] == -np.inf and filterProps["max"] == np.inf:
@@ -252,7 +252,9 @@ class ICNumericFilterForSelection(QDialog):
 
 class NumericFilter(QDialog):
 
-    def __init__(self,mainController, selectedNumericColumn = [], *args, **kwargs):
+    def __init__(self,mainController, selectedNumericColumn = None, *args, **kwargs):
+        if selectedNumericColumn is None:
+            selectedNumericColumn = []
         super(NumericFilter,self).__init__(*args, **kwargs)
         
         self.mC = mainController
@@ -507,7 +509,7 @@ class NumericFilter(QDialog):
                     funcProps[columnName] = {"min":float(filtProps["min"].text()) if filtProps["min"].text() != "" else -np.inf,
                                     "max":float(filtProps["max"].text()) if filtProps["max"].text() != "" else np.inf,
                                     "filterType":filtProps["filterType"]}
-                except:
+                except Exception:
                     self.mC.sendToWarningDialog(infoText = "Entered values could not be converted to floats. Please use . instead of , for decimal numbers.",parent=self)
                     return
         if len(funcProps) == 0:

@@ -7,13 +7,13 @@ from scipy.special import comb
 import seaborn as sns
 
 import matplotlib.pyplot as plt
-# from bokeh.models import ColumnDataSource, LinearColorMapper,ColorBar,CDSView,BooleanFilter
+from bokeh.models import ColumnDataSource, LinearColorMapper,ColorBar,CDSView,BooleanFilter
 # from bokeh.plotting import figure, output_file, show
 # from bokeh.palettes import viridis,GnBu,brewer, magma
 # from bokeh.layouts import column, gridplot, row, layout
 # from bokeh.transform import transform
 # from bokeh.models.glyphs import Patches
-# from bokeh.models import HoverTool,BoxSelectTool,TapTool
+from bokeh.models import HoverTool,BoxSelectTool,TapTool
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as scd
 # from bokeh.models.glyphs import MultiLine

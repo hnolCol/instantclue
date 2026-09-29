@@ -217,6 +217,42 @@ class ICLineplot(ICChart):
                         self.quickSelectLines[idx].set_color(c)
                         self.quickSelectLines[idx].set_markerfacecolor(c)
         else:
+            # Bug fix (round 1, item 32): this loop only ever mutated the LIVE
+            # matplotlib artists (set_color/set_facecolor) that are already on
+            # screen. It never touched self.data["plotData"][n][i]["color"],
+            # which is the color initLineplot() reads when it (re)builds the
+            # lines from scratch. "To main figure" (mirrorAxis ->
+            # mirrorAxisContent -> initLineplot(axisID, targetAx)) does
+            # exactly that rebuild, so a manually chosen color was silently
+            # discarded in favor of the original color - the panel came out
+            # looking "reset to default". The color LEGEND transferred
+            # correctly because addColorLegendToGraph() below is rebuilt
+            # directly from the current colorGroup every time, not from
+            # plotData, so it never went stale like the lines did.
+            #
+            # Bug fix (round 2, item 35): the round-1 fix persisted the new
+            # color by looking up the *old* color per internalID from
+            # self.data["dataColorGroups"] and finding plotData entries whose
+            # stored color still equalled it. That lookup is unusable in
+            # practice: ICColorTable's ColorTableModel.initData() keeps
+            # self._labels as the SAME DataFrame object passed in (no
+            # .copy()), and this plot hands it exactly self.data["dataColorGroups"]
+            # via setDataInColorTable(). ColorTableModel.setColor() then edits
+            # that shared object in place ("self._labels.loc[idx,'color'] =
+            # hexColor") the moment the user picks a color - before
+            # updateGroupColors() is even called. So by the time this method
+            # runs, self.data["dataColorGroups"] already reads the NEW color
+            # for the very entry that changed, "oldColor" was in fact already
+            # the new color, the "q.get('color') == oldColor" match against
+            # plotData's still-old stored color could never succeed, and the
+            # color was silently never persisted - only ever changed live
+            # on-screen. Matching by position instead of by color value
+            # sidesteps the aliasing entirely: colorGroup's rows and each
+            # self.data["plotData"][n] list are built in the same fixed group
+            # order at plot creation (see plotterCalculations.py), so row i of
+            # colorGroup always corresponds to element i of every plotData
+            # facet list, regardless of what color value is stored where.
+            positionByInternalID = {internalID: pos for pos, internalID in enumerate(colorGroup["internalID"])}
 
             for color, _ , internalID in colorGroup.values:
                 if internalID in self.lineplotItems:
@@ -228,7 +264,19 @@ class ICLineplot(ICChart):
                             l.set_markerfacecolor(color)
                         if isinstance(l,Line2D): #2D line has marker colors and line colors
                             l.set_color(color)
-                        
+
+                # persist the new color into the stored plot data (by
+                # position, not by matching a now-unrecoverable old color) so
+                # a later rebuild (main-figure export, session save/restore)
+                # uses it
+                pos = positionByInternalID.get(internalID)
+                if pos is not None:
+                    for lineData in self.data["plotData"].values():
+                        if pos < len(lineData):
+                            lineData[pos]["color"] = color
+
+            self.data["dataColorGroups"] = colorGroup
+
         if hasattr(self,"colorLegend"):
             self.addColorLegendToGraph(colorGroup,update=False)
         self.updateFigure.emit()
@@ -373,9 +421,19 @@ class ICLineplot(ICChart):
         
         data = self.data
         self.initLineplot(axisID,targetAx)
-        for n,ax in self.axisDict.items():
+        for n,_ in self.axisDict.items():
             if axisID == n and axisID in data["axisLimits"]:
-                self.setAxisLimits(ax,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
+                # Bug fix: this used to pass `ax` (self.axisDict[n], the SOURCE
+                # plot's own live axis) instead of `targetAx` (the main-figure
+                # export axis). That mutated the source plot's own live zoom/pan
+                # back to the limits stored at plot-creation time every time
+                # "To main figure" was used, and - because mirrorLimits() later
+                # reads sourceAx.get_xlim()/get_ylim() to copy the live view onto
+                # the target - it also meant the target panel got those same
+                # stale, pre-zoom limits instead of the user's actual current
+                # zoom ("axis scaling is not transferred"). ICHistogram.py's
+                # mirrorAxisContent already uses the correct target here.
+                self.setAxisLimits(targetAx,yLimit=data["axisLimits"][n]["yLimit"],xLimit=data["axisLimits"][n]["xLimit"])
     
         self.setXTicksForAxes({axisID:targetAx},data["tickPositions"],data["tickLabels"], onlyForID = axisID, rotation=90)                         
            

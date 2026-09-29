@@ -47,9 +47,35 @@ class ICSwarmplot(ICChart):
                                         )
         else:
             columnPair = self.data["columnPairs"][onlyForID]
+            # Export/mirror to the main figure must read the CURRENT, live
+            # per-axis scatterPlot's own data (as ICScatter.py's precedent
+            # does: exportData = self.scatterPlots[columnPair].data), not
+            # self.data["plotData"]. The chart-level plotData is a one-time
+            # snapshot from the initial onDataLoad() and is never updated by
+            # runtime color changes (updateGroupColors/setNaNColor mutate
+            # only each scatterPlot instance's own .data) - using it here
+            # silently reverted any color changes (including "Remove Color
+            # Encoding") on every export to the main figure.
+            exportData = self.scatterPlots[onlyForID].data
+            # self.data["multiScatterKwargs"][onlyForID] is the ONE-TIME dict built
+            # by the backend at initial chart construction (each columnPair -> its
+            # own {"color":..}), used by scatterPlot.replot()'s per-collection branch
+            # to color each internalID/group independently on the SAME axis. Runtime
+            # per-group recoloring (updateGroupColors -> setColorForMultiScatter)
+            # only ever (a) pushes the new color onto the already-drawn collection via
+            # set_facecolor(), and (b) records it in a "color(x:y)" column on the live
+            # scatterPlot's own .data - it never writes back into this chart-level
+            # dict. Passing that stale dict straight through on export made replot()
+            # rebuild every group's collection with its ORIGINAL color, silently
+            # discarding any live per-group recoloring (independent of the item 38
+            # fix above, which only covers "Remove Color Encoding" / single-collection
+            # staleness, not this per-group multi-collection path).
+            multiScatterKwargsForExport = self.getLiveMultiScatterKwargs(
+                exportData, self.data["multiScatterKwargs"][onlyForID]
+                )
             scatterPlot(
                         self,
-                        data = self.data["plotData"],
+                        data = exportData,
                         plotter = self.p,
                         ax = targetAx,
                         numericColumns = list(columnPair),
@@ -57,9 +83,23 @@ class ICSwarmplot(ICChart):
                         scatterKwargs = self.scatterKwargs,
                         hoverKwargs = self.getHoverKwargs(),
                         multiScatter = True,
-                        multiScatterKwargs = self.data["multiScatterKwargs"][onlyForID],
+                        multiScatterKwargs = multiScatterKwargsForExport,
                         interactive = False
                         )
+
+    def getLiveMultiScatterKwargs(self, exportData, staleMultiScatterKwargs):
+        "\n        Rebuild a per-columnPair scatterKwargs dict for export, overriding\n        each pair's stale initial color with whatever color is CURRENTLY\n        recorded for that pair (i.e. reflecting any setColorForMultiScatter/\n        setSizesForMultiScatter runtime updates), read back from the live\n        scatterPlot's own 'color(x:y)' data column. Rows belonging to other\n        column pairs are NaN in that column (their x/y is NaN for this pair\n        too, so they never render) and are filled with a placeholder purely\n        to keep the color array's length equal to the data's full length,\n        which matplotlib's scatter() requires even for masked points.\n        "
+        exportKwargs = {}
+        for columnPair, kwargs in staleMultiScatterKwargs.items():
+            pairKwargs = dict(kwargs)
+            colorColumnName = "color({}:{})".format(*columnPair)
+            if colorColumnName in exportData.columns:
+                colorSeries = exportData[colorColumnName]
+                if colorSeries.notna().any():
+                    fillValue = pairKwargs.get("color", colorSeries.dropna().iloc[0])
+                    pairKwargs["color"] = colorSeries.fillna(fillValue).values
+            exportKwargs[columnPair] = pairKwargs
+        return exportKwargs
 
     def onDataLoad(self, data):
         ""
@@ -125,6 +165,10 @@ class ICSwarmplot(ICChart):
                     dataIdx = self.quickSelectScatterDataIdx[ax]
                     scatterSizes = [quickSelectGroup["size"].loc[idx] for idx in dataIdx]	
                     scatterColors = [quickSelectGroup["color"].loc[idx] for idx in dataIdx]
+                else:
+                    #item 60 (B6): same as ICScatter.updateQuickSelectData - skip panels
+                    #without quick-selected points instead of reusing stale colours
+                    continue
                 
             scatterPlot.updateQuickSelectScatter(scatterColors,scatterSizes)
 
@@ -184,7 +228,30 @@ class ICSwarmplot(ICChart):
             self.addColorLegendToGraph(colorGroup,update=False)
 
         self.updateFigure.emit()
-    
+
+    def setNaNColor(self):
+        ""
+        # "Remove Color Encoding" (ICColorTable.removeFromGraph) calls
+        # graph.setNaNColor() for any chart where hasScatters() is True.
+        # ICSwarmplot never overrode this - it fell back to ICChart's
+        # no-op base implementation, so removing colors on a swarm plot
+        # never actually reset the drawn points (on the original axis or
+        # on export), unlike ICScatter's own setNaNColor (item 36). Mirror
+        # that fix here: reset every underlying scatterPlot's points to the
+        # NaN color and invalidate any cached categorical color legend.
+        for scatterPlot in self.scatterPlots.values():
+            scatterPlot.setNaNColorToCollection()
+        self.setDataInColorTable(self.data["dataColorGroups"], title = self.data["colorCategoricalColumn"])
+        if hasattr(self,"colorLegend"):
+            try:
+                self.colorLegend.remove()
+            except Exception as e:
+                print(e)
+            del self.colorLegend
+        if hasattr(self,"colorLegendKwargs"):
+            del self.colorLegendKwargs
+        self.updateFigure.emit()
+
     def updateGroupSizes(self,sizeGroup, changedCategory = None):
         "changed category == internal id!"
         if self.sizeCategoryIndexMatch is not None:

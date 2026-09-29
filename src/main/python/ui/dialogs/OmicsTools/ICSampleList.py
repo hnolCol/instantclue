@@ -227,7 +227,7 @@ class ICSampleListCreater(QDialog):
         try:
             self.currentNumRow  = int(float(rowNum)) - 1
             self.rowEditLabel.setText("Number of rows (A-{})".format(string.ascii_uppercase[self.currentNumRow]))
-        except:
+        except Exception:
             self.currentNumRow  = None
             self.rowEditLabel.setText("Number of rows (A-...)")
 
@@ -236,7 +236,7 @@ class ICSampleListCreater(QDialog):
         try:
             self.currentNumColumns  = int(float(colNum)) 
             self.columnEditLabel.setText("Number of columns (1-{})".format(self.currentNumColumns))
-        except:
+        except Exception:
             self.currentNumColumns  = None
             self.columnEditLabel.setText("Number of columns (1-...)")
 
@@ -266,7 +266,7 @@ class ICSampleListCreater(QDialog):
                 else:
                     self.validPos = True
                     self.startIndex = intPos
-            except:
+            except Exception:
                 self.validPos = False
                 self.startIndex = None
         if self.validPos:

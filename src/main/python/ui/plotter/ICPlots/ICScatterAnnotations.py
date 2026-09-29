@@ -59,9 +59,11 @@ class ICScatterAnnotations(object):
                     numericColumns,
                    # madeAnnotations = {},
                    # selectionLabels = {},
-                    scatterPlots = {},
+                    scatterPlots = None,
                     annotationParams = None,
                     labelInAllPlots = False):
+        if scatterPlots is None:
+            scatterPlots = {}
         self.parent = parent
         self.p = plotter
         self.ax = ax

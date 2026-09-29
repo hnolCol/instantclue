@@ -1,7 +1,6 @@
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
-from matplotlib.pyplot import title 
 from ..custom.Widgets.ICButtonDesgins import ICStandardButton
 from ..custom.warnMessage import WarningMessage
 
@@ -85,8 +84,8 @@ class ICShareGraph(QDialog):
                         "data":data.to_json(orient="records"),
                         "graph-props":graphProps,
                         "search-data":searchData}
-                        )
-                except:
+                        , timeout=30)
+                except Exception:
                     self.mC.sendToInformationDialog(infoText="Error in http request. Server not reachable.")
                     return
                     

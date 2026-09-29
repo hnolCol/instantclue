@@ -56,7 +56,6 @@ from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.neighbors import KernelDensity
-from sklearn.feature_selection import VarianceThreshold
 from sklearn.preprocessing import scale
 from threadpoolctl import threadpool_limits
 
@@ -90,17 +89,17 @@ def fasta_iter(fasta_name):
     given a fasta file. yield tuples of header, sequence
     """
     
-    fh = open(fasta_name)
-    faiter = (x[1] for x in groupby(fh, lambda line: line[0] == ">"))
+    with open(fasta_name) as fh:
+        faiter = (x[1] for x in groupby(fh, lambda line: line[0] == ">"))
 
-    for header in faiter:
-        # drop the ">"
-        headerStr = header.__next__()[1:].strip()
+        for header in faiter:
+            # drop the ">"
+            headerStr = header.__next__()[1:].strip()
 
-        # join all sequence lines to one.
-        seq = "".join(s.strip() for s in faiter.__next__())
+            # join all sequence lines to one.
+            seq = "".join(s.strip() for s in faiter.__next__())
 
-        yield (headerStr, seq)
+            yield (headerStr, seq)
 
 
 
@@ -394,12 +393,19 @@ class DataCollection(object):
 										replaceGrouping = OrderedDict()
 										for groupName, groupedItems in groupings[groupingName].items():
 											if groupName in grouping:
-												groupedItems = np.concatenate([groupedItems.values,grouping[groupingName].values])
+												#item 59 (B5): the key was groupingName (the grouping's own name, never a
+												#key of this dict -> KeyError -> "grouping could not be loaded"), and the
+												#merged dict below was discarded in favour of the last single array.
+												groupedItems = pd.Series(pd.unique(np.concatenate([groupedItems.values,grouping[groupName].values])))
 												
 											replaceGrouping[groupName] = groupedItems
-										groupings[groupingName] = groupedItems
+										#groups that only occur in the later header row
+										for groupName, groupedItems in grouping.items():
+											if groupName not in replaceGrouping:
+												replaceGrouping[groupName] = groupedItems
+										groupings[groupingName] = replaceGrouping
 							
-					except:
+					except Exception:
 						funcProps["messageProps"] = getMessageProps("Error","File was loaded, and grouping detected. However the grouping could not be loaded.")
 
 					funcProps["groupings"] = groupings
@@ -581,7 +587,7 @@ class DataCollection(object):
 			loadFileProps["thousands"] = None
 		try:
 			skiprows = int(loadFileProps["skiprows"])
-		except:
+		except Exception:
 			skiprows = 0
 		loadFileProps["skiprows"] = skiprows
 
@@ -786,10 +792,12 @@ class DataCollection(object):
 		
 		return funcProps
 
-	def evaluateColumnName(self,columnName, dataID = None, columnList = None, extraColumnList = [], maxLength = 80):
+	def evaluateColumnName(self,columnName, dataID = None, columnList = None, extraColumnList = None, maxLength = 80):
 		'''
 		Check if the column name already exists and how often. Adds a suffix.
 		'''
+		if extraColumnList is None:
+		    extraColumnList = []
 		if not isinstance(extraColumnList,list):
 			extraColumnList = []
 		if columnList is None:
@@ -884,9 +892,11 @@ class DataCollection(object):
 							groupings=None,
 							colorData = None,
 							colorDataArray = None,
-							colorColumnNames = []):
+							colorColumnNames = None):
 		""
 
+		if colorColumnNames is None:
+		    colorColumnNames = []
 		dataColumns = self.getPlainColumnNames(dataID).values.tolist()
 		clusterColumns = clusteredData.columns.values.tolist() 
 		extraDataColumns = [columnName for columnName in dataColumns if columnName not in clusterColumns]
@@ -1471,7 +1481,7 @@ class DataCollection(object):
 			for n,x in enumerate(row.values):
 				try: 
 					r[n] = float(x)
-				except:
+				except Exception:
 					r[n] = np.nan 
 			return r 
 			
@@ -1489,7 +1499,7 @@ class DataCollection(object):
 					self.joinDataFrame(dataID,pd.DataFrame(X,index=self.dfs[dataID].index, columns=newColumnNames))
 				else:
 					self.dfs[dataID][columnNames] = self.dfs[dataID][columnNames].astype(newDataType)
-			except:
+			except Exception:
 				return getMessageProps("Error..","Changing data type failed.")
 			
 			if newDataType in ['object','str']:
@@ -1591,8 +1601,8 @@ class DataCollection(object):
 		
 		for n,category in enumerate(flatSplitData):
 			
-			regExp = categoricalFilter.build_regex('',
-												[category],
+			regExp = self.categoricalFilter.buildRegex([category],
+												withSeparator = True,
 												splitString = sepString)
 			
 			boolIndicator = self.df[categoricalColumn[0]].str.contains(regExp)
@@ -1661,7 +1671,7 @@ class DataCollection(object):
 		===========
 		Evaluated Column name
 		'''
-		columnName = get_elements_from_list_as_string(numericColumnList, addString =  'valid_values: ')
+		columnName = 'valid_values:({})'.format(mergeListToString(numericColumnList))
 		columnNameEval = self.evaluate_column_name(columnName)
 		validValues = self.df[numericColumnList].count(axis='columns')
 		self.df[columnNameEval] = validValues
@@ -2662,10 +2672,12 @@ class DataCollection(object):
 		self.set_current_data_by_id(saveId)
 				
 		
-	def join_missing_columns_to_other_df(self, otherDf, id, definedColumnsList = []):
+	def join_missing_columns_to_other_df(self, otherDf, id, definedColumnsList = None):
 		'''
 		'''
 
+		if definedColumnsList is None:
+		    definedColumnsList = []
 		storedData = self.dfs[id]
 		columnsJoinDf = otherDf.columns
 		
@@ -2952,7 +2964,23 @@ class DataCollection(object):
 			dataT = df[requiredColumnNames].T 
 			dataT.columns = newColumnNames
 
+			#the old column names (e.g. sample names) become row values once
+			#transposed, sitting in the index. Name that index column explicitly
+			#before reset_index() so we have a stable handle on it below.
+			oldColumnNameColumn = self.evaluateColumnName(columnName = "columnNames", columnList = dataT.columns.tolist())
+			dataT.index.name = oldColumnNameColumn
 			dataT = dataT.reset_index()
+
+			#add groupings - mirrors meltData(): map each row's original column
+			#name (now sitting in oldColumnNameColumn) through the existing
+			#groupings to attach a group-membership annotation column, so a
+			#sample grouping defined before transposing is not lost, just
+			#repositioned from column groups to a row annotation column.
+			if self.parent.grouping.groupingExists():
+				groupingNames = self.parent.grouping.getGroupings()
+				for groupingName in groupingNames:
+					mapper = self.parent.grouping.getGroupNameByColumn(groupingName)
+					dataT.loc[:,groupingName] = dataT[oldColumnNameColumn].map(mapper).fillna(self.replaceObjectNan)
 
 			return self.addDataFrame(dataT,fileName="t:{}".format(self.getFileNameByID(dataID)))
 
@@ -3040,7 +3068,7 @@ class DataCollection(object):
 		data = self.df[columns]
 		try:
 			model = VarianceThreshold(thres).fit(data)
-		except:
+		except Exception:
 			return
 
 		boolIndicator = model.get_support()
@@ -3229,11 +3257,15 @@ class DataCollection(object):
 		
 			
 	def shift_data_by_row_matches(self,id = None, matchColumn = '', 
-								  adjustColumns = [], sort = False,
-								  intervalData = {}, removeOtherData = False):
+								  adjustColumns = None, sort = False,
+								  intervalData = None, removeOtherData = False):
 		'''
 		Shift data
 		'''
+		if adjustColumns is None:
+		    adjustColumns = []
+		if intervalData is None:
+		    intervalData = {}
 		if id is None:
 			id = self.currentDataFile
 		
@@ -3278,7 +3310,7 @@ class DataCollection(object):
 			
 
 				collectDf = pd.concat([collectDf,dfSub],ignore_index=False, axis=1)
-			except:
+			except Exception:
 				pass
 		indices = collectDf.index.tolist()
 		minValue = indices[0] * intSteps

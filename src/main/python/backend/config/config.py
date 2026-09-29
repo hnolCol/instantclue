@@ -57,7 +57,13 @@ class Config(object):
 
     def getParam(self,paramName):
         ""
-        if not paramName not in self.parameters:
+        #Bug fix (item 49 / report 1.1): this read "if not paramName not in
+        #self.parameters", a double negative that simplifies to "paramName IN
+        #self.parameters" - so the recovery below ran only when the parameter was
+        #already present, i.e. never when it was actually missing. Parameters
+        #absent from an older saved profile therefore fell through to an implicit
+        #return None instead of being restored from DEFAULT_PARAMETER.
+        if paramName not in self.parameters:
             #check if it in default params (e.g. if an old profile config was used)
             self.updateParamsFromProfile(DEFAULT_PARAMETER,overwriteOnlyWhenNotPresent=True)
 
@@ -93,7 +99,11 @@ class Config(object):
         for p in self.parameters.values():
             pType = p.getAttr("parentType")
             if pType is None:
-                p.getAttr("name")
+                #Bug fix (item 50 / report 1.6): the result of this call used to be
+                #discarded, making the branch a no-op, so a parameter without a
+                #parentType was silently dropped from the settings dialog grouping
+                #by the test below. It now falls back to the parameter's own name.
+                pType = p.getAttr("name")
             if pType not in parentTypes and pType is not None:
                 parentTypes.append(pType)
         return parentTypes

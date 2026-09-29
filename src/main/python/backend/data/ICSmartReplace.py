@@ -6,8 +6,10 @@ from collections import OrderedDict
 
 
 class ICSmartReplace(object):
-    def __init__(self, nNaNForDownshift = 4, minValidvalues = 4, grouping = {}, downshift = 1.8, scaledWidth = 0.3):
+    def __init__(self, nNaNForDownshift = 4, minValidvalues = 4, grouping = None, downshift = 1.8, scaledWidth = 0.3):
 
+        if grouping is None:
+            grouping = {}
         self.params= {"nNaNForDownshift":nNaNForDownshift,
                       "minRequiredValues" : minValidvalues,
                       "grouping":grouping,
@@ -52,14 +54,20 @@ class ICSmartReplace(object):
         self.columnStds = self.X.std()
        
 
-    def fitTransform(self,X, columnNames = []):
+    def fitTransform(self,X, columnNames = None):
         ""
         self.X = X
         self.getColumnMeans()
         self.getColumnStds()
-        columnNames = []
-        for groupColumnNames in  self.params["grouping"].values():
-            columnNames.extend(groupColumnNames.values.tolist())
+        #Bug fix (item 50 / report 1.7): an unconditional "columnNames = []" used
+        #to sit here and overwrite whatever the caller passed, so the parameter had
+        #no effect at all. The column list is now derived from the grouping only
+        #when the caller does not supply one. The single in-tree caller
+        #(backend/data/data.py:2111) passes nothing, so that path is unchanged.
+        if columnNames is None:
+            columnNames = []
+            for groupColumnNames in  self.params["grouping"].values():
+                columnNames.extend(groupColumnNames.values.tolist())
        
         outPut = pd.DataFrame(columns=columnNames, index = self.X.index) 
         

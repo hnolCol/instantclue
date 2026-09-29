@@ -89,7 +89,7 @@ class ICValidateEmail(QDialog):
             URL = "http://127.0.0.1:5000/api/v1/app/validate"
             email = self.mC.webAppComm.encryptStringWithPublicKey(currentText.encode('utf-8'))
             appID = self.mC.webAppComm.getAppID()
-            r = requests.put(URL,json={"app-id":appID,"email":email})
+            r = requests.put(URL,json={"app-id":appID,"email":email}, timeout=30)
             #print(email,appID)
             self.statusLabel.setText("Request sent. Please check email.")
             if r.status_code == 200:
@@ -108,4 +108,4 @@ class ICValidateEmail(QDialog):
             self.applyButton.setEnabled(True)
             URL = "http://127.0.0.1:5000/api/v1/app/validate"
             appID = self.mC.getAppID()
-            r = requests.post(URL,json={"app-id":appID,"verification":newText})
+            r = requests.post(URL,json={"app-id":appID,"verification":newText}, timeout=30)

@@ -26,7 +26,7 @@ class scatterPlot(object):
 
 
 	def __init__(self, parent, data, numericColumns, plotter, colorMap = "Blues", 
-						ax = "", dataID = "", scatterKwargs = {}, hoverKwargs = {},
+						ax = "", dataID = "", scatterKwargs = None, hoverKwargs = None,
 						showLegend = True, ignoreYlimChange = False, multiScatter = False,interactive = True, multiScatterKwargs = dict(), adjustLimits = True):
 		'''
 		Class to handle scatter plots. Scatter plots that are generated together
@@ -35,12 +35,26 @@ class scatterPlot(object):
 		Additional information of data can be added due to additional color and size levels.
 		'''
 		
+		if scatterKwargs is None:
+		    scatterKwargs = {}
+		if hoverKwargs is None:
+		    hoverKwargs = {}
 		self.parent = parent
 		self.ax = ax
 		self.plotter = plotter
 		self.dataID = dataID
 		self.numericColumns = numericColumns
-		self.scatterKwargs = scatterKwargs
+		#Item 52: take a COPY of the caller's scatterKwargs instead of holding a
+		#reference to it. addKwargsToData() below writes into self.scatterKwargs
+		#("s" and "color"), and every caller passes the SAME dict object to each
+		#scatterPlot it creates (e.g. ICScatter.initScatterPlots passes
+		#self.scatterKwargs both when building the on-screen plot and when
+		#exporting to a main-figure panel). Sharing it meant the export - whose
+		#data carries sizes already multiplied by scaleFactor - overwrote the
+		#SOURCE plot's stored size, so each export shrank the points again from an
+		#already-shrunk baseline. That is the item 20 defect returning by a second
+		#route: item 20 copied the DataFrame, but the kwargs dict was still shared.
+		self.scatterKwargs = dict(scatterKwargs)
 		self.hoverKwargs = hoverKwargs
 		self.colorMap = colorMap
 		self.multiScatter = multiScatter
@@ -566,8 +580,10 @@ class scatterPlot(object):
 		else:
 			self.mainCollection.update(kwargs)
 
-	def updateScatterProps(self,propsData,updatableProps = ["color","size","layer","marker"]):
+	def updateScatterProps(self,propsData,updatableProps = None):
 		""
+		if updatableProps is None:
+		    updatableProps = ["color","size","layer","marker"]
 		self.setHoverPointsInvisible()
 		self.setSelecRectInvisible()
 		columnsPresent = [x for x in  updatableProps if x in propsData.columns]
@@ -787,11 +803,32 @@ class scatterPlot(object):
 			self.mainCollecion = {}
 			numericColumnPairs = list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))
 			
+			#Item 54: a live per-row "color" column must win over the per-columnPair
+			#default in multiScatterKwargs. That dict is the ONE-TIME map the backend
+			#builds at chart construction (one color per category group), whereas
+			#dropping a column on color marks writes a per-ROW "color" column onto
+			#this scatterPlot's own data. replotCollection() - the on-screen redraw
+			#after a color change - already prefers the live column (its
+			#multiScatterKwargs override is commented out and it assigns
+			#kwargs["color"] = self.data['color'].values). replot() did not, and
+			#replot() is what runs when a scatterPlot is CONSTRUCTED - i.e. on every
+			#export to a main-figure panel. So the exported panel was recolored by
+			#category group, discarding the color-mark encoding, while the on-screen
+			#plot and the legend stayed correct.
+			liveColor = self.data["color"].values if "color" in self.data.columns else None
 			for xName, yName in numericColumnPairs:
+				#copy per pair: the original assigned into the shared kwargs dict, so a
+				#pair with no entry of its own silently inherited the previous pair's color.
+				pairKwargs = dict(kwargs)
 				if len(self.multiScatterKwargs) != 0 and (xName,yName) in self.multiScatterKwargs:
 					for k,v in self.multiScatterKwargs[(xName,yName)].items():
-						kwargs[k] = v 
-				self.mainCollecion[(xName,yName)] = ax.scatter(self.data[xName], self.data[yName], **kwargs) #save collection
+						pairKwargs[k] = v 
+				#a per-pair color that is already an ARRAY comes from a live per-group
+				#recoloring (ICSwarmplot.getLiveMultiScatterKwargs) and is kept; only a
+				#single stale color is replaced by the live per-row column.
+				if liveColor is not None and not isinstance(pairKwargs.get("color"),(list,tuple,np.ndarray,pd.Series)):
+					pairKwargs["color"] = liveColor
+				self.mainCollecion[(xName,yName)] = ax.scatter(self.data[xName], self.data[yName], **pairKwargs) #save collection
 		elif "marker" in self.data.columns:
 			self._plotMarkerSpecScatter()
 		else:
