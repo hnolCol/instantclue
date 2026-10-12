@@ -21,7 +21,9 @@ import pandas as pd
 TOOLTIP_STR = "Drag & drop numerical columns to view extra data.\nWorks in combination with hierarchical clustering and scatter plots."
 
 class LiveGraph(QWidget):
-    def __init__(self, parent=None, mainController=None, acceptedDragTypes = ["Numeric Floats"], zScoreNorm = False):
+    def __init__(self, parent=None, mainController=None, acceptedDragTypes = None, zScoreNorm = False):
+        if acceptedDragTypes is None:
+            acceptedDragTypes = ["Numeric Floats"]
         super(LiveGraph, self).__init__(parent)
         self.setAcceptDrops(True)
         self.acceptedDragTypes = acceptedDragTypes

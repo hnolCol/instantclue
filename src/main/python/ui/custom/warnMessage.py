@@ -211,8 +211,10 @@ class AskForFile(MessageBase):
 
 class AskOptionsMessage(MessageBase):
 
-    def __init__(self,options = [],parent=None,*args,**kwargs):
+    def __init__(self,options = None,parent=None,*args,**kwargs):
         ""
+        if options is None:
+            options = []
         super(AskOptionsMessage,self).__init__(parent,*args,**kwargs)
         
         self.options = options

@@ -291,7 +291,7 @@ columnHeaderDictKey = OrderedDict([('Source',''),('Correction','type'),
     
 class Anova(object):
 	
-	def __init__(self, dataframe, dependentVariable, wFactors = [], bFactors = [],
+	def __init__(self, dataframe, dependentVariable, wFactors = None, bFactors = None,
 					subjectColumn = 'Subject', measure = '', alpha = 0.05):		
 		'''
 		Paramater
@@ -299,6 +299,10 @@ class Anova(object):
 		'''
 		
 		
+		if wFactors is None:
+		    wFactors = []
+		if bFactors is None:
+		    bFactors = []
 		factors = wFactors + bFactors
 		self.subj = subjectColumn
 		## getting unique levels for each factor in dict as well as 

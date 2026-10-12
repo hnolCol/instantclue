@@ -39,9 +39,11 @@ class ICFeatureSelection(object):
         sfp = SelectFdr(alpha=self.alpha, **kwargs).fit(X,Y)
         return sfp.get_support()
     
-    def selectFeaturesBySVM(self, X, Y, SVMwargs = {}, scale = True):
+    def selectFeaturesBySVM(self, X, Y, SVMwargs = None, scale = True):
         "Random forest selection"
 
+        if SVMwargs is None:
+            SVMwargs = {}
         svm = SVC(**SVMwargs) #random firest classifier
         sfm = SelectFromModel(svm, max_features = self.maxFeatures)
        # sfm = SelectFpr()
@@ -53,8 +55,10 @@ class ICFeatureSelection(object):
        # print(sfm.get_support())
         return sfm.get_support()
 
-    def selectFeaturesByRF(self, X, Y, RFKwargs = {}, scale = True):
+    def selectFeaturesByRF(self, X, Y, RFKwargs = None, scale = True):
         "Random forest selection"
+        if RFKwargs is None:
+            RFKwargs = {}
         rfc = RandomForestClassifier(**RFKwargs) #random firest classifier
         if scale:
             X = self.scaleData(X)
@@ -63,8 +67,10 @@ class ICFeatureSelection(object):
         sfm.transform(X)
         return sfm.get_support(), rfc.feature_importances_
 
-    def selectFeaturesByRFECV(self,X,Y,model = "Random Forest", ModelKwargs = {}, cv = 3, scale=True):
+    def selectFeaturesByRFECV(self,X,Y,model = "Random Forest", ModelKwargs = None, cv = 3, scale=True):
         ""
+        if ModelKwargs is None:
+            ModelKwargs = {}
         if model == "Random Forest":
             modelEstimator = RandomForestClassifier(**ModelKwargs)
         else:

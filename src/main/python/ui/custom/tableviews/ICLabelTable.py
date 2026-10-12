@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createLabel, createTitleLabel
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase
 from .ICDataTable import ICLabelDataTableDialog
@@ -201,7 +201,7 @@ class LabelTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             self.dataChanged.emit(index,indexBottomRight)
             return True
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             self.setCheckState(index)
             self.dataChanged.emit(index,indexBottomRight)
             return True

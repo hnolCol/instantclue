@@ -24,12 +24,12 @@ addDataOrShow = [
  #               sendMessageProps]
 #
 funcPropControl = {
-    "update::checkForUpdate": #will be removed soon.
+    "update::checkForUpdate": #item 62: re-enabled (removed in item 48)
         {
             "threadRequest":{"obj":"updateChecker","fn":"checkForUpdates","requiredKwargs":[]},
             "completedRequest": 
                             [
-                                {"obj":"self","fn":"showMessageForNewVersion","requiredKwargs":["releaseURL"]},
+                                {"obj":"self","fn":"showMessageForNewVersion","requiredKwargs":["releaseURL"],"optionalKwargs":["latestVersion"]},
                                 sendMessageProps]
         }, 
     "data::annotateDataByIndicies":
@@ -951,7 +951,7 @@ funcPropControl = {
                 #{"obj":"self","fn":"setSizeGroupData","objKey":"sliceMarks","objName":"mainFrames","requiredKwargs":["sizeGroupData"],"optionalKwargs":["title"]},
                 {"obj":"self","fn":"updateHclustSize","objKey":"middle","objName":"mainFrames","requiredKwargs":["sizeData"]},
                 #{"obj":"self","fn":"setCategoryIndexMatch","objKey":"middle","objName":"mainFrames","requiredKwargs":["categoryIndexMatch"],"optionalKwargs":["categoryEncoded"]},
-                #sendMessageProps
+                sendMessageProps #item 61 (B7): re-enabled so the message for non-numeric size columns is shown
             ]           
         },  
     "plotter:getHclustColorGroups": 

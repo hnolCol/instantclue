@@ -790,7 +790,7 @@ class _sgccak(object):
             
             try:
                 self.a = [np.linalg.svd(x)[-1].T[:,0] for x in self.A]
-            except:
+            except Exception:
                 self.a  = [np.random.randn(n) for n in self.pjs]
 
         # empty vectors for Y and Z 

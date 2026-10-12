@@ -1,7 +1,12 @@
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
+from scipy.stats import norm
 from ..utils.stringOperations import getRandomString
+
+# quantile function (inverse CDF) of the standard normal distribution,
+# used by _lv_box_ends() for the 'trustworthy' k_depth method.
+qf = norm.ppf
 
 
 def _lv_outliers(vals, k):
@@ -111,7 +116,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
                 IQR = IQR[IQR.columns[1::2]]
                 IQR.columns = [(colName[0],"IQR") for colName in columnNamesForIQR[1::2]]
             groupedPlotData = groupedPlotData.join(IQR)
-        except:
+        except Exception:
             groupedPlotData = pd.DataFrame()
    
     if not splitByCategories and nCatCols > 0:
@@ -273,7 +278,7 @@ def calculatePositions(dataID, sourceData, numericColumns, categoricalColumns, m
         if scaleXAxis:
             try:
                 numericTickPos = np.array([float(x.split(splitString)[splitIndex]) for x in colorCategories])
-            except:
+            except Exception:
                 scaleXAxis = False
             
         

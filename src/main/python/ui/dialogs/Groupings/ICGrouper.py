@@ -44,9 +44,21 @@ class ICGroupFrame(QFrame):
         try:
             event.accept()
             self.updateFn(groupID = self.groupID)
-            self.tableToResetDrag.resetDragEvent()
         except Exception as e:
             print(e)
+        finally:
+            # Always reset the source table's drag bookkeeping (draggedRows /
+            # dragStartIndex / model draggedIndices), even if updateFn raised.
+            # Previously this call was skipped whenever updateFn threw, which
+            # silently latched the table's dragged-row selection: because
+            # hideDragLabels() only re-reads selectionModel().selectedRows()
+            # when self.draggedRows does not yet exist, a single failed drop
+            # left every SUBSEQUENT drag - regardless of which row the user
+            # actually clicked and dragged - reusing whatever row was captured
+            # by the last successful assignment, so the wrong (and always the
+            # same) column kept getting removed/added no matter what was
+            # dragged.
+            self.tableToResetDrag.resetDragEvent()
     
 
 
@@ -200,7 +212,7 @@ class ICGrouper(QDialog):
             selectedItems = selDialog.savedSelection
             try:
                 splitIndex = int(float(selectedItems["index"]))
-            except:
+            except Exception:
                 w = WarningMessage(infoText = "Index could be itnerpreted as an integer (0,1,2,3).",iconDir = self.mC.mainPath)
                 w.exec()
                 return 
@@ -250,7 +262,7 @@ class ICGrouper(QDialog):
             else:
                 groupNames = pd.DataFrame([colName.split(splitString,maxsplit=maxsplit)[index][:len(colName)-removeN] for colName in selectedColumnNames.values],
                     columns=["GroupName"], index=selectedColumnNames.index)
-        except:
+        except Exception:
             self.mC.sendToWarningDialog(infoText = "Splitting resulted in an error. Index out of range? Indexing starts with 0.",parent=self)
             return
         groupNames["ColumnNames"] = selectedColumnNames.values
@@ -469,7 +481,7 @@ class ICGrouper(QDialog):
         #find items that are not already in group
         idxToAdd = labels.index.difference(items.index)
         if idxToAdd.size > 0:
-            addedItems = pd.concat([items,labels.loc[idxToAdd]],ignore_index=True)
+            addedItems = pd.concat([items,labels.loc[idxToAdd]])
             #addedItems = items.append(labels.loc[idxToAdd],ignore_index = False)
             self.groupItems[groupID]["items"] = addedItems
             self.model.layoutAboutToBeChanged.emit()

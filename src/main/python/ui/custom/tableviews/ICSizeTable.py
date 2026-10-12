@@ -3,7 +3,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtWidgets import * 
 
 from ..utils import clearLayout, getStandardFont
-from ...utils import getHoverColor, createSubMenu, createMenu, createLabel, createTitleLabel
+from ...utils import getHoverColor, createSubMenu, createLabel, createTitleLabel
 from ...delegates.ICSpinbox import SpinBoxDelegate #borrow delegate
 from .ICColorTable import ICColorSizeTableBase, ItemDelegate
 import pandas as pd
@@ -60,8 +60,10 @@ class ICSizeTable(ICColorSizeTableBase):
         except Exception as e:
             print(e)
         
-    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = {}):
+    def addLegendToGraph(self, ignoreNaN = False, legendKwargs = None):
         ""
+        if legendKwargs is None:
+            legendKwargs = {}
         exists, graph =  self.mC.getGraph()
         if exists:
             graph.setHoverObjectsInvisible()

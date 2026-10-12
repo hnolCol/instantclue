@@ -420,7 +420,7 @@ class PandaModel(QAbstractTableModel):
                 v = int(value)
             else:
                 v = value
-        except:
+        except Exception:
             
             if hasattr(self.parent(),"mC") and hasattr(self.parent().mC,"sendToWarningDialog"):
                 self.parent().mC.sendToWarningDialog(

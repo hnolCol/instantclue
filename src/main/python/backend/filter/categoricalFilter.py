@@ -2,7 +2,6 @@ import re
 import pandas as pd 
 import numpy as np 
 import csv
-import re
 from itertools import chain
 
 #internal imports

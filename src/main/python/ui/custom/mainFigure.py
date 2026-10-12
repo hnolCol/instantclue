@@ -284,8 +284,16 @@ class MainFigure(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.mainFigureCollection = mainFigureRegistry
         self.updateFigure.connect(self.update)
+        #Item 51: WindowMaximizeButtonHint added. setWindowFlags REPLACES the whole
+        #flag set, and this call previously listed only the minimize and close
+        #hints - so the window had no maximize button and (on Windows) would not
+        #maximize on a title-bar double-click either. The canvas stays a fixed
+        #physical size (see setWidgetResizable(False) below, deliberate for a
+        #print template), so maximizing reveals more of the template rather than
+        #scaling the figure.
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowSystemMenuHint
                             | Qt.WindowType.WindowMinimizeButtonHint
+                            | Qt.WindowType.WindowMaximizeButtonHint
                             | Qt.WindowType.WindowCloseButtonHint)
         
         self.mC = mainController
@@ -608,7 +616,7 @@ class MainFigure(QDialog):
         propsStrings = [gridRow, gridCol,posRow, posCol,rowSpan, colSpan]
         try:
             propsIntegers = [int(float(item)) for item in propsStrings]  
-        except:
+        except Exception:
             w = WarningMessage(infoText="Axis properties could not be converted to integers. Invlid input.",iconDir = self.mC.mainPath)
             w.exec()
             return None
@@ -691,7 +699,7 @@ class MainFigure(QDialog):
             
                 try:
                     newValue = int(float(changedValue))
-                except:
+                except Exception:
                     warn = WarningMessage(infoText="Could not convert to integer : {}".format(changedValue),iconDir = self.mC.mainPath)
                     warn.exec()
                 propRange = [str(i) for i in range(1,newValue+1)]
@@ -716,7 +724,7 @@ class MainFigure(QDialog):
             legend = self.checkForLegend(ax)
             if legend is not None:
                 legend.remove()
-                self.redraw()
+                self.updateFigure.emit()
        
     def resetAxisProps(self):
         ""

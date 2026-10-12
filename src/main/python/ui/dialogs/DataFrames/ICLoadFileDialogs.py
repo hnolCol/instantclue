@@ -225,7 +225,7 @@ class ExcelImporter(QDialog):
                         if k in ICToPandasForExcelFiles:
                             k = ICToPandasForExcelFiles[k] # louzy overwrite
                         loadProps[k] = value
-                except:
+                except Exception:
                     if k in excelDataTypes:
                         self.mC.sendToWarningDialog(infoText="There was an error when convertig {} to {}".format(k,excelDataTypes[k]),parent=self)
                     else:

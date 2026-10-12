@@ -98,10 +98,12 @@ def getRandomString(N = 20):
 
 def getHashedUrl(url):
     ""
-    hash = hashlib.md5(url.encode()) # get the hash for the url
-    hash = hash.replace('=','').replace('/','_')  # some cleaning
-    shortUrl = base64.b64encode(hash)
-    
+    # usedforsecurity=False: MD5 is used here only to derive a short,
+    # deterministic identifier for the url, not for any security purpose.
+    hashDigest = hashlib.md5(url.encode(), usedforsecurity=False).digest() # get the hash for the url
+    shortUrl = base64.b64encode(hashDigest).decode('ascii')
+    shortUrl = shortUrl.replace('=','').replace('/','_')  # some cleaning
+
     return shortUrl
 
 def copyAttributes(obj2, obj1, attr_list):
@@ -206,13 +208,17 @@ def createMenu(*args,**kwargs):
     
     return menu
 
-def createMenus(menuNames = []):
+def createMenus(menuNames = None):
     ""
+    if menuNames is None:
+        menuNames = []
     return dict([(menuName,createMenu()) for menuName in menuNames])
 
 
-def createSubMenu(main = None,subMenus = []):
+def createSubMenu(main = None,subMenus = None):
     "Returns a dict of menus"
+    if subMenus is None:
+        subMenus = []
     menus = dict() 
     if main is None or not isinstance(main,QMenu):
         #main menu
@@ -222,9 +228,11 @@ def createSubMenu(main = None,subMenus = []):
         menus[subMenu] =  setStyleSheetForMenu(menus["main"].addMenu(subMenu))
     return menus
 
-def createCombobox(parent = None, items = []):
+def createCombobox(parent = None, items = None):
     ""
     #set up data frame combobox and its style
+    if items is None:
+        items = []
     combo = QComboBox(parent)
     combo.addItems(items)
     combo.setFont(getStandardFont())

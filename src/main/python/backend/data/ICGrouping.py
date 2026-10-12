@@ -81,8 +81,10 @@ class ICGrouping(object):
             self.currentGrouping = groupingName
 
 
-    def addGroupingsFromDict(self,groupings, colorMaps = {}):
+    def addGroupingsFromDict(self,groupings, colorMaps = None):
         ""
+        if colorMaps is None:
+            colorMaps = {}
         if not hasattr(groupings,"items"):
             return
         for groupingName, groupedItems in groupings.items():
@@ -323,8 +325,10 @@ class ICGrouping(object):
         if groupingName in self.groups:
             return self.groups[groupingName]
 
-    def getGroupingsByList(self,groupinNames=[]):
+    def getGroupingsByList(self,groupinNames=None):
         ""
+        if groupinNames is None:
+            groupinNames = []
         if isinstance(groupinNames,list):
             return OrderedDict([(groupingName,self.groups[groupingName]) for groupingName in groupinNames if groupingName in self.groups])
         else:
@@ -438,6 +442,6 @@ class ICGrouping(object):
                     else:
                         cmapName = None
                     self.addGrouping(groupingName, groupedItems,colorMap=cmapName)
-        except:
+        except Exception:
             return getMessageProps("Error ..","There was an error reading the selected json file.")
         return getMessageProps("Done..","Grouping loaded.")

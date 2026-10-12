@@ -80,7 +80,7 @@ class ICFetchDataFromMitoCube(QDialog):
         dataID = self.dataID.text()
 
         try:
-            r = requests.post(url=url,json={"dataID":dataID,"pw":pw})
+            r = requests.post(url=url,json={"dataID":dataID,"pw":pw}, timeout=30)
         except ConnectionError:
             self.mC.sendToWarningDialog(infoText="Connection error raised. Please try again later and make sure that you have entered the correct url.")
             return
@@ -119,7 +119,7 @@ class ICFetchDataFromMitoCube(QDialog):
             URL = "http://127.0.0.1:5000/api/v1/app/validate"
             email = self.mC.webAppComm.encryptStringWithPublicKey(currentText.encode('utf-8'))
             appID = self.mC.webAppComm.getAppID()
-            r = requests.put(URL,json={"app-id":appID,"email":email})
+            r = requests.put(URL,json={"app-id":appID,"email":email}, timeout=30)
             print(email,appID)
             self.statusLabel.setText("Request sent. Please check email.")
             if r.status_code == 200:
@@ -138,4 +138,4 @@ class ICFetchDataFromMitoCube(QDialog):
             self.applyButton.setEnabled(True)
             URL = "http://127.0.0.1:5000/api/v1/app/validate"
             appID = self.mC.getAppID()
-            r = requests.post(URL,json={"app-id":appID,"verification":newText})
+            r = requests.post(URL,json={"app-id":appID,"verification":newText}, timeout=30)

@@ -657,7 +657,7 @@ class FavoriteSelectionCollection(object):
             return True
         except PermissionError:
             return "Not saved. Permission Error" 
-        except:
+        except Exception:
             return "Not saved Unknown Error"
 
     def load(self,selectionName):
@@ -677,7 +677,7 @@ class FavoriteSelectionCollection(object):
                 return True
             except PermissionError:
                 return "Not removed. Permission Error" 
-            except:
+            except Exception:
                 return "Not removed. Unknown Error"
             
 
@@ -885,16 +885,23 @@ class QuickSelectModel(QAbstractTableModel):
 
             checkedData = selectionData["checkedValues"]
             caseSensitive = self.parent().mC.config.getParam("quick.select.case.sensitive")
-            if caseSensitive: #make each string lowercase and match then
+            #Bug fix (item 49 / report 1.2): these two branches were inverted.
+            #Lowercasing both sides before comparing is CASE-INSENSITIVE matching,
+            #but it used to run when quick.select.case.sensitive was True. The
+            #condition is now negated (in both places) so that the setting means
+            #what its description says. Branch bodies are unchanged.
+            if not caseSensitive: #case-insensitive: lowercase both sides, then match
                 lowerStrLabels = self._inputLabels.str.lower()
                 lowerStrSelectionData = selectionData["checkedValues"].str.lower()
                 boolMatch = lowerStrLabels.isin(lowerStrSelectionData)
-            else: #exact matching
+            else: #case-sensitive: exact matching
                 boolMatch = self._inputLabels.isin(checkedData.values)
             if np.any(boolMatch.values):
                 dataMatched = self._inputLabels[boolMatch]
                 for index, value in  dataMatched.iteritems():
-                    if caseSensitive:
+                    #must match the branch above: lowerStrLabels /
+                    #lowerStrSelectionData only exist on the case-insensitive path
+                    if not caseSensitive:
                         lowerValue = lowerStrLabels.loc[index]
                         findSavedIndex = lowerStrSelectionData[lowerStrSelectionData.values == lowerValue].index.values[0]
                     else:

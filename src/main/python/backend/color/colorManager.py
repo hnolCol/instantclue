@@ -166,9 +166,13 @@ class ColorManager(object):
 
             return None, None, None
 
-    def createColorMapDict(self,uniqueCategories, nanString = None, addNaNLevels = [], as_hex = False, customPalette = False, customPaletteKwargs = {}):
+    def createColorMapDict(self,uniqueCategories, nanString = None, addNaNLevels = None, as_hex = False, customPalette = False, customPaletteKwargs = None):
         ""
 
+        if addNaNLevels is None:
+            addNaNLevels = []
+        if customPaletteKwargs is None:
+            customPaletteKwargs = {}
         if nanString is None:
             nanString = self.sourceData.getNaNString()
         #find number of unique categories
@@ -194,12 +198,14 @@ class ColorManager(object):
         return colorMapDict, layerColorDict
 
 
-    def getCategoricalColorMap(self, dataID, categoricalColumn, userDefinedColors = {}):
+    def getCategoricalColorMap(self, dataID, categoricalColumn, userDefinedColors = None):
         '''
         This is needed for updating the color in scatter plots with same colors
         Retrns a dict of : Categorical level - color
 
         '''
+        if userDefinedColors is None:
+            userDefinedColors = {}
         naString = self.sourceData.getNaNString()
 
         if isinstance(categoricalColumn,str):
@@ -309,9 +315,11 @@ class ColorManager(object):
             return cmap
 
 
-    def replaceNaNInColorMap(self,colorMapDict,additionalNanLevels = []):
+    def replaceNaNInColorMap(self,colorMapDict,additionalNanLevels = None):
         ""
 
+        if additionalNanLevels is None:
+            additionalNanLevels = []
         levelsToNaN = ['nan',' '] + additionalNanLevels
 
         for level in levelsToNaN:

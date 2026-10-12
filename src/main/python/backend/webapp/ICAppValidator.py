@@ -5,8 +5,6 @@ import os
 import requests 
 import json
 import base64
-import base64
-import json 
 
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
@@ -26,13 +24,13 @@ class ICAppValidator(object):
         "Checks in InstantClue Webapp API if id exists alread. Since we create random strings as an id, a collision is possible and should be avoided. The chances are however vereeery looow :) "
         URL = "https://app.instantclue.de/api/v1/app/id/exists"
         try:
-            r = requests.get(URL,params={"app-id":b64EncAppID})
+            r = requests.get(URL,params={"app-id":b64EncAppID}, timeout=30)
             if r.status_code == 200:
                 validID = json.loads(r.json())["valid"] == "True"
                 return validID, False
             else:
                 return False,True
-        except:
+        except Exception:
             return False, True
 
     def copyAppIDToClipboard(self):
@@ -81,7 +79,7 @@ class ICAppValidator(object):
             URL = BASE_URL+"app/validate"
             try:
                 r = requests.get(URL,params={"appID":appID}, timeout=2)
-            except:
+            except Exception:
                 print("Connection error")
                 return
             if r.status_code == 200:
@@ -102,6 +100,7 @@ class ICAppValidator(object):
     def saveAppID(self,appIDPath, appID):
         ""
         #print(appIDPath)
+        os.makedirs(os.path.dirname(appIDPath), exist_ok=True)
         with open(appIDPath,"w") as f:
             f.write(appID)
 
@@ -125,7 +124,7 @@ class ICAppValidator(object):
                 return df["title"].values.tolist()
             else:
                 return []
-        except:
+        except Exception:
             return []
 
     def getChartTextInfo(self, chartDetails, isProtected, password = None):
@@ -137,9 +136,9 @@ class ICAppValidator(object):
                 URL = "https://app.instantclue.de/api/v1/graph/text"
                 if isProtected:
                     encryptPwd = self.encryptStringWithPublicKey(password)
-                    r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd})
+                    r = requests.post(URL,json={"url":str(shortUrl),"pwd":encryptPwd}, timeout=30)
                 else:
-                    r = requests.get(URL,params={"url":shortUrl})
+                    r = requests.get(URL,params={"url":shortUrl}, timeout=30)
                 rJson = r.json()
                 if "success" in rJson and rJson["success"]:
                     print(rJson["success"])
@@ -149,7 +148,7 @@ class ICAppValidator(object):
                     
                 else:
                     self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
-            except:
+            except Exception:
                 self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
 
 
@@ -157,8 +156,8 @@ class ICAppValidator(object):
         ""
         URL = "https://app.instantclue.de/api/v1/graph/protected"
         try:
-            r = requests.get(URL,params={"url":graphURL})
-        except:
+            r = requests.get(URL,params={"url":graphURL}, timeout=30)
+        except Exception:
             self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
         if r.status_code == 200:
             graphIsProtected = not r.json()["protected"] == "false"
@@ -170,13 +169,13 @@ class ICAppValidator(object):
         if appID is not None:
             URL = "https://app.instantclue.de/api/v1/app/graphs"
             try:
-                r = requests.get(URL,params={"appID":appID})
-            except:
+                r = requests.get(URL,params={"appID":appID}, timeout=30)
+            except Exception:
                 self.mC.sendToWarningDialog(infoText="There was an error connecting to the web app and retrieving the data.")
             try:
                 df = pd.read_json(r.json(),orient="records")
 
-            except:
+            except Exception:
                 df = pd.DataFrame()
             return df
         else:
@@ -186,7 +185,7 @@ class ICAppValidator(object):
         ""
         URL = BASE_URL + "/graph"
 
-        r = requests.get(URL,params={"graphID":graphID})
+        r = requests.get(URL,params={"graphID":graphID}, timeout=30)
         if r.status_code == 200:
             jsonData = r.json() 
             print(jsonData)

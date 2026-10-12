@@ -107,7 +107,7 @@ menuBarItems = [
         "name":"Welch-test",
         "funcKey": "compareGroups",
         "dataType": "Numeric Floats",
-        "fnKwargs":{"test":"welch-test"}
+        "fnKwargs":{"test":"Welch-test"} #item 58 (B1): was "welch-test", unknown to the backend (KeyError)
     },
     {
         "subM":"Groupings",
@@ -444,7 +444,6 @@ menuBarItems = [
     {
         "subM":"Filter",
         "name":"Random Row Selection",
-        "funcKey": "applyNumericFilterForSelection",
         "funcKey": "getUserInput",
         "dataType" : "All",
         "fnKwargs" : {"funcKey":"data::randomSelection",
@@ -455,12 +454,11 @@ menuBarItems = [
                       }
     },
     
-    {
-        "subM":"Smoothing",
-        "name":"IIR Filter",
-        "funcKey": "data::transformData",
-        "dataType": "Numeric Floats"
-    },
+    #item 59 (B4): "Smoothing -> IIR Filter" removed. It sent data::transformData,
+    #which routes to DataCollection.transformData - a method that does not exist
+    #(Transformer.transformData exists, but has no IIR/smoothing transformation,
+    #and the menu never supplied the required "transformation" argument). No IIR
+    #filter is implemented anywhere in the code, so the item could never work.
     {
         "subM":"Data Format Transformation",
         "name":"To long format (melt)",
@@ -1565,8 +1563,10 @@ class DataTreeView(QWidget):
         "Returns Selected Data."
         return self.table.getSelectedData()
 
-    def sendToThread(self, funcProps = {}, addSelectionOfAllDataTypes = False, addDataID = False):
+    def sendToThread(self, funcProps = None, addSelectionOfAllDataTypes = False, addDataID = False):
         ""
+        if funcProps is None:
+            funcProps = {}
         if addDataID:
             if not "kwargs" in funcProps:
                 funcProps["kwargs"] = {}
@@ -1582,7 +1582,12 @@ class DataTreeView(QWidget):
 
     def sortLabels(self):
         "Sorts label, first ascending, then descending, then raw order"
-        #how = "ascending"
+        #item 57 (A2): "how" was left unassigned on the third click (reset
+        #branch), raising UnboundLocalError and closing the program. The model's
+        #sort() restores the original order itself when called with the same
+        #direction as the last sort, so the reset branch now passes "descending"
+        #again instead of clearing lastSearchType first.
+        how = "ascending"
         if hasattr(self.table.model(),"lastSearchType"):
             lastSerachType = getattr(self.table.model(),"lastSearchType")
             if lastSerachType is None:
@@ -1590,8 +1595,8 @@ class DataTreeView(QWidget):
             elif lastSerachType == "ascending":
                 how = "descending"
             elif lastSerachType == "descending":
-                #reset view
-                setattr(self.table.model(),"lastSearchType",None)
+                #reset view (original order)
+                how = "descending"
             
         self.table.model().sort(how=how)
         columnDict = self.mC.mainFrames["data"].dataTreeView.getColumns("all")
@@ -1620,13 +1625,15 @@ class DataTreeView(QWidget):
 
         self.showShortcuts = not self.showShortcuts
 
-    def addData(self,X, tooltipData = {} ,dataID = None):
+    def addData(self,X, tooltipData = None ,dataID = None):
         ""
 
+        if tooltipData is None:
+            tooltipData = {}
+        self.table.selectionModel().clear()
         self.table.model().layoutAboutToBeChanged.emit()
         self.table.model().setNewData(X)
         self.table.model().setTooltipdata(tooltipData)
-        self.table.selectionModel().clear()
         self.table.model().layoutChanged.emit()
 
       
@@ -2914,9 +2921,11 @@ class DataTreeViewTable(QTableView):
         else:
             self.mC.sendMessageRequest({"title":"Error..","message":"No Grouping found."})
 
-    def prepareMenuAction(self,funcKey,kwargs = {},addDataID=True,addColumnSelection=True):
+    def prepareMenuAction(self,funcKey,kwargs = None,addDataID=True,addColumnSelection=True):
 
         ""
+        if kwargs is None:
+            kwargs = {}
         try:
             if hasattr(self,funcKey):
                 getattr(self,funcKey)(**kwargs)

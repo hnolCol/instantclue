@@ -158,12 +158,13 @@ class AnalysisSelection(QWidget):
                     if task == "Line from clipboard":
                         try:
                             data = pd.read_clipboard()
-                        except:
+                        except Exception:
                             self.mC.sendMessageRequest({"title":"Error..","message":"No suitable data found in clipboard"})
+                            return #item 58 (B3): used to continue with 'data' unassigned
                     elif task == "Line from file":
                         dlg = QFileDialog(caption="Select File for Line data",
                                 filter = "ICLoad Files (*.txt *.csv *tsv );;Text files (*.txt *.csv *tsv)")
-                        dlg.setFileMode(QFileDialog.ExistingFiles)
+                        dlg.setFileMode(QFileDialog.FileMode.ExistingFiles) #item 58 (B3): PyQt5 name made 'Line from file' fail silently
                         if dlg.exec():
                             fileName = dlg.selectedFiles()[0]
                             data = pd.read_csv(fileName,sep="\t")

@@ -60,8 +60,10 @@ class Message(QFrame):
 
 class Notification(QWidget):
     signNotifyClose = pyqtSignal(str)
-    def __init__(self, parent = None, padding = {"right":50,"top":50}):
+    def __init__(self, parent = None, padding = None):
 
+        if padding is None:
+            padding = {"right":50,"top":50}
         super(QWidget, self).__init__(parent)
        # print(self.parent)
         self.padding = padding

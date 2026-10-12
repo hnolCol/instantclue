@@ -36,7 +36,6 @@ from collections import OrderedDict
 import operator
 import seaborn as sns 
 import itertools
-import numpy as np
 import scipy.stats as st
 from sklearn.neighbors import KernelDensity
 from scipy.spatial.distance import pdist, squareform
@@ -61,7 +60,7 @@ def extractCIFromstring(ciString):
     ""
     try:
         ci = float(re.findall( r'(\d{1,3})%',ciString)[0])/100
-    except:
+    except Exception:
         ci = 0.95
     return ci
 
@@ -1432,7 +1431,7 @@ class PlotterBrain(object):
                 if scaleXAxis:
                     try:
                         tickPos = [float(x.split(splitString)[splitIndex]) for x in colorCategories]
-                    except: 
+                    except Exception: 
                         tickPos = np.arange(nColorCats)
                 else:
                     tickPos = np.arange(nColorCats)
@@ -1552,7 +1551,7 @@ class PlotterBrain(object):
                 if scaleXAxis:
                     try:
                         tickPos = [float(x.split(splitString)[splitIndex]) for x in tickCats]
-                    except: 
+                    except Exception: 
                         tickPos = np.arange(tickCats.size)
                 else:
                     tickPos = np.arange(tickCats.size)
@@ -1661,7 +1660,7 @@ class PlotterBrain(object):
                     if scaleXAxis:
                         try:
                             tickPos = [float(x.split(splitString)[splitIndex]) for x in tickCats]
-                        except: 
+                        except Exception: 
                             tickPos = np.arange(tickCats.size)
                     else:
                         tickPos = np.arange(tickCats.size)
@@ -3384,6 +3383,14 @@ class PlotterBrain(object):
         numericColumnPairs = {}
         axisLabels = {}
         tickLabels = {}
+        #item 46 fix: per-group click-to-stats data (group label, x position, raw
+        #value array), index-aligned within each axisID list. Populated only by
+        #the branches below that build it; branches that don't populate a given
+        #axisID leave interactive click-to-stats inert for that configuration
+        #instead of raising (ICChart.onPress checks for presence before using it).
+        groupNames = {}
+        boxPositions = {}
+        groupValueArrays = {}
 
         NProcesses = self.sourceData.parent.config.getParam("n.processes.multiprocessing")
         splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
@@ -3520,6 +3527,11 @@ class PlotterBrain(object):
                                 interalIDColumnPairs[n][internalID].append(columnPair)
 
                 numericColumnPairs[n] = tuple(columnNames)
+                #item 46 fix: filteredData is index-aligned with groupNames[n]/
+                #boxPositions[n] (both appended together above, per group, incl.
+                #the "Complete" group at the top of this loop) - save it per axis
+                #before the next numericColumn iteration overwrites the list.
+                groupValueArrays[n] = list(filteredData)
                 #plotData[n] = {"x":filteredData}
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
@@ -3645,7 +3657,13 @@ class PlotterBrain(object):
             tickLabels = []
             widthBox= 1/(nColorCats)
             border = widthBox/3
-            
+            #item 46 fix: per-group click-to-stats data for this single axis (id 0),
+            #index-aligned across all three lists so ICChart.onPress can resolve a
+            #click x-position to the nearest group and its raw value array.
+            groupNames[0] = []
+            boxPositions[0] = []
+            groupValueArrays[0] = []
+
             for m,numColumn in enumerate(numericColumns):
 
                 startPos = m if m == 0 else m + (border * m) #add border
@@ -3676,6 +3694,12 @@ class PlotterBrain(object):
                             data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
                         plotData = plotData.join(data)
                         columnNames.extend([xName,numColumn])
+                        #item 46 fix: record this group's click position, label and
+                        #raw (non-jittered, non-NaN) value array for the stats click
+                        #handler - parallel to boxplot's own positions/x arrays.
+                        groupNames[0].append("{}-{}".format(numColumn,colCat) if len(numericColumns) > 1 else str(colCat))
+                        boxPositions[0].append(positions[nColCat])
+                        groupValueArrays[0].append(groupData[numColumn])
                         multiScatterKwargs[0][(xName,numColumn)] = {"color": colorDict[colCat]}
                         internalID = colorGroupsData.loc[colorGroupsData["group"] == colCat]["internalID"].values[0]
                         #saving internal id and color matches with pandas index (to allow easy manipulation)
@@ -3939,6 +3963,13 @@ class PlotterBrain(object):
             "interalIDColumnPairs" : interalIDColumnPairs,
             "colorCategoricalColumn" : colorCategoricalColumn,
             "sizeCategoricalColumn" : colorCategoricalColumn,
+            #item 46 fix: expose per-group click-to-stats data (built above for the
+            #numCatColumns==1 and the "not splitByCats" branches; empty/absent for
+            #other branches, which leaves interactive stats inert there as before)
+            #so ICChart.onPress can support "Compare two groups" tests on swarm plots.
+            "groupNames" : groupNames,
+            "boxPositions" : boxPositions,
+            "groupValueArrays" : groupValueArrays,
             "dataID":dataID}}    
 
     def getColorQuadMeshForHeatmap(self,dataID, colorColumn = None, colorColumnType = None):
@@ -4059,6 +4090,10 @@ class PlotterBrain(object):
             repData = np.repeat(rawData.values,quantiles.size,axis=1)
             repData[repData < quantiles] = np.nan
             sizeData = pd.DataFrame(repData,index=rawData.index)
+        else:
+            #item 61 (B7): sizeData was left unassigned for any other column type,
+            #giving an internal UnboundLocalError instead of an explanation
+            return getMessageProps("Error..","Size encoding in a heatmap requires a numeric (float) column.")
         
         return {"sizeData":sizeData}
 

@@ -28,7 +28,11 @@ headercolors = sns.color_palette("Paired",8,desat=0.75).as_hex()
 
 class PandaTableDialog(QDialog):
 
-    def __init__(self, mainController, df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, filterActive = True, multiSelection = False, modelKwargs = {}, tableKwargs = {}, clippingActive = False, *args, **kwargs):
+    def __init__(self, mainController, df, headerLabel = "Source Data", addToMainDataOption = True, ignoreChanges =  False, filterActive = True, multiSelection = False, modelKwargs = None, tableKwargs = None, clippingActive = False, *args, **kwargs):
+        if modelKwargs is None:
+            modelKwargs = {}
+        if tableKwargs is None:
+            tableKwargs = {}
         super(PandaTableDialog,self).__init__(*args, **kwargs)
         
         self.header = headerLabel
@@ -256,8 +260,12 @@ class PandaTableDialog(QDialog):
 
 class ICLabelDataTableDialog(PandaTableDialog):
     ""
-    def __init__(self,modelKwargs = {},tableKwargs = {},*args,**kwargs):
+    def __init__(self,modelKwargs = None,tableKwargs = None,*args,**kwargs):
         ""
+        if modelKwargs is None:
+            modelKwargs = {}
+        if tableKwargs is None:
+            tableKwargs = {}
         super(ICLabelDataTableDialog,self).__init__(*args,**kwargs, ignoreChanges=True ,addToMainDataOption=False, filterActive=False, multiSelection=True, modelKwargs = modelKwargs,tableKwargs=tableKwargs)
 
     
