@@ -14,7 +14,6 @@ class ICBarplot(ICChart):
     
     def initBarplots(self, onlyForID = None, targetAx = None):
         ""
-        # try:
         for n, barplotProps in self.data["plotData"].items():
             if onlyForID is not None and n != onlyForID:
                 continue
@@ -24,9 +23,6 @@ class ICBarplot(ICChart):
             elif targetAx is not None:
                 barplotProps["color"] = [a.get_facecolor() for a in self.barplotItems[n].patches]
                 targetAx.bar(**barplotProps)
-        # except Exception as e:
-        #     print("ERROR?")
-        #     print(e)
 
     def onDataLoad(self, data):
         ""

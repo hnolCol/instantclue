@@ -638,12 +638,19 @@ class DataCollection(object):
 			dataToConcat.append(valueSubset)
 
 		data = pd.concat(dataToConcat,ignore_index=True)
-		data.to_clipboard(sep=self.parent.config.getParam("export.file.clipboard.separator"))
+		data.to_clipboard(sep=self.getClipboardSeparator())
 		return getMessageProps("Done ..","Quick Select data copied to clipboard. Data might contain duplicated rows.")
 
+	def getClipboardSeparator(self):
+		"""Converts the configured separator to a literal string usable for clipboard export."""
+		sep = self.parent.config.getParam("export.file.clipboard.separator")
+		if sep == sepConverter["space"]:
+			sep = " "
+		return sep
+	
 	def copyDataFrameToClipboard(self,dataID=None,data=None,attachDataToMain = None):
 		""
-		sepForExport=self.parent.config.getParam("export.file.clipboard.separator")
+		sepForExport = self.getClipboardSeparator()
 		if dataID is None and data is None:
 			return {"messageProps":{"title":"Error",
 								"message":"Neither id nor data specified.."}
@@ -806,11 +813,12 @@ class DataCollection(object):
 
 		while evalColumnName in columnList:
 			if "_" in evalColumnName and evalColumnName.split("_")[-1].isdigit():
-				removeChar = len(evalColumnName.split("_")[-1])
-				count += 1
-				evalColumnName = evalColumnName[:-removeChar] + "{:02d}".format(count)
+				baseName, suffix = evalColumnName.rsplit("_",1)
+				count = int(suffix) + 1
+				evalColumnName = "{}_{:02d}".format(baseName,count)
 			else:
 				evalColumnName = "{}_{:02d}".format(evalColumnName, count)
+				count += 1
 	
 		return evalColumnName
 
@@ -1357,23 +1365,15 @@ class DataCollection(object):
 			# if bandwidth is None:
 			# 	bandwidth = data.index.size**(-1/(data.columns.size+4)) 
 			data_noNan = data.dropna()
+			if data_noNan.index.size == 0:
+				return np.array([]), data_noNan.index
 			if data.shape[1] == 1:
 				X = data_noNan.values.flatten()
 			else:
 				X = data_noNan.values
-
 			hist, bin_edges = np.histogram(X,bins='auto',density=True)
-	
 			kdeData = np.array([hist[-1] if idx == hist.size else hist[idx] for idx in np.digitize(X,bin_edges,right=True)])
-			
-			return kdeData, data.index
-			print(kdeData)
-			kde = KernelDensity(bandwidth=bandwidth,
-                        kernel=kernel, algorithm='ball_tree')
-			kde.fit(data) 
-			kdeData = np.exp(kde.score_samples(data))
-			
-			return kdeData, data.index
+			return kdeData, data_noNan.index
 		return None, None
 		
 	def replaceColumns(self,dataID,columnNames,data):

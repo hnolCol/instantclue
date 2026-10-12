@@ -1178,14 +1178,13 @@ class StatisticCenter(object):
       
         with Pool(NProcesses) as p:
             rPool = p.starmap(p_anova,[(indexDf,"value",groupings.tolist(),idx) for idx,indexDf in groupedDF])
-            idx, data = zip(*[r[0] for r in rPool if r is not None and r[0] is not None])
+            validResults = [r[0] for r in rPool if r is not None and r[0] is not None]
+        if len(validResults) > 0:
+            idx, data = zip(*validResults)
             sourceName = rPool[0][1]
             columnNames = ["p-unc ({})".format(idx) for idx in sourceName.values]
-
-        if len(rPool) > 0:
             df = pd.DataFrame(data,index=idx,columns=columnNames)
             return self.sourceData.joinDataFrame(dataID,df)
-    
         else:
             return getMessageProps("Error..","All performed tests did not yield a valid result. No data attached.")
     

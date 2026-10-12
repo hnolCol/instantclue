@@ -209,7 +209,6 @@ class Normalizer(object):
         withinGrouping  = self.sourceData.parent.grouping.getGrouping(withinGroupingName)
         data = self.sourceData.dfs[dataID]
         r = OrderedDict()
-        print(toGroups)
         for specGroup in toGroups:
             if specGroup in grouping:
                 specGroupColumnNames = grouping[specGroup]
