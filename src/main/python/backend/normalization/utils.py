@@ -4,7 +4,7 @@ class Normalization(object):
 
 
         self.ZScoreRow = 1 
-        self.01Row = 2 
+        self.Row01 = 2 
 
 
 

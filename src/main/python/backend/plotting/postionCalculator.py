@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
+from scipy.stats import norm
 from ..utils.stringOperations import getRandomString
 
 
@@ -34,7 +35,7 @@ def _lv_box_ends(vals, k_depth="tukey",trust_alpha=0.05,):
         elif k_depth == 'proportion':
             k = int(np.log2(n)) - int(np.log2(n * p)) + 1
         elif k_depth == 'trustworthy':
-            point_conf = 2 * qf((1 - trust_alpha / 2)) ** 2
+            point_conf = 2 * norm.ppf(1 - trust_alpha / 2) ** 2
             k = int(np.log2(n / point_conf)) + 1
         else:
             k = int(k_depth)  # allow having k as input

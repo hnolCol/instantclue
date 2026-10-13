@@ -1591,26 +1591,26 @@ class DataCollection(object):
 		
 		for n,category in enumerate(flatSplitData):
 			
-			regExp = categoricalFilter.build_regex('',
-												[category],
-												splitString = sepString)
+				regExp = self.categoricalFilter.buildRegex([category],
+														withSeparator = True,
+														splitString = sepString)
 			
-			boolIndicator = self.df[categoricalColumn[0]].str.contains(regExp)
-			dfSubset = self.df.loc[boolIndicator,:]
+				boolIndicator = self.df[categoricalColumn[0]].str.contains(regExp)
+				dfSubset = self.df.loc[boolIndicator,:]
 			
-			if aggregate == 'median':
-				aggData = dfSubset[numericColumns].median(axis=0)
-			elif aggregate == 'mean':
-				aggData = dfSubset[numericColumns].mean(axis=0)
-			elif aggregate == 'sum':
-				aggData = dfSubset[numericColumns].sum(axis=0)
+				if aggregate == 'median':
+					aggData = dfSubset[numericColumns].median(axis=0)
+				elif aggregate == 'mean':
+					aggData = dfSubset[numericColumns].mean(axis=0)
+				elif aggregate == 'sum':
+					aggData = dfSubset[numericColumns].sum(axis=0)
 
 			
-			if progressBar is not None and n % 30 == 0:
-				progressBar.update_progressbar_and_label(n/nUniqueCats * 100,
+				if progressBar is not None and n % 30 == 0:
+					progressBar.update_progressbar_and_label(n/nUniqueCats * 100,
 											'Found {} categories .. {}/{}'.format(nUniqueCats,n,nUniqueCats))
 			
-			collData.append(pd.Series(np.append(aggData,np.array(category))))
+				collData.append(pd.Series(np.append(aggData,np.array(category))))
 				
 		df = df.append(collData,ignore_index=True)
 		df.columns = numericColumns + categoricalColumn
@@ -1661,7 +1661,7 @@ class DataCollection(object):
 		===========
 		Evaluated Column name
 		'''
-		columnName = get_elements_from_list_as_string(numericColumnList, addString =  'valid_values: ')
+		columnName = 'valid_values: ' + mergeListToString(numericColumnList)
 		columnNameEval = self.evaluate_column_name(columnName)
 		validValues = self.df[numericColumnList].count(axis='columns')
 		self.df[columnNameEval] = validValues

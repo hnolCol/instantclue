@@ -7,7 +7,7 @@ from collections import OrderedDict
 
 from numpy import array
 from numpy import mean
-from numpy import cov
+from numpy import cov, eig
 
 
 class ICPCA(object):
