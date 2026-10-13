@@ -454,7 +454,7 @@ class QuickSelect(QWidget):
                 self.mC.sendRequestToThread(funcProps)
 
             else:
-                sepForExport=self.parent().mC.config.getParam("export.file.clipboard.separator")
+                sepForExport=self.parent().mC.data.getClipboardSeparator()
                 selectionData.to_clipboard(sep=sepForExport)
 
             self.mC.sendMessageRequest({"title":"Done ..","message":"Selection copied to clipboard."})

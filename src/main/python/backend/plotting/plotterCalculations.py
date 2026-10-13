@@ -686,12 +686,14 @@ class PlotterBrain(object):
             plotData["height"] = [np.mean(x) for x in data]
             plotData["width"] = xWidth * (self.sourceData.parent.config.getParam("barplot.width.scale"))
             plotData["color"] = faceColors[n]
+            yerrorValues = None
             if "CI" in self.barplotError:
                 ci = extractCIFromstring(self.barplotError)
                 yerrorValues = [CI(a.values,ci) for a in data]
             elif self.barplotError == "Std":
                 yerrorValues = [np.std(a.values) for a in data]
-            plotData["yerr"] = None if all(not np.isfinite(x) for x in yerrorValues) else yerrorValues
+            if yerrorValues is not None:
+                plotData["yerr"] = None if all(not np.isfinite(x) for x in yerrorValues) else yerrorValues
             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
 
             plotData["x"] = boxPositions[n] 
