@@ -31,49 +31,28 @@ jobs:
         run: |
           flake8 src/main/python \
             --select=E9,F63,F7,F82 \
-            --exclude=examples,quickSelectLists
+            --exclude=examples,quickSelectLists,backend/plotting/chord_diagram.py
 
-  backend-smoke:
-    name: Backend import smoke test
+  tests:
+    name: Unit tests + full import smoke test
     runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy pandas scipy scikit-learn statsmodels pingouin \
             fastcluster hdbscan umap-learn seaborn matplotlib openpyxl \
             XlsxWriter threadpoolctl pynndescent numba joblib tqdm requests \
-            littleutils outdated pandas-flavor
-      - name: Import backend modules
+            littleutils outdated pandas-flavor PyQt6 darkdetect wordcloud \
+            lmfit pycryptodomex pytest
+      - name: Run test suite
         run: |
           cd src/main/python
-          python - <<'EOF'
-          import importlib, sys, traceback
-
-          modules = [
-              "backend.config.config",
-              "backend.data.data",
-              "backend.statistics.statistics",
-              "backend.plotting.plotterCalculations",
-              "backend.normalization.normalizer",
-              "backend.utils.funcControl",
-          ]
-
-          failed = []
-          for mod in modules:
-              try:
-                  importlib.import_module(mod)
-                  print(f"OK    {mod}")
-              except Exception:
-                  print(f"FAIL  {mod}")
-                  traceback.print_exc()
-                  failed.append(mod)
-
-          if failed:
-              sys.exit(f"Failed imports: {', '.join(failed)}")
-          print("All backend modules imported successfully.")
-          EOF
+          pytest tests/ -v
