@@ -7,8 +7,8 @@ from tokenize import group
 from numba.np.ufunc import parallel
 import numpy as np
 from numpy.core import numeric
-from numpy.lib.histograms import histogram 
-import pandas as pd 
+from numpy.lib.histograms import histogram
+import pandas as pd
 
 from matplotlib.colors import to_hex
 #backend imports
@@ -34,7 +34,7 @@ from matplotlib import rcParams
 
 from collections import OrderedDict
 import operator
-import seaborn as sns 
+import seaborn as sns
 import itertools
 import numpy as np
 import scipy.stats as st
@@ -54,7 +54,7 @@ def spreadSwarm(kde):
     ""
     A = np.zeros(shape=(kde.size,1))
     for i in prange(kde.size):
-        A[i,0] = np.random.uniform(-kde[i]*0.85,kde[i]*0.85) 
+        A[i,0] = np.random.uniform(-kde[i]*0.85,kde[i]*0.85)
     return A
 
 def extractCIFromstring(ciString):
@@ -91,16 +91,16 @@ def lowessFit(X,it=None,frac=None,*args,**kwargs):
         yfit,ymin,ymax = loess_fit(x,y,span=frac)
         #lowessLine = lowess(y,x, it=it, frac=frac,*args,**kwargs)
         lowessLine = np.empty(shape=(x.size,4))
-        lowessLine[:,0] = x 
+        lowessLine[:,0] = x
         lowessLine[:,1] = yfit
         lowessLine[:,2] = ymin
         lowessLine[:,3] = ymax
-        return lowessLine 
+        return lowessLine
 
 def buildLabelData(axisInts, numericColumns, groupColorDict, labelData):
     ""
     for numericColumn, nAx in zip(numericColumns,axisInts):
-        
+
         tKwargs = {
             "color" : groupColorDict[numericColumn] if numericColumn in groupColorDict else "black",
             "s" : numericColumn,
@@ -109,10 +109,10 @@ def buildLabelData(axisInts, numericColumns, groupColorDict, labelData):
             "x" : 0.5,
             "y" : 0.5
             }
-        
+
         labelData[nAx] = tKwargs
-        
-    
+
+
     return labelData
 
 def build2DHistogramData(axisInts, columnPairs, data, histogramData):
@@ -120,9 +120,9 @@ def build2DHistogramData(axisInts, columnPairs, data, histogramData):
         ""
         for nA in axisInts.flatten():
             numericPairs = list(columnPairs[nA])
-            
+
             XY  = data[numericPairs].dropna().values
-            
+
             H, xedges, yedges = np.histogram2d(XY[:,0], XY[:,1], bins=(25, 25))
             meshX, meshY = np.meshgrid(xedges, yedges)
             histogramData[nA] = {
@@ -176,7 +176,7 @@ def buildScatterMatrix(data,
                     spearmanCorrMatrix,
                     lowessKwargs):
     ""
-    backgroundColors = {} 
+    backgroundColors = {}
     histogramData = {}
     linregressFit = {}
     lowessData = {}
@@ -205,8 +205,8 @@ def buildScatterMatrix(data,
     if "label" in plotType:
         labelData = buildLabelData(axisInts,numericColumns,groupColorDict,labelData)
 
-    if (addPearson or addSpearman) and (addToPlotType == "all types" or addToPlotType == plotType) and plotType not in ["label-kde","label","kde"]:            
-                
+    if (addPearson or addSpearman) and (addToPlotType == "all types" or addToPlotType == plotType) and plotType not in ["label-kde","label","kde"]:
+
             labelData = buildCorrelationLabelData(axisInts,
                             columnPairs,
                             labelData,
@@ -222,7 +222,7 @@ def _findBwByGridSearch(x,minBW,maxBW,numCrossValidations=5,kernel="gaussian"):
                 {'bandwidth': np.linspace(minBW, maxBW, 30)},
                 cv=numCrossValidations) # 5-fold cross-validation
     grid.fit(x)
-    
+
     return grid.best_params_["bandwidth"]
 
 def distKDEData(kdeData):
@@ -232,16 +232,16 @@ def distKDEData(kdeData):
 
 
     return  np.random.uniform(low=kdeData*(-0.75),high=kdeData*0.75,size=kdeData.size)
-   
+
 
 def buildKdeData(axisInts,data,numericColumns,kdeData,bw,kernel,bwGridSearch,logDensity,gridMin,gridMax,numCVs):
     ""
 
     minMaxValues = np.nanquantile(data[numericColumns].values, q = [0.0,1.0],axis=0)
-    
+
     for n,nAx in enumerate(axisInts):
         x = data[numericColumns[n]].dropna().values.reshape(-1,1)
-    
+
         #find x limits
         minValue,maxValue = minMaxValues[:,n]
         offSet = (maxValue - minValue) * 0.1
@@ -251,15 +251,15 @@ def buildKdeData(axisInts,data,numericColumns,kdeData,bw,kernel,bwGridSearch,log
         #caluclate kde and get y values
         xx = np.linspace(minValue,maxValue,num=500).reshape(-1,1)
         if bwGridSearch:
-            
+
             bw = _findBwByGridSearch(x,gridMin,gridMax,numCVs)
-        
-        
+
+
         kde = KernelDensity(bandwidth=bw, kernel=kernel, algorithm='ball_tree').fit(x)
         y = kde.score_samples(xx)
         if not logDensity:
             y = np.exp(y)
-        
+
         #find y limits
         yMax = np.max(y)
         yMin = np.min(y)
@@ -271,7 +271,7 @@ def buildKdeData(axisInts,data,numericColumns,kdeData,bw,kernel,bwGridSearch,log
 
 def linRegress(X):
     X = X.dropna()
-    
+
     x = X.iloc[:,0].values
     y = X.iloc[:,1].values
 
@@ -284,12 +284,12 @@ def linRegress(X):
 def kdeCalc(X, bw = None, kernel = "gaussian", widthBox=1, addToX=0, numColumn = "Col", defaultPos = 0):
     xName = "x({})".format(numColumn)
     if X.index.size > 2:
-        
+
         if bw is None:
-            bw = X.index.size**(-1/(X.columns.size+4)) 
+            bw = X.index.size**(-1/(X.columns.size+4))
         kde = KernelDensity(bandwidth=bw,
             kernel=kernel, algorithm='ball_tree')
-        kde.fit(X.values) 
+        kde.fit(X.values)
         kdeData = np.exp(kde.score_samples(X.values))
 
         allSame = np.all(kdeData == kdeData[0])
@@ -305,7 +305,7 @@ def kdeCalc(X, bw = None, kernel = "gaussian", widthBox=1, addToX=0, numColumn =
         data = pd.DataFrame(kdeData, index = X.index, columns=[xName])
     else:
 
-        
+
         kdeData = np.array([0]) +  defaultPos
         data = pd.DataFrame(kdeData ,index=X.index, columns = [xName])
 
@@ -376,7 +376,7 @@ class PlotterBrain(object):
         self.histogramLinewidth = 1
         self.histogramSortCategories = False
         self.countTransform = "none"
-        
+
 
     def figToClipboard(self,figure):
         ""
@@ -391,7 +391,7 @@ class PlotterBrain(object):
         return funcProps
         #QApplication.clipboard().setImage(QImage.fromData(buf.getvalue()))
         #self.figure.savefig(buf,format="png")
-        
+
         # buf.close()
 
 
@@ -404,15 +404,15 @@ class PlotterBrain(object):
                 width = 0.8
                 x0 = np.linspace(0,nNumCol-1, num = nNumCol) - width/2
                 return x0,width
-            
+
     def getPlotProps(self, dataID, numericColumns, categoricalColumns = None, plotType = "scatter", **kwargs):
         ""
 
         self.numericColumns = numericColumns
         self.categoricalColumns = categoricalColumns
         self.plotType = plotType
-        with threadpool_limits(limits=1, user_api='blas'): 
-            
+        with threadpool_limits(limits=1, user_api='blas'):
+
             graphData = getattr(self,plotFnDict[plotType])(dataID,numericColumns,categoricalColumns,**kwargs)
             graphData["plotType"] = plotType
             return graphData
@@ -426,7 +426,7 @@ class PlotterBrain(object):
 
         if len(numericColumns) > 0 and len(categoricalColumns) == 0:
             print("numeric count plot")
-            #visualize missing data using the countplot 
+            #visualize missing data using the countplot
 
             return getMessageProps("Error..","Not yet implemented.")
 
@@ -441,10 +441,10 @@ class PlotterBrain(object):
             for groupName, groupData in groupSizes.groupby(by=categoricalColumn,sort=False):
                 c = groupData["counts"].sum()
                 totalCountData.append((groupName,c))
-       
+
         if groupbyCatColumns.ngroups > 30:
             return getMessageProps("Error..","More than 30 unique categories found. This plot type is not appropiate for so many categories.")
-    
+
         colorGroups["group"] = categoricalColumns
         colorGroups["color"] = colors
         colorGroups["internalID"] = [getRandomString() for _ in categoricalColumns]
@@ -462,15 +462,15 @@ class PlotterBrain(object):
         maxCountValue = np.max(yCountValues)
         yTicksPoints = np.arange(numUniqueValues)
         #get facotrs for unique cats
-        factors = OrderedDict() 
+        factors = OrderedDict()
         for n, catCol in enumerate(categoricalColumns):
             codes, _ = groupSizes[catCol].factorize()
             if n == 0:
-                factors[catCol] = codes 
+                factors[catCol] = codes
             else:
                 maxFactors = np.max([v for v in factors.values()]) + 1
-                codes = codes + maxFactors 
-                factors[catCol] = codes 
+                codes = codes + maxFactors
+                factors[catCol] = codes
         lines = {}
         hoverData = {}
         for idx in groupSizes.index:
@@ -492,9 +492,9 @@ class PlotterBrain(object):
             "rawTotalCounts" : [x[1] for x in totalCountData],
             "tickColors" : tickColors,
             "plotData" : {
-                    "bar-counts" : 
+                    "bar-counts" :
                             {"x":xCountValues,"height" : yCountValues},
-                    "total-bar-count" : 
+                    "total-bar-count" :
                             {"width" : [x[1] for x in totalCountData], "y" : np.arange(len(totalCountData))},
                     "lineplot": lines},
             "axisLimits" : {0:{"xLimit" : [-0.5,xLimitMax-0.5], "yLimit" : [0,maxCountValue+0.01*maxCountValue]},
@@ -508,8 +508,8 @@ class PlotterBrain(object):
             "colorCategoricalColumn" : "Categorical Columns",
             "dataColorGroups": colorGroups,
             "chartData" : groupSizes
- 
-            
+
+
         }}
 
     def getClusterLineplots(self,clusterLabels, data, numericColumns, columnName,*args,**kwargs):
@@ -521,7 +521,7 @@ class PlotterBrain(object):
         for n, (clusterLabel, clusterData) in enumerate(groupby):
             plotData[n] = {}
             quickSelect[n] = {}
-            plotData[n]["segments"] = [list(zip(xValues,data.loc[idx,:].values.flatten())) for idx in clusterData.index] 
+            plotData[n]["segments"] = [list(zip(xValues,data.loc[idx,:].values.flatten())) for idx in clusterData.index]
             quickSelect[n]["positions"] = np.arange(len(numericColumns))
             quickSelect[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns]
         return plotData, quickSelect, groupby
@@ -532,13 +532,13 @@ class PlotterBrain(object):
         quickSelect = {}
         for n, (clusterLabel, clusterData) in enumerate(clusterLabels.groupby(columnName,sort=False)):
             plotData[n] = {}
-            plotData[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns] 
+            plotData[n]["x"] = [data.loc[clusterData.index,colName] for colName in data.columns]
             plotData[n]["patch_artist"] = True
             plotData[n]["positions"] = np.arange(len(numericColumns))
         quickSelect = plotData.copy()
         return plotData, quickSelect
-           
-            
+
+
     def getNumericColorMappingGroupNames(self, maxV,q75,median,q25,minV):
         ""
         groupNames = ["Max ({})".format(getReadableNumber(maxV)),
@@ -551,7 +551,7 @@ class PlotterBrain(object):
     def getClusterProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
         clusterCenters = None
-        #get config 
+        #get config
         config = self.sourceData.parent.config
         #get cluster method
         method = config.getParam("clusterplot.method")
@@ -566,7 +566,7 @@ class PlotterBrain(object):
         columnName = "C({})".format(method)
         dataMinValue, dataMaxValue = np.nanquantile(data.values.flatten(),q=[0,1])
         clusterLabels = pd.DataFrame(["C({})".format(x) for x in clusterLabels.values.flatten()], index=clusterLabels.index,columns=[columnName])
-        
+
         numNumericColumns = len(numericColumns)
 
         if method in ["kmeans","Birch"] and config.getParam("clusterplot.show.cluster.center"):
@@ -585,7 +585,7 @@ class PlotterBrain(object):
             extraLines = {}
         #print(clusterLabels)
         uniqueClusters = clusterLabels[columnName].unique()
-        nClusters = uniqueClusters.size 
+        nClusters = uniqueClusters.size
         displayDistanceByColor = config.getParam("clusterplot.lineplot.color.distance") and method in ["kmeans","Birch"] and plottype == "lineplot"
         #print(uniqueClusters)
         #print(nClusters)
@@ -596,7 +596,7 @@ class PlotterBrain(object):
             faceColors = dict([(n,[colorMap[uniqueCluster]] * numNumericColumns) for n,uniqueCluster in enumerate(uniqueClusters)])
 
         elif plottype == "lineplot":
-            
+
             plotData, qSData, groupby = self.getClusterLineplots(clusterLabels,data,numericColumns,columnName)
             if displayDistanceByColor:
                 faceCs = []
@@ -613,13 +613,13 @@ class PlotterBrain(object):
                     X = distanceMeasures.loc[clusterData.index,n].values
                     colorArray, _  = self.sourceData.colorManager.matchColorsToValues(X,"Spectral",vmin=minValue,vmax=maxValue)
                     faceCs.append((n,colorArray))
-                
+
                 faceColors = dict(faceCs)#dict([(n,colorMap[uniqueCluster]) ])
 
             else:
 
                 faceColors = dict([(n,colorMap[uniqueCluster]) for n,uniqueCluster in enumerate(uniqueClusters)])
-        
+
         axisPositions = getAxisPosition(nClusters,maxCol=self.maxColumns)
         axisLabels = dict([(n,{"x":"","y":"Value"}) for n in range(nClusters)])#
         axisTitles = dict([(n,"{} n:{}".format(uniqueCluster,np.sum(clusterLabels[columnName] == uniqueCluster))) for n,uniqueCluster in enumerate(uniqueClusters)])
@@ -640,8 +640,8 @@ class PlotterBrain(object):
             colorGroups["color"] = list(colorMap.values())
             colorGroups["internalID"] = [getRandomString() for _ in range(len(colorMap))]
 
-        
-       
+
+
 
         return {"data":{
             "plotType" : plottype,
@@ -678,9 +678,9 @@ class PlotterBrain(object):
         colorCategoricalColumn, \
         xWidth, axisLabels, axisLimits, axisTitles, groupNames, verticalLines, groupedPlotData  = calculatePositions(dataID,self.sourceData,numericColumns,categoricalColumns,self.maxColumns,splitByCategories= splitByCats)
 
-        
+
         filteredData = OrderedDict()
-        hoverData = OrderedDict() 
+        hoverData = OrderedDict()
         for n,plotData in plotData.items():
             data = plotData["x"]
             hoverData[n] = {"x" : data}
@@ -695,7 +695,7 @@ class PlotterBrain(object):
             plotData["yerr"] = None if all(not np.isfinite(x) for x in yerrorValues) else yerrorValues
             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
 
-            plotData["x"] = boxPositions[n] 
+            plotData["x"] = boxPositions[n]
             filteredData[n] = plotData
 
         return {"data":{
@@ -749,7 +749,7 @@ class PlotterBrain(object):
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             plotData = {0:[]}
             colorCategoricalColumn = categoricalColumns[0]
-            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)            
+            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)
            # colorList = self.sourceData.colorManager.getNColorsByCurrentColorMap(N=len(groupBy.keys()))
             colors,_ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
             for groupName, groupData in data.groupby(by=categoricalColumns[0],sort=False):
@@ -762,8 +762,8 @@ class PlotterBrain(object):
                 if maxQGroup > maxQ:
                     maxQ = maxQGroup
             nNumCol = len(numericColumns)
-            marginY = np.sqrt(minQ**2 + maxQ**2) * 0.05  
-            marginX = 0.05*(nNumCol-1)  
+            marginY = np.sqrt(minQ**2 + maxQ**2) * 0.05
+            marginX = 0.05*(nNumCol-1)
             axisLimits = {0:{"xLimit":[-marginX,len(numericColumns)-(1-marginX)],"yLimit":[minQ-marginY,maxQ+marginY]}}
             tickPositions = {0:np.arange(nNumCol)}
             tickLabels = {0:numericColumns}
@@ -776,16 +776,16 @@ class PlotterBrain(object):
 
         elif len(categoricalColumns) == 2:
             subplotBorders = dict(wspace=0.10, hspace = 0.1,bottom=0.05,right=0.95,top=0.95)
-            splitCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1]) 
+            splitCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[1])
             axisPositions = getAxisPosition(splitCategories.size,maxCol=self.maxColumns)
             plotData = dict([(n,[]) for n in axisPositions.keys()])
 
             colorCategoricalColumn = categoricalColumns[0]
-            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)            
+            colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)
            # colorList = self.sourceData.colorManager.getNColorsByCurrentColorMap(N=len(groupBy.keys()))
             colors,_ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
-            hoverData = {} 
-            
+            hoverData = {}
+
             for n, (axisName,axisData) in enumerate(data.groupby(by=categoricalColumns[1],sort=False)):
                 #n = axis number
                 hoverData[n] = axisData
@@ -800,9 +800,9 @@ class PlotterBrain(object):
                         maxQ = maxQGroup
 
                 nNumCol = len(numericColumns)
-                marginY = np.sqrt(minQ**2 + maxQ**2) * 0.05  
-                marginX = 0.05*(nNumCol-1) 
-                 
+                marginY = np.sqrt(minQ**2 + maxQ**2) * 0.05
+                marginX = 0.05*(nNumCol-1)
+
                 axisLimits = dict([(n,{"xLimit":[-marginX,len(numericColumns)-(1-marginX)],
                                        "yLimit":[minQ-marginY,maxQ+marginY]}) for n in axisPositions.keys()])
                 tickPositions = dict([(n,np.arange(nNumCol)) for n in axisPositions.keys()])
@@ -812,7 +812,7 @@ class PlotterBrain(object):
                 colorGroups["group"] = colorCategories
                 colorGroups["internalID"] = [getRandomString() for n in range(colorCategories.size)]
 
-                
+
 
 
 
@@ -843,7 +843,7 @@ class PlotterBrain(object):
         subplotBorders = dict(wspace=0.175, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
         axisPositions = getAxisPosition(len(numericColumns),maxCol=self.maxColumns)
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-        
+
         if len(categoricalColumns) == 0:
 
             colors = self.sourceData.colorManager.getNColorsByCurrentColorMap(len(numericColumns))
@@ -855,11 +855,11 @@ class PlotterBrain(object):
                     histData = data[numCol].replace([np.inf, -np.inf], np.nan).dropna()
                 if histData.empty:
                         continue
-                hist, bins = np.histogram(histData.values, 
-                                            bins=self.histogramBins, 
+                hist, bins = np.histogram(histData.values,
+                                            bins=self.histogramBins,
                                             density=self.histogramDensity)
                 width = 0.95 * (bins[1] - bins[0])
-                
+
                # center = (bins[:-1] + bins[1:]) / 2
                 if self.histogramCumulative:
                     hist = np.cumsum(hist)
@@ -868,9 +868,9 @@ class PlotterBrain(object):
                 if self.histogramHisttype == "bar":
                     patches[n] = [{
                             "p":dict(
-                                xy = (binStart,0), 
-                                width= width, 
-                                height= hist[m], 
+                                xy = (binStart,0),
+                                width= width,
+                                height= hist[m],
                                 facecolor = colors[n],
                                 linewidth = 0.2,
                                 edgecolor = "black"),
@@ -889,10 +889,10 @@ class PlotterBrain(object):
                                         ),
                                     "type":"Polygon",
                                     "internalID" : internalIDs[n]}]
-                
+
                 colorGroups["color"] = colors
                 colorGroups["group"] = numericColumns
-                colorGroups["internalID"] = internalIDs 
+                colorGroups["internalID"] = internalIDs
                 colorCategoricalColumn = "Numeric Columns"
                 minHist, maxHist = np.min(hist), np.max(hist)
                 xMargin = np.sqrt(bins[-1]**2 + bins[0]**2) * 0.02
@@ -900,16 +900,16 @@ class PlotterBrain(object):
                 axisLimits[n] = {
                     "xLimit":(bins[0]-xMargin ,bins[-1]+xMargin),
                     "yLimit":(0,maxHist + yMargin)}
-                
+
         elif len(categoricalColumns) > 0:
             colorCategoricalColumn = "\n".join(categoricalColumns)
             groupby = data.groupby(by=categoricalColumns, sort=self.histogramSortCategories)
             colorCategories = list(groupby.groups.keys()) #self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = colorCategoricalColumn)
             internalIDs = OrderedDict([(colorCat,getRandomString()) for colorCat in colorCategories])
-            colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories, 
-                                                            as_hex=True, 
+            colors, _ = self.sourceData.colorManager.createColorMapDict(colorCategories,
+                                                            as_hex=True,
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)*len(categoricalColumns)],)
-            
+
             for n,numCol in enumerate(numericColumns):
                 minHist, maxHist = np.inf, -np.inf
                 if self.histogramLog:
@@ -928,8 +928,8 @@ class PlotterBrain(object):
                     if histData.empty:
                         continue
                     hist, bins = np.histogram(
-                                histData.values, 
-                                bins=self.histogramBins, 
+                                histData.values,
+                                bins=self.histogramBins,
                                 density=self.histogramDensity,
                                 range = (histRangeMin, histRangeMax))
                     width = 0.95 * (bins[1] - bins[0])
@@ -941,9 +941,9 @@ class PlotterBrain(object):
 
                         histPatches = [{
                                 "p":dict(
-                                    xy = (binStart,0), 
-                                    width= width, 
-                                    height= hist[m], 
+                                    xy = (binStart,0),
+                                    width= width,
+                                    height= hist[m],
                                     facecolor = colors[groupName],
                                     linewidth = 0.2,
                                     edgecolor = "black",
@@ -963,7 +963,7 @@ class PlotterBrain(object):
                                             facecolor = "None"
                                             ),
                                         "type" : "Polygon",
-                                        "internalID" : internalIDs[groupName]}]    
+                                        "internalID" : internalIDs[groupName]}]
                     if n in patches:
                         p = patches[n]
                         patches[n] = p + histPatches
@@ -976,17 +976,17 @@ class PlotterBrain(object):
                         minHist = minHistCol
                     if maxHistCol > maxHist:
                         maxHist = maxHistCol
-                    
+
                     xMargin = np.sqrt(bins[-1]**2 + bins[0]**2) * 0.02
                     yMargin = np.sqrt(minHist**2 + maxHist**2) * 0.02
 
                     axisLimits[n] = {
                         "xLimit":(bins[0]-xMargin ,bins[-1]+xMargin),
                         "yLimit":(0,maxHist + yMargin)}
-                    
+
 
             colorGroups["color"] = colors.values()
-            colorGroups["group"] = colorCategories 
+            colorGroups["group"] = colorCategories
             colorGroups["internalID"] = internalIDs.values()
 
 
@@ -1001,7 +1001,7 @@ class PlotterBrain(object):
             "colorCategoricalColumn" : colorCategoricalColumn,
             "hoverData" : hoverData
         }}
-                        
+
 
     def createSteppedHistoValues(self, bins, hist):
         ""
@@ -1009,11 +1009,11 @@ class PlotterBrain(object):
         x = np.append([bins[0]],x).reshape(-1,1)
         y = np.repeat(hist,2)
         y = np.append(y,[hist[-1]]).reshape(-1,1)
-        
+
         return np.append(x,y,axis=1)
 
     def getViolinProps(self,dataID,numericColumns, categoricalColumns,*args,**kwargs):
-        ""    
+        ""
         # axisPostions = dict([(n,[1,1,n+1]) for n in range(1)])
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
 
@@ -1037,20 +1037,20 @@ class PlotterBrain(object):
                                                                                 numericColumns,
                                                                                 categoricalColumns,
                                                                                 self.maxColumns,
-                                                                                splitByCategories= splitByCats)        
+                                                                                splitByCategories= splitByCats)
         # xLabel = ""
 
         filteredData = OrderedDict()
-        medianData = OrderedDict() 
-        minMaxLine = OrderedDict() 
+        medianData = OrderedDict()
+        minMaxLine = OrderedDict()
         quantileLine = OrderedDict()
-        hoverData = OrderedDict() 
+        hoverData = OrderedDict()
 
         for n,plotData in plotData.items():
             data = plotData["x"]
             plotData["widths"] = xWidth
             plotData["dataset"] = [x.values for x in data]
-            
+
             plotData["showmeans"] = self.sourceData.parent.config.getParam("violin.show.means")
             plotData["positions"] = violinPositions[n]
             plotData["showextrema"] = self.sourceData.parent.config.getParam("violin.show.extrema")
@@ -1089,7 +1089,7 @@ class PlotterBrain(object):
 
     def getBoxenProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         """
-        Part of this code was adapted from the great seaborn package! 
+        Part of this code was adapted from the great seaborn package!
         """
         def height(b):
                 return b[1] - b[0]
@@ -1098,7 +1098,7 @@ class PlotterBrain(object):
             rect = dict(
                     xy = (x - widths * w / 2, b[0]),
                     width = widths * w,
-                    height = height(b), 
+                    height = height(b),
                     fill=True
                     )
             return rect
@@ -1116,13 +1116,13 @@ class PlotterBrain(object):
                                                                     self.sourceData,
                                                                     numericColumns,
                                                                     categoricalColumns,
-                                                                    self.maxColumns, 
+                                                                    self.maxColumns,
                                                                     splitByCategories = splitByCats)
-       
+
         rectData = OrderedDict()
-        hoverData = OrderedDict() 
+        hoverData = OrderedDict()
         meanData = OrderedDict()
-        positionData = OrderedDict() 
+        positionData = OrderedDict()
         outlierData = OrderedDict()
         widthFn = self.sourceData.parent.config.getParam("boxen.width.calculation")
         xWidth = xWidth * self.sourceData.parent.config.getParam("boxenplot.width.scale")
@@ -1146,7 +1146,7 @@ class PlotterBrain(object):
                         "medianLine":{},
                         "internalID":internalID,
                         "outlierProps" : outlierProps})
-                    
+
                 elif boxData.size == 1:
                     y = boxData.iloc[0]
                     medianLineProps = {
@@ -1165,26 +1165,26 @@ class PlotterBrain(object):
                     if showMeans:
                         meanData[n]["x"].append(x)
                         meanData[n]["y"].append(y)
-                        
+
                 else:
-                    
+
                     #fncs form seaborn package
                     vals = boxData.values.flatten()
                     boxEnds, k = _lv_box_ends(vals)
                     width = _width_functions(widthFn)
-                    
+
                     # Scale the width of the boxes so the biggest starts at 1
                     w_area = np.array([width(height(b), i, k)
                                     for i, b in enumerate(boxEnds)])
 
                     w_area = w_area / np.max(w_area)
-                    
-                    
+
+
                     outliers = _lv_outliers(vals,k)
                     if len(outliers) > 0:
                         xdata = np.full(len(outliers), x)
                         ydata = outliers
-                    
+
                         outlierProps.update({
                             "xdata" : xdata,
                             "ydata" : ydata,
@@ -1192,15 +1192,15 @@ class PlotterBrain(object):
                             "markerfacecolor" : "black",
                             "markeredgecolor" : "black",
                             "markeredgewidth" : 0.5,
-                            "markersize" : 3, 
+                            "markersize" : 3,
                             "marker" : "+"
                          })
-                         
+
                     boxes = [vertRectProps(x, b[0], i, k, b[1],xWidth)
                         for i, b in enumerate(zip(boxEnds, w_area))]
-                    
+
                     y = np.median(boxData)
-                    
+
                     medianLineProps = {
                         "xdata" : [x-xWidth/2,x+xWidth/2],
                         "ydata" : [y,y],
@@ -1231,7 +1231,7 @@ class PlotterBrain(object):
 
                 outlierData[n].append(outlierProps)
 
-        
+
         return {"data":{
                 "plotData":rectData,#"
                 "meanData" : meanData,
@@ -1254,7 +1254,7 @@ class PlotterBrain(object):
 
 
 
-#  
+#
 #         for n,plotData in plotData.items():
 #             data = plotData["x"]
 #             hoverData[n] = {"x" : data}
@@ -1267,14 +1267,14 @@ class PlotterBrain(object):
 #                 plotData["yerr"] = [np.std(a.values) for a in data]
 #             plotData["error_kw"] = {"capsize":rcParams["errorbar.capsize"],"elinewidth":0.5,"markeredgewidth":0.5,"zorder":1e6}
 
-#             plotData["x"] = boxPositions[n] 
+#             plotData["x"] = boxPositions[n]
 #             filteredData[n] = plotData
 
 #         return {"data":{
 #                 "plotData":filteredData,#"
     def getBoxplotProps(self, dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
-        
+
         subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
         if len(categoricalColumns) > 3:
             splitByCats = False
@@ -1287,18 +1287,18 @@ class PlotterBrain(object):
                                                                     self.sourceData,
                                                                     numericColumns,
                                                                     categoricalColumns,
-                                                                    self.maxColumns, 
+                                                                    self.maxColumns,
                                                                     splitByCategories = splitByCats)
-        
+
         filteredData = OrderedDict()
         for n,plotData in plotCalcData.items():
             plotData["widths"] = xWidth * self.sourceData.parent.config.getParam("boxplot.width.scale")
             plotData["patch_artist"] = True
-            plotData["positions"] = boxPositions[n] 
-            plotData["capprops"] = {"linewidth":rcParams["boxplot.whiskerprops.linewidth"]} 
+            plotData["positions"] = boxPositions[n]
+            plotData["capprops"] = {"linewidth":rcParams["boxplot.whiskerprops.linewidth"]}
             filteredData[n] = plotData
-        
-    
+
+
         return {"data":{
                 "plotData":filteredData,#"
                 "facecolors" : faceColors,
@@ -1316,11 +1316,11 @@ class PlotterBrain(object):
                 "groupedPlotData" : groupedPlotData,
                 #"tooltipsTexts" : texts,
                 "dataID":dataID}}
-        
+
     def getPointplotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         """
-        If categoricalColmns == 0 
-        
+        If categoricalColmns == 0
+
 
 
         return general  line2Ds
@@ -1351,7 +1351,7 @@ class PlotterBrain(object):
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             colorList = self.sourceData.colorManager.getNColorsByCurrentColorMap(N=len(numericColumns))
-            
+
             hoverData[0] = rawData
 
             for n in axisPositions.keys():
@@ -1361,10 +1361,10 @@ class PlotterBrain(object):
                 errorValues = [e if not np.isnan(e) else 0 for e in errorValues]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
-                
+
                 if np.isnan(maxErrorValue):
                     maxErrorValue = 0.05*maxValue
-                
+
                 tickLabels[n] = numericColumns
                 tickPositions[n] = np.arange(len(numericColumns))
 
@@ -1386,15 +1386,15 @@ class PlotterBrain(object):
                     error2D["y"] = [columnMeans[m]]
                     error2D["yerr"] = [errorValues[m]]
                     error2D["elinewidth"] = errorLineWidth
-                    
+
                     error2D["ecolor"] = colorList[m] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
                 errorKwargs[n] = line2DErrorKwargs
                 #define axis limits
-                
+
                 #marginY = np.sqrt(((maxValue+3*maxErrorValue)-(minValue-2*maxErrorValue))**2)
-               
+
                 axisLimits[n] = {
                         "xLimit": (-0.5,len(numericColumns)-0.5),
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
@@ -1404,9 +1404,9 @@ class PlotterBrain(object):
                 colorGroups["internalID"] = [getRandomString() for n in range(len(numericColumns))]
                 axisLabels[n] = {"x":"","y":"Value"}
             colorCategoricalColumn = "Numeric Columns"
-        
+
         elif len(categoricalColumns) == 1 and len(numericColumns) == 1:
-            
+
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
             #get unique categories
@@ -1418,11 +1418,11 @@ class PlotterBrain(object):
             colorGroups["internalID"] = [getRandomString() for n in range(nColorCats)]
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns)
             colorCategoricalColumn = categoricalColumns[0]
-            hoverData[0] = rawData 
+            hoverData[0] = rawData
             ci = extractCIFromstring(self.barplotError)
             for n in axisPositions.keys():
                 columnMeans = [data.loc[:,numericColumns[0]].mean() for groupName, data in groupByCatColumn]
-               
+
                 errorValues = [CI(data[numericColumns[0]].dropna(),ci) for groupName, data in groupByCatColumn]
                 maxErrorValue = np.nanmax(errorValues)
                 minValue, maxValue = np.nanmin(columnMeans), np.nanmax(columnMeans)
@@ -1432,11 +1432,11 @@ class PlotterBrain(object):
                 if scaleXAxis:
                     try:
                         tickPos = [float(x.split(splitString)[splitIndex]) for x in colorCategories]
-                    except: 
+                    except:
                         tickPos = np.arange(nColorCats)
                 else:
                     tickPos = np.arange(nColorCats)
-                    
+
                 tickPositions[n] = tickPos
 
                 line2DKwargs = []
@@ -1457,7 +1457,7 @@ class PlotterBrain(object):
                     error2D["y"] = [columnMeans[m]]
                     error2D["yerr"] = [errorValues[m]]
                     error2D["elinewidth"] = errorLineWidth
-                    
+
                     error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
@@ -1470,7 +1470,7 @@ class PlotterBrain(object):
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
                 axisLabels[n] = {"x":"colorCategoricalColumn","y":"value"}
-        
+
         elif len(categoricalColumns) == 1 and len(numericColumns) > 1:
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             axisPositions = getAxisPosition(1,maxCol=self.maxColumns)
@@ -1490,7 +1490,7 @@ class PlotterBrain(object):
             if np.isnan(maxErrorValue):
                 maxErrorValue = 0.05*maxValue
             colorCategoricalColumn = categoricalColumns[0]
-            
+
             for n in axisPositions.keys():
                 tickLabels[n] = numericColumns
 
@@ -1498,7 +1498,7 @@ class PlotterBrain(object):
                 line2DKwargs = []
                 line2DErrorKwargs = []
                 for m,category in enumerate(colorCategories):
-                    
+
                     line2D = {}
                     error2D = {}
                     line2D["marker"] = "o"
@@ -1516,7 +1516,7 @@ class PlotterBrain(object):
                     error2D["y"] = np.array([meanErrorData[category][numColumn]["value"] for numColumn in numericColumns])#groupMeans.loc[category ,:].values#line2D["ydata"]
                     error2D["yerr"] = np.array([meanErrorData[category][numColumn]["error"] for numColumn in numericColumns])
                     error2D["elinewidth"] = errorLineWidth
-                    
+
                     error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
@@ -1526,9 +1526,9 @@ class PlotterBrain(object):
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
                 axisLabels[n] = {"x":"","y":"value"}
-        
+
         elif len(categoricalColumns) == 2 and len(numericColumns) >= 1:
-            
+
             nNumCols = len(numericColumns)
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             axisPositions = getAxisPosition(nNumCols,maxCol=self.maxColumns)
@@ -1544,40 +1544,40 @@ class PlotterBrain(object):
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
             if np.isnan(maxErrorValue):
                 maxErrorValue = 0.05*maxValue
-        
-            
-           
+
+
+
             for n in axisPositions.keys():
                 tickLabels[n] = tickCats
                 if scaleXAxis:
                     try:
                         tickPos = [float(x.split(splitString)[splitIndex]) for x in tickCats]
-                    except: 
+                    except:
                         tickPos = np.arange(tickCats.size)
                 else:
                     tickPos = np.arange(tickCats.size)
-                tickPositions[n] = tickPos 
+                tickPositions[n] = tickPos
                 xValues = dict([(catName,tickPos[nCat]) for nCat,catName in enumerate(tickCats)])
                 numColumn = numericColumns[n]
-                
+
                 minX, maxX = np.min(tickPos), np.max(tickPos)
                 distance = np.sqrt(minX**2 + maxX**2) * 0.05
                 axisLimits[n] = {
                         "xLimit": (minX-distance,maxX+distance),
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
-           
+
                 line2DKwargs = []
                 line2DErrorKwargs = []
-                    
+
                 for m,category in enumerate(colorCategories):
-                    
+
                     x = []
                     y = []
                     e = []
 
                     for tCat in tickCats:
-                        
+
                         groupName = (tCat,category)
                         if groupName in meanErrorData:
                             if tCat in xValues:
@@ -1605,7 +1605,7 @@ class PlotterBrain(object):
                     error2D["y"] = y
                     error2D["yerr"] = e
                     error2D["elinewidth"] = errorLineWidth
-                    
+
                     error2D["ecolor"] = colors[category] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                     line2DErrorKwargs.append(error2D)
                 lineKwargs[n] = line2DKwargs
@@ -1639,16 +1639,16 @@ class PlotterBrain(object):
             colorGroups["internalID"] = [getRandomString() for n in colors.values()]
             #some calculataions for axis limits
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
-            #create groupby 
-            
+            #create groupby
+
             axisGroupby = rawData.groupby(categoricalColumns[2],sort=False)
-            
+
             groupByCatColumn = self.sourceData.getGroupsbByColumnList(dataID,categoricalColumns,as_index=False)
             meanErrorData, minValue, maxValue, maxErrorValue = self.getCIForGroupby(groupByCatColumn,numericColumns)
-            
+
             if np.isnan(maxErrorValue):
                 maxErrorValue = 0.05*maxValue
-        
+
             xValues = dict([(catName,x) for x,catName in enumerate(tickCats)])
             nAxis = -1
             for numColumn in numericColumns:
@@ -1661,21 +1661,21 @@ class PlotterBrain(object):
                     if scaleXAxis:
                         try:
                             tickPos = [float(x.split(splitString)[splitIndex]) for x in tickCats]
-                        except: 
+                        except:
                             tickPos = np.arange(tickCats.size)
                     else:
                         tickPos = np.arange(tickCats.size)
-                        
+
                     tickPositions[nAxis] = tickPos
                     minX, maxX = np.min(tickPos), np.max(tickPos)
                     distance = np.sqrt(minX**2 + maxX**2) * 0.05
                     hoverData[nAxis] = axisCatData
-                    
+
                     axisLimits[nAxis] = {
                         "xLimit": (minX-distance,maxX+distance),
                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
                         }
-           
+
                     for m,colorCategory in enumerate(colorCategories):
 
                             x = []
@@ -1709,7 +1709,7 @@ class PlotterBrain(object):
                             error2D["y"] = y
                             error2D["yerr"] = e
                             error2D["elinewidth"] = errorLineWidth
-                            
+
                             error2D["ecolor"] = colors[colorCategory] if errorColorAsLineColor else rcParams["patch.edgecolor"]
                             line2DErrorKwargs.append(error2D)
                     lineKwargs[nAxis] = line2DKwargs
@@ -1724,7 +1724,7 @@ class PlotterBrain(object):
 #                         "xLimit": (-0.5,tickCats.size-0.5),
 #                         "yLimit" : (minValue-1.5*maxErrorValue,maxValue+1.5*maxErrorValue)
 #                         }
-           
+
 #                 line2DKwargs = []
 #                 line2DErrorKwargs = []
 
@@ -1749,7 +1749,7 @@ class PlotterBrain(object):
 
     def getCIForGroupby(self,groupby, numericColumns):
         ""
-        meanErrorData = OrderedDict() 
+        meanErrorData = OrderedDict()
         es = []
         maxValue = np.nanmax(groupby.max()[numericColumns].values)
         minValue = np.nanmin(groupby.min()[numericColumns].values)
@@ -1763,7 +1763,7 @@ class PlotterBrain(object):
                     m = np.nanmean(X.values)
                     if np.isnan(errorValue): #no confidence interval can be caluclated.
                         errorValue = 0
-                    
+
                     es.append(errorValue)
                     meanErrorData[groupName][numColumn] = {"value":m,
                                                            "error":errorValue}
@@ -1786,7 +1786,7 @@ class PlotterBrain(object):
                 baseStr += "{} : {}".format(idx,getReadableNumber(desc.loc[idx,columnName]))
             tooltipsStr[columnName] = baseStr
         return tooltipsStr
-            
+
 
     def getProteinPeptideProps(self, proteinDataID, peptideDataID, proteinColumnNames, peptideColumnNames):
         ""
@@ -1852,7 +1852,7 @@ class PlotterBrain(object):
         groupingRectangles = []
         rectangles = []
         clusterColorMap = {}
-        
+
         #display grouping setting
         displayGrouping = self.sourceData.parent.config.getParam("hclust.display.grouping")
         distanceBetweenClusterMapAndColor = self.sourceData.parent.config.getParam("hclust.color.axis.border.left")
@@ -1863,20 +1863,20 @@ class PlotterBrain(object):
         if displayGrouping and groupingName is not None:
             if isinstance(groupingName,str):
                 groupingName = [groupingName]
-            
+
             for gN in groupingName:
-               
+
                 colorsByColumnNames[gN] = self.sourceData.parent.grouping.getColorsForGroupMembers(gN)
 
                 colorsByColumnNamesFiltered[gN] = dict([(k,v) for k,v in colorsByColumnNames[gN].items() if k in numericColumns])
                 if len(colorsByColumnNamesFiltered[gN]) == 0: #if no column in grouping - dont display grouping
                    del colorsByColumnNamesFiltered[gN]
-               
+
         else:
           #  grouping = {}
             displayGrouping = False
 
-        #cluster rows 
+        #cluster rows
         rowMetric = self.sourceData.statCenter.rowMetric
         rowMethod = self.sourceData.statCenter.rowMethod
          #cluster columns
@@ -1898,7 +1898,7 @@ class PlotterBrain(object):
                     #remove no deviation data (Same value)
                     if removeRowsWithNoStd:
                         data = data.loc[data.std(axis=1) != 0,:]
-                    rowMetric = "nanEuclidean" 
+                    rowMetric = "nanEuclidean"
                     if columnMetric != "None":
                         columnMetric = "nanEuclidean"
                 else:
@@ -1910,40 +1910,40 @@ class PlotterBrain(object):
                     else:
                         data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
                         #if no clustering applied, we can keep all values (e.g. just display)
-            
+
             data = data.astype(float)
-            
-        
+
+
             #nRows, nCols = data.shape
             rawIndex = data.index
             rowXLimit, rowYLimit, rowLineCollection = None, None, None
             colXLimit, colYLimit, colLineCollection = None, None, None
 
 
-            axisDict = self.getClusterAxes(numericColumns, 
+            axisDict = self.getClusterAxes(numericColumns,
                     numberOfRows = rawIndex.size,
                     figureSize = figureSize,
-                    corrMatrix=corrMatrix, 
-                    rowOn = rowMetric != "None" and rowMethod != "None", 
+                    corrMatrix=corrMatrix,
+                    rowOn = rowMetric != "None" and rowMethod != "None",
                     columnOn =  columnMethod != "None" and columnMetric != "None",
                     numberOfGroups=len(colorsByColumnNamesFiltered),
                     displayGrouping = displayGrouping,
                     distanceBetweenClusterMapAndColor = distanceBetweenClusterMapAndColor
                     )
-            
+
             #perform clustering on rows.
             if data.shape[0] > 1 and rowMetric != "None" and rowMethod != "None":
                 rowLinkage, rowMaxD = self.sourceData.statCenter.clusterData(data,rowMetric,rowMethod)
 
-                Z_row = sch.dendrogram(rowLinkage, orientation='left', color_threshold= rowMaxD, 
+                Z_row = sch.dendrogram(rowLinkage, orientation='left', color_threshold= rowMaxD,
                                     leaf_rotation=90, ax = None, no_plot=True)
-                
+
                 rowXLimit, rowYLimit, rowLineCollection = self.addDendrogram(Z_row,True)
 
                 rowClustNumber = self.getClusterNumber(rowLinkage,rowMaxD)
                 ytickPosition, ytickLabels, rectangles, clusterColorMap = self.getClusterRectangles(data,rowMaxD,rowClustNumber,Z_row)
                 data = data.iloc[Z_row['leaves']]
-                
+
             else:
                 del axisDict["axRowDendro"]
                 Z_row = None
@@ -1952,9 +1952,9 @@ class PlotterBrain(object):
             if data.shape[1] > 1 and columnMetric != "None" and columnMethod != "None":
                 columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data.values),columnMetric,columnMethod)
 
-                Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
+                Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD,
                                     leaf_rotation=90, ax = None, no_plot=True)
-                
+
                 data = data.iloc[:,Z_col['leaves']]
                 numericColumns = [numericColumns[idx] for idx in Z_col['leaves']]
 
@@ -1963,14 +1963,14 @@ class PlotterBrain(object):
             else:
                 del axisDict["axColumnDendro"]
 
-            #add grouping rectangles. TO DO: Better just save the props? 
+            #add grouping rectangles. TO DO: Better just save the props?
             groupingRectangles = []
             if groupingName is not None and displayGrouping and len(colorsByColumnNamesFiltered) > 0:
                 for ii, (gN, colorsByColumnNamesForGn) in enumerate(colorsByColumnNamesFiltered.items()):
                     groupingGNRectangles = [
                         Rectangle(
                             xy = (0+10*n,-0.5+ii),
-                            width = 10, 
+                            width = 10,
                             height = 1,
                             facecolor =  colorsByColumnNamesForGn[columnName] if columnName in  colorsByColumnNamesForGn else self.sourceData.colorManager.nanColor,
                             alpha = 0.75) for n,columnName in enumerate(data.columns.values)]
@@ -1978,7 +1978,7 @@ class PlotterBrain(object):
         except Exception as e:
             print(e)
             return {}
-               
+
         groupingAxLabels = {"tickLabels":groupingName,"tickPosition":np.arange(len(groupingName))} if groupingName is not None else {}
         return {"newPlot":True,
             "data":{"plotData":data,
@@ -2015,7 +2015,7 @@ class PlotterBrain(object):
                     ("nanFilter","all NaNs filtered" if rowMetric != "nanEuclidean" else "minValidValues = {}".format(nanThreshold))]
                     }
                 }
-    
+
     def addDendrogram(self,dendrogram,rotate,*args,**kwargs):
         '''
         Idea is from the seaborn package.
@@ -2040,14 +2040,14 @@ class PlotterBrain(object):
             lines = dict(segments = [list(zip(x, y))
                                             for x, y in zip(independent_coord,
                                             dependent_coord)],
-                                            **line_kwargs)	
+                                            **line_kwargs)
             xLimit =  len(dendrogram['leaves']) * 10
-            yLimit =  max_dependent_coord * 1.05  
+            yLimit =  max_dependent_coord * 1.05
             #ax.set_xlim(0, self.xLimitCol)
             #ax.set_ylim(0, self.yLimitCol)
 
         return (0,xLimit), (0,yLimit), lines
-    
+
 
     def getClusterRectangles(self,data,rowMaxD,rowClustNumber,Z_row):
         ""
@@ -2063,7 +2063,7 @@ class PlotterBrain(object):
         #clusterColors = sns.color_palette(self.clusterColorMap,uniqueCluster.size)
         rectangles = [dict(
                         xy = (0,n if n == 0 else sum(countsClust[:n] * 10)),
-                        width = rowMaxD, 
+                        width = rowMaxD,
                         height = yLimit * 10,
                         alpha = 0.75,
                         facecolor = clusterColors[n]) for n, yLimit in enumerate(countsClust)]
@@ -2074,16 +2074,16 @@ class PlotterBrain(object):
         '''
         Returns cluster numbers
         '''
-        return sch.fcluster(linkage,maxD,'distance')	
+        return sch.fcluster(linkage,maxD,'distance')
 
-    def getClusterAxes(self, 
-                    numericColumns, 
+    def getClusterAxes(self,
+                    numericColumns,
                     numberOfRows,
-                    figureSize, 
-                    corrMatrix=False, 
+                    figureSize,
+                    corrMatrix=False,
                     rowOn = True,
                     columnOn = True,
-                    numberOfGroups = 0, 
+                    numberOfGroups = 0,
                     displayGrouping = False,
                     distanceBetweenClusterMapAndColor = 25):
         ""
@@ -2112,44 +2112,44 @@ class PlotterBrain(object):
 
         width = x1-x0-leftMargin
         height = y1-y0-bottomLabelMargin-topMargin
-        
+
         #multWidth = 0.4
-       
-        
+
+
         maxPixelForHeatmap = (width - 0.1) * pixelFigureWidth #0.1 = min margin
         maxPixelHeightHeatmap = height * pixelFigureHeight
-        
+
         if not corrMatrix:
             heightMain = height
-     
-        
+
+
         if maxPixelForHeatmap < len(numericColumns) * pixelPerColumn:
             clusterMapWidth = 0.75
             widthInPixel = maxPixelForHeatmap
         else:
             widthInPixel = len(numericColumns) * pixelPerColumn
             clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
-            
+
         borderForColorMap = distanceBetweenClusterMapAndColor/pixelFigureWidth
 
         if corrMatrix:
-            
+
             if widthInPixel <= maxPixelHeightHeatmap:
-               
+
                # heightInPixel = widthInPixel
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
-                
+
             else:
-                widthInPixel = maxPixelHeightHeatmap 
+                widthInPixel = maxPixelHeightHeatmap
                 clusterMapWidth = 0.75 * widthInPixel/maxPixelForHeatmap
                 heightMain = height * widthInPixel/maxPixelHeightHeatmap
-        
+
         elif squareRectangles:
-           
+
             pixelRelativeHeight = (widthInPixel/len(numericColumns) * numberOfRows) / (pixelFigureHeight)
             if pixelRelativeHeight < heightMain:
                 heightMain = pixelRelativeHeight
-         
+
           #  y0 = height - heightMain - 0.1# 0.1#(maxPixelHeightHeatmap - heightInPixel) / maxPixelHeightHeatmap
         # if not corrMatrix:
         #     y0 = bottomLabelMargin
@@ -2164,35 +2164,35 @@ class PlotterBrain(object):
                 columnDendroHeight = rowDendroWidth
             else:
                 columnDendroHeight = width * 0.13
-        else: 
+        else:
             columnDendroHeight = 0
-       
+
         if numberOfGroups > 0 and displayGrouping:
-           
+
            groupingAxHeight = width * 0.013 * numberOfGroups
            addSpacingForGroupAx = width * 0.013 * 0.75
-           
+
         else:
             groupingAxHeight = 0
             addSpacingForGroupAx = 0
-				
+
 
         #create axis dict.
-        axisDict = dict() 
+        axisDict = dict()
 
         axisDict["axRowDendro"] = [x0,
                                     y0,
                                     rowDendroWidth,
                                     heightMain]
-                                    
-        axisDict["axColumnDendro"] = [x0 + rowDendroWidth, 
+
+        axisDict["axColumnDendro"] = [x0 + rowDendroWidth,
                                     y0+heightMain + groupingAxHeight + addSpacingForGroupAx,
                                     clusterMapWidth,
                                     columnDendroHeight ]
 
         if groupingAxHeight > 0 and displayGrouping:
 
-            axisDict["axColumnGrouping"] = [x0 + rowDendroWidth, 
+            axisDict["axColumnGrouping"] = [x0 + rowDendroWidth,
                                     y0+heightMain + addSpacingForGroupAx,
                                     clusterMapWidth,
                                     groupingAxHeight]
@@ -2201,17 +2201,17 @@ class PlotterBrain(object):
                                     y0,
                                     clusterMapWidth,
                                     heightMain]
-        
+
         axisDict["axLabelColor"] =  [x0+rowDendroWidth+clusterMapWidth+borderForColorMap, #add margin
                                     y0,
                                     width-clusterMapWidth-rowDendroWidth if clusterMapWidth < 0.75 else 0.1,
-                                    heightMain]		
-        
+                                    heightMain]
+
         axisDict["axColormap"] =    [x0,
                                     y1-0.15,
                                     0.02,
-                                    0.1]	
-        
+                                    0.1]
+
         return axisDict
 
     def getDimRedProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
@@ -2234,7 +2234,7 @@ class PlotterBrain(object):
         if not (len(numericColumns) > 0 and len(categoricalColumns) > 0):
             return getMessageProps("Error ..","")
         data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-        plotData = OrderedDict() 
+        plotData = OrderedDict()
 
         faceColors = dict()
         useColorMap = self.sourceData.parent.config.getParam("forest.plot.use.colormap")
@@ -2243,11 +2243,11 @@ class PlotterBrain(object):
         internalIDs = []
 
         if  self.sourceData.parent.config.getParam("forest.plot.calculated.data"):
-            axisPositions = getAxisPosition(1) 
+            axisPositions = getAxisPosition(1)
             #categorical columns -> names of variables -> yticks
             categoricalData = data[categoricalColumns[0]].values.flatten()
             colors, _ = self.sourceData.colorManager.createColorMapDict(categoricalData, as_hex=True)
-            
+
             if useColorMap:
                 colorGroupsData["color"] = colors.values()
             else:
@@ -2260,7 +2260,7 @@ class PlotterBrain(object):
                         "x":numericColumns[0],
                         "y":"Variables"
                         }
-            
+
             faceColors[0] = {}
             if len(numericColumns) == 3:
                     meanColumName,ci_lowerColumName, ci_upperColumName = numericColumns
@@ -2269,10 +2269,10 @@ class PlotterBrain(object):
                     ci_lowerColumName = None
                     ci_upperColumName = None
 
-            plotData[0] = OrderedDict() 
+            plotData[0] = OrderedDict()
             for m,idx in enumerate(data.index):
-                
-                meanValue = data.loc[idx,meanColumName]  
+
+                meanValue = data.loc[idx,meanColumName]
                 rowName = categoricalData[m]
                 ci_lower = data.loc[idx,ci_lowerColumName]  if ci_lowerColumName is not None else np.nan
                 ci_upper = data.loc[idx,ci_upperColumName] if ci_upperColumName is not None else np.nan
@@ -2291,7 +2291,7 @@ class PlotterBrain(object):
         else:
 
             axisPositions = getAxisPosition(len(numericColumns))
-            
+
             colors, layer = self.sourceData.colorManager.createColorMapDict(categoricalColumns, as_hex=True)
             if useColorMap:
                 colorGroupsData["color"] = colors.values()
@@ -2305,7 +2305,7 @@ class PlotterBrain(object):
                     ct=pd.crosstab(data[numericColumn],data[categoricalColumn])
                     table = Table2x2(ct.values)
                     internalID = getRandomString()
-                    
+
                     plotData[n][categoricalColumn] = {
                                         "oddsRatio"          :   table.oddsratio,
                                         "oddsRatioCI"        :   table.oddsratio_confint(),
@@ -2326,7 +2326,7 @@ class PlotterBrain(object):
                         }
                 tickPositions[n] = np.arange(len(categoricalColumns))
                 axisLimits[n] = {"yLimit":[-0.5,len(categoricalColumns)-0.5],"xLimit": None}
-                
+
                 if not useColorMap:
                     faceColors[n][categoricalColumn] = defaultColor
                 else:
@@ -2334,8 +2334,8 @@ class PlotterBrain(object):
 
         colorGroupsData["internalID"] = internalIDs
 
-            
-    
+
+
         return {"data":{
                     "plotData" : plotData,
                     "axisPositions" : axisPositions,
@@ -2347,7 +2347,7 @@ class PlotterBrain(object):
                     "dataColorGroups": colorGroupsData
                     }
                 }
-        
+
 
     def getPCAProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
@@ -2361,7 +2361,7 @@ class PlotterBrain(object):
         #print(result)
       #  print(eigVectors)
         axisPostions = dict([(n,[2,2,n+1]) for n in range(4)])
-    
+
 
         return {"data":{"plotData":{"projection":driverResult,"eigV":eigVectors},
                 "axisPositions":axisPostions,
@@ -2374,7 +2374,7 @@ class PlotterBrain(object):
         ""
         numericColumnPairs = [("Index ({:02d})".format(n+1),numColumn) for n,numColumn in enumerate(numericColumns)]
         for indexName, numColumn in numericColumnPairs:
-                           
+
             index = data.sort_values(by=numColumn, ascending = self.indexSort == "ascending").index
             data = data.join(pd.Series(np.arange(index.size),index=index, name = indexName))
 
@@ -2382,9 +2382,9 @@ class PlotterBrain(object):
 
     def getScatterProps(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
         ""
-        
+
         try:
-            axisTitles = {} 
+            axisTitles = {}
 
             if len(categoricalColumns) == 0:
                 data = self.sourceData.getDataByColumnNames(dataID,numericColumns)["fnKwargs"]["data"]
@@ -2394,19 +2394,19 @@ class PlotterBrain(object):
 
                 else:
                     data, numericColumnPairs = self._addIndexToData(data,numericColumns)
-                        
+
                 nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
                 axisPositions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
                 axisLabels = dict([(n,{"x":x1,"y":x2}) for n, (x1,x2) in enumerate(numericColumnPairs)])
 
             else:
-                
+
                 subplotBorders = dict(wspace=0, hspace = 0.2, bottom=0.15,right=0.95,top=0.95)
                 data = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
-                uniqueValuesCat1 = data[categoricalColumns[0]].unique() 
-                numUniqueCat = uniqueValuesCat1.size 
-                
-               
+                uniqueValuesCat1 = data[categoricalColumns[0]].unique()
+                numUniqueCat = uniqueValuesCat1.size
+
+
                 axisLabels = {}
                 firstAxisRow = True
                 axisID = 0
@@ -2427,11 +2427,11 @@ class PlotterBrain(object):
                             requiredColumns.append("{}:{}:({})".format(uniqueValue,categoricalColumns[0],numCols[1]))
 
                     plotData = pd.DataFrame(
-                                index=data.index, 
+                                index=data.index,
                                 columns = requiredColumns
                                 )
-                    
-                    
+
+
                     for numCols in numericColumnPairs:
                         for nGroup , (groupName, groupData) in enumerate(data.groupby(categoricalColumns[0],sort=False)):
 
@@ -2448,12 +2448,12 @@ class PlotterBrain(object):
                                 pair.append(columnKey)
                             plotNumericPairs.append(tuple(pair))
 
-                            axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}  
-                            axisID += 1  
-                    
+                            axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}
+                            axisID += 1
+
                    # axisPositions = getAxisPosition(len(numericColumnPairs),nCols=numUniqueCat)
                 elif len(categoricalColumns) == 2:
-                    uniqueValuesCat2 = data[categoricalColumns[1]].unique() 
+                    uniqueValuesCat2 = data[categoricalColumns[1]].unique()
                     numUniqueCat2 = uniqueValuesCat2.size
 
                     numOfAxis = numUniqueCat * numUniqueCat2 * len(numericColumnPairs)
@@ -2471,16 +2471,16 @@ class PlotterBrain(object):
                                                                             uniqueValueCat2,
                                                                             categoricalColumns[0],
                                                                             numCols[1]))
-                    
+
                     plotData = pd.DataFrame(
-                                index=data.index, 
+                                index=data.index,
                                 columns = requiredColumns
                                 )
-                    
-                    
+
+
                     for numCols in numericColumnPairs:
                         for uniqueValueCat2, cat2data in data.groupby(categoricalColumns[1],sort=False):
-                            
+
                             for nGroup,  (groupName, groupData) in enumerate(cat2data.groupby(categoricalColumns[0], sort=False)):
                                     if axisID == numUniqueCat:
                                         firstAxisRow = False
@@ -2494,13 +2494,13 @@ class PlotterBrain(object):
                                                         "appendWhere":"right",
                                                         "textRotation" : 90
                                                     }
-                                                    
+
                                         if axisID in axisTitles:
                                             addTitles = [axisTitles[axisID],titleProps]
                                             axisTitles[axisID] = addTitles
                                         else:
                                             axisTitles[axisID] = titleProps
-                                    
+
                                     pair = []
                                     for columnName in numCols:
                                         columnKey = "{}:{}:{}:({})".format(groupName,uniqueValueCat2,categoricalColumns[0],columnName)
@@ -2508,14 +2508,14 @@ class PlotterBrain(object):
                                         pair.append(columnKey)
                                     plotNumericPairs.append(tuple(pair))
 
-                                    axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}  
-                                    axisID += 1  
+                                    axisLabels[axisID] = {"x":numCols[0],"y":numCols[1] if nGroup == 0 else ""}
+                                    axisID += 1
                 else:
                     return getMessageProps("Error ..","For Scatter plots only two categorical columns are considered. You can use color, size and marker highlights.")
-                
+
                 numericColumnPairs = plotNumericPairs
                 data = plotData
-                
+
 
 
 
@@ -2523,12 +2523,12 @@ class PlotterBrain(object):
                 print(e)
 
         colorInternalID = getRandomString()
-        colorGroupsData = pd.DataFrame() 
+        colorGroupsData = pd.DataFrame()
         colorGroupsData["color"] = [self.sourceData.colorManager.nanColor]
         colorGroupsData["group"] = [""]
         colorGroupsData["internalID"] = [colorInternalID]
         sizeInternalID = getRandomString()
-        sizeGroupsData = pd.DataFrame() 
+        sizeGroupsData = pd.DataFrame()
         sizeGroupsData["size"] = [self.scatterSize]
         sizeGroupsData["group"] = [""]
         sizeGroupsData["internalID"] = [sizeInternalID]
@@ -2538,7 +2538,7 @@ class PlotterBrain(object):
 
         return {"data":{
             "plotData":data,
-            "axisPositions":axisPositions, 
+            "axisPositions":axisPositions,
             "colorCategoryIndexMatch" : colorCategoryIndexMatch,
             "sizeCategoryIndexMatch" : sizeCategoryIndexMatch,
             "axisTitles": axisTitles,
@@ -2548,7 +2548,7 @@ class PlotterBrain(object):
             "axisLabels" : axisLabels,
             "subplotBorders":subplotBorders,
             "dataID":dataID}}
-        
+
         #{"plotData":data.values,"xLabel":numericColumns[0],"yLabel":numericColumns[1],"plotType":"scatter"}
 
     def getMarkerGroupsForScatter(self,dataID,markerColumn,markerColumnType):
@@ -2567,24 +2567,24 @@ class PlotterBrain(object):
             else:
                 rawMarkerData = rawData[markerColumnName]
             markerCategories = rawMarkerData.unique()
-            
+
             availableMarkers = ["o","^","D","s","P","v","p","+","."]
 
             markerMap = OrderedDict([(cat,availableMarkers[n % len(availableMarkers)]) for n,cat in enumerate(markerCategories)])
-  
+
             markerData = rawMarkerData.map(markerMap)
             markerGroupData["marker"] = markerMap.values()
             markerGroupData["group"] = markerCategories
             markerGroupData["internalID"] = [getRandomString() for n in markerGroupData.index]
-        
+
         propsData = pd.DataFrame(markerData.values,columns=["marker"], index=rawData.index)
-        title = mergeListToString(markerColumn.values,"\n")      
+        title = mergeListToString(markerColumn.values,"\n")
 
         categoryIndexMatch = dict([(intID,rawData[rawData.values == category].index) for category, intID in zip(markerGroupData["group"].values,
                                                                                                                 markerGroupData["internalID"].values)])
 
-        return {"propsData":propsData, 
-                "title":title, 
+        return {"propsData":propsData,
+                "title":title,
                 "markerGroupData":markerGroupData,
                 "categoryEncoded":"marker",
                 "categoryIndexMatch":categoryIndexMatch}
@@ -2603,15 +2603,15 @@ class PlotterBrain(object):
                 n += 1
 
         return columnPairs
-        
+
     def _build2DHistogramData(self, axisInts, columnPairs, data, histogramData):
         #get pcolormesh for column pairs
         ""
         for nA in axisInts.flatten():
             numericPairs = list(columnPairs[nA])
-            
+
             XY  = data[numericPairs].dropna().values
-            
+
             H, xedges, yedges = np.histogram2d(XY[:,0], XY[:,1], bins=(25, 25))
             meshX, meshY = np.meshgrid(xedges, yedges)
             histogramData[nA] = {
@@ -2635,7 +2635,7 @@ class PlotterBrain(object):
                     {'bandwidth': np.linspace(minBW, maxBW, 30)},
                     cv=numCrossValidations) # 5-fold cross-validation
         grid.fit(x)
-        
+
         return grid.best_params_["bandwidth"]
 
     def _buildKdeData(self,axisInts,data,numericColumns,kdeData):
@@ -2651,7 +2651,7 @@ class PlotterBrain(object):
         numCVs = self.sourceData.parent.config.getParam("multi.scatter.kde.grid.n.cross.val")
         for n,nAx in enumerate(axisInts):
             x = data[numericColumns[n]].dropna().values.reshape(-1,1)
-        
+
             #find x limits
             minValue,maxValue = minMaxValues[:,n]
             offSet = (maxValue - minValue) * 0.1
@@ -2661,15 +2661,15 @@ class PlotterBrain(object):
             #caluclate kde and get y values
             xx = np.linspace(minValue,maxValue,num=500).reshape(-1,1)
             if bwGridSearch:
-                
+
                 bw = self._findBwByGridSearch(x,gridMin,gridMax,numCVs)
-           
-           
+
+
             kde = KernelDensity(bandwidth=bw, kernel=kernel, algorithm='ball_tree').fit(x)
             y = kde.score_samples(xx)
             if not logDensity:
                 y = np.exp(y)
-           
+
             #find y limits
             yMax = np.max(y)
             yMin = np.min(y)
@@ -2682,7 +2682,7 @@ class PlotterBrain(object):
     def _buildLabelData(self,axisInts, numericColumns, groupColorDict, labelData):
         ""
         for numericColumn, nAx in zip(numericColumns,axisInts):
-            
+
             tKwargs = {
                 "color" : groupColorDict[numericColumn] if numericColumn in groupColorDict else "black",
                 "s" : numericColumn,
@@ -2691,10 +2691,10 @@ class PlotterBrain(object):
                 "x" : 0.5,
                 "y" : 0.5
                 }
-            
+
             labelData[nAx] = tKwargs
-            
-        
+
+
         return labelData
 
     def _buildCorrelationLabelData(self,axisInts, columnPairs, labelData, corrMatrix  = None, spearmanCorrMatrix=None):
@@ -2719,17 +2719,17 @@ class PlotterBrain(object):
 
         return labelData
 
- 
+
     def getScatterCorrMatrix(self,dataID, numericColumns, categoricalColumns,*args,**kwargs):
         """
-        Provide required information to plot a scatter matrix. 
-        Several options are taken from the config settings. 
+        Provide required information to plot a scatter matrix.
+        Several options are taken from the config settings.
         """
         #init dicts
-        histogramData = dict() 
+        histogramData = dict()
         kdeData = dict()
         scatterColumnPairs = dict()
-        colorDict = dict() 
+        colorDict = dict()
         groupColorDict = dict()
         labelData = dict()
         lowessFit,linregressFit = dict(), dict()
@@ -2764,18 +2764,18 @@ class PlotterBrain(object):
         corrmatrix = data[numericColumns].corr()
         spearmanCorrMatrix =  data[numericColumns].corr(method="spearman") if addSpearman else None
         nNumCols = len(numericColumns)
-        
+
         if colorBackground:
             if colorScale == "dataMinMax":
                 vmin, vmax = None, None
             else:
                 vmin,vmax = [float(x) for x in colorScale.split(",")]
             backgroundColorMapper = self.sourceData.colorManager.matchColorsToValues(corrmatrix.values,backgroundCmap,vmin,vmax)
-      
+
             backgroundColorHex = pd.DataFrame(
                     np.array([to_hex(c)  for cs in backgroundColorMapper[0] for c in cs ]).reshape((nNumCols,nNumCols)),
                     columns = numericColumns, index = numericColumns)
-            
+
         if  columnSorting != "None":
             if columnSorting == "Grouping" and self.sourceData.parent.grouping.groupingExists():
                 groupingName = self.sourceData.parent.grouping.getCurrentGroupingName()
@@ -2787,12 +2787,12 @@ class PlotterBrain(object):
                 columnLinkage, colMaxD = self.sourceData.statCenter.clusterData(np.transpose(data[numericColumns].dropna(axis=0).values))
                 if columnLinkage is None:
                     return getMessageProps("Error..","There was an error in clustering columns.")
-                Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD, 
+                Z_col = sch.dendrogram(columnLinkage, orientation='top', color_threshold = colMaxD,
                                     leaf_rotation=90, ax = None, no_plot=True)
-                
+
                 data = data.iloc[:,Z_col['leaves']]
                 numericColumns = [numericColumns[idx] for idx in Z_col['leaves']]
-                
+
 
         nAxis = int(nNumCols ** 2)
         axisPositions = getAxisPosition(nAxis, maxCol=nNumCols)
@@ -2802,7 +2802,7 @@ class PlotterBrain(object):
 
         if len(categoricalColumns) > 0:
             colorDict = self.getColorGroupsDataForScatter(dataID,pd.Series(categoricalColumns))
-            
+
             colorGroupsData = colorDict["colorGroupData"]
             colorTitle = colorDict["title"]
             propsData = colorDict["propsData"]
@@ -2831,7 +2831,7 @@ class PlotterBrain(object):
         np.fill_diagonal(axisIntsTop,0)
         np.fill_diagonal(axisIntsBottom,0)
 
-        #get ints for scatter by using the indicies found by tril/diagonal is zero 
+        #get ints for scatter by using the indicies found by tril/diagonal is zero
         axisIntsTop = axisIntsTop.flatten()
         axisIntsTop = axisIntsTop[axisIntsTop > 0]
 
@@ -2852,15 +2852,15 @@ class PlotterBrain(object):
         lowessKwargs = {"frac":lowessFrac , "it" : lowessIt, "delta" : lowessDelta}
                             # if addLowess:
                             #     lowessFit[nA] = self.sourceData.statCenter.runLowess(dataID,numericPairs,frac=lowessFrac , it = lowessIt, delta = lowessDelta)
-        #multi processing to calculate the axisInts (topRight,bottomleft,and diagonal simult.)      
+        #multi processing to calculate the axisInts (topRight,bottomleft,and diagonal simult.)
         #
-        # 
+        #
 
-        if nNumCols > 5:  
+        if nNumCols > 5:
             with Pool(NProcesses) as p:
                 rPool = p.starmap(buildScatterMatrix,[(data,
                                             numericColumns,
-                                            plotType, 
+                                            plotType,
                                             axisInts,
                                             backgroundColorHex,
                                             scatterColumnPairs,
@@ -2881,7 +2881,7 @@ class PlotterBrain(object):
         else:
             rPool = [buildScatterMatrix(data,
                                             numericColumns,
-                                            plotType, 
+                                            plotType,
                                             axisInts,
                                             backgroundColorHex,
                                             scatterColumnPairs,
@@ -2905,17 +2905,17 @@ class PlotterBrain(object):
         kdeData = {k: v for d in rPool for k, v in d[4].items()}
         labelData = {k: v for d in rPool for k, v in d[5].items()}
         lowessFit = {k: v for d in rPool for k, v in d[6].items()}
-           
-                
+
+
 
         #compile size groups
-        sizeGroupsData = pd.DataFrame() 
+        sizeGroupsData = pd.DataFrame()
         sizeGroupsData["size"] = [self.scatterSize]
         sizeGroupsData["group"] = [""]
 
         return {"data":{
                         "plotData":data,
-                        "axisPositions":axisPositions, 
+                        "axisPositions":axisPositions,
                         "scatterColumnPairs": scatterColumnPairs,
                         "dataColorGroups": colorGroupsData,
                         "dataSizeGroups" : sizeGroupsData,
@@ -2947,20 +2947,20 @@ class PlotterBrain(object):
 
     def getNearestNeighborConnections(self,dataID,numericColumnPairs,numberNearestNeighbors=3):
         ""
-       
+
         columnNames = pd.Series(np.array(numericColumnPairs).flatten()).unique()
-       
+
         rawData = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
-        
+
         lineCollections = {}
         for n,columnPair in enumerate(numericColumnPairs):
             X = rawData[list(columnPair)].dropna().values
-          
+
             euclideanDistanceMatrix = squareform(pdist(X, 'euclidean'))
 
             # select the kNN for each datapoint
             neighbors = np.sort(np.argsort(euclideanDistanceMatrix, axis=1)[:, 0:numberNearestNeighbors])
-          
+
             N = neighbors.shape[0]
             coordinates = np.zeros((N, numberNearestNeighbors, 2, 2))
             for i in np.arange(N):
@@ -2996,15 +2996,15 @@ class PlotterBrain(object):
             else:
                 rawSizeData = rawData[sizeColumnName]
 
-            
+
             sizeCategories = rawSizeData.unique()
             nCategories = sizeCategories.size
             scaleSizes = np.linspace(0.2,1,num=nCategories,endpoint=True)
             sizeMap = dict(zip(sizeCategories,scaleSizes))
             sizeMap = replaceKeyInDict(self.sourceData.replaceObjectNan,sizeMap,0.1)
-           
+
             scaledSizedata = rawSizeData.map(sizeMap)
-           
+
             sizeData = scaledSizedata.values * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize
 
             sizeGroupData["size"] = scaleSizes * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize
@@ -3013,8 +3013,8 @@ class PlotterBrain(object):
 
             categoryIndexMatch = dict([(intID,rawData[rawSizeData == category].index) for category, intID in zip(sizeGroupData["group"].values,
                                                                                                                     sizeGroupData["internalID"].values)])
-          #  print(sizeGroupData)  
-           # print(propsData)  
+          #  print(sizeGroupData)
+           # print(propsData)
         elif sizeColumnType == "Numeric Floats":
             transformFuncs = {"log2":np.log2,"ln":np.log,"log10":np.log10}
             if sizeColumn.size > 1:
@@ -3048,16 +3048,16 @@ class PlotterBrain(object):
             sizeGroupData["group"] = groupNames
             sizeGroupData["size"] = [round((x-minV)/(maxV-minV) * (self.maxScatterSize-self.minScatterSize) + self.minScatterSize,1) \
                                                                             for x in  [maxV,q75,median,q25,minV,0]] #0.1 == Nan Size
-            
+
             sizeGroupData["internalID"] = [getRandomString() for n in sizeGroupData.index]
-            
+
             sizeGroupData.loc[sizeGroupData["group"] == "NaN","size"] = round(0.1 * self.minScatterSize,1)
-           
+
 
         propsData = pd.DataFrame(sizeData,columns=["size"], index=rawData.index)
-        title = mergeListToString(sizeColumn.values,"\n")                                                                   
+        title = mergeListToString(sizeColumn.values,"\n")
 
-        
+
         return {"sizeGroupData":sizeGroupData,
                 "propsData":propsData,
                 "title":title,
@@ -3071,11 +3071,11 @@ class PlotterBrain(object):
         ""
         lineData = {}
         for n,numColumns in enumerate(numericColumnPairs):
-            
+
             xList,yList,slope,intercept,rValue,pValue, stdErrorSlope  = self.sourceData.statCenter.runLinearRegression(dataID,list(numColumns))
             lineKwargs = {"xdata":xList,"ydata":yList}
             lineData[n] = lineKwargs
-            
+
         funcProps = getMessageProps("Done..","Linear regression line added.")
         funcProps["lineData"] = lineData
         return funcProps
@@ -3091,18 +3091,18 @@ class PlotterBrain(object):
             lineKwargs = {"xdata":lowessFit[:,0],"ydata":lowessFit[:,1]}
             lineData[n] = lineKwargs
             areaData[n] = {"x" : lowessFit[:,0], "y1": lowessFit[:,2], "y2":lowessFit[:,3], "facecolor":"lightgrey","edgecolor":"None","alpha":0.5}
-        
+
         funcProps = getMessageProps("Done..","Lowess line added.")
         funcProps["lineData"] = lineData
         funcProps["areaData"] = areaData
-        
+
         return funcProps
 
 
 
     def getColorMapDictAndLayers(self, colorCategories, N):
         ""
-        colors, layerMap = self.sourceData.colorManager.createColorMapDict(colorCategories, 
+        colors, layerMap = self.sourceData.colorManager.createColorMapDict(colorCategories,
                                                                         addNaNLevels=[(self.sourceData.replaceObjectNan,)*N],
                                                                         as_hex=True)
         return colors,layerMap
@@ -3123,7 +3123,7 @@ class PlotterBrain(object):
         rawData = self.sourceData.getDataByColumnNames(dataID,columnNames)["fnKwargs"]["data"]
         boolIdcs = rawData[significantColumns] == significantStr
         log2Columns = [columnPair[0] for columnPair in columnPairs]
-        aboveZero = rawData.loc[:,log2Columns] > 0 
+        aboveZero = rawData.loc[:,log2Columns] > 0
 
         #crate significant categories
         fakeSignificantCategories = pd.DataFrame(np.full(shape=aboveZero.shape, fill_value="-", dtype=str), columns=boolIdcs.columns, index=boolIdcs.index)
@@ -3132,40 +3132,40 @@ class PlotterBrain(object):
             belowAndSignificant = np.logical_and(~aboveZero.iloc[:,n].values,boolIdcs.iloc[:,n].values)
             fakeSignificantCategories.iloc[aboveZeroAndSignificant,n] = sigUpString
             fakeSignificantCategories.iloc[belowAndSignificant,n] = sigDownString
-       
-        if colorColumns.size > 0:   
+
+        if colorColumns.size > 0:
             if colorColumns.size > 1:
                 colorCategories = rawData.loc[:,colorColumns].apply(tuple,axis=1).values #mege if more color columns given
             else:
                 colorCategories = rawData.loc[:,colorColumns].values
             colorCategories = pd.DataFrame(np.tile(colorCategories.flatten().reshape(-1,1), (1, boolIdcs.columns.size)), columns=boolIdcs.columns, index=boolIdcs.index)
-            
+
 
             potentialColorAndSignificantCategories = pd.DataFrame(
                 {x: zip(fakeSignificantCategories.loc[:,x].values,colorCategories.loc[:,x].values) for x in fakeSignificantCategories.columns}, index = boolIdcs.index)
             uniqueCategories = np.unique(potentialColorAndSignificantCategories.values.flatten())
             categoricalGroups = dict( )
             it = itertools.groupby(uniqueCategories.tolist(), operator.itemgetter(0))
-            
+
             for k, l in it:
                 categoricalGroups[k] = list(l)
-           
+
             # upCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] == sigUpString]
             # downCategories = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
             # nonSigCategoris = [categoricalValue for categoricalValue in uniqueCategories if categoricalValue[0] ==  downCategories]
-            #customPalette = False, customPaletteKwargs 
-            colorsUp, layerMapUp = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigUpString], 
+            #customPalette = False, customPaletteKwargs
+            colorsUp, layerMapUp = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigUpString],
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
                                                             as_hex=True,
                                                             customPalette = True,
                                                             customPaletteKwargs = {"palette" : f"light:{colorForUpReg}_r","n_colors" : len(categoricalGroups[sigUpString])+1})
-            colorsDown, layerMapDown = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigDownString], 
+            colorsDown, layerMapDown = self.sourceData.colorManager.createColorMapDict(categoricalGroups[sigDownString],
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
                                                             as_hex=True,
                                                             customPalette = True,
                                                             customPaletteKwargs = {"palette" : f"light:{colorForDownReg}_r","n_colors" : len(categoricalGroups[sigDownString])+1})
             if encodeNonSig:
-                colorsNonSig, layerMapNonSig = self.sourceData.colorManager.createColorMapDict(categoricalGroups[self.sourceData.replaceObjectNan], 
+                colorsNonSig, layerMapNonSig = self.sourceData.colorManager.createColorMapDict(categoricalGroups[self.sourceData.replaceObjectNan],
                                                             addNaNLevels=[(self.sourceData.replaceObjectNan,)* (colorColumns.index.size+1)],
                                                             as_hex=True,
                                                             customPalette = True,
@@ -3173,7 +3173,7 @@ class PlotterBrain(object):
             else:
                 colorsNonSig = dict(zip(categoricalGroups[self.sourceData.replaceObjectNan],[self.sourceData.colorManager.nanColor]*len(categoricalGroups[self.sourceData.replaceObjectNan])))
                 layerMapNonSig = {self.sourceData.colorManager.nanColor : -2}
-            
+
             colors = {**colorsUp,**colorsDown, **colorsNonSig}
             layerMap = {**layerMapUp, **layerMapDown, **layerMapNonSig}
             #colors, layerMap = self.getColorMapDictAndLayers(uniqueCategories, colorColumns.index.size+1)
@@ -3190,7 +3190,7 @@ class PlotterBrain(object):
                 self.sourceData.colorManager.nanColor : -1
 
             }
-    
+
         colorData = potentialColorAndSignificantCategories.applymap(lambda x: colors[x])
         layerData = colorData.applymap(lambda x: layerMap[x])
 
@@ -3211,30 +3211,30 @@ class PlotterBrain(object):
             # else:
             #     colorDataForColumnPair =  colorData.iloc[:,n]
             #     layerValues = layerData.iloc[:,0]
-            
+
             #colorDataForColumnPair[aboveZeroAndSignificant] = colorForUpReg
             scatterProps[columnPair]["color"] = colorData.iloc[:,n]
             scatterProps[columnPair]["layer"] = layerData.iloc[:,n]
             sumUp = np.sum(fakeSignificantCategories.iloc[:,n] == f"{significantStr} & up")
             sumDown = np.sum(fakeSignificantCategories.iloc[:,n] == f"{significantStr} & down")
             textKwargs[n] = [{ #here key must be n matching the axisDict keyword, not the scatterPlot columnpair
-                    "x" : 0.98, 
-                    "y": 0.98, 
+                    "x" : 0.98,
+                    "y": 0.98,
                     "s" : f"{sumUp}",
                     "color" : colorForUpReg,
-                    "ha" : "right", 
+                    "ha" : "right",
                     "va" : "top"},
                 {
-                    "x" : 0.02, 
-                    "y": 0.98, 
+                    "x" : 0.02,
+                    "y": 0.98,
                     "s" : f"{sumDown}",
                     "color" : colorForDownReg,
-                    "ha" : "left", 
+                    "ha" : "left",
                     "va" : "top"
                     }]
             rawColorCategories = potentialColorAndSignificantCategories.iloc[:,n]
 
-            
+
             categoryIndexMatch[columnPair] =  dict([(intID,rawColorCategories.index[[x == category for x in rawColorCategories.values]]) for category, intID in zip(colorGroupData["group"].values,
                                                                                                                  colorGroupData["internalID"].values)])
 
@@ -3248,13 +3248,13 @@ class PlotterBrain(object):
         funcProps["texts"] = textKwargs
         funcProps["encodedColumnNames"] = colorColumns
        # print(funcProps)
-        return funcProps 
-        
+        return funcProps
+
 
     def getColorGroupsDataForScatter(self,dataID, colorColumn = None, colorColumnType = None, colorGroupData = None, userMinMax = None):
         ""
-     
-            
+
+
         if colorColumn is None:
             if self.colorColumn is None:
                 return {}
@@ -3262,7 +3262,7 @@ class PlotterBrain(object):
         if colorColumnType is None:
             colorColumnType = self.colorColumnType
         colorColumnName = colorColumn.values[0]
-        
+
         categoryIndexMatch = None
 
         #get raw data
@@ -3282,22 +3282,22 @@ class PlotterBrain(object):
                 rawColorData = rawData.apply(tuple,axis=1)
             else:
                 rawColorData = rawData[colorColumnName]
-            
+
             if colorGroupData is None:
                 colorCategories = rawColorData.unique()
             else:
                 colorCategories = colorGroupData["group"].values
 
-            colors, layerMap = self.getColorMapDictAndLayers(colorCategories,colorColumn.index.size) 
+            colors, layerMap = self.getColorMapDictAndLayers(colorCategories,colorColumn.index.size)
             colorData = pd.DataFrame(rawColorData.map(colors).values,
                                         columns=["color"],
                                         index=rawData.index)
             #add color layer props
 
 
-            
+
             colorData["layer"] = colorData["color"].map(layerMap)
-            
+
             if colorGroupData is None:
                 colorGroupData = pd.DataFrame(columns=["color","group"])
                 colorGroupData["group"] = [f"{colorCategory} ({np.sum(rawColorData == colorCategory)})" for colorCategory in colorCategories]
@@ -3307,9 +3307,9 @@ class PlotterBrain(object):
                # categoryIndexMatch = dict([(intID,rawData[rawColorData.values == category].index) for category, intID in zip(colorGroupData["group"].values,
                 #                                                                                                            colorGroupData["internalID"].values)])
             else:
-                
+
                 colorGroupData["color"] = [colors[k] for k in colorCategories]
-            
+
             categoryIndexMatch = dict([(intID,rawData.index[rawColorData == category]) for category, intID in zip(colorCategories,
                                                                                                                 colorGroupData["internalID"].values)])
 
@@ -3324,26 +3324,26 @@ class PlotterBrain(object):
                     rawData = rawData.sum(axis=1)
 
             nanIndex = rawData.index[np.isnan(rawData.values).flatten()]
-            
+
             minV, q25, median, q75, maxV = np.nanquantile(rawData.values,q = [0,0.25,0.5,0.75,1])
             if userMinMax is not None:
                 minV, maxV = userMinMax
-                median = (maxV+minV) / 2 
+                median = (maxV+minV) / 2
                 q25 = median - (median-minV)/2
                 q75 = median + (maxV-median)/2
 
-            
+
             colorValues, colorsInMapper = self.sourceData.colorManager.matchColorsToValues(arr = rawData.values.flatten(), colorMapName = twoColorMap, vmin = minV, vmax = maxV, asHex=True)
             colorData =  pd.DataFrame(colorValues,
                                     columns=["color"],
                                     index=rawData.index)
             colorData.loc[nanIndex,"color"] = self.sourceData.colorManager.nanColor
-            
+
             #save colors for legend
             #scaledColorVs = [to_hex(cmap( (x - minV) / (maxV - minV))) for x in [maxV,q75,median,q25,minV]]
             legendColors, _ = self.sourceData.colorManager.matchColorsToValues(arr = [maxV,q75,median,q25,minV], colorMapName = twoColorMap, vmin = minV, vmax = maxV, asHex=True)
             colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
-            
+
             colorGroupData = pd.DataFrame(columns=["color","group"])
             groupNames = [f"Max ({getReadableNumber(maxV)})",
                         f"75% Quantile ({getReadableNumber(q75)})",
@@ -3353,12 +3353,12 @@ class PlotterBrain(object):
                         "NaN"]
             colorGroupData["color"] = colorLimitValues
             colorGroupData["group"] = groupNames
-        
+
         tableTitle = mergeListToString(colorColumn.values,"\n") if userMinMax is None else "Custom Scale\n" + mergeListToString(colorColumn.values,"\n")
-        #save data to enable fast update 
+        #save data to enable fast update
         self.colorColumn = colorColumn
         self.colorColumnType = colorColumnType
-        
+
         return {
             "colorGroupData":colorGroupData,
             "propsData":colorData,
@@ -3389,7 +3389,7 @@ class PlotterBrain(object):
         splitByCats = self.sourceData.parent.config.getParam("boxplot.split.data.on.category")
         replaceObjectNan = self.sourceData.replaceObjectNan
         if numCatColumns > 3: splitByCats = False
-        colorGroupsData = pd.DataFrame() 
+        colorGroupsData = pd.DataFrame()
         sizeGroupsData = pd.DataFrame()
 
 
@@ -3397,39 +3397,39 @@ class PlotterBrain(object):
         if numCatColumns > 0 and not splitByCats:
             rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
             axisPostions = getAxisPosition(n = numNumColumns, maxCol=2)
-            
+
             uniqueValueIndex = {}
             tickPositionByUniqueValue = {}
             tickPositions = {}
-            boxPositions = {} 
+            boxPositions = {}
             groupNames = {}
-            plotData = pd.DataFrame(rawData, index = rawData.index) 
+            plotData = pd.DataFrame(rawData, index = rawData.index)
 
             uniqueValuesByCatColumns = OrderedDict([(categoricalColumn,[cat for cat in rawData[categoricalColumn].unique() if cat != replaceObjectNan]) for categoricalColumn in categoricalColumns])
-            uniqueValuesForCatColumns = [uniqueValuesByCatColumns[categoricalColumn]  for categoricalColumn in categoricalColumns] 
+            uniqueValuesForCatColumns = [uniqueValuesByCatColumns[categoricalColumn]  for categoricalColumn in categoricalColumns]
             uniqueValuesPerCatColumn = dict([(categoricalColumn,uniqueValuesForCatColumns[n]) for n,categoricalColumn in enumerate(categoricalColumns)])
             uniqueCategories = ["Complete"] + ["{}:({})".format(uniqueValue,k) for k,v in uniqueValuesByCatColumns.items() for uniqueValue in v]
             colors,_ = self.sourceData.colorManager.createColorMapDict(uniqueCategories, as_hex=True)
             flatUniqueValues = ["Complete"] + [uniqueValue for sublist in uniqueValuesForCatColumns for uniqueValue in sublist]
             #drop "-"
             totalNumUniqueValues = np.array(uniqueValuesForCatColumns).flatten().size
-            
+
             widthBox = 1/(totalNumUniqueValues + 1)
             border = widthBox/10
-        
+
             colorGroupsData["color"] = colors.values()
             colorGroupsData["group"] = uniqueCategories
             colorGroupsData["internalID"] = [getRandomString() for n in colorGroupsData["color"].values]
-            
+
             colorCategoricalColumn = "\n".join(categoricalColumns)
-        
+
             offset = 0 + border + widthBox/2
             tickPositionByUniqueValue["Complete"] = offset
 
-            for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items(): 
+            for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items():
                 uniqueValueIndex[categoricalColumn] = {}
                 offset += widthBox/2 #extra offset by categorical column
-                
+
                 for uniqueValue in uniqueValues:
                     offset += widthBox
                     idxBool = rawData[categoricalColumn] == uniqueValue
@@ -3479,15 +3479,15 @@ class PlotterBrain(object):
                 plotData = plotData.join(data)
                 #iterate through unique values
                 for categoricalColumn, uniqueValues in uniqueValuesPerCatColumn.items():
-                    
+
                     for m,uniqueValue in enumerate(uniqueValues):
                         xName = f"x({numericColumn}:{categoricalColumn}:{uniqueValue})"
                         colorKey ="{}:({})".format(uniqueValue,categoricalColumn)
                         fc = colors[colorKey]
                         idxBool = uniqueValueIndex[categoricalColumn][uniqueValue]
-                        uniqueValueFilteredData = rawData[numericColumn].loc[idxBool].dropna() 
+                        uniqueValueFilteredData = rawData[numericColumn].loc[idxBool].dropna()
                         tickBoxPos = tickPositionByUniqueValue[colorKey]
-                        
+
 
                         if uniqueValueFilteredData.index.size > 0:
 
@@ -3500,13 +3500,13 @@ class PlotterBrain(object):
                             boxPositions[n].append(tickBoxPos)
                             tickPositions[n].append(tickBoxPos)
                             groupNames[n].append("{}-{}".format(numericColumn,colorKey))
-                        
+
                             plotData = plotData.join(data)
                             columnNames.extend([xName,numericColumn])
                             columnPair = (xName,numericColumn)
                             multiScatterKwargs[n][columnPair] = {"color": fc}
                             #saving internal id and color matches with pandas index (to allow easy manipulation)
-                           
+
                             internalID = colorGroupsData.loc[colorGroupsData["group"] == colorKey]["internalID"].values[0]
                             if internalID not in colorCategoryIndexMatch:
                                 colorCategoryIndexMatch[internalID] = kdeIndex
@@ -3526,7 +3526,7 @@ class PlotterBrain(object):
             tickLabels = dict([(n,flatUniqueValues) for n in range(numNumColumns)])
             axisLabels = dict([(n,{"x":"Categories","y":numericColumn}) for n,numericColumn in enumerate(numericColumns)])
             axisLimits = dict([(n,{"xLimit" : (0,offset),"yLimit":None}) for n in range(numNumColumns)])
-            
+
 
         elif numCatColumns == 0:
             #get raw data
@@ -3536,7 +3536,7 @@ class PlotterBrain(object):
             tickPositions = {0:np.arange(numNumColumns) + widthBox}
             positions = np.arange(numNumColumns)
             colorDict,_ = self.sourceData.colorManager.createColorMapDict(numericColumns, as_hex=True)
-            plotData = pd.DataFrame(rawData, index = rawData.index) 
+            plotData = pd.DataFrame(rawData, index = rawData.index)
             columnNames = []
             multiScatterKwargs[0] = dict() #0 = axis id
             interalIDColumnPairs[0] = dict() #0 = axis id
@@ -3556,7 +3556,7 @@ class PlotterBrain(object):
                 # print(kdeIndex, dataList, xNames)
                 plotData = plotData.join(dataList)
                 for n,(xName,numColumn) in enumerate(xNames):
-                    columnNames.extend([xName,numColumn]) 
+                    columnNames.extend([xName,numColumn])
                     multiScatterKwargs[0][(xName,numColumn)] = {"color": colorDict[numColumn]}
                     internalID = colorGroupsData.loc[colorGroupsData["group"] == numColumn]["internalID"].values[0]
                     colorCategoryIndexMatch[internalID] = kdeIndex[n]
@@ -3564,12 +3564,12 @@ class PlotterBrain(object):
                         interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
                     else:
                         interalIDColumnPairs[0][internalID].append((xName,numColumn))
-                
+
             else:
                 for n,numColumn in enumerate(numericColumns):
                     xName = "x({})".format(numColumn)
                     groupData = rawData[[numColumn]].dropna()
-                   
+
                     if groupData.empty:
                         continue
                     elif groupData.index.size == 1:
@@ -3577,22 +3577,22 @@ class PlotterBrain(object):
                         data = pd.DataFrame(kdeData ,index=groupData.index, columns = [xName])
                         kdeIndex = data.index
                     else:
-                        
+
                         #get kernel data
                         kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                         #get random x position around 0 to spread data
-                       
+
                         allSame = np.all(kdeData == kdeData[0])
                         if allSame:
                             kdeData = np.zeros(shape=kdeData.size)
                         else:
                             kdeData = scaleBetween(kdeData,(0,widthBox/2))
-                       
+
                         kdeData = distKDEData(kdeData)
                         #print(time.time()-t1,"numpy")
                         kdeData = kdeData + positions[n]
                         #save data
-                        
+
                         data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
 
 
@@ -3605,7 +3605,7 @@ class PlotterBrain(object):
                         interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
                     else:
                         interalIDColumnPairs[0][internalID].append((xName,numColumn))
-            
+
             numericColumnPairs = {0:tuple(columnNames)}
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
@@ -3618,10 +3618,10 @@ class PlotterBrain(object):
 
             rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
             numericColumnPairs = []
-            
-            plotData = pd.DataFrame(rawData, index = rawData.index) 
+
+            plotData = pd.DataFrame(rawData, index = rawData.index)
             columnNames = []
-            
+
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             nColorCats = colorCategories.size
             colorDict,_ = self.sourceData.colorManager.createColorMapDict(colorCategories, as_hex=True)
@@ -3631,21 +3631,21 @@ class PlotterBrain(object):
             interalIDColumnPairs[0] = dict() #0 = axis ID
 
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
-            
+
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
-            colorGroupsData["color"] = colorDict.values() 
+            colorGroupsData["color"] = colorDict.values()
             colorGroupsData["group"] = colorCategories
             colorGroupsData["internalID"] = [getRandomString() for _ in range(colorCategories.size)]
 
             sizeGroupsData["size"] = [self.sourceData.parent.config.getParam("scatterSize")] * nColorCats
             sizeGroupsData["group"] = colorCategories
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
-            
+
             tickPositions = []
             tickLabels = []
             widthBox= 1/(nColorCats)
             border = widthBox/3
-            
+
             for m,numColumn in enumerate(numericColumns):
 
                 startPos = m if m == 0 else m + (border * m) #add border
@@ -3669,8 +3669,8 @@ class PlotterBrain(object):
                         else:
                             kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                             #get random x position around 0 to spread data between - and + kdeData
-                            kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
-                         
+                            kdeData = scaleBetween(kdeData,(0,widthBox/2))
+
                             kdeData = distKDEData(kdeData)
                             kdeData = kdeData + positions[nColCat]
                             data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -3689,10 +3689,10 @@ class PlotterBrain(object):
                             interalIDColumnPairs[0][internalID] = [(xName,numColumn)]
                         else:
                             interalIDColumnPairs[0][internalID].append((xName,numColumn))
-                    
-            
+
+
             numericColumnPairs = {0:tuple(columnNames)}
-            
+
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
             axisLabels = dict([(n,{"x":"Numeric Column(s)","y":"Value"}) for n in range(1)])
@@ -3707,7 +3707,7 @@ class PlotterBrain(object):
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
-           
+
             #get color cats
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             #matching colors to categories (dict)
@@ -3720,7 +3720,7 @@ class PlotterBrain(object):
             colorGroupsData["color"] = colors.values()
             colorGroupsData["group"] = colorCategories
             colorGroupsData["internalID"] = [getRandomString() for n in range(nColorCats)]
-            
+
             sizeGroupsData["size"] = [self.sourceData.parent.config.getParam("scatterSize")] * nColorCats
             sizeGroupsData["group"] = colorCategories
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
@@ -3729,7 +3729,7 @@ class PlotterBrain(object):
             catGroupby = rawData.groupby(categoricalColumns, sort=False)
 
             #plot data
-            plotData = pd.DataFrame(rawData, index = rawData.index) 
+            plotData = pd.DataFrame(rawData, index = rawData.index)
             widthBox= 1/(nColorCats)
             border = widthBox / 3
 
@@ -3759,15 +3759,15 @@ class PlotterBrain(object):
                                 kdeIndex = data.index
                             else:
                                 #get kernel data
-                                
+
                                 kdeData, kdeIndex = self.sourceData.getKernelDensityFromDf(groupData[[numColumn]],bandwidth = 0.75)
                                 #get random x position around 0 to spread data between - and + kdeData
                                 allSame = np.all(kdeData == kdeData[0])
                                 if allSame:
                                     kdeData = np.zeros(shape=kdeData.size)
                                 else:
-                                    kdeData = scaleBetween(kdeData,(0,widthBox/2)) 
-                                
+                                    kdeData = scaleBetween(kdeData,(0,widthBox/2))
+
                                 kdeData = distKDEData(kdeData)
                                 kdeData = kdeData + positions[nColCat]
                                 data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -3793,14 +3793,14 @@ class PlotterBrain(object):
                 tickLabels[nAxis] = catTickLabels
                 axisLimits[nAxis] = {"yLimit":[globalMin-yMargin,globalMax+yMargin],"xLimit":[0-widthBox/2-border,nXAxisCats+widthBox/2+border]}
                 #saving internal id and color matches with pandas index (to allow easy manipulation)
-                
+
         elif numCatColumns == 3:
 
             rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
             subplotBorders = dict(wspace=0.15, hspace = 0.15,bottom=0.15,right=0.95,top=0.95)
             globalMin, globalMax = np.nanquantile(rawData[numericColumns].values, q = [0,1])
             yMargin = np.sqrt(globalMax**2 + globalMin**2)*0.05
-           
+
             #get color cats
             colorCategories = self.sourceData.getUniqueValues(dataID = dataID, categoricalColumn = categoricalColumns[0])
             #matching colors to categories (dict)
@@ -3814,7 +3814,7 @@ class PlotterBrain(object):
             colorGroupsData["color"] = colors.values()
             colorGroupsData["group"] = colorCategories
             colorGroupsData["internalID"] = [getRandomString() for n in range(nColorCats)]
-            
+
             sizeGroupsData["size"] = [self.sourceData.parent.config.getParam("scatterSize")] * nColorCats
             sizeGroupsData["group"] = colorCategories
             sizeGroupsData["internalID"] = colorGroupsData["internalID"].values
@@ -3823,22 +3823,22 @@ class PlotterBrain(object):
             catGroupby = rawData.groupby(categoricalColumns, sort=False)
 
             #plot data
-            plotData = pd.DataFrame(rawData, index = rawData.index) 
+            plotData = pd.DataFrame(rawData, index = rawData.index)
             widthBox= 1/(nColorCats)
             border = widthBox / 3
-            
+
 
             tickPositions = {}
             numericColumnPairs = {}
             axisLabels = {}
             tickLabels = {}
-            
+
             nAxis = -1
 
             for n,numColumn in enumerate(numericColumns):
 
                 for nAxisCat, axisCat in enumerate(axisCategories):
-                    nAxis +=1 
+                    nAxis +=1
                     multiScatterKwargs[nAxis] = dict()
                     interalIDColumnPairs[nAxis] = dict() #nAxis = axis ID
                     catTickPositions = []
@@ -3874,7 +3874,7 @@ class PlotterBrain(object):
                                         kdeData = np.zeros(shape=kdeData.size)
                                     else:
                                         kdeData = scaleBetween(kdeData,(0,widthBox/2))
-                                    
+
                                     kdeData = distKDEData(kdeData)
                                     kdeData = kdeData + positions[nColCat]
                                     data = pd.DataFrame(kdeData, index = kdeIndex, columns=[xName])
@@ -3899,16 +3899,16 @@ class PlotterBrain(object):
                     axisLabels[nAxis] = {"x":categoricalColumns[1],"y":numColumn}
                     tickLabels[nAxis] = catTickLabels
                     axisLimits[nAxis] = {"yLimit":[globalMin-yMargin,globalMax+yMargin],"xLimit":[0-widthBox/2-border,nXAxisCats+widthBox/2+border]}
-                    if not nAxisCat in axisTitles:   
+                    if not nAxisCat in axisTitles:
                         axisTitles[nAxisCat] = "{}:{}".format(categoricalColumns[2],axisCat)
                 #saving internal id and color matches with pandas index (to allow easy manipulation)
-        
 
-                    
 
-            
-            
-            
+
+
+
+
+
 
             #tickPositions = dict([(n,np.arange(len(numericColumns))) for n in range(1)])
         #             index = data.sort_values(by=numColumn, ascending = self.indexSort == "ascending").index
@@ -3922,7 +3922,7 @@ class PlotterBrain(object):
 
 
         return {"data":{"plotData":plotData,
-            "axisPositions":axisPostions, 
+            "axisPositions":axisPostions,
             "columnPairs":numericColumnPairs,
             "tickLabels": tickLabels,
             "tickPositions" : tickPositions,
@@ -3939,10 +3939,10 @@ class PlotterBrain(object):
             "interalIDColumnPairs" : interalIDColumnPairs,
             "colorCategoricalColumn" : colorCategoricalColumn,
             "sizeCategoricalColumn" : colorCategoricalColumn,
-            "dataID":dataID}}    
+            "dataID":dataID}}
 
     def getColorQuadMeshForHeatmap(self,dataID, colorColumn = None, colorColumnType = None):
-        ""    
+        ""
         if colorColumn is None:
             colorColumn = self.colorColumn
         if colorColumnType is None:
@@ -3951,13 +3951,13 @@ class PlotterBrain(object):
         colorColumnNames = colorColumn.values
         treatIntegersAsCategories = self.sourceData.parent.config.getParam("hclust.treat.integers.as.categories")
         rawData = self.sourceData.getDataByColumnNames(dataID,colorColumn)["fnKwargs"]["data"]
-        
+
         if colorColumnType == "Categories" or (colorColumnType == "Integer" and treatIntegersAsCategories):
             combineCategoricalValues = self.sourceData.parent.config.getParam("hclust.color.combine.categories")
             sortUniqueValues = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values")
             ascendingOrder = self.sourceData.parent.config.getParam("hclust.color.sort.unique.values.ascending")
             colorMap = self.sourceData.parent.config.getParam("hclust.color.column.categories.colormap")
-            
+
             if not combineCategoricalValues  and colorColumn.values.size > 1:
                 for columnName in colorColumn.values:
                     rawData[columnName] = rawData[columnName].astype(str) + "({})".format(columnName)
@@ -3972,7 +3972,7 @@ class PlotterBrain(object):
                 uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList)).sort_values(ascending=ascendingOrder)
             else:
                 uniqueValuesAsSeries = pd.Series(np.concatenate(uniqueValuesList))
-            
+
             uniqueValuesTotal = pd.Series([self.sourceData.replaceObjectNan]).append(
                                 uniqueValuesAsSeries, ignore_index=True).unique()
             factorMapper = OrderedDict(zip(uniqueValuesTotal,np.arange(uniqueValuesTotal.size)))
@@ -3983,9 +3983,9 @@ class PlotterBrain(object):
 
             colorValues = sns.color_palette(colorMap,len(factorMapper)).as_hex()
             colorValues[0] = self.sourceData.colorManager.nanColor
-        
+
             cmap = ListedColormap(colorValues)
-        
+
             colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
             colorGroupData["color"] = colorValues
             colorGroupData["group"] = list(factorMapper.keys())
@@ -3996,27 +3996,27 @@ class PlotterBrain(object):
             combinedScale = self.sourceData.parent.config.getParam("hclust.color.combine.numeric.values")
 
             colorData = pd.DataFrame(columns = colorColumn, index = rawData.index)
-            
+
             minV, q25, median, q75, maxV = np.nanquantile(rawData.values,q = [0,0.25,0.5,0.75,1])
             cmap = self.sourceData.parent.colorManager.get_max_colors_from_pallete(colorMap)
-            cmap.set_bad(self.sourceData.parent.config.getParam("nanColor")) 
+            cmap.set_bad(self.sourceData.parent.config.getParam("nanColor"))
             colorMeshLimits = {"vmin":minV,"vmax":maxV}
-            
+
 
             colorData =  pd.DataFrame(rawData.values,
                                     columns=colorColumn,
                                     index=rawData.index)
 
-   
+
             legendColors, _ = self.sourceData.colorManager.matchColorsToValues(
-                        arr = [maxV,q75,median,q25,minV], 
-                        colorMapName = colorMap, 
-                        vmin = minV, 
-                        vmax = maxV, 
+                        arr = [maxV,q75,median,q25,minV],
+                        colorMapName = colorMap,
+                        vmin = minV,
+                        vmax = maxV,
                         asHex=True)
 
             colorLimitValues = legendColors.flatten().tolist() + [self.sourceData.colorManager.nanColor]
-            
+
             colorGroupData = pd.DataFrame(columns=["color","group"])
             groupNames = ["Max ({})".format(getReadableNumber(maxV)),
                         "75% Quantile ({})".format(getReadableNumber(q75)),
@@ -4045,7 +4045,7 @@ class PlotterBrain(object):
             "encodedColumnNames" : colorColumn,
             "colorMeshLimits" : colorMeshLimits
             }
-        
+
 
     def getSizeQuadMeshForHeatmap(self,dataID,sizeColumn = None,sizeColumnType = None):
         ""
@@ -4059,10 +4059,10 @@ class PlotterBrain(object):
             repData = np.repeat(rawData.values,quantiles.size,axis=1)
             repData[repData < quantiles] = np.nan
             sizeData = pd.DataFrame(repData,index=rawData.index)
-        
+
         return {"sizeData":sizeData}
 
-	
+
     def getColorGroupingForCorrmatrix(self, columnNames, grouping, groupingName, groupColorMapper):
 
         #turn values and keys around
@@ -4071,10 +4071,10 @@ class PlotterBrain(object):
 
         groupFactors, levels = pd.factorize(groupNames)
         groupMapper = dict([(levels[factor],factor) for factor in groupFactors if factor >= 0])
-       
+
         colorData = pd.DataFrame(groupFactors, columns=["Grouping"], index = columnNames.values)
         colorData["Grouping"] = colorData["Grouping"].replace(-1,np.nan)
-    
+
         title = groupingName
 
         colorGroupData = pd.DataFrame(columns=["color","group","internalID"])
@@ -4090,15 +4090,15 @@ class PlotterBrain(object):
         n_pairs = len(numericPairs)
         if  n_pairs == 1:
             return 1,1,subplotProps
-        
+
         subplotProps["wspace"]=0.30
         subplotProps["hspace"]=0.30
 
         if n_pairs < 5:
             return 2,2, subplotProps
-        else: 
+        else:
             rows = int(np.ceil(n_pairs/3))
-            columns = 3 
+            columns = 3
             return rows, columns, subplotProps
 
     def getColorMapper(self,uniqueValues):
@@ -4115,32 +4115,32 @@ class PlotterBrain(object):
             completeKwargs = getMessageProps("Exported..","Figure saved.")
         except Exception as e:
             print(e)
-        
+
         return completeKwargs
 
     def getWordCloud(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         ""
-        
+
         axisPostions = getAxisPosition(1)
         rawData = self.sourceData.getDataByColumnNames(dataID,categoricalColumns)["fnKwargs"]["data"]
         config =  self.sourceData.parent.config
         splitString = config.getParam("word.cloud.split_string")
         cmap = self.sourceData.colorManager.get_max_colors_from_pallete()
-        
+
         wc = WordCloud(
             font_path = "Arial",
             max_font_size = config.getParam("word.cloud.max_font_size"),
             min_font_size = config.getParam("word.cloud.min_font_size"),
             normalize_plurals = config.getParam("word.cloud.normalize_plurals"),
             max_words = config.getParam("word.cloud.max_words"),
-            colormap = cmap, 
+            colormap = cmap,
             include_numbers = config.getParam("word.cloud.include_numbers"),
             background_color = config.getParam("word.cloud.background_color"),
-            width = 1600, 
+            width = 1600,
             height = 800)
 
         if config.getParam("word.cloud.categories_to_frequencies"):
-            
+
             splitData = rawData[categoricalColumns[0]].astype("str").str.split(splitString, expand=True).values.flatten()
             countedValues = pd.Series(splitData).value_counts(normalize=True).to_dict()
             wordcloud = wc.generate_from_frequencies(countedValues)
@@ -4155,7 +4155,7 @@ class PlotterBrain(object):
 
     def getXYPlotProps(self,dataID,numericColumns,categoricalColumns,*args,**kwargs):
         "Returns plot properties for a XY plot"
-        colorGroupsData = pd.DataFrame() 
+        colorGroupsData = pd.DataFrame()
         axisLabels = {}
         axisLimits = {}
         linesByInternalID = {}
@@ -4171,11 +4171,11 @@ class PlotterBrain(object):
         #get raw data
         rawData = self.sourceData.getDataByColumnNames(dataID,numericColumns + categoricalColumns)["fnKwargs"]["data"]
         config =  self.sourceData.parent.config
-        
+
 
         if config.getParam("xy.plot.stem.mode"):
             stemBottom = config.getParam("xy.plot.bottom.stem")
-        
+
         if config.getParam("xy.plot.against.index") or len(numericColumns) == 1:
             idxColumnName = "ICIndex_{}".format(getRandomString())#ensures that there are no duplicates
             rawData[idxColumnName] = np.arange(rawData.index.size)
@@ -4184,7 +4184,7 @@ class PlotterBrain(object):
             numericColumnPairs = [(numericColumns[0],columnName) for columnName in numericColumns[1:]]
         else:
             numericColumnPairs = list(zip(numericColumns[0::2], numericColumns[1::2]))
-        
+
         separatePairs = config.getParam("xy.plot.separate.column.pairs")
         axisPostions = getAxisPosition(1 if not separatePairs else len(numericColumnPairs))
         if len(categoricalColumns) == 0:
@@ -4197,7 +4197,7 @@ class PlotterBrain(object):
             colorGroupsData["group"] = colorCategories
             colorValues = self.sourceData.colorManager.getNColorsByCurrentColorMap(numColorCategories)
             colorGroupBy = rawData.groupby(by=categoricalColumns[0],sort=False)
-        #line2D 
+        #line2D
         colorGroupsData["color"] = colorValues
         colorGroupsData["internalID"] = [getRandomString() for n in colorValues]
         colorGroupsData = colorGroupsData[["color","group","internalID"]]
@@ -4214,13 +4214,13 @@ class PlotterBrain(object):
                     data = colorGroupBy.get_group(colorCategory)
                     internalID = colorGroupsData["internalID"].iloc[m]
                     colorValue = colorValues[m]
-                
+
                 if config.getParam("xy.plot.stem.mode"):
-                    #create LineCollections 
+                    #create LineCollections
                     lineSegments = [[(x,stemBottom),(x,y)] for x,y in data[list(columnPair)].values]
                     lineProps = dict(
                             linestyle = config.getParam("xy.plot.line.style"),
-                            segments = lineSegments, 
+                            segments = lineSegments,
                             color = colorValue,
                             linewidth = config.getParam("xy.plot.linewidth"))
 
@@ -4234,9 +4234,9 @@ class PlotterBrain(object):
                             markeredgecolor = "darkgrey",
                             markerfacecolor = colorValue,
                             markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
-                            alpha = config.getParam("xy.plot.alpha"), 
+                            alpha = config.getParam("xy.plot.alpha"),
                             markersize = config.getParam("xy.plot.marker.size"),
-                            linewidth = 0, 
+                            linewidth = 0,
                             marker = config.getParam("xy.plot.marker"))
 
                         markerLine = Line2D(**markerProps)
@@ -4250,14 +4250,14 @@ class PlotterBrain(object):
                             color = colorValue,
                             markeredgecolor = "darkgrey",
                             markeredgewidth = config.getParam("xy.plot.marker.edge.width"),
-                            alpha = config.getParam("xy.plot.alpha"), 
+                            alpha = config.getParam("xy.plot.alpha"),
                             markersize = config.getParam("xy.plot.marker.size"),
-                            linewidth = config.getParam("xy.plot.linewidth"), 
+                            linewidth = config.getParam("xy.plot.linewidth"),
                             marker = config.getParam("xy.plot.marker") if config.getParam("xy.plot.show.marker") else "")
 
                     l = Line2D(**lineProps)
-            
-                
+
+
                 if markerLine is not None:
                     if internalID in linesByInternalID:
                         linesByInternalID[internalID].extend([l,markerLine])
@@ -4270,7 +4270,7 @@ class PlotterBrain(object):
                         linesByInternalID[internalID] = [l]
 
                 if not separatePairs:
-                    if 0 not in lines:    
+                    if 0 not in lines:
                         lines[0] = []
                         lineKwargs[0] = []
                         markerLines[0] = []
@@ -4281,7 +4281,7 @@ class PlotterBrain(object):
                     markerKwargs[0].append({"ID":internalID,"props":markerProps})
                 else:
                     if n not in lines:
-                        lines[n] = [l]   
+                        lines[n] = [l]
                         lineKwargs[n] = [{"ID":internalID,"props":lineProps}]
                         markerKwargs[n] = [{"ID":internalID,"props":markerProps}]
                         markerLines[n] = [markerLine]
@@ -4291,20 +4291,20 @@ class PlotterBrain(object):
                         markerKwargs[n].append({"ID":internalID,"props":markerProps})
                         markerLines[n].append(markerLine)
 
-            
-    
+
+
         if not separatePairs:
             xAxisColumns = np.unique([columnPair[0] for columnPair in numericColumnPairs])
             yAxisColumns = np.unique([columnPair[1] for columnPair in numericColumnPairs])
             xAxisMin, xAxisMax, yAxisMin, yAxisMax = self._getXYLimits(X = rawData[xAxisColumns].values.flatten(),
                                     Y  = rawData[yAxisColumns].values.flatten())
-                
+
             axisLimits[0] = {"xLimit": (xAxisMin,xAxisMax), "yLimit": (yAxisMin,yAxisMax)}
-            
+
             axisLabels[0] = {"x":numericColumnPairs[0][0],
                             "y":numericColumnPairs[0][1]} if len(numericColumnPairs) == 1 else {"x":"Index","y":"Y-value"}
         else:
-            
+
             for n, columnPair in enumerate(numericColumnPairs):
                 xColumn, yColumn = columnPair
                 xAxisMin, xAxisMax, yAxisMin, yAxisMax = self._getXYLimits(
@@ -4329,7 +4329,7 @@ class PlotterBrain(object):
                     "numericColumnPairs" : numericColumnPairs,
                     "hoverData" : rawData
                     }}
-        
+
     def _getXYLimits(self,X,Y,marginFrac = 0.1):
         ""
         minX, maxX = np.nanquantile(X,q = [0,1])
@@ -4342,7 +4342,7 @@ class PlotterBrain(object):
         return xAxisMin, xAxisMax, yAxisMin, yAxisMax
 
 #  return {"data":{"plotData":plotData,
-#             "axisPositions":axisPostions, 
+#             "axisPositions":axisPostions,
 #             "columnPairs":numericColumnPairs,
 #             "tickLabels": tickLabels,
 #             "tickPositions" : tickPositions,
@@ -4359,4 +4359,4 @@ class PlotterBrain(object):
 #             "interalIDColumnPairs" : interalIDColumnPairs,
 #             "colorCategoricalColumn" : colorCategoricalColumn,
 #             "sizeCategoricalColumn" : colorCategoricalColumn,
-#             "dataID":dataID}}    
+#             "dataID":dataID}}
