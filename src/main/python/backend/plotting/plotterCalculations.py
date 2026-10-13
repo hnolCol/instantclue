@@ -3670,9 +3670,19 @@ class PlotterBrain(object):
                 endPos = startPos + widthBox * (nColorCats-1)
                 positions = np.linspace(startPos,endPos,num=nColorCats)
 
-                tickPos = np.median(positions)
-                tickPositions.append(tickPos)
-                tickLabels.append(numColumn)
+                #Item 67: with ONE numeric column, label every category on the
+                #x-axis (as the box plot does in postionCalculator.calculatePositions).
+                #Before, the swarm plot always put a single tick in the middle labelled
+                #with the numeric column name, so e.g. 34 categories of "job" were
+                #shown under one label "pair_iptm". With several numeric columns the
+                #previous behaviour (one tick per numeric column) is kept.
+                if len(numericColumns) == 1:
+                    tickPositions.extend(list(positions))
+                    tickLabels.extend([str(colCat) for colCat in colorCategories])
+                else:
+                    tickPos = np.median(positions)
+                    tickPositions.append(tickPos)
+                    tickLabels.append(numColumn)
 
                 for nColCat, colCat in enumerate(colorCategories):
                     #remove nan for kernel estimation
@@ -3719,7 +3729,12 @@ class PlotterBrain(object):
             
             nrows,ncols,subplotBorders = self._findScatterSubplotProps(numericColumnPairs)
             axisPostions = dict([(n,[nrows,ncols,n+1]) for n in range(len(numericColumnPairs))])
-            axisLabels = dict([(n,{"x":"Numeric Column(s)","y":"Value"}) for n in range(1)])
+            #item 67: axis titles as in the box plot - the categorical column on x,
+            #and the numeric column name on y when only one is plotted
+            if len(numericColumns) == 1:
+                axisLabels = {0:{"x":categoricalColumns[0],"y":numericColumns[0]}}
+            else:
+                axisLabels = dict([(n,{"x":"Numeric Column(s)","y":"Value"}) for n in range(1)])
             tickLabels = {0:tickLabels}
             axisLimits[0] = {"xLimit":[-2*border,endPos+2*border],"yLimit":[globalMin-yMargin,globalMax+yMargin]}
             tickPositions = {0:tickPositions}

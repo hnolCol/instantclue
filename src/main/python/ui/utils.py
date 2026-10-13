@@ -116,7 +116,8 @@ def areFilesSuitableToLoad(filePaths):
     checkedFiles = []
     for filePath in filePaths:
         if os.path.exists(filePath):
-            if any(str(filePath).endswith(endStr) for endStr in ["txt","csv","xlsx","tsv"]):
+            #item 64: case-insensitive and with the dot (".CSV" was rejected; "xtxt" accepted)
+            if str(filePath).lower().endswith((".txt",".csv",".xlsx",".tsv")):
                 checkedFiles.append(filePath)
     return checkedFiles
 

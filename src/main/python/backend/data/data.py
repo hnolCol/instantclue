@@ -583,7 +583,11 @@ class DataCollection(object):
 			loadFileProps["na_values"] = None
 		elif isinstance(loadFileProps["na_values"],str) and ";" in loadFileProps["na_values"]:
 			loadFileProps["na_values"] = loadFileProps["na_values"].split(";")
-		if "thousandas" not in loadFileProps or loadFileProps["thousands"] == "None":
+		#item 69: the key was misspelled ("thousandas"), so this was always true and
+		#the "Thousand Separator" chosen in the import window was always discarded.
+		#A thousands separator equal to the column separator is ignored (pandas error).
+		if "thousands" not in loadFileProps or loadFileProps["thousands"] in ("None", None, "") \
+				or loadFileProps["thousands"] == loadFileProps.get("sep"):
 			loadFileProps["thousands"] = None
 		try:
 			skiprows = int(loadFileProps["skiprows"])

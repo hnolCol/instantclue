@@ -608,12 +608,13 @@ class scatterPlot(object):
 				for markerName, markerData in self.data.groupby("marker"):
 					if markerName in self.mainCollecion:
 						maskIndex = markerData.index.intersection(self.maskIndex)
-
-						self.mainCollecion[markerName].set_offsets(markerData.loc[maskIndex,self.numericColumns].values)
+						#item 63: stacked over all column pairs (multi-collection scatters)
+						offsets, colors, sizes = self._getMarkerGroupArrays(markerData.loc[maskIndex])
+						self.mainCollecion[markerName].set_offsets(offsets)
 						if "color" in markerData.columns:
-							self.mainCollecion[markerName].set_facecolor(markerData.loc[maskIndex,"color"].values)
+							self.mainCollecion[markerName].set_facecolor(colors)
 						if "size" in markerData.columns:
-							self.mainCollecion[markerName].set_sizes(markerData.loc[maskIndex,"size"].values)
+							self.mainCollecion[markerName].set_sizes(sizes)
 			else:
 				maskIndex = self.data.index.intersection(self.maskIndex)
 				for scatterPathCollection in self.mainCollecion.values():
@@ -645,6 +646,34 @@ class scatterPlot(object):
 			print(e)
 
 
+	def _getRowPropsFromPairCollections(self, propName):
+		"""Item 63: per-row color/size of a multi-collection scatter keyed by x/y
+		column pairs. Each row takes the value of the collection of the pair it
+		belongs to (the pair whose columns are not NaN in that row), instead of
+		every row taking the value of the first collection. Returns None if the
+		collections are not keyed by column pairs."""
+		if not isinstance(self.mainCollecion,dict) or len(self.mainCollecion) == 0:
+			return None
+		if not all(isinstance(k,tuple) and len(k) == 2 and all(c in self.data.columns for c in k) for k in self.mainCollecion.keys()):
+			return None
+		values = pd.Series([None] * self.data.index.size, index=self.data.index, dtype=object)
+		for (xName, yName), collection in self.mainCollecion.items():
+			collectionValues = collection.get_facecolors() if propName == "color" else collection.get_sizes()
+			if len(collectionValues) == 0:
+				continue
+			rowMask = self.data[[xName, yName]].notna().all(axis=1).values
+			if len(collectionValues) == self.data.index.size:
+				for n in np.flatnonzero(rowMask):
+					values.iloc[n] = collectionValues[n]
+			else:
+				for n in np.flatnonzero(rowMask):
+					values.iloc[n] = collectionValues[0]
+		#rows outside every pair are not drawn; give them the first value
+		firstValue = next((v for v in values.values if v is not None), None)
+		if firstValue is None:
+			return None
+		return values.apply(lambda v: firstValue if v is None else v)
+
 	def updateDataWithProps(self):
 		""
 		
@@ -654,6 +683,14 @@ class scatterPlot(object):
 		else:
 			scatterPathCollection = self.mainCollecion
 		
+		if "color" not in self.data.columns:
+			pairColors = self._getRowPropsFromPairCollections("color")
+			if pairColors is not None:
+				self.data.loc[:,"color"] = pairColors
+		if "size" not in self.data.columns:
+			pairSizes = self._getRowPropsFromPairCollections("size")
+			if pairSizes is not None:
+				self.data.loc[:,"size"] = pairSizes
 		if "color" not in self.data.columns:
 			self.data.loc[:,"color"] = pd.Series([scatterPathCollection.get_facecolors()[0]] * self.data.index.size, index=self.data.index)
 		if "size" not in self.data.columns:
@@ -672,7 +709,7 @@ class scatterPlot(object):
 		if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
 			for markerName, markerData in self.data.groupby("marker"):
 				if markerName in self.mainCollecion:
-					self.mainCollecion[markerName].set_facecolor(markerData["color"].values)
+					self.mainCollecion[markerName].set_facecolor(self._getMarkerGroupArrays(markerData)[1]) #item 63
 		elif isinstance(self.mainCollecion,dict):
 			for scatterPathCollection in self.mainCollecion.values():
 				scatterPathCollection.set_facecolor(self.data.loc[:,"color"].values)
@@ -697,7 +734,7 @@ class scatterPlot(object):
 			if isinstance(self.mainCollecion,dict) and "marker" in self.data.columns:
 					for markerName, markerData in self.data.groupby("marker"):
 						if markerName in self.mainCollecion:
-							self.mainCollecion[markerName].set_sizes(markerData["size"].values)
+							self.mainCollecion[markerName].set_sizes(self._getMarkerGroupArrays(markerData)[2]) #item 63
 
 			elif isinstance(self.mainCollecion,dict):
 					for scatterPathCollection in self.mainCollecion.values():
@@ -743,21 +780,71 @@ class scatterPlot(object):
 						y = self.data[self.numericColumns[1]], 
 						**kwargs)
 
-	def _plotMarkerSpecScatter(self):
+	#Item 63: marker shapes for multi-collection scatters (swarm on box/violin/bar
+	#plots and swarm plots). Marker drawing used numericColumns[0] and [1] only,
+	#i.e. the FIRST x/y column pair. A multi-collection scatter holds one x/y
+	#pair per category, so all other categories would have lost their points.
+	#The helpers below stack every pair, so each marker group is still ONE
+	#collection (keyed by marker name, as before) but contains the points of
+	#all pairs. For an ordinary scatter (exactly one pair) the result is
+	#identical to the previous code.
+	def _getMarkerColumnPairs(self):
+		"x/y column pairs drawn by this scatterPlot."
+		if len(self.numericColumns) > 2:
+			return list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))
+		return [(self.numericColumns[0], self.numericColumns[1])]
+
+	def _getPairPropArray(self, markerData, columnPair, propName, kwargsName, baseKwargs):
+		"Per-row values of color/size for one marker group and one column pair."
+		n = markerData.index.size
+		if propName in markerData.columns:
+			return list(markerData[propName].values)
+		value = None
+		if isinstance(self.multiScatterKwargs,dict) and columnPair in self.multiScatterKwargs:
+			value = self.multiScatterKwargs[columnPair].get(kwargsName)
+		if value is None and isinstance(baseKwargs,dict):
+			value = baseKwargs.get(kwargsName)
+		if isinstance(value,(list,tuple,np.ndarray,pd.Series)) and not isinstance(value,str):
+			if isinstance(value,tuple) and len(value) in (3,4) and all(isinstance(x,(int,float,np.floating)) for x in value):
+				return [value] * n #a single RGB(A) tuple
+			if len(value) == self.data.index.size:
+				return list(pd.Series(list(value), index=self.data.index).loc[markerData.index].values)
+			if len(value) > 0:
+				return [value[0]] * n
+			value = None
+		return [value] * n
+
+	def _getMarkerGroupArrays(self, markerData, baseKwargs = None):
+		"Offsets, colors and sizes of one marker group, stacked over all column pairs."
+		if baseKwargs is None:
+			baseKwargs = self.scatterKwargs
+		columnPairs = self._getMarkerColumnPairs()
+		offsets = np.vstack([markerData[[xName,yName]].values.astype(float) for xName, yName in columnPairs]) \
+					if markerData.index.size > 0 else np.empty((0,2))
+		colors, sizes = [], []
+		for columnPair in columnPairs:
+			colors.extend(self._getPairPropArray(markerData, columnPair, "color", "color", baseKwargs))
+			sizes.extend(self._getPairPropArray(markerData, columnPair, "size", "s", baseKwargs))
+		return offsets, colors, sizes
+
+	def _plotMarkerSpecScatter(self, ax = None, baseKwargs = None):
 		""
-		defaultKwargs = self.scatterKwargs.copy()
+		if ax is None:
+			ax = self.ax
+		defaultKwargs = (self.scatterKwargs if baseKwargs is None else baseKwargs).copy()
 		self.mainCollecion = {}
 		for groupName, groupData in self.data.groupby("marker"):
 			kwargs = defaultKwargs.copy()
+			offsets, colors, sizes = self._getMarkerGroupArrays(groupData, defaultKwargs)
 			kwargs["marker"] = groupName
-			kwargs["s"] = groupData['size'].values
-			kwargs["color"] = groupData['color'].values
+			kwargs["s"] = sizes
+			kwargs["color"] = colors
 			if groupName == "+":
 				kwargs["linewidth"] = 2
 				#kwargs["edgecolor"] = "black"
-			scatterCollection = self.ax.scatter(
-						x = groupData[self.numericColumns[0]],
-						y = groupData[self.numericColumns[1]], 
+			scatterCollection = ax.scatter(
+						x = offsets[:,0],
+						y = offsets[:,1], 
 						**kwargs)
 			self.mainCollecion[groupName] = scatterCollection #save  marker
 
@@ -798,7 +885,12 @@ class scatterPlot(object):
 	def replot(self, ax, **kwargs):
 		'''
 		'''
-		if self.multiScatter and len(self.numericColumns) > 2:
+		if "marker" in self.data.columns:
+			#item 63: marker shapes must also be kept when a multi-collection
+			#scatter is (re)built, e.g. on export to a main-figure panel; the
+			#multi-collection branch below draws every point with one marker.
+			self._plotMarkerSpecScatter(ax = ax, baseKwargs = kwargs)
+		elif self.multiScatter and len(self.numericColumns) > 2:
 			
 			self.mainCollecion = {}
 			numericColumnPairs = list(zip(self.numericColumns[0::2], self.numericColumns[1::2]))

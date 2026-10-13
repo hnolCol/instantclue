@@ -603,6 +603,11 @@ class InstantClue(QMainWindow):
             parentMenu.addMenu(self.subMenus[subMenuName])
 
     def getWindowIcon(self):
+        #item 70: same multi-size icon as the application icon (see icBuildAppIcon)
+        if not hasattr(self,"_icWindowIcon"):
+            self._icWindowIcon = icBuildAppIcon(self.mainPath)
+        if not self._icWindowIcon.isNull():
+            return self._icWindowIcon
         ""
         pathToIcon = os.path.join(self.mainPath,"icons","instantClueLogo.png")
         if os.path.exists(pathToIcon):
@@ -862,12 +867,24 @@ class InstantClue(QMainWindow):
     def dropEvent(self,event):
         "Allows drop of files from os"
         #find Urls of dragged objects
-        droppedFiles = [url.path() for url in event.mimeData().urls() if url.isValid()]
+        #item 64: toLocalFile() gives a proper local path on Windows ("D:/x/file.csv");
+        #url.path() returns "/D:/x/file.csv", which is not a valid Windows path
+        droppedFiles = [url.toLocalFile() or url.path() for url in event.mimeData().urls() if url.isValid()]
         #check if file ends with proper fileExtension
         checkedDroppedFiles = areFilesSuitableToLoad(droppedFiles)
         if len(checkedDroppedFiles) > 0:
             event.accept()
-            self.mainFrames["data"].addTxtFiles(checkedDroppedFiles)
+            #.txt files keep loading directly with the saved import settings (as
+            #before). Dropped .csv/.tsv files were passed to addTxtFiles, which
+            #ignored everything except ".txt", so nothing happened. They now open
+            #the plain-text import dialog first, because they usually need a
+            #different column separator (e.g. comma) than the saved default.
+            txtFiles = [f for f in checkedDroppedFiles if f.lower().endswith(".txt")]
+            csvLikeFiles = [f for f in checkedDroppedFiles if f.lower().endswith((".csv",".tsv"))]
+            if len(txtFiles) > 0:
+                self.mainFrames["data"].addTxtFiles(txtFiles)
+            if len(csvLikeFiles) > 0:
+                self.mainFrames["data"].openDialog(selectedFiles=csvLikeFiles)
             self.mainFrames["data"].addExcelFiles(checkedDroppedFiles)
 
 
@@ -1228,6 +1245,44 @@ class MainWindowSplitter(QWidget):
        # self.ICwelcome.deleteLater()
 
 
+def icSetWindowsAppUserModelID(appID = "InstantClue.InstantClue"):
+    """Item 70: give the process its own taskbar identity on Windows.
+    Windows 11 always groups taskbar buttons and takes the group's icon from the
+    shell's icon cache for the program file, not from the window. Without an
+    explicit AppUserModelID an outdated or unreadable cache entry kept the generic
+    window symbol in the taskbar although the window itself had the logo. With
+    an explicit ID the taskbar shows the icon set by the program (below). Must be
+    called before the first window is created; does nothing on other systems."""
+    if not sys.platform.startswith("win"):
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appID)
+    except Exception:
+        pass
+
+def icBuildAppIcon(baseDir):
+    """Item 70: build the window/taskbar icon with every size Windows asks for
+    (16 to 256 px), pre-scaled smoothly from the logo. Previously one 1834x1834
+    picture was passed and Windows had to scale it down itself for the small
+    taskbar sizes. Returns an empty QIcon if the logo is missing."""
+    icon = QIcon()
+    try:
+        pathToLogo = os.path.join(baseDir,"icons","instantClueLogo.png")
+        if os.path.exists(pathToLogo):
+            logo = QPixmap(pathToLogo)
+            if not logo.isNull():
+                for size in (16, 20, 24, 32, 40, 48, 64, 128, 256):
+                    icon.addPixmap(logo.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
+                                               Qt.TransformationMode.SmoothTransformation))
+        if icon.isNull():
+            pathToIco = os.path.join(baseDir,"icons","ICLogo.ico")
+            if os.path.exists(pathToIco):
+                icon = QIcon(pathToIco)
+    except Exception:
+        pass
+    return icon
+
 def main():
     "Start the main window."
 
@@ -1239,6 +1294,7 @@ def main():
 
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
     #QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
+    icSetWindowsAppUserModelID() #item 70: before any window exists
     app = QApplication(sys.argv)
     app.setStyle("Windows") # set Fusion Style
     # Bug fix: iconPath was a relative path ("../icons/base/32.png") to a file
@@ -1258,9 +1314,10 @@ def main():
         _iconBaseDir = sys._MEIPASS
     else:
         _iconBaseDir = os.path.dirname(os.path.abspath(__file__))
-    iconPath = os.path.join(_iconBaseDir,"icons","instantClueLogo.png")
-    if os.path.exists(iconPath):
-        app.setWindowIcon(QIcon(iconPath))
+    #item 70: multi-size icon instead of the single 1834x1834 picture
+    appIcon = icBuildAppIcon(_iconBaseDir)
+    if not appIcon.isNull():
+        app.setWindowIcon(appIcon)
     win = InstantClue() # Inherits QMainWindow
     screenGeom = app.primaryScreen().geometry()
     win.setGeometry(10,10,screenGeom.width()-100,screenGeom.height()-140)

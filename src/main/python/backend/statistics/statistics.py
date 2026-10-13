@@ -18,6 +18,42 @@ import scipy.spatial.distance as scd
 from scipy.optimize import curve_fit
 from scipy.stats import linregress, f_oneway, ttest_ind, mannwhitneyu, wilcoxon, fisher_exact, chi2_contingency, ttest_1samp
 
+
+def onewayANOVAOmitNaN(groupArrays):
+    """Item 70 (report 3.1): row-wise one-way ANOVA that ignores missing values,
+    like the t-test in runComparison (ttest_ind(..., nan_policy="omit")).
+    scipy.stats.f_oneway in the shipped SciPy (1.11) has no nan_policy, so a
+    single missing value anywhere in a row made that row's F and p NaN, while the
+    t-test on the same data still gave a result.
+    groupArrays: list of 2D arrays (rows x replicates), one per group.
+    Per row, NaNs are dropped within each group. A row gets a result when every
+    group has at least one value and there are more values than groups (so the
+    within-group variance is defined) - the same as f_oneway on the remaining
+    values. Otherwise F and p are NaN. Returns (F, p) as 1D arrays."""
+    from scipy.stats import f as fDistribution
+    groups = [np.asarray(g, dtype=float) for g in groupArrays]
+    groups = [g.reshape(-1,1) if g.ndim == 1 else g for g in groups]
+    k = len(groups)
+    nPerGroup = np.column_stack([np.sum(~np.isnan(g), axis=1) for g in groups])
+    sumPerGroup = np.column_stack([np.nansum(g, axis=1) for g in groups])
+    with np.errstate(invalid="ignore", divide="ignore"):
+        meanPerGroup = sumPerGroup / nPerGroup
+        nTotal = nPerGroup.sum(axis=1)
+        grandMean = sumPerGroup.sum(axis=1) / nTotal
+        ssBetween = np.nansum(nPerGroup * (meanPerGroup - grandMean.reshape(-1,1))**2, axis=1)
+        ssWithin = np.sum([np.nansum((g - meanPerGroup[:,[n]])**2, axis=1) for n,g in enumerate(groups)], axis=0)
+        dfBetween = k - 1
+        dfWithin = nTotal - k
+        F = (ssBetween / dfBetween) / (ssWithin / dfWithin)
+        #as f_oneway: all values within groups identical -> F = inf (p = 0) if the
+        #group means differ, NaN if they do not
+        F = np.where(ssWithin == 0, np.where(ssBetween > 0, np.inf, np.nan), F)
+        p = fDistribution.sf(F, dfBetween, dfWithin)
+    valid = np.all(nPerGroup >= 1, axis=1) & (dfWithin >= 1) & (k >= 2)
+    F = np.where(valid, F, np.nan)
+    p = np.where(valid & ~np.isnan(F), p, np.nan)
+    return F, p
+
 from sklearn.cluster import KMeans, OPTICS, AgglomerativeClustering, Birch, AffinityPropagation
 from sklearn.manifold import TSNE, Isomap, LocallyLinearEmbedding, MDS, SpectralEmbedding
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -1168,7 +1204,7 @@ class StatisticCenter(object):
             groupingForANOVA = grouping.getGrouping(groupingName)
             results = pd.DataFrame(index=dataFrame.index)
             testGroupData = [dataFrame[columnNames].values for columnNames in groupingForANOVA.values()]
-            F,p = f_oneway(*testGroupData,axis=1)
+            F,p = onewayANOVAOmitNaN(testGroupData) #item 70: missing values ignored, as in the t-test
             results["F({})".format(groupingName)] = F
             results["p-unc-1WANOVA({})".format(groupingName)] = p
 
@@ -1261,7 +1297,7 @@ class StatisticCenter(object):
         results = pd.DataFrame(index = data.index)
         if test == "1W-ANOVA":
             testGroupData = [data[columnNames].values for columnNames in grouping.values()]
-            F,p = f_oneway(*testGroupData,axis=1)
+            F,p = onewayANOVAOmitNaN(testGroupData) #item 70: missing values ignored, as in the t-test
             results["F({})".format(groupingName)] = F
             if logPValues:
                 pValueColumn = "-log10-p-1WANOVA({})".format(groupingName)
@@ -1294,7 +1330,13 @@ class StatisticCenter(object):
            
                 elif test in ["t-test","Welch-test"]:
 
-                    t, p = ttest_ind(X,Y,axis=1,nan_policy="omit",equal_var = test == "t-test")
+                    #Item 70 (report 3.2): the column is labelled "(group1)_(group0)" and
+                    #"t-test diff" is mean(group1) - mean(group0), i.e. positive when the
+                    #group named FIRST is higher. The T-statistic was computed as
+                    #ttest_ind(group0, group1) and therefore had the opposite sign.
+                    #Arguments swapped so that T-stat, t-test diff and the label agree
+                    #("A vs B" positive = A higher). p-values are unchanged (two-sided).
+                    t, p = ttest_ind(Y,X,axis=1,nan_policy="omit",equal_var = test == "t-test")
                     
                     if logPValues:
                         pValueColumnLog = "-log10-p-value:({})".format(resultColumnNames[n])

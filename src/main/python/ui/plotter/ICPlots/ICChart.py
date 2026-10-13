@@ -1143,9 +1143,16 @@ class ICChart(QObject):
 						#if visibility is Flase -> dont plot anything
 						return
 				columnPair = self.swarmData["columnPairs"][onlyForID]
+				#item 63: export the LIVE swarm data of this axis (it carries the
+				#"marker" column set via the marker box), not the construction-time
+				#snapshot in swarmData["plotData"], which would draw only circles.
+				if onlyForID in self.swarmScatter and hasattr(self.swarmScatter[onlyForID],"data"):
+					swarmExportData = self.swarmScatter[onlyForID].data
+				else:
+					swarmExportData = self.swarmData["plotData"]
 				scatterPlot(
 							self,
-							data = self.swarmData["plotData"],
+							data = swarmExportData,
 							plotter = self.p,
 							ax = targetAx,
 							numericColumns = list(columnPair),
@@ -2019,6 +2026,88 @@ class ICChart(QObject):
 				self.setXTicks(ax,xTicks[n],[""] * len(xTicks[n]),**kwargs)
 			else:
 				self.setXTicks(ax,xTicks[n],xLabels[n],**kwargs)
+		if onlyForID is None:
+			#item 68: make room for long category labels (main chart only; exports
+			#to a main-figure panel pass onlyForID and are left as they are)
+			self.fitXTickLabelsInFigure()
+
+	def fitXTickLabelsInFigure(self, maxBottomFraction = 0.45, paddingPx = 6):
+		"""Item 68: every plot type uses a fixed bottom margin (subplotBorders
+		bottom=0.15, i.e. 15% of the figure height). Category labels on the x-axis are
+		drawn rotated by 90 degrees, so a label like
+		"complex_E0CYV9_P60710_P60710_and4more_62a427" needs far more room than
+		that: it was cut off at the window edge, and the x-axis title disappeared
+		below the window, leaving only the y-axis title readable.
+		This enlarges the bottom margin to fit the longest label plus the x-axis
+		title, up to maxBottomFraction of the figure height. If labels still do not
+		fit, they are shortened in the middle with an ellipsis (beginning and end
+		are kept, as the end usually distinguishes the names). The full labels are
+		kept on the axis, so a larger window (resize_event, see ICPlotter) shows
+		them in full again. The margin is never made smaller than the default from
+		the backend. Any failure leaves the plot unchanged."""
+		try:
+			fig = self.p.f
+			if not hasattr(self,"axisDict") or len(self.axisDict) == 0:
+				return
+			figHeight = float(fig.bbox.height)
+			if figHeight <= 1:
+				return
+			renderer = fig.canvas.get_renderer() if hasattr(fig.canvas,"get_renderer") else fig._get_renderer()
+			#the plot's own margin is the minimum (never shrink a layout)
+			if not hasattr(self,"_icBaseBottom"):
+				if hasattr(self,"data") and isinstance(self.data,dict) and isinstance(self.data.get("subplotBorders"),dict) \
+						and "bottom" in self.data["subplotBorders"]:
+					self._icBaseBottom = self.data["subplotBorders"]["bottom"]
+				else:
+					self._icBaseBottom = fig.subplotpars.bottom
+			defaultBottom = self._icBaseBottom
+			maxBottomFraction = max(maxBottomFraction, defaultBottom)
+			bottomAxes = []
+			for ax in self.axisDict.values():
+				spec = ax.get_subplotspec() if hasattr(ax,"get_subplotspec") else None
+				if spec is not None and spec.is_last_row() and hasattr(ax,"_icFullXTickLabels"):
+					bottomAxes.append(ax)
+			if len(bottomAxes) == 0:
+				return
+			def measure(ax):
+				"label height (px) of the tallest tick label and room for tick + title"
+				labelPx = 0.0
+				for t in ax.get_xticklabels():
+					if t.get_text() != "":
+						labelPx = max(labelPx, t.get_window_extent(renderer).height)
+				titlePx = ax.xaxis.label.get_window_extent(renderer).height if ax.get_xlabel() != "" else 0.0
+				tickPx = ax.xaxis.get_tick_padding() * fig.dpi / 72.0 + 2 * paddingPx
+				return labelPx, titlePx + tickPx
+			#1) full labels first
+			for ax in bottomAxes:
+				ax.set_xticklabels(ax._icFullXTickLabels)
+			neededPx = max(sum(measure(ax)) for ax in bottomAxes)
+			maxPx = maxBottomFraction * figHeight
+			if neededPx > maxPx:
+				#2) shorten labels so that they fit into the maximum margin
+				for ax in bottomAxes:
+					labelPx, otherPx = measure(ax)
+					fullLabels = ax._icFullXTickLabels
+					maxLen = max(len(l) for l in fullLabels) if len(fullLabels) > 0 else 0
+					if labelPx <= 0 or maxLen == 0:
+						continue
+					allowedChars = max(5, int(maxLen * (maxPx - otherPx) / labelPx))
+					ax.set_xticklabels([self._shortenTickLabel(l, allowedChars) for l in fullLabels])
+				neededPx = min(max(sum(measure(ax)) for ax in bottomAxes), maxPx)
+			newBottom = min(max(defaultBottom, neededPx / figHeight), maxBottomFraction)
+			if abs(fig.subplotpars.bottom - newBottom) > 1e-3:
+				fig.subplots_adjust(bottom = newBottom)
+		except Exception as e:
+			print(e)
+
+	def _shortenTickLabel(self, label, maxChars):
+		"Item 68: middle-ellipsis shortening, e.g. complex_E0CYV9_P60…ore_62a427"
+		label = str(label)
+		if len(label) <= maxChars:
+			return label
+		keepEnd = (maxChars - 1) // 2
+		keepStart = maxChars - 1 - keepEnd
+		return label[:keepStart] + "\u2026" + label[len(label)-keepEnd:]
 	
 	def setYTicksForAxes(self,axes,yTicks,xLabels,onlyForID = None,**kwargs):
 		""
@@ -2031,6 +2120,8 @@ class ICChart(QObject):
 		""
 		ax.set_xticks(ticks)
 		ax.set_xticklabels(labels,**kwargs)
+		#item 68: remember the full labels, fitXTickLabelsInFigure may shorten them
+		ax._icFullXTickLabels = [str(l) for l in labels]
 
 	def setYTicks(self,ax,ticks,labels,tickwargs = None,**kwargs,):
 		""
@@ -2080,6 +2171,17 @@ class ICChart(QObject):
 
 	def updateScatterProps(self,propsData):
 		""
+		#Item 63: box, violin and bar plots keep their swarm points in
+		#self.swarmScatter, not in self.scatterPlots, so hasScatters() is False for
+		#them and a column dropped on the marker box never reached the swarm: the
+		#marker legend appeared (it is drawn from the marker table) but every point
+		#stayed a circle. Marker assignments are now forwarded to the swarm.
+		#Only the "marker" column is forwarded, so color/size behaviour of these
+		#plot types is unchanged.
+		if isinstance(propsData,pd.DataFrame) and "marker" in propsData.columns \
+				and hasattr(self,"swarmScatter") and isinstance(self.swarmScatter,dict):
+			for swarmScatterPlot in self.swarmScatter.values():
+				swarmScatterPlot.updateScatterProps(propsData[["marker"]])
 		
 		if self.hasScatters():
 			if hasattr(self,"colorLegend"):
