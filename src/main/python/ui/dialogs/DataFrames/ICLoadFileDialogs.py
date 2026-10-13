@@ -94,7 +94,13 @@ class ImporterBase(QDialog):
                 comboText = propCombo.currentText()
                 if propLabel in comboboxLabelToParam:
                     configName = comboboxLabelToParam[propLabel]
-                    self.mC.config.setParam(configName,comboText)
+                    #item 69: an automatically detected separator that the user left
+                    #unchanged applies to this load only and does not replace the
+                    #saved default (otherwise loading one .csv switched all later
+                    #directly dropped .txt files to comma separation)
+                    if not (propLabel == 'Column Separator:' and getattr(self,"detectedSeparator",None) is not None \
+                            and comboText == self.detectedSeparator):
+                        self.mC.config.setParam(configName,comboText)
                 self.loadFileProps[pandasKwarg] = comboText if comboText != "None" else None
             elif propLabel == 'Replace NaN in Object Columns:':
                 self.replaceObjectNan = propCombo.currentText() 
@@ -304,8 +310,48 @@ class ExcelImporter(QDialog):
         self.update()
 
 
+def detectColumnSeparator(filePath, encoding = "utf-8", maxLines = 50):
+    """Item 69: guess the column separator of a text file from its first lines.
+    Returns the separator as shown in the import window ("tab", ",", ";", "|",
+    "space") or None if no separator gives a consistent column count. Falls back
+    to the file extension (.csv -> ",", .tsv -> "tab") when the content is not
+    conclusive. Never raises."""
+    candidates = [("\t","tab"),(",",","),(";",";"),("|","|")]
+    try:
+        import csv
+        lines = []
+        with open(filePath, "r", encoding = encoding if encoding not in (None,"None","") else "utf-8", errors = "replace", newline = "") as f:
+            for line in f:
+                if line.strip() != "":
+                    lines.append(line)
+                if len(lines) >= maxLines:
+                    break
+        best = None
+        if len(lines) > 0:
+            for sepChar, sepName in candidates:
+                counts = [len(row) for row in csv.reader(lines, delimiter = sepChar)]
+                if len(counts) == 0 or counts[0] < 2:
+                    continue
+                #share of lines that have the same number of columns as the header
+                consistency = sum(1 for c in counts if c == counts[0]) / len(counts)
+                if consistency >= 0.9 and (best is None or counts[0] > best[0]):
+                    best = (counts[0], sepName)
+        if best is not None:
+            return best[1]
+    except Exception:
+        pass
+    lowerPath = str(filePath).lower()
+    if lowerPath.endswith(".csv"):
+        return ","
+    if lowerPath.endswith(".tsv"):
+        return "tab"
+    return None
+
+
 class PlainTextImporter(ImporterBase):
     def __init__(self,*args, **kwargs):
+        #item 64/69: the files to be loaded, used to preselect their column separator
+        self.selectedFiles = kwargs.pop("selectedFiles", None) or []
         super(PlainTextImporter,self).__init__(*args, **kwargs)
         #self.setAttribute(Qt.WA_DeleteOnClose)
         try:
@@ -314,6 +360,7 @@ class PlainTextImporter(ImporterBase):
             self.__controls()
             self.__layout()
             self.__bindEvents()
+            self.__preselectSeparator()
 
             self.replaceObjectNan = "-"
         except Exception as e:
@@ -363,6 +410,30 @@ class PlainTextImporter(ImporterBase):
         ""
         self.loadButton.clicked.connect(self._collectSettings)
         self.closeButton.clicked.connect(self.close)
+
+    def __preselectSeparator(self):
+        """Item 69: the window used to always preset the saved separator (default
+        "tab"), so a comma-separated .csv file was read as ONE column unless the
+        separator was changed by hand. The separator is now detected from the
+        first selected file and preselected; it can still be changed. A detected
+        separator is not stored as the new default (see _collectSettings), so a
+        later directly dropped .txt file still uses the saved one."""
+        self.detectedSeparator = None
+        if len(self.selectedFiles) == 0:
+            return
+        encoding = None
+        for label, propCombo in self.widgetControl:
+            if label.text() == "Encoding:":
+                encoding = propCombo.currentText()
+        detected = detectColumnSeparator(self.selectedFiles[0], encoding = encoding)
+        if detected is None:
+            return
+        for label, propCombo in self.widgetControl:
+            if label.text() == "Column Separator:":
+                if propCombo.findText(detected) < 0:
+                    propCombo.addItem(detected)
+                propCombo.setCurrentText(detected)
+                self.detectedSeparator = detected
 
     
 

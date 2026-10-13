@@ -126,6 +126,15 @@ def _copytree_safe(src, dst):
         shutil.rmtree(dst)
     shutil.copytree(src, dst)
 
+# Item 65: conf/ holds per-user runtime data only (saved settings current.ic,
+# conf/key/app_id, conf/mainFigureImages) and is excluded from the upstream git
+# repository (.gitignore), so it is not part of a fresh source tree. InstantClue
+# creates it itself on first start, but this spec copies and bundles conf/ and
+# conf/key/ below, so building a fresh tree before ever running "python main.py"
+# failed with "FileNotFoundError: [WinError 3] ... src\\main\\python\\conf".
+# Create the (empty) folders if they are missing; nothing is changed if they exist.
+os.makedirs(os.path.join(BASE_DIR, 'conf', 'key'), exist_ok=True)
+
 _copytree_safe(os.path.join(BASE_DIR, 'examples'), os.path.join(BASE_DIR, 'dist', 'examples'))
 _copytree_safe(os.path.join(BASE_DIR, 'conf'), os.path.join(BASE_DIR, 'dist', 'conf'))
 _copytree_safe(os.path.join(BASE_DIR, 'annotations'), os.path.join(BASE_DIR, 'dist', 'annotations'))

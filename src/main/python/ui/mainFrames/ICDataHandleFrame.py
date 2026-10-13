@@ -26,6 +26,13 @@ import datetime
 import socket
 
 
+PLAIN_TEXT_FILE_EXTENSIONS = (".txt",".csv",".tsv")
+
+def isPlainTextFile(filePath):
+    "Item 64: True for text-type data files loaded through the plain-text importer (case-insensitive)."
+    return isinstance(filePath,str) and filePath.lower().endswith(PLAIN_TEXT_FILE_EXTENSIONS)
+
+
 class LoadButton(BigArrowButton):
     ""
     def __init__(self,parent=None, callback = None, *args,**kwargs):
@@ -272,18 +279,22 @@ class DataHandleFrame(QFrame):
         if selectedFiles is None:
             selectedFiles = []
         try:
-            if any(f.endswith(".txt") | f.endswith(".csv") | f.endswith(".tsv") for f in selectedFiles):
-                d = PlainTextImporter(mainController = self.mC) 
+            #item 64: one shared test for text-type files (.txt/.csv/.tsv, any letter case)
+            if any(isPlainTextFile(f) for f in selectedFiles):
+                #item 69: pass the files so the window can preselect their separator
+                d = PlainTextImporter(mainController = self.mC, selectedFiles = [f for f in selectedFiles if isPlainTextFile(f)]) 
                 d.exec()
                 if d.result():
                     #set replace object
-                    txtFiles = [f for f in selectedFiles if f.endswith(".txt")]
+                    #item 64: used to keep only ".txt", so a .csv/.tsv file passed the
+                    #import dialog and then silently dropped out here - "Load" did nothing
+                    txtFiles = [f for f in selectedFiles if isPlainTextFile(f)]
                     replaceObjectNan = d.replaceObjectNan
                     self.mC.config.setParam("replaceObjectNan",replaceObjectNan)
                     #load files on thread
                     self.addTxtFiles(txtFiles,d.getSettings())
 
-            if any(f.endswith(".xlsx") for f in selectedFiles):
+            if any(f.lower().endswith(".xlsx") for f in selectedFiles):
                
                 self.excelImporter = ExcelImporter(mainController = self.mC, selectedFiles = selectedFiles) 
                 
@@ -312,14 +323,16 @@ class DataHandleFrame(QFrame):
 
     def addExcelFiles(self,files):
         ""
-        files = [f for f in files if f.endswith(".xlsx")]
+        files = [f for f in files if f.lower().endswith(".xlsx")]
         self.openDialog(selectedFiles=files)
         # 
 
 
     def addTxtFiles(self,files, loadFileProps = None):
         ""
-        files = [f for f in files if f.endswith(".txt")]
+        #item 64: accept .csv/.tsv as well (was ".txt" only; second filter that
+        #dropped csv files after the import dialog)
+        files = [f for f in files if isPlainTextFile(f)]
         for filePath in files:
             if os.path.exists(filePath):
                 fileName = removeFileExtension(Path(filePath).name)

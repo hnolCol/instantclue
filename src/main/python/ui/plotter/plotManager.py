@@ -45,6 +45,8 @@ class ICPlotter(object):
         self.mC = mainController
         self.f = figure
         self.f.canvas.mpl_connect("draw_event",self.updateBackground)
+        #item 68: refit long x-axis category labels when the window size changes
+        self.f.canvas.mpl_connect("resize_event",self.refitTickLabels)
 
     def setGraph(self,plotType):
 
@@ -82,6 +84,14 @@ class ICPlotter(object):
         ""
         if hasattr(self,"graph"):
             self.graph.updateBackgrounds()
+
+    def refitTickLabels(self,event=None):
+        "Item 68: margin for x-axis category labels depends on the window height."
+        try:
+            if hasattr(self,"graph") and hasattr(self.graph,"fitXTickLabelsInFigure"):
+                self.graph.fitXTickLabelsInFigure()
+        except Exception as e:
+            print(e)
 
     
 
